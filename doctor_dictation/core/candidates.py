@@ -1,0 +1,107 @@
+"""Sound-alike candidates for medicine names the lexicon does not know.
+
+Pure and deterministic: stdlib only (re, difflib), no I/O, no randomness.
+Candidates are only ever *suggestions* shown to the LLM in the repair message;
+nothing here changes a prescription row.
+"""
+import difflib
+import re
+
+MIN_SCORE = 0.78
+MIN_LEN = 4  # shorter lexicon keys ("pan", "pcm") are too noisy to rank
+MAX_NAME_LETTERS = 40  # a longer "name" is not a medicine name; keep difflib work bounded
+
+# Consonant classes that speech recognisers confuse: voiced/unvoiced pairs and
+# near-identical sounds share one letter.
+_CLASS = {
+    "b": "p", "p": "p", "d": "t", "t": "t", "g": "k", "k": "k", "q": "k",
+    "v": "f", "f": "f", "z": "s", "s": "s", "j": "j", "m": "m", "n": "n",
+    "l": "l", "r": "r", "x": "x",
+}
+_VOWELS = set("aeiouy")
+
+
+def phonetic_key(word: str) -> str:
+    """Compact English phonetic key for drug names (lowercase letters).
+
+    Case, spaces, digits and punctuation are ignored; then, in order:
+    1. leading kn/gn/pn/wr lose the first letter; leading x is s.
+    2. ph->f, ck->k, sch->sk, ch->k, th->t, sh->s; gh is silent.
+    3. c before e/i/y is s, otherwise k; x is ks.
+    4. Keep the first letter (a vowel there becomes a); drop later vowels, h, w.
+    5. Merge confusable consonants: b/p, d/t, g/k/q, v/f, z/s.
+    6. Collapse runs of the same letter ("all" -> "l").
+    """
+    s = re.sub(r"[^a-z]", "", (word or "").lower())
+    if not s:
+        return ""
+    if s[:2] in ("kn", "gn", "pn", "wr"):
+        s = s[1:]
+    if s[0] == "x":
+        s = "s" + s[1:]
+    s = s.replace("sch", "sk").replace("ph", "f").replace("ck", "k")
+    s = re.sub(r"gh", "", s)
+    s = s.replace("ch", "k").replace("th", "t").replace("sh", "s")
+    s = re.sub(r"c(?=[eiy])", "s", s).replace("c", "k").replace("x", "ks")
+    out = []
+    for i, ch in enumerate(s):
+        if i == 0:
+            code = "a" if ch in _VOWELS else _CLASS.get(ch, ch)
+        elif ch in _VOWELS or ch in "hw":
+            continue
+        else:
+            code = _CLASS.get(ch, ch)
+        if not out or out[-1] != code:
+            out.append(code)
+    return "".join(out)
+
+
+_index = (None, ())  # (lexicon list the index was built from, rows)
+
+
+def _rows():
+    """[(spelling, phonetic key, canonical)], sorted, cached per lexicon."""
+    global _index
+    from .determinism import _alias_map, load_lexicon
+
+    lex = load_lexicon()
+    if _index[0] is lex:
+        return _index[1]
+    rows = []
+    for text, canon in sorted(_alias_map().items()):
+        if len(text) >= MIN_LEN and " " not in text:
+            rows.append((text, phonetic_key(text), canon))
+    _index = (lex, tuple(rows))
+    return _index[1]
+
+
+def _score(a: str, ka: str, b: str, kb: str) -> float:
+    ratio = difflib.SequenceMatcher(None, a, b).ratio()
+    kratio = difflib.SequenceMatcher(None, ka, kb).ratio() if ka and kb else 0.0
+    score = 0.5 * ratio + 0.5 * kratio
+    if ka and ka == kb:
+        score += 0.15
+    elif min(len(ka), len(kb)) >= 3 and (ka.startswith(kb) or kb.startswith(ka)):
+        score += 0.10
+    return min(score, 1.0)
+
+
+def suggest_candidates(name: str, k: int = 3) -> list:
+    """Up to ``k`` lexicon canonical names that sound like ``name``, best first.
+
+    Score = 0.5 * spelling ratio + 0.5 * phonetic-key ratio (difflib), +0.15
+    for equal keys, +0.10 for a key prefix (3+ letters), capped at 1.0. A
+    canonical keeps its best spelling (generic, alias or brand). Under
+    MIN_SCORE nothing is returned, so garbage gives []. Ties sort by name.
+    """
+    low = re.sub(r"[^a-z]", "", (name or "").lower())
+    key = phonetic_key(low)
+    if k <= 0 or len(low) < 4 or len(low) > MAX_NAME_LETTERS or len(key) < 3:
+        return []
+    best = {}
+    for text, tkey, canon in _rows():
+        sc = _score(low, key, text, tkey)
+        if sc >= MIN_SCORE and sc > best.get(canon, 0.0):
+            best[canon] = sc
+    ranked = sorted(best.items(), key=lambda kv: (-round(kv[1], 6), kv[0].lower(), kv[0]))
+    return [c for c, _ in ranked[:k]]

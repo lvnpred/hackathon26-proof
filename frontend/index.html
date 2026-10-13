@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clinic Workspace</title>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="letterhead.css?v=4" />
+</head>
+<body>
+<header class="topbar no-print">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">✚</div>
+    <div class="brand-text">
+      <span id="topClinic" class="brand-clinic">Clinic</span>
+      <span id="topDoctor" class="brand-doctor">Doctor</span>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span id="agentChip" class="agent-chip idle" role="status" aria-live="polite">Idle</span>
+    <span id="engineBadge" class="badge">loading…</span>
+    <button id="newPatientBtn" type="button" title="Clear the screen and start a new patient">↺ New patient</button>
+    <button id="profileOpenBtn" type="button" title="View or edit the clinic profile">⚙ Profile</button>
+    <button id="letterheadOpenBtn" type="button" title="Print prescriptions on your own letterhead">📄 Letterhead</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- Left: the patients completed today. Clicking one reopens its document. -->
+  <aside id="today" class="sidebar no-print" aria-label="Patients completed today">
+    <h2 class="pane-title">Today</h2>
+    <div id="todayList" class="today-list"></div>
+  </aside>
+
+  <!-- Middle: the dictation orb, the assistant's coarse steps and the transcript. -->
+  <section id="middle" class="middle no-print" aria-label="Dictation">
+    <div class="dictation">
+      <button id="recBtn" class="mic" type="button" aria-label="Start dictation">
+        <span class="mic-icon" aria-hidden="true">🎤</span>
+        <span class="mic-label">Start dictation</span>
+      </button>
+      <span id="timer" class="timer">00:00</span>
+      <span id="wave" class="rec-dot" aria-hidden="true">● REC</span>
+    </div>
+
+    <ol id="steps" class="steps" aria-label="Assistant status">
+      <li class="step" data-step="listening"><span class="dot" aria-hidden="true"></span>Listening</li>
+      <li class="step" data-step="working"><span class="dot" aria-hidden="true"></span>Working</li>
+      <li class="step" data-step="ready"><span class="dot" aria-hidden="true"></span>Ready</li>
+    </ol>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div id="error" class="error" role="alert" hidden>
+      <span id="errorText"></span>
+      <button id="retryBtn" class="retry no-print" type="button" hidden>↻ Retry</button>
+    </div>
+    <div id="grounding" class="grounding" hidden></div>
+
+    <div id="transcriptBox" class="transcript" hidden>
+      <div class="transcript-title">Transcript</div>
+      <div id="transcriptText" class="transcript-text"></div>
+    </div>
+
+    <div class="block-panel" id="blockPanel" hidden>
+      <strong>Confirm these medicines before saving</strong>
+      <ul id="blockList"></ul>
+      <button id="confirmAllBtn" type="button">Confirm all &amp; Save</button>
+    </div>
+  </section>
+
+  <!-- Right: the prescription document. Only #sheet prints. -->
+  <section class="doc-pane" aria-label="Prescription document">
+    <div id="resaveNote" class="resave-note no-print" hidden></div>
+    <section id="sheet" class="empty">
+      <div class="clinic-head" id="clinicHead">
+        <div class="clinic-doctor" id="cDoctor"></div>
+        <div class="clinic-name" id="cClinic"></div>
+        <div class="clinic-meta"><span id="cReg"></span><span id="cPhone"></span></div>
+        <div class="clinic-addr" id="cAddr"></div>
+      </div>
+      <div id="profileHint" class="profile-hint no-print">Add your clinic details in ⚙ Profile so they print on every prescription.</div>
+      <h2>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h2>
+      <div class="sub patient-row">
+        <span class="pf" id="pDate" contenteditable="true" data-field="date" data-placeholder="Date"></span>
+        <span class="pf" id="pOp" contenteditable="true" data-field="opNo" data-placeholder="OP / IP No"></span>
+        <span class="pf pf-name" id="pName" contenteditable="true" data-field="patientName" data-placeholder="Patient name"></span>
+        <span class="pf" id="pAge" contenteditable="true" data-field="ageSex" data-placeholder="Age / Sex"></span>
+      </div>
+      <div id="sheetBody">
+        <div class="sec-title">DIAGNOSIS / CLINICAL IMPRESSION</div>
+        <ul id="pDx" class="editable-list"></ul>
+        <div class="sec-title">CHIEF COMPLAINTS &amp; BRIEF HISTORY</div>
+        <ul id="pCc" class="editable-list"></ul>
+        <div class="sec-title">INVESTIGATIONS ADVISED</div>
+        <ul id="pIx" class="editable-list"></ul>
+        <div class="sec-title">Rx (MEDICATIONS)</div>
+        <table class="rx">
+          <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th>Check</th></tr></thead>
+          <tbody id="pRx"></tbody>
+        </table>
+        <div class="sec-title">DIETARY &amp; GENERAL ADVICE</div>
+        <ul id="pAdv" class="editable-list"></ul>
+        <div class="sec-title">REVIEW / FOLLOW-UP</div>
+        <div id="pRev" class="editable" contenteditable="true"></div>
+        <div class="disclaimer">AI draft — doctor must verify before signing. STT + LLM may mishear drug names.</div>
+      </div>
+    </section>
+    <button id="saveBtn" class="save no-print" type="button" hidden>💾 Save &amp; Print</button>
+  </section>
+</div>
+
+<!-- Clinic-profile settings panel (view/edit; printed on every prescription). -->
+<dialog id="profilePanel" class="panel no-print" aria-labelledby="profilePanelTitle">
+  <form id="profileForm">
+    <h2 id="profilePanelTitle">Clinic profile</h2>
+    <p class="panel-hint">These details print at the top of every prescription.</p>
+    <label class="field">Doctor name
+      <input id="profDoctor" type="text" autocomplete="name" />
+    </label>
+    <label class="field">Qualifications
+      <input id="profQual" type="text" />
+    </label>
+    <label class="field">Registration no.
+      <input id="profReg" type="text" />
+    </label>
+    <label class="field">Clinic name
+      <input id="profClinic" type="text" autocomplete="organization" />
+    </label>
+    <label class="field">Address
+      <textarea id="profAddress" rows="2"></textarea>
+    </label>
+    <label class="field">Phone
+      <input id="profPhone" type="tel" autocomplete="tel" />
+    </label>
+    <div id="profileStatus" class="panel-status" role="status" aria-live="polite"></div>
+    <div class="panel-actions">
+      <button id="profileCancelBtn" type="button">Cancel</button>
+      <button id="profileSaveBtn" type="submit" class="primary">Save profile</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Letterhead panel (logic in letterhead.js). -->
+<dialog id="lhPanel" class="panel lh-panel no-print" aria-labelledby="lhTitle">
+  <div class="lh-wrap">
+    <div class="lh-head">
+      <h2 id="lhTitle">Letterhead</h2>
+      <button id="lhCloseBtn" type="button" aria-label="Close the letterhead panel">Close</button>
+    </div>
+    <div class="lh-body">
+      <p id="lhStatus" class="lh-current" role="status" aria-live="polite"></p>
+      <button id="lhStopBtn" type="button" class="lh-act lh-stop" hidden>Stop using this letterhead</button>
+      <div id="lhDone" class="lh-done" role="status" hidden></div>
+      <div id="lhError" class="lh-error" role="alert" hidden></div>
+      <div id="lhProgress" class="lh-progress" hidden>
+        <progress aria-label="Working"></progress> <span id="lhProgressText"></span>
+      </div>
+      <section id="lhUpload" aria-label="Upload a letterhead picture">
+        <div class="lh-warn" role="note">
+          <strong>Blank pad only. No patient information.</strong>
+          Photograph or scan an empty prescription pad. Do not use a used prescription:
+          it may show a patient's name. The picture is sent to an AI service so it can
+          be read, and this demo must only ever see fake data.
+        </div>
+        <form id="lhUploadForm" class="lh-upload">
+          <label class="field">Picture of the blank pad (JPEG, PNG or iPhone HEIC, up to 8 MB)
+            <input id="lhFile" type="file" accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif" />
+          </label>
+          <button id="lhUploadBtn" type="submit" class="primary lh-act">Upload and read letterhead</button>
+        </form>
+      </section>
+      <section id="lhReview" class="lh-review" aria-label="Review the recreated letterhead" hidden>
+        <div class="lh-warn" role="note"><strong>Check every line.</strong>
+          The AI may misread text. Fix anything wrong, then Accept. Nothing prints on it until you accept.</div>
+        <div class="lh-cols">
+          <div class="lh-preview-col">
+            <h3>Page 1 preview</h3>
+            <div id="lhPreview" class="lh-preview" aria-live="polite"></div>
+          </div>
+          <div class="lh-form-col">
+            <div id="lhLinesBox"><h3>Text lines on the pad</h3><div id="lhLines"></div></div>
+            <h3>Clinic details</h3>
+            <div id="lhProfileFields"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div id="lhFoot" class="lh-foot" hidden>
+      <button id="lhBuiltinBtn" type="button" class="lh-act">Use built-in layout instead</button>
+      <button id="lhReuploadBtn" type="button" class="lh-act">Re-upload</button>
+      <button id="lhUpdateBtn" type="button" class="lh-act">Update preview</button>
+      <button id="lhAcceptBtn" type="button" class="primary lh-act">Accept</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js?v=10"></script>
+<script src="letterhead.js?v=3"></script>
+</body>
+</html>

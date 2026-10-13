@@ -1,0 +1,3 @@
+# Optional: server-side PDF rendering (doctor_dictation/pdf/). After installing, run:
+#   python -m playwright install chromium
+playwright>=1.40

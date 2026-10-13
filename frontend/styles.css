@@ -1,0 +1,181 @@
+/* Professional two-pane workspace: topbar + "Today" sidebar + dictation/assistant
+   middle pane + the prescription document. Vanilla CSS, no build step. Symbols
+   (✓/?/!/±) carry meaning in print too. Print shows only #sheet. */
+:root {
+  --ink:#1a1a1a; --muted:#5f6b7a; --line:#333; --soft:#d7dde5;
+  --accent:#0b5fff; --warn:#9a6700; --bad:#b3261e; --ok:#1a7f37;
+  --bg:#eef1f5; --card:#fff; --radius:12px;
+}
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", Arial, sans-serif; margin:0; color:var(--ink); background:var(--bg); }
+button { cursor:pointer; border-radius:20px; padding:9px 16px; border:1px solid #b8c0cc; font-size:14px; background:#fff; color:inherit; }
+button:disabled { opacity:.5; cursor:default; }
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+
+/* --- top bar --------------------------------------------------------------- */
+.topbar { position:sticky; top:0; z-index:5; background:#fff; border-bottom:1px solid var(--soft);
+  padding:10px 20px; display:flex; justify-content:space-between; align-items:center; gap:16px; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+.brand { display:flex; align-items:center; gap:10px; min-width:0; }
+.brand-mark { width:34px; height:34px; border-radius:9px; background:var(--accent); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto; }
+.brand-text { display:flex; flex-direction:column; min-width:0; }
+.brand-clinic { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.brand-doctor { font-size:12px; color:var(--muted); }
+.topbar-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.badge { font-size:12px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; padding:3px 9px; border-radius:10px; white-space:nowrap; }
+.agent-chip { font-size:12px; font-weight:600; padding:3px 10px; border-radius:10px; border:1px solid var(--soft); background:#f4f5f7; color:var(--muted); }
+.agent-chip.listening { background:#fdecea; border-color:#f3b6b0; color:var(--bad); }
+.agent-chip.working { background:#fff8e1; border-color:#e8cf9a; color:var(--warn); }
+.agent-chip.ready { background:#e6f4ea; border-color:#a9d9b8; color:var(--ok); }
+
+/* --- workspace grid -------------------------------------------------------- */
+.workspace { display:grid; grid-template-columns:230px minmax(280px, 340px) minmax(420px, 1fr);
+  gap:16px; align-items:start; max-width:1460px; margin:0 auto; padding:16px; }
+.pane-title { font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:2px 0 10px; }
+.sidebar, .middle { background:var(--card); border:1px solid var(--soft); border-radius:var(--radius); padding:14px; }
+.sidebar { position:sticky; top:70px; }
+.middle { position:sticky; top:70px; }
+
+/* --- Today sidebar --------------------------------------------------------- */
+.today-list { display:flex; flex-direction:column; gap:6px; }
+.today-item { text-align:left; border-radius:8px; border:1px solid transparent; background:transparent; padding:8px 10px; display:flex; flex-direction:column; gap:2px; }
+.today-item:hover { background:#f2f6ff; border-color:#d7e3ff; }
+.today-item.active { background:#eaf1ff; border-color:#bcd2ff; }
+.today-name { font-weight:600; font-size:14px; }
+.today-meta { font-size:11px; color:var(--muted); }
+.today-empty { font-size:12px; color:var(--muted); padding:6px 2px; }
+
+/* --- dictation orb --------------------------------------------------------- */
+.dictation { display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; padding:8px 0 16px; }
+.mic { display:inline-flex; flex-direction:column; align-items:center; gap:6px; width:124px; height:124px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-weight:600; padding:0; line-height:1.2;
+  box-shadow:0 8px 20px rgba(11,95,255,.28); }
+.mic .mic-icon { font-size:32px; }
+.mic .mic-label { font-size:13px; }
+.mic.recording { background:#d00; box-shadow:0 8px 20px rgba(221,0,0,.28); }
+.mic.busy { background:#666; box-shadow:none; }
+.timer { font-variant-numeric: tabular-nums; font-weight:700; font-size:20px; min-width:56px; text-align:center; }
+.rec-dot { display:none; color:#d00; font-size:13px; font-weight:700; }
+.rec-dot.on { display:inline; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity:.3; } }
+
+/* --- assistant coarse steps ------------------------------------------------ */
+.steps { list-style:none; display:flex; gap:6px; margin:0 0 12px; padding:0; }
+.steps .step { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; color:var(--muted);
+  border:1px solid var(--soft); border-radius:8px; padding:6px 4px; background:#fafbfc; }
+.steps .dot { width:8px; height:8px; border-radius:50%; background:#c2cad6; flex:0 0 auto; }
+.steps .step.done { color:var(--ok); border-color:#bfe0c8; background:#f0f9f2; }
+.steps .step.done .dot { background:var(--ok); }
+.steps .step.active { color:#fff; background:var(--accent); border-color:var(--accent); font-weight:600; }
+.steps .step.active .dot { background:#fff; }
+.step[data-step="listening"].active { background:var(--bad); border-color:var(--bad); }
+.step[data-step="working"].active { background:var(--warn); border-color:var(--warn); }
+.step[data-step="ready"].active { background:var(--ok); border-color:var(--ok); }
+
+.status { text-align:center; font-size:12px; color:var(--muted); min-height:16px; margin-bottom:6px; }
+.error { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:#fdecea; border:1px solid var(--bad); color:var(--bad); border-radius:8px; padding:10px 12px; font-size:13px; margin:8px 0; }
+.error[hidden] { display:none; }
+#errorText { flex:1; }
+.retry { background:#fff; border:1px solid var(--bad); color:var(--bad); font-weight:600; white-space:nowrap; }
+.retry[hidden] { display:none; }
+.grounding { text-align:center; font-size:12px; margin:6px 0 10px; }
+.grounding.warn { color:var(--warn); }
+.grounding.ok { color:var(--ok); }
+
+.transcript { border:1px solid var(--soft); border-radius:8px; padding:10px 12px; margin:8px 0 0; background:#fafbfc; }
+.transcript-title { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:4px; }
+.transcript-text { font-size:13px; line-height:1.45; white-space:pre-wrap; max-height:220px; overflow:auto; }
+
+/* --- confirm-before-save panel --------------------------------------------- */
+.block-panel { background:#fff8e1; border:1px solid var(--warn); border-radius:8px; padding:12px 16px; margin:12px 0 0; }
+.block-panel ul { margin:8px 0; padding-left:20px; }
+.block-panel li { margin:6px 0; font-size:13px; }
+.confirm-btn { font-size:12px; padding:3px 10px; border-radius:12px; margin-left:6px; }
+.confirm-btn.on { background:#e6f4ea; border-color:var(--ok); color:var(--ok); }
+
+/* --- document pane --------------------------------------------------------- */
+.doc-pane { min-width:0; }
+.resave-note { font-size:12px; color:var(--accent); background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:6px 10px; margin-bottom:10px; }
+.profile-hint { font-size:12px; color:var(--muted); text-align:center; margin:2px 0 6px; }
+
+.clinic-head { text-align:center; margin:0 0 10px; }
+.clinic-doctor { font-size:15px; font-weight:700; }
+.clinic-name { font-size:13px; }
+.clinic-meta { font-size:11px; color:#333; }
+.clinic-meta span + span::before { content:" | "; }
+.clinic-addr { font-size:11px; color:#333; }
+
+#sheet { background:var(--card); border:2px solid var(--line); border-radius:var(--radius); padding:16px; }
+#sheet h2 { text-align:center; margin:0 0 4px; font-size:17px; letter-spacing:.5px; }
+#sheet .sub { text-align:center; font-size:12px; color:var(--muted); margin-bottom:10px; }
+#sheet.empty #sheetBody { display:none; }
+.patient-row { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; }
+.pf { min-width:60px; padding:2px 6px; border-bottom:1px dotted #bbb; outline:none; }
+.pf-name { min-width:160px; font-weight:600; }
+[contenteditable]:empty:not(:focus)::before { content: attr(data-placeholder); color:#aaa; }
+[contenteditable]:focus { background:#f0f6ff; border-radius:3px; }
+
+.sec-title { background:#eee; font-weight:700; padding:4px 8px; margin:12px -16px 8px; border-top:1px solid #999; border-bottom:1px solid #999; }
+ul.editable-list { margin:6px 0; padding-left:20px; }
+ul.editable-list li { outline:none; min-height:18px; padding:1px 3px; }
+ul.editable-list li:empty:not(:focus)::before { content:"—"; color:#bbb; }
+#pRev { min-height:20px; padding:2px 4px; outline:none; }
+#pRev:empty:not(:focus)::before { content:"—"; color:#bbb; }
+
+table.rx { width:100%; border-collapse:collapse; font-size:14px; }
+table.rx th, table.rx td { border:1px solid #999; padding:6px; text-align:left; vertical-align:top; }
+table.rx td.cell { outline:none; }
+table.rx td.med { padding:6px; }
+table.rx td.med .cell { outline:none; padding:1px 2px; }
+table.rx td.med .cell + .cell::before { content:" "; }
+td.check { text-align:center; white-space:nowrap; }
+
+.disclaimer { margin-top:12px; font-size:11px; color:#900; border-top:1px dashed #999; padding-top:6px; }
+
+/* --- grounding pills ------------------------------------------------------- */
+.pill { display:inline-block; min-width:22px; text-align:center; font-weight:700; font-size:13px;
+  border:1px solid #999; border-radius:10px; padding:0 6px; }
+.pill.ok { background:#e6f4ea; border-color:var(--ok); color:var(--ok); }
+.pill.warn { background:#fff8e1; border-color:var(--warn); color:var(--warn); }
+.pill.bad { background:#fdecea; border-color:var(--bad); color:var(--bad); }
+
+/* --- finish action --------------------------------------------------------- */
+.save { display:block; margin:16px auto 0; background:var(--accent); color:#fff; border-color:var(--accent);
+  font-weight:700; font-size:16px; padding:14px 34px; }
+.save[hidden] { display:none; }
+
+/* --- settings panel (dialog) ----------------------------------------------- */
+dialog.panel { border:none; border-radius:var(--radius); padding:0; width:min(520px, 92vw); color:var(--ink); box-shadow:0 20px 60px rgba(15,23,42,.3); }
+dialog.panel::backdrop { background:rgba(15,23,42,.45); }
+dialog.panel form { padding:20px; display:flex; flex-direction:column; gap:10px; }
+dialog.panel h2 { margin:0; font-size:18px; }
+.panel-hint { margin:0; font-size:12px; color:var(--muted); }
+.field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); }
+.field input, .field textarea { font-size:14px; color:var(--ink); padding:8px 10px; border:1px solid #b8c0cc; border-radius:8px; font-family:inherit; }
+.field input:focus, .field textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(11,95,255,.15); }
+.panel-status { font-size:12px; color:var(--bad); min-height:15px; }
+.panel-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:4px; }
+
+/* --- responsive ------------------------------------------------------------ */
+@media (max-width: 1000px) {
+  .workspace { grid-template-columns: 1fr; }
+  .sidebar, .middle { position:static; }
+}
+
+/* --- print: only the sheet ------------------------------------------------- */
+/* Explicit print boundary so the sheet never runs to the page edge. */
+@page { margin: 14mm; }
+@media print {
+  body { background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .topbar, .sidebar, .middle, .no-print, .confirm-btn { display:none !important; }
+  .workspace { display:block; margin:0; padding:0; max-width:none; }
+  .doc-pane { display:block; }
+  #sheet { border:none; border-radius:0; padding:0; }
+  /* On screen .sec-title's -16px side margins bleed out to #sheet's 16px
+     padding; print removes that padding, so the bars overhung the page edge
+     and clipped their first letter. Neutralize the bleed for print. */
+  .sec-title { margin-left:0; margin-right:0; }
+  #sheet.empty #sheetBody { display:block; }
+  [contenteditable]:empty:not(:focus)::before { content:""; }
+}

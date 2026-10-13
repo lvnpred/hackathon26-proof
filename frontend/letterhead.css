@@ -1,0 +1,27 @@
+/* Letterhead panel. Reuses dialog.panel / .field / .primary from styles.css. */
+.lh-panel [hidden] { display:none !important; }
+dialog.lh-panel { width:min(980px, 96vw); max-height:92vh; }
+dialog.lh-panel[open] { display:flex; }
+.lh-wrap { display:flex; flex-direction:column; width:100%; max-height:92vh; }
+.lh-head { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid var(--soft); }
+.lh-head h2 { margin:0; font-size:18px; }
+.lh-body { padding:14px 20px; overflow-y:auto; flex:1 1 auto; display:flex; flex-direction:column; gap:12px; }
+.lh-body h3 { margin:0 0 6px; font-size:14px; }
+.lh-current { margin:0; font-size:14px; font-weight:600; }
+.lh-warn { background:#fff8e1; border:2px solid var(--warn); border-radius:8px; padding:10px 14px; font-size:14px; line-height:1.4; }
+.lh-error { background:#fdecea; border:1px solid var(--bad); color:var(--bad); border-radius:8px; padding:10px 14px; font-size:14px; }
+.lh-done { background:#e6f4ea; border:1px solid var(--ok); color:var(--ok); border-radius:8px; padding:10px 14px; font-size:14px; }
+.lh-progress { display:flex; align-items:center; gap:10px; font-size:14px; }
+.lh-progress progress { width:140px; }
+.lh-upload { display:flex; flex-direction:column; gap:10px; align-items:flex-start; margin-top:10px; }
+.lh-upload .field { width:100%; font-size:14px; }
+.lh-review { display:flex; flex-direction:column; gap:12px; }
+.lh-cols { display:grid; grid-template-columns:minmax(260px, 5fr) 6fr; gap:20px; }
+.lh-preview { border:1px solid var(--soft); background:#f4f5f7; border-radius:8px; height:min(56vh, 520px); padding:8px; font-size:13px; color:var(--muted); overflow:auto; }
+.lh-preview object { width:100%; height:100%; border:0; }
+.lh-form-col .field { margin-bottom:8px; }
+.lh-foot { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; padding:12px 20px; border-top:1px solid var(--soft); background:#fff; }
+.lh-panel button:focus-visible, .lh-panel input:focus-visible, .lh-panel textarea:focus-visible, .lh-panel a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+@media (max-width: 760px) { .lh-cols { grid-template-columns:1fr; } .lh-preview { height:40vh; } }
+.lh-stop { align-self:flex-start; width:auto; margin:0; }
+.lh-stop[hidden] { display:none; }

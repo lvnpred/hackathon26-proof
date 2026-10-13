@@ -1,0 +1,13 @@
+# DEFERRED / NOT NEEDED — see providers/stt/onnx.py. Nothing installs this file today.
+# Part B / Step 1 — ONNX Whisper on Snapdragon X Elite (Adreno/NPU).
+# Separate ARM64 Python 3.11 venv (QNN EP supports 3.11; verify your wheel):
+#   py -3.11-arm64 -m venv .venv-qnn
+#   .\.venv-qnn\Scripts\python -m pip install -r doctor_dictation\requirements-onnx.txt
+#   .\.venv-qnn\Scripts\python -m pip install -r doctor_dictation\requirements.txt
+# Plus (manual, Qualcomm account needed): QNN SDK, Hexagon NPU driver
+# >= 30.0.140.0, Windows 11 24H2+, exported Whisper ONNX model in
+# doctor_dictation\stt_models\<model>\ (encoder.onnx, decoder.onnx, tokenizer.json).
+# QNN GPU backend runs fp16 with NO quantization; HTP/NPU needs QDQ export
+# done on an x64 machine (see plan: agent-loop-and-snapdragon.md, Part B).
+onnxruntime-qnn>=1.18
+numpy>=1.25.2

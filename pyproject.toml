@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doctor-dictation"
+version = "0.1.0"
+description = "Voice-to-prescription service: dictation, STT, rules-checked structuring, PDF."
+readme = "README.md"
+requires-python = ">=3.11"
+# Single source of truth stays in the requirements files next to the code.
+dynamic = ["dependencies", "optional-dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["doctor_dictation/requirements.txt"] }
+
+[tool.setuptools.dynamic.optional-dependencies]
+stt = { file = ["doctor_dictation/requirements-stt.txt"] }
+onnx = { file = ["doctor_dictation/requirements-onnx.txt"] }
+pdf = { file = ["doctor_dictation/requirements-pdf.txt"] }
+dev = { file = ["doctor_dictation/requirements-dev.txt"] }
+
+[tool.setuptools.packages.find]
+include = ["doctor_dictation*"]
+
+[tool.setuptools.package-data]
+doctor_dictation = ["core/lexicon/*.json", "db/migrations/*.sql", "requirements*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

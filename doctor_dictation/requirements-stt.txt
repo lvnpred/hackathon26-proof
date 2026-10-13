@@ -1,0 +1,8 @@
+# Local STT — REQUIRES Python 3.11 or 3.12 (ctranslate2 has no Python 3.15 wheels yet).
+# Install only if you use a supported Python:
+#   py -3.12 -m venv .venv-stt
+#   .\.venv-stt\Scripts\python -m pip install -r doctor_dictation\requirements-stt.txt
+faster-whisper>=1.0.3
+# Pinned: av>=15 removed the metadata_errors kwarg that faster-whisper passes to
+# av.open() (verified 2026-10-11: av 19.0.1 breaks decode). Keep av 14.x.
+av>=11,<15

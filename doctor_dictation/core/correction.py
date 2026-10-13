@@ -43,7 +43,26 @@ CORRECTION_INSTRUCTION = (
     '3. Allowed timing ONLY: "After food", "Before food", "At bedtime", or "".\n'
     '4. ageSex format is "<age> / <M|F>", for example "45 / M".\n'
     '5. Duration format: "<N> days/weeks/months" with digits; two weeks -> 14 days.\n'
-    "6. Never invent strengths, durations or drugs. Return only fields the doctor stated."
+    "6. Never invent strengths, durations or drugs. Return only fields the doctor stated.\n"
+    '7. To REMOVE something add a top-level "remove" object: {"rx": ["<row name>"], '
+    '"diagnosis": [], "complaints": [], "investigations": [], "advice": []} '
+    "(list the exact text of each item to delete). To CHANGE the name or text of one "
+    'existing row/item add a top-level "replace" object: {"rx": [{"from": "<current name>", '
+    '"to": "<right name>"}], "diagnosis": [{"from": "<current text>", "to": "<new text>"}], '
+    '"complaints": [], "investigations": [], "advice": []}. Both keys are optional; omit '
+    "empty ones.\n"
+    '8. Use "remove"/"replace" ONLY when the doctor explicitly asks to remove, delete, '
+    "drop, cancel or stop something, or says a name/text is wrong and gives the right one. "
+    'Copy "from" and each removed item exactly as it appears in the current form. Never '
+    "remove or rename anything the doctor did not name. For a wrong drug name use "
+    '"replace" and do NOT also add a new row for it.\n'
+    '9. Never use "remove" to change a dose, strength, timing or duration: give the new '
+    'value in an rx row. Use "remove" only when the doctor says to remove, delete, drop, '
+    "cancel or stop the medicine or item entirely.\n"
+    "Examples:\n"
+    '- "remove the Pantoprazole" -> {"remove": {"rx": ["Pantoprazole"]}}\n'
+    '- "the drug name is wrong, it is Cefixime not Cephixime" -> '
+    '{"replace": {"rx": [{"from": "Cephixime", "to": "Cefixime"}]}}'
 )
 
 
@@ -225,7 +244,8 @@ def strip_grounding_markers(form: dict) -> dict:
     return out
 
 
-def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict) -> dict:
+def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
+                                 extra_named=()) -> dict:
     """Restore prior rx verification state for rows the patch does not name.
 
     A correction must not change the verification state of rows it never
@@ -236,7 +256,7 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict) -
     patch-named (and brand-new) rows keep the grounding `validate_structured`
     recomputed. Mutates and returns `structured`.
     """
-    named = _patch_rx_names(patch)
+    named = _patch_rx_names(patch) | {_norm_name(n) for n in extra_named}
     prior = {}
     cur_rows = current.get("rx") if isinstance(current, dict) else None
     for row in cur_rows if isinstance(cur_rows, list) else []:

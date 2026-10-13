@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation.config import get_settings
+from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     extract_correction,
     merge_form,
@@ -191,11 +192,12 @@ async def correct(req: CorrectRequest):
             engine = f"{llm.name}:{llm.model}+lexicon v{lexicon_version()}"
         except Exception as e:
             engine = f"rules-after-error v{lexicon_version()}: {e}".strip()[:300]
-    patch, merge_warnings = resolve_blank_names(current, patch)
+    current2, patch2, ops_notes, touched = apply_ops(current, patch)
+    patch2, merge_warnings = resolve_blank_names(current2, patch2)
     structured, _warnings = await _validate(
-        strip_grounding_markers(merge_form(current, patch)), normalized)
-    preserve_untouched_rx_status(current, patch, structured)
+        strip_grounding_markers(merge_form(current2, patch2)), normalized)
+    preserve_untouched_rx_status(current, patch2, structured, extra_named=touched)
     grounding = {"rounds": 0, "open_issues": open_issues(structured),
                  "llm_calls": llm_calls}
     return {"structured": structured, "grounding": grounding, "engine": engine,
-            "warnings": merge_warnings}
+            "warnings": ops_notes + merge_warnings}

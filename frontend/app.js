@@ -115,6 +115,7 @@ function setWorking(on, msg) {
   $("letterheadOpenBtn").disabled = on;
   const rb = $("retryBtn");
   if (rb) rb.disabled = on;
+  document.querySelectorAll("#sheet .x-btn, #undoBtn").forEach(b => { b.disabled = on; });
   recBtn.classList.toggle("busy", on);
 }
 
@@ -532,7 +533,7 @@ function renderTranscript() {
 
 // ---- reading the form back out of the DOM ----------------------------------
 function readList(id) {
-  return [...$(id).querySelectorAll("li")].map(li => text(li)).filter(Boolean);
+  return [...$(id).querySelectorAll("li")].map(liText).filter(Boolean);
 }
 
 function readRx() {
@@ -556,9 +557,7 @@ function readRx() {
   // keyed to the stable data-rowid, so a dropped/renumbered row can never move a
   // confirmation onto a different medicine (Review Finding 1).
   kept.forEach(({ tr }, i) => {
-    tr.dataset.index = String(i);
-    const n = tr.querySelector(".rownum");
-    if (n) n.textContent = String(i + 1);
+    setRowNum(tr, i);
   });
   return kept;
 }
@@ -597,17 +596,167 @@ function hasContent(s) {
   return (s.rx || []).some(r => r && (r.name || r.strength));
 }
 
+// ---- delete (x) buttons + one-level undo -----------------------------------
+function xBtn(action, label, title) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "x-btn no-print";
+  b.dataset.action = action;
+  b.setAttribute("aria-label", label);
+  b.title = title;
+  b.textContent = "×";
+  b.disabled = state.working;
+  if (action === "delete-item") b.contentEditable = "false";
+  return b;
+}
+// List item text excludes the x button (and an Enter-split li may hold stray ones).
+function liText(li) {
+  const c = li.cloneNode(true);
+  c.querySelectorAll(".x-btn").forEach(b => b.remove());
+  return text(c);
+}
+// Every li keeps exactly one trailing x; `blank` drives the "—" placeholder.
+function normalizeLi(li) {
+  const btns = li.querySelectorAll(".x-btn");
+  if (btns.length !== 1 || li.lastChild !== btns[0]) {
+    btns.forEach(b => b.remove());
+    li.appendChild(xBtn("delete-item", "Delete item", "Delete this item"));
+  }
+  const blank = !liText(li);
+  li.classList.toggle("blank", blank);
+  const t = liText(li);
+  li.querySelector(".x-btn").setAttribute("aria-label", t ? "Delete item: " + t.slice(0, 30) : "Delete item");
+  // A caret cannot sit before a lone non-editable button; a <br> gives it a home.
+  const br = li.querySelector("br");
+  if (blank && !br) li.insertBefore(document.createElement("br"), li.firstChild);
+  else if (!blank && br) br.remove();
+}
+function makeLi(v) {
+  const li = document.createElement("li");
+  li.contentEditable = "true";
+  if (v) li.appendChild(document.createTextNode(v));
+  normalizeLi(li);
+  return li;
+}
+function normalizeList(ul) { ul.querySelectorAll("li").forEach(normalizeLi); }
+function setRowNum(tr, i) {
+  tr.dataset.index = String(i);
+  const n = tr.querySelector(".rownum");
+  if (n) n.textContent = String(i + 1);
+  const b = tr.querySelector(".x-btn");
+  if (b) b.setAttribute("aria-label", "Delete medicine row " + (i + 1));
+}
+function renumberRx() {
+  [...rxBody.querySelectorAll("tr[data-index]")].forEach((tr, i) => setRowNum(tr, i));
+}
+function emptyRxRow() {
+  const tr = document.createElement("tr");
+  tr.className = "rx-empty";
+  tr.innerHTML = '<td colspan="8">—</td>';
+  return tr;
+}
+
+const undoBar = document.createElement("div");
+undoBar.className = "undo-bar no-print";
+undoBar.hidden = true;
+undoBar.setAttribute("role", "status");
+undoBar.innerHTML = '<span id="undoText"></span> <button id="undoBtn" type="button" class="undo-btn">Undo</button>';
+statusEl.after(undoBar);
+const undoStack = []; // up to 5 deletions, most recent last
+let lastDeleteAt = 0; // a double-click must never delete two rows
+function clearUndo() { undoStack.length = 0; undoBar.hidden = true; }
+function showUndo() {
+  const r = undoStack[undoStack.length - 1];
+  if (!r) { undoBar.hidden = true; return; }
+  $("undoText").textContent = r.msg + (undoStack.length > 1 ? " (" + undoStack.length + " can be undone)" : "");
+  undoBar.hidden = false;
+}
+function setUndo(rec, msg) {
+  rec.msg = msg;
+  undoStack.push(rec);
+  if (undoStack.length > 5) undoStack.shift();
+  lastDeleteAt = Date.now();
+  showUndo();
+}
+
+function snapshotRow(tr) {
+  const rec = { status: tr.dataset.status || "", lexicon_match: tr.dataset.lexicon || "" };
+  for (const c of ["form", "name", "strength", "dose", "timing", "duration", "instructions"]) rec[c] = cellText(tr, c);
+  return rec;
+}
+function deleteRow(tr) {
+  const rows = [...rxBody.querySelectorAll("tr[data-index]")];
+  const pos = rows.indexOf(tr), rowid = tr.dataset.rowid;
+  const rec = { type: "row", pos, rowid, data: snapshotRow(tr), wasConfirmed: state.confirmed.has(rowid) };
+  state.confirmed.delete(rowid);
+  tr.remove();
+  if (rows.length === 1) rxBody.appendChild(emptyRxRow());
+  renumberRx();
+  updateGrounding();
+  if (!blockPanel.hidden) refreshBlockPanel();
+  setUndo(rec, "Deleted medicine row " + (pos + 1) + ".");
+}
+function deleteItem(li) {
+  const ul = li.parentElement;
+  const lis = [...ul.children];
+  const rec = { type: "item", ulId: ul.id, pos: lis.indexOf(li), txt: liText(li) };
+  li.remove();
+  if (!ul.children.length) ul.appendChild(makeLi(""));
+  setUndo(rec, "Deleted item.");
+}
+function undoDelete() {
+  if (!undoStack.length || state.working) return;
+  const r = undoStack.pop();
+  let focusEl = null;
+  if (r.type === "row") {
+    const empty = rxBody.querySelector("tr.rx-empty");
+    if (empty) empty.remove();
+    const rows = [...rxBody.querySelectorAll("tr[data-index]")];
+    const tr = rxRow(r.data, r.pos);
+    tr.dataset.rowid = r.rowid; // same identity, so a pending block/confirm still matches
+    if (r.wasConfirmed) state.confirmed.add(r.rowid);
+    renderCheck(tr);
+    rxBody.insertBefore(tr, rows[r.pos] || null);
+    renumberRx();
+    updateGrounding();
+    if (!blockPanel.hidden) refreshBlockPanel();
+    focusEl = tr.querySelector(".x-btn");
+  } else {
+    const ul = $(r.ulId);
+    const lis = [...ul.children];
+    const only = lis.length === 1 && lis[0].classList.contains("blank") ? lis[0] : null;
+    const li = makeLi(r.txt);
+    if (only) only.remove();
+    ul.insertBefore(li, only ? null : (lis[r.pos] || null));
+    focusEl = li.querySelector(".x-btn");
+  }
+  showUndo();
+  if (focusEl) focusEl.focus();
+}
+sheetEl.addEventListener("click", (e) => {
+  const b = e.target && e.target.closest ? e.target.closest(".x-btn") : null;
+  if (!b || state.working || Date.now() - lastDeleteAt < 500) return;
+  if (b.dataset.action === "delete") deleteRow(b.closest("tr[data-index]"));
+  else if (b.dataset.action === "delete-item") deleteItem(b.closest("li"));
+  else return;
+  $("undoBtn").focus();
+});
+$("undoBtn").addEventListener("click", undoDelete);
+// Enter/Backspace/paste inside a list li can split, merge or drop the x button.
+function fixLists(e) {
+  const ul = e.target && e.target.closest ? e.target.closest("ul.editable-list") : null;
+  if (ul) normalizeList(ul);
+}
+sheetEl.addEventListener("input", fixLists);
+sheetEl.addEventListener("keyup", fixLists);
+sheetEl.addEventListener("paste", (e) => setTimeout(() => fixLists(e), 0));
+
 // ---- rendering -------------------------------------------------------------
 function renderList(ul, values) {
   ul.innerHTML = "";
   const list = Array.isArray(values) ? values.filter(v => String(v || "").trim()) : [];
   if (!list.length) list.push("");
-  for (const v of list) {
-    const li = document.createElement("li");
-    li.contentEditable = "true";
-    li.textContent = v;
-    ul.appendChild(li);
-  }
+  for (const v of list) ul.appendChild(makeLi(v));
 }
 
 function editable(tag, col, value) {
@@ -649,6 +798,11 @@ function rxRow(r, index) {
   check.className = "check";
   tr.appendChild(check);
   renderCheck(tr);
+
+  const del = document.createElement("td");
+  del.className = "del no-print";
+  del.appendChild(xBtn("delete", "Delete medicine row " + (index + 1), "Delete this medicine"));
+  tr.appendChild(del);
   return tr;
 }
 
@@ -656,10 +810,7 @@ function renderRx(rows) {
   rxBody.innerHTML = "";
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) {
-    const tr = document.createElement("tr");
-    tr.className = "rx-empty";
-    tr.innerHTML = '<td colspan="7">—</td>';
-    rxBody.appendChild(tr);
+    rxBody.appendChild(emptyRxRow());
     return;
   }
   list.forEach((r, i) => rxBody.appendChild(rxRow(r, i)));
@@ -711,6 +862,7 @@ function renderSheet(s) {
   renderList($("pAdv"), s.advice);
   setText($("pRev"), s.review || "");
   renderRx(s.rx);
+  clearUndo(); // any new/reloaded sheet invalidates the one-level undo
   sheetEl.classList.remove("empty");
   saveBtn.hidden = false;
   refreshMicLabel();
@@ -769,7 +921,8 @@ function statusText(s) {
 
 function refreshBlockPanel() {
   const list = $("blockList");
-  const remaining = state.lastBlock.filter(b => b.rowid != null && !state.confirmed.has(b.rowid));
+  const remaining = state.lastBlock.filter(b => b.rowid != null && !state.confirmed.has(b.rowid) &&
+    rxBody.querySelector('tr[data-rowid="' + b.rowid + '"]'));
   if (!remaining.length) { blockPanel.hidden = true; return; }
   list.innerHTML = "";
   for (const b of remaining) {
@@ -823,6 +976,7 @@ async function saveAndPrint() {
     if (state.documentId != null) payload.document_id = state.documentId;
     const j = await postJson("/api/v1/documents", payload, SAVE_TIMEOUT_MS);
     setWorking(false);
+    clearUndo(); // only a successful save retires the undo (a blocked/failed one keeps it)
     hideBlockPanel();
     const verb = state.documentId != null ? "Updated" : "Saved";
     // A fresh INSERT returns the new document id: remember it so a second
@@ -860,6 +1014,7 @@ $("retryBtn").addEventListener("click", retryLast);
 // ---- New patient -----------------------------------------------------------
 function newPatient() {
   if (state.transcript && !window.confirm("Start a new patient? The current draft stays unsaved.")) return;
+  clearUndo();
   state.structured = null;
   state.transcript = "";
   state.transcriptSha = "";

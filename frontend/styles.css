@@ -118,8 +118,9 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 
 .sec-title { background:#eee; font-weight:700; padding:4px 8px; margin:12px -16px 8px; border-top:1px solid #999; border-bottom:1px solid #999; }
 ul.editable-list { margin:6px 0; padding-left:20px; }
-ul.editable-list li { outline:none; min-height:18px; padding:1px 3px; }
-ul.editable-list li:empty:not(:focus)::before { content:"—"; color:#bbb; }
+ul.editable-list li { outline:none; min-height:18px; padding:1px 30px 1px 3px; position:relative; }
+ul.editable-list li.blank:not(:focus)::before { content:"—"; color:#bbb; }
+ul.editable-list li .x-btn { position:absolute; right:2px; top:0; }
 #pRev { min-height:20px; padding:2px 4px; outline:none; }
 #pRev:empty:not(:focus)::before { content:"—"; color:#bbb; }
 
@@ -130,6 +131,16 @@ table.rx td.med { padding:6px; }
 table.rx td.med .cell { outline:none; padding:1px 2px; }
 table.rx td.med .cell + .cell::before { content:" "; }
 td.check { text-align:center; white-space:nowrap; }
+table.rx th:last-child, table.rx td.del { width:34px; padding:2px; text-align:center; vertical-align:middle; }
+
+/* --- delete (x) buttons + undo --------------------------------------------- */
+.x-btn { width:24px; height:24px; min-width:24px; padding:0; border:none; border-radius:50%; background:transparent;
+  color:#8a94a3; font-size:18px; line-height:1; user-select:none; }
+.x-btn:hover, .x-btn:focus-visible { color:var(--bad); background:#fdecea; }
+.x-btn:focus-visible { outline:2px solid var(--bad); outline-offset:1px; }
+.undo-bar { display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.undo-bar[hidden] { display:none; }
+.undo-btn { font-size:12px; padding:2px 12px; border-radius:12px; color:var(--accent); border-color:var(--accent); font-weight:600; }
 
 .disclaimer { margin-top:12px; font-size:11px; color:#900; border-top:1px dashed #999; padding-top:6px; }
 
@@ -162,13 +173,19 @@ dialog.panel h2 { margin:0; font-size:18px; }
   .workspace { grid-template-columns: 1fr; }
   .sidebar, .middle { position:static; }
 }
+/* Phone: the 8-column Rx table is wider than the screen (pre-existing); scroll
+   it inside the sheet instead of widening the whole page. */
+@media screen and (max-width: 600px) {
+  .doc-pane { min-width:0; max-width:100%; }
+  table.rx { display:block; overflow-x:auto; }
+}
 
 /* --- print: only the sheet ------------------------------------------------- */
 /* Explicit print boundary so the sheet never runs to the page edge. */
 @page { margin: 14mm; }
 @media print {
   body { background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .topbar, .sidebar, .middle, .no-print, .confirm-btn { display:none !important; }
+  .topbar, .sidebar, .middle, .no-print, .confirm-btn, .x-btn, table.rx th:last-child, table.rx td.del { display:none !important; }
   .workspace { display:block; margin:0; padding:0; max-width:none; }
   .doc-pane { display:block; }
   #sheet { border:none; border-radius:0; padding:0; }
@@ -178,4 +195,6 @@ dialog.panel h2 { margin:0; font-size:18px; }
   .sec-title { margin-left:0; margin-right:0; }
   #sheet.empty #sheetBody { display:block; }
   [contenteditable]:empty:not(:focus)::before { content:""; }
+  ul.editable-list li.blank:not(:focus)::before { content:""; }
+  ul.editable-list li { padding-right:3px; }
 }

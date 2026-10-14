@@ -102,6 +102,20 @@ progress.
   the server-generated PDF (`doctor_dictation/pdf.py`), so it prints on every prescription.
   Blank fields are omitted; with no profile saved, nothing is printed there.
 
+## Multi-clinic sign-in
+Single mode (`MULTI_CLINIC` off, the default) has **no sign-in**: anyone who can reach the server can use it.
+To give each clinic its own data and logins:
+1. Set `MULTI_CLINIC=1`, `DATA_DIR=<folder>` and `SESSION_SECRET` in `.env`. Generate the secret with
+   `python -c "import secrets; print(secrets.token_urlsafe(48))"` (the app refuses to start without it).
+2. Create a clinic and its first user: `python -m doctor_dictation.admin create-clinic --slug rao --name "Rao Clinic" --first-user dr.rao`.
+   A temporary password is printed once.
+3. Start the app: `uvicorn doctor_dictation.main:app`. Behind a proxy add `--proxy-headers --forwarded-allow-ips=<proxy>` (for example `127.0.0.1`).
+4. SQLite 3.35 or newer is required (the app refuses to start in multi-clinic mode otherwise).
+5. Open the site; it redirects to `/login`. The first sign-in forces a password change.
+- More users: `python -m doctor_dictation.admin create-user --clinic rao --username dr.shah --display-name "Dr. Shah" --role doctor` (`--role` is `doctor`, `assistant` or `admin`).
+- Keep today's single-clinic data: stop the app, then `python -m doctor_dictation.admin adopt-existing --slug rao --first-user dr.rao`.
+- Forgotten password: `python -m doctor_dictation.admin reset-password --user dr.shah` (prints a new temporary password and ends that user's sessions).
+
 ## Notes
 - STT: **cloud-first, the default.** With `OPENAI_API_KEY` set, `/api/transcribe`
   sends the recorded audio to the OpenAI Whisper API (seconds, no model load). If

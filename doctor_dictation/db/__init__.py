@@ -15,6 +15,8 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from doctor_dictation.scope import clinic_dir, current_scope, multi_clinic_enabled, require_scope
+
 # This file *is* the ``doctor_dictation.db`` package, so ``__file__`` is
 # ``doctor_dictation/db/__init__.py``. Resolve relative to the package directory
 # (``doctor_dictation/db``) and its parent (``doctor_dictation``) explicitly so both paths match
@@ -31,7 +33,13 @@ MIGRATIONS_DIR = _PACKAGE_DIR / "migrations"
 # --- connection + migrations ----------------------------------------------
 
 def db_path() -> Path:
-    """Resolve the DB path from ``DB_PATH`` at call time (monkeypatch-friendly)."""
+    """Resolve the DB path at call time (monkeypatch-friendly).
+
+    Multi-clinic mode (``MULTI_CLINIC=1``): the scoped clinic's ``app.db``; ``NoScope`` when
+    there is no scope. ``DB_PATH`` is ignored there and nothing falls back to a default.
+    """
+    if multi_clinic_enabled():
+        return clinic_dir(require_scope().clinic_slug) / "app.db"
     env = os.getenv(DB_PATH_ENV)
     return Path(env) if env else DEFAULT_DB_PATH
 
@@ -260,6 +268,8 @@ def log_audit(
     ip=None,
     at=None,
 ) -> int:
+    if actor is None and (sc := current_scope()) is not None:
+        actor, role = sc.username, role or sc.role
     cur = conn.execute(
         "INSERT INTO audit_log(actor, role, action, entity, entity_id, detail, ip, at)"
         " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

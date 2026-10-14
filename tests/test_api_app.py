@@ -14,6 +14,8 @@ EXPECTED_ROUTES = {
     ("GET", "/api/health"), ("GET", "/health"),
     ("POST", "/api/transcribe"), ("POST", "/api/format"), ("POST", "/api/v1/correct"),
     ("GET", "/api/v1/profile"), ("PUT", "/api/v1/profile"),
+    ("GET", "/login"), ("POST", "/api/v1/auth/login"), ("POST", "/api/v1/auth/logout"),
+    ("GET", "/api/v1/auth/me"), ("POST", "/api/v1/auth/change-password"),
     ("GET", "/api/v1/patients"), ("POST", "/api/v1/patients"),
     ("GET", "/api/v1/encounters"), ("POST", "/api/v1/encounters"),
     ("GET", "/api/v1/encounters/today"),

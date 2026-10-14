@@ -24,7 +24,7 @@ dev = { file = ["doctor_dictation/requirements-dev.txt"] }
 include = ["doctor_dictation*"]
 
 [tool.setuptools.package-data]
-doctor_dictation = ["core/lexicon/*.json", "db/migrations/*.sql", "requirements*.txt"]
+doctor_dictation = ["core/lexicon/*.json", "db/migrations/*.sql", "directory/migrations/*.sql", "requirements*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

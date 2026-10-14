@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in - Doctor Dictation</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="login.css">
+</head>
+<body>
+<main class="card">
+  <div class="brand-mark" aria-hidden="true">&#9877;</div>
+  <h1>Doctor Dictation</h1>
+
+  <form id="loginForm">
+    <h2>Sign in</h2>
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit" class="primary">Sign in</button>
+  </form>
+
+  <form id="changeForm" hidden>
+    <h2>Choose a new password</h2>
+    <input id="changeUser" name="username" type="text" autocomplete="username" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">
+    <p class="hint">You must set a new password before continuing.</p>
+    <label for="current">Current password</label>
+    <input id="current" name="current" type="password" autocomplete="current-password" required>
+    <label for="newpw">New password</label>
+    <input id="newpw" name="newpw" type="password" autocomplete="new-password" minlength="10" required>
+    <span class="hint">At least 10 characters</span>
+    <label for="confirm">Confirm new password</label>
+    <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required>
+    <button type="submit" class="primary">Change password</button>
+    <button type="button" id="signoutLink">Use a different account</button>
+  </form>
+
+  <p id="msg" role="alert"></p>
+</main>
+<script src="login.js"></script>
+</body>
+</html>

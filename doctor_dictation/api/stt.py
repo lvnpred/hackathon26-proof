@@ -12,6 +12,7 @@ from doctor_dictation.config import get_settings
 from doctor_dictation.core.hints import build_hints
 from doctor_dictation.providers.stt.base import SttChainError
 from doctor_dictation.providers.stt.factory import failure_response, make_stt, success_body
+from doctor_dictation.scope import NoScope
 
 router = APIRouter()
 
@@ -21,6 +22,8 @@ def _doctor_top(limit: int) -> list[str]:
     try:
         with closing(dbmod.get_conn()) as conn:
             return dbmod.top_medicines(conn, min(30, limit))
+    except NoScope:
+        raise                      # a missing scope is an auth bug, not "no hints"
     except Exception as exc:  # noqa: BLE001 - hints are optional
         print(f"hints: top_medicines unavailable: {exc}", flush=True)
         return []

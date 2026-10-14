@@ -20,6 +20,7 @@ const groundingEl = $("grounding");
 const sheetEl = $("sheet");
 const rxBody = $("pRx");
 const saveBtn = $("saveBtn");
+const printBtn = $("printBtn");
 const blockPanel = $("blockPanel");
 const todayList = $("todayList");
 const transcriptBox = $("transcriptBox");
@@ -35,7 +36,11 @@ const state = {
   engine: "",
   confirmed: new Set(), // rx row *ids* (stable) the doctor explicitly confirmed
   lastBlock: [],        // rows the last save refused on ({index,name,status,rowid})
-  saved: false,         // true after a save: the next dictation is a new encounter
+  dirty: false,         // the sheet has changes since the last save / open
+  editGen: 0,           // bumps on every edit: Save/Open/Print detect a change made while in flight
+  sheetSeq: 0,          // bumps whenever a different sheet is rendered or cleared
+  savedPatientName: null, // patient name when the document was last saved/opened
+  printing: false,      // a Print fetch is in flight (double-click guard)
   retry: null,          // {mode, transcript} for a failed format/correct
   working: false,
   pendingMode: "dictate",
@@ -110,9 +115,10 @@ function setWorking(on, msg) {
   if (msg) setStatus(msg);
   recBtn.disabled = on;
   saveBtn.disabled = on;
+  if (on) printBtn.disabled = true; else refreshPrintButton();
   $("newPatientBtn").disabled = on;
   $("profileOpenBtn").disabled = on;
-  $("letterheadOpenBtn").disabled = on;
+  $("profileLetterheadBtn").disabled = on;
   const rb = $("retryBtn");
   if (rb) rb.disabled = on;
   document.querySelectorAll("#sheet .x-btn, #undoBtn").forEach(b => { b.disabled = on; });
@@ -122,7 +128,7 @@ function setWorking(on, msg) {
 // ---- clinic profile --------------------------------------------------------
 // The six profile fields render at the top of the sheet (mirrors backend PDF
 // header) and give the top bar its clinic/doctor identity. A blank profile is
-// fine: Save & Print is never blocked, and a hint nudges a first-run entry.
+// fine: Save is never blocked, and a hint nudges a first-run entry.
 function renderProfileHeader(p) {
   p = p || {};
   setText($("cDoctor"), [p.doctor_name, p.qualifications].filter(Boolean).join(" "));
@@ -269,31 +275,37 @@ async function openDocument(row) {
   // Never switch documents mid-flight: a correction applied after a switch
   // could land on the wrong document (Finding #2). Busy/recording -> refuse,
   // but say so rather than silently doing nothing.
-  if (state.working || (mr && mr.state === "recording")) {
-    setStatus("Finish the current recording or save before opening another patient.");
+  if (state.working || state.printing || (mr && mr.state === "recording")) {
+    setStatus("Finish the current recording, save or print before opening another patient.");
     return;
   }
   // Opening another patient overwrites the in-progress draft. Confirm first so a
   // dictated-but-unsaved visit is never lost silently (mirrors newPatient). A
   // re-click of the already-open document loses nothing and needs no prompt.
   const sameDoc = state.documentId != null && String(state.documentId) === String(row.document_id);
-  if (!state.saved && !sameDoc && (state.transcript || state.structured) &&
+  if (isUnsaved() && !sameDoc &&
       !window.confirm("Open " + (row.patient_name || "this document") +
         "? The current draft stays unsaved.")) {
     return;
   }
   clearError();
-  setStatus("Loading " + (row.patient_name || "document") + "…");
+  const gen = state.editGen; // an edit made while the GET is in flight must not be discarded
+  setWorking(true, "Loading " + (row.patient_name || "document") + "…");
   try {
     const r = await fetch("/api/v1/documents/" + encodeURIComponent(row.document_id));
     const j = await safeJson(r);
     if (!r.ok) throw new Error(j.error || ("Could not load document (" + r.status + ")"));
+    if (state.editGen !== gen) {
+      setStatus("You changed the sheet while the document was loading, so it was not opened. Save or finish your edit, then open it again.");
+      return;
+    }
     state.structured = j.structured || {};
     state.engine = j.engine || "";
     state.transcriptSha = j.transcript_sha256 || "";
     state.transcript = "";
-    state.saved = false; // edits/corrections allowed; re-save still updates in place
+    state.dirty = false; // a saved document: edits/corrections allowed, re-save updates in place
     state.documentId = j.document_id != null ? j.document_id : row.document_id;
+    state.savedPatientName = String((state.structured || {}).patientName || "");
     state.retry = null;
     state.confirmed.clear();
     state.lastBlock = [];
@@ -303,11 +315,14 @@ async function openDocument(row) {
     renderSheet(state.structured);
     updateResaveNote();
     highlightToday();
+    refreshPrintButton();
     setStep("ready");
-    setStatus("Reopened " + (row.patient_name || "document") + " — edits update this document. Save & Print re-renders it.");
+    setStatus("Reopened " + (row.patient_name || "document") + " — Print it as is, or edit and Save to update this document.");
   } catch (e) {
     setStatus("");
     showError(errorMessage(e, "Could not load the document"));
+  } finally {
+    setWorking(false);
   }
 }
 
@@ -315,7 +330,7 @@ function updateResaveNote() {
   if (!resaveNote) return;
   if (state.documentId == null) { resaveNote.hidden = true; resaveNote.textContent = ""; return; }
   resaveNote.hidden = false;
-  resaveNote.textContent = "Editing today's document #" + state.documentId + " — Save & Print updates it in place.";
+  resaveNote.textContent = "Editing today's document #" + state.documentId + " — Save updates it in place.";
 }
 
 // ---- recorder --------------------------------------------------------------
@@ -352,6 +367,7 @@ async function beginRecording() {
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => { stopStream(stream); onRecordingStop(); };
   mr.start();
+  refreshPrintButton();
   t0 = Date.now();
   timerEl.textContent = "00:00";
   tick = setInterval(() => { timerEl.textContent = fmtTime(Math.floor((Date.now() - t0) / 1000)); }, 500);
@@ -372,16 +388,38 @@ function endRecordingUI() {
   recBtn.classList.remove("recording");
   wave.classList.remove("on");
   refreshMicLabel();
+  refreshPrintButton();
 }
 function setMicLabel(t) { const l = recBtn.querySelector(".mic-label"); if (l) l.textContent = t; }
-// The mic follows the visible sheet: a sheet that is unsaved, or tied to a saved
-// document (just saved, or opened from Today), takes corrections that re-save in
-// place. Only "New patient" (no sheet, no document) makes a dictation a fresh visit.
-function canCorrect() { return !!state.structured && (!state.saved || state.documentId != null); }
-// Any change to the sheet after a save leaves that change unsaved (guards in
-// openDocument/newPatient protect it); a successful save sets saved again.
-function markDirty() { if (state.saved) state.saved = false; }
-function refreshMicLabel() { setMicLabel(canCorrect() ? "Dictate correction" : "Start dictation"); }
+// The mic follows the visible sheet: any sheet on screen takes corrections (a
+// saved document re-saves in place). Only "New patient" makes a dictation a fresh visit.
+function canCorrect() { return !!state.structured; }
+// Unsaved work = something on screen that is not a saved, unchanged document.
+function isUnsaved() {
+  return !!(state.structured || state.transcript) && (state.documentId == null || state.dirty);
+}
+// Any change to the sheet leaves it unsaved until the next successful Save.
+function markDirty() { state.dirty = true; state.editGen++; refreshPrintButton(); }
+// Print is enabled only for a saved document with no unsaved changes.
+function refreshPrintButton() {
+  const recording = !!(mr && mr.state === "recording");
+  const saved = state.documentId != null;
+  printBtn.disabled = !(saved && !state.dirty && !state.working && !recording) || state.printing;
+  printBtn.title = !saved ? "Save first, then print"
+    : state.dirty ? "Save your changes first"
+    : "Print this prescription (letterhead PDF)";
+}
+// Persistent cue next to the mic: which prescription a dictation would correct.
+function updateCue() {
+  const el = $("correctingCue");
+  if (!el) return;
+  if (!state.structured) { el.hidden = true; el.textContent = ""; return; }
+  const name = text($("pName")), op = text($("pOp"));
+  el.hidden = false;
+  el.textContent = "Correcting: " + (name || "this prescription") + (op ? " · " + op : "") +
+    (state.documentId != null ? " (document " + state.documentId + ")" : " (not saved yet)");
+}
+function refreshMicLabel() { setMicLabel(canCorrect() ? "Dictate correction" : "Start dictation"); updateCue(); }
 
 async function onRecordingStop() {
   const mode = state.pendingMode;
@@ -462,6 +500,7 @@ async function formatTranscript(transcript) {
   state.transcript = transcript;
   renderTranscript();
   state.documentId = null; // a fresh dictation is a new encounter, not a re-save
+  refreshPrintButton();
   updateResaveNote();
   setWorking(true, "Structuring the prescription…");
   setStep("working");
@@ -470,7 +509,7 @@ async function formatTranscript(transcript) {
     state.transcriptSha = j.transcript_sha256 || "";
     state.engine = j.engine || "";
     state.structured = j.structured || {};
-    state.saved = false;
+    state.dirty = false; // documentId is null here, so the sheet still counts as unsaved
     state.retry = null;
     state.confirmed.clear();
     state.lastBlock = [];
@@ -480,7 +519,7 @@ async function formatTranscript(transcript) {
     const open = openRows().length;
     setStatus("Draft ready via " + (j.engine || "engine") + (j.cached ? " (cached)" : "") + ". " +
       (open ? open + " medicine" + (open > 1 ? "s" : "") + " need" + (open > 1 ? "" : "s") + " a check." : "All medicines verified ✓.") +
-      " Edit, dictate a correction, or Save & Print.");
+      " Edit, dictate a correction, or Save.");
   } catch (e) {
     state.retry = { mode: "dictate", transcript };
     showError(errorMessage(e, "Could not structure the dictation") +
@@ -511,7 +550,7 @@ async function applyCorrection(transcript) {
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
       (open ? open + " medicine" + (open > 1 ? "s" : "") + " need" + (open > 1 ? "" : "s") + " a check." : "All medicines verified ✓.") +
-      " Review, then Save & Print." +
+      " Review, then Save." +
       (j.warnings && j.warnings.length ? " ⚠ " + j.warnings.join(" ") : ""));
   } catch (e) {
     state.retry = { mode: "correct", transcript };
@@ -863,6 +902,7 @@ function renderCheck(tr) {
 
 function renderSheet(s) {
   s = s || {};
+  state.sheetSeq++;
   setText($("pName"), s.patientName || "");
   setText($("pAge"), s.ageSex || "");
   setText($("pOp"), s.opNo || "");
@@ -876,7 +916,9 @@ function renderSheet(s) {
   clearUndo(); // any new/reloaded sheet invalidates the one-level undo
   sheetEl.classList.remove("empty");
   saveBtn.hidden = false;
+  printBtn.hidden = false;
   refreshMicLabel();
+  refreshPrintButton();
   updateGrounding();
 }
 
@@ -892,13 +934,14 @@ function updateGrounding() {
   groundingEl.className = "grounding " + (open ? "warn" : "ok");
   groundingEl.textContent = open
     ? open + " medicine" + (open > 1 ? "s" : "") + " need" + (open > 1 ? "" : "s") +
-      " checking — confirm the row or dictate a correction before Save & Print."
-    : "All medicines checked ✓ — ready to Save & Print.";
+      " checking — confirm the row or dictate a correction before Save."
+    : "All medicines checked ✓ — ready to Save.";
 }
 
 // ---- inline-edit invalidation (Review Focus #2) ----------------------------
 sheetEl.addEventListener("input", (e) => {
   markDirty();
+  updateCue();
   const tr = e.target && e.target.closest ? e.target.closest("tr[data-index]") : null;
   if (!tr) return;
   // Any hand-edit of an Rx cell clears verification AND any confirmation, so a
@@ -964,17 +1007,29 @@ $("confirmAllBtn").addEventListener("click", async () => {
   rxBody.querySelectorAll("tr[data-index]").forEach(tr => renderCheck(tr));
   refreshBlockPanel();
   updateGrounding();
-  await saveAndPrint();
+  await saveDocument();
 });
 
-// ---- Save & Print ----------------------------------------------------------
-async function saveAndPrint() {
+// ---- Save, then Print (two separate actions) ---------------------------------
+async function saveDocument() {
   if (state.working) return;
   clearError();
   const { structured, confirmed_rows, indexToRowid } = serializeForm();
   state.structured = structured;
   updateGrounding();
   if (!hasContent(structured)) { showError("Nothing to save yet — dictate the visit first."); return; }
+  // Saving over an existing document with a different patient name is almost
+  // certainly "next patient dictated without New patient": ask first.
+  if (state.documentId != null && state.savedPatientName) {
+    const was = state.savedPatientName.trim(), now = String(structured.patientName || "").trim();
+    if (was.toLowerCase() !== now.toLowerCase() &&
+        !window.confirm("The patient name changed from “" + was + "” to “" + now +
+          "”. Save over this prescription anyway? To record a different patient, cancel and press New patient.")) {
+      setStatus("Not saved. Press “New patient” to record a different patient.");
+      return;
+    }
+  }
+  const gen = state.editGen; // edits after this point are NOT in the payload
 
   setWorking(true, "Saving…");
   try {
@@ -987,22 +1042,31 @@ async function saveAndPrint() {
     // Opened from "Today" -> update that document in place (design #1).
     if (state.documentId != null) payload.document_id = state.documentId;
     const j = await postJson("/api/v1/documents", payload, SAVE_TIMEOUT_MS);
-    setWorking(false);
     clearUndo(); // only a successful save retires the undo (a blocked/failed one keeps it)
     hideBlockPanel();
     const verb = state.documentId != null ? "Updated" : "Saved";
-    // A fresh INSERT returns the new document id: remember it so a second
-    // Save & Print updates this document in place instead of inserting a
-    // duplicate. "New patient" (and a fresh dictation) clears it again.
+    // A fresh INSERT returns the new document id: remember it so a second Save
+    // updates this document in place instead of inserting a duplicate. "New
+    // patient" (and a fresh dictation) clears it again.
     if (state.documentId == null) state.documentId = j.document_id;
-    setStatus(verb + " (patient " + j.patient_id + ", encounter " + j.encounter_id + ", document " + j.document_id + "). Printing…");
-    state.saved = true;
+    const changedWhileSaving = state.editGen !== gen;
+    if (!changedWhileSaving) state.dirty = false; // otherwise keep dirty: the PDF would lack the edit
+    state.savedPatientName = String(structured.patientName || "");
+    // A server-generated OP number goes on the sheet so the printout and any
+    // re-save carry it. A typed value is never overwritten.
+    if (j.op_no && !$("pOp").textContent.trim()) {
+      setText($("pOp"), j.op_no);
+      if (state.structured) state.structured.opNo = j.op_no;
+    }
     updateResaveNote();
     refreshMicLabel();
+    setWorking(false); // also refreshes Print (now enabled)
     loadToday();
-    window.print();
-    setStatus(verb + " — document " + j.document_id + ". Need a change? Edit the sheet or dictate a correction, " +
-      "then Save & Print again to update this document. Press “New patient” before the next visit.");
+    refreshPrintButton();
+    setStatus(changedWhileSaving
+      ? "Saved — but you changed the sheet while saving; press Save again before printing."
+      : verb + " — document " + j.document_id + ". Press Print to print it. Need a change? " +
+        "Edit the sheet or dictate a correction, then Save again. Press “New patient” before the next visit.");
   } catch (e) {
     setWorking(false);
     if (e && e.status === 409 && e.data && Array.isArray(e.data.block)) {
@@ -1014,25 +1078,132 @@ async function saveAndPrint() {
       const n = state.lastBlock.length;
       setStatus("Some medicines still need confirmation before saving.");
       showError("Save blocked: " + n + " medicine" + (n > 1 ? "s" : "") + " need" + (n > 1 ? "" : "s") +
-        " a check. Confirm below (or in the row) or dictate a correction, then Save & Print again.");
+        " a check. Confirm below (or in the row) or dictate a correction, then Save again.");
     } else {
       showError(errorMessage(e, "Save failed"));
     }
   }
 }
 
-saveBtn.addEventListener("click", saveAndPrint);
+saveBtn.addEventListener("click", saveDocument);
+
+// ---- Print a saved document (any number of times; never writes to the server) --
+function shortReason(e, status) {
+  if (status) return "server answered " + status;
+  return (e && e.message) ? String(e.message).slice(0, 60) : "network error";
+}
+const IFRAME_LOAD_WAIT_MS = 3000;
+// Resolves "iframe" (print dialog requested), "tab" (opened in a new tab) or
+// "blocked" (popup blocked: caller shows a link; blob kept alive 5 minutes).
+function printBlob(url) {
+  // Hidden off-screen iframe (not display:none, which blocks printing in some
+  // browsers). Falls back to a new tab with the browser's PDF viewer.
+  return new Promise((resolve) => {
+    const f = document.createElement("iframe");
+    f.setAttribute("aria-hidden", "true");
+    f.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+    let done = false, timer = null;
+    const cleanup = (ms) => setTimeout(() => { f.remove(); URL.revokeObjectURL(url); }, ms);
+    const finish = (how) => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      if (how === "tab") {
+        let w = null;
+        try { w = window.open(url, "_blank"); } catch { w = null; }
+        if (!w || w.closed) how = "blocked";
+        cleanup(300000);
+      } else {
+        cleanup(60000);
+      }
+      resolve(how);
+    };
+    timer = setTimeout(() => finish("tab"), IFRAME_LOAD_WAIT_MS);
+    f.addEventListener("load", () => {
+      if (done) return;
+      try {
+        // Ignore the initial about:blank load; a cross-origin PDF viewer may
+        // throw here, which means "cannot inspect": go ahead and print.
+        if (f.contentWindow.location.href === "about:blank") return;
+      } catch { /* cannot inspect */ }
+      try { f.contentWindow.focus(); f.contentWindow.print(); finish("iframe"); }
+      catch { finish("tab"); }
+    });
+    f.src = url;
+    document.body.appendChild(f);
+  });
+}
+// New patient / Today / mic are frozen while a print is prepared, so the sheet
+// the doctor pressed Print on cannot change underneath it.
+function setPrinting(on) {
+  state.printing = on;
+  $("newPatientBtn").disabled = on;
+  if (!(mr && mr.state === "recording")) recBtn.disabled = on || state.working;
+  todayList.querySelectorAll("button").forEach(b => { b.disabled = on; });
+  refreshPrintButton();
+}
+function showBlockedLink(url) {
+  statusEl.textContent = "Your browser blocked the new tab. Open the PDF: ";
+  const a = document.createElement("a");
+  a.href = url; a.target = "_blank"; a.rel = "noopener";
+  a.textContent = "Open prescription PDF";
+  statusEl.appendChild(a);
+}
+async function printDocument() {
+  if (state.printing || printBtn.disabled || state.documentId == null) return;
+  const id = state.documentId, gen = state.editGen, seq = state.sheetSeq;
+  const unchanged = () => state.documentId === id && !state.dirty && state.editGen === gen && state.sheetSeq === seq;
+  const CHANGED = "The sheet changed while preparing the print; press Print again.";
+  setPrinting(true);
+  clearError();
+  setStatus("Preparing document " + id + " for printing…");
+  let fallbackWhy = "";
+  try {
+    let r = null;
+    try {
+      r = await fetch("/api/v1/documents/" + encodeURIComponent(id) + "/pdf", { cache: "no-store" });
+    } catch (e) { fallbackWhy = shortReason(e); }
+    if (r && !r.ok) fallbackWhy = shortReason(null, r.status);
+    if (r && r.ok) {
+      const ct = (r.headers.get("Content-Type") || "").toLowerCase();
+      if (!ct.includes("application/pdf")) fallbackWhy = "the server did not return a PDF";
+      else {
+        const blob = await r.blob();
+        if (!unchanged()) { setStatus(CHANGED); return; }
+        const url = URL.createObjectURL(blob);
+        const how = await printBlob(url);
+        if (how === "blocked") showBlockedLink(url);
+        else setStatus(how === "iframe" ? "Printing document " + id + "…"
+          : "Opened document " + id + " in a new tab — press Print there.");
+        return;
+      }
+    }
+    if (!unchanged()) { setStatus(CHANGED); return; }
+    setStatus("The PDF could not be prepared (" + fallbackWhy + "), so the on-screen sheet was printed instead.");
+    window.print();
+  } catch (e) {
+    if (!unchanged()) { setStatus(CHANGED); return; }
+    setStatus("The PDF could not be prepared (" + shortReason(e) + "), so the on-screen sheet was printed instead.");
+    window.print();
+  } finally {
+    setPrinting(false);
+  }
+}
+printBtn.addEventListener("click", printDocument);
 $("retryBtn").addEventListener("click", retryLast);
 
 // ---- New patient -----------------------------------------------------------
 function newPatient() {
-  if (state.transcript && !window.confirm("Start a new patient? The current draft stays unsaved.")) return;
+  if (state.printing) return; // a print is being prepared for the current sheet
+  if (isUnsaved() && !window.confirm("Start a new patient? The current draft stays unsaved.")) return;
+  // Only past the confirm may state change: a cancel must be a perfect no-op.
+  state.sheetSeq++;
+  state.savedPatientName = null;
   clearUndo();
   state.structured = null;
   state.transcript = "";
   state.transcriptSha = "";
   state.engine = "";
-  state.saved = false;
+  state.dirty = false;
   state.documentId = null;
   state.retry = null;
   state.confirmed.clear();
@@ -1043,6 +1214,8 @@ function newPatient() {
   updateResaveNote();
   sheetEl.classList.add("empty");
   saveBtn.hidden = true;
+  printBtn.hidden = true;
+  refreshPrintButton();
   setText($("pName"), "");
   setText($("pAge"), "");
   setText($("pOp"), "");

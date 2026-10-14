@@ -346,6 +346,15 @@ def update_document(
     return cur.rowcount
 
 
+def set_document_pdf_path(conn, document_id, pdf_path) -> int:
+    """Record (or clear) a document's rendered PDF path; return rows changed."""
+    cur = conn.execute(
+        "UPDATE documents SET pdf_path = ? WHERE id = ?", (pdf_path, document_id)
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def get_document(conn, document_id):
     """Return the document row for ``document_id`` (or None)."""
     return conn.execute(

@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=3" />
-<link rel="stylesheet" href="letterhead.css?v=4" />
+<link rel="stylesheet" href="styles.css?v=6" />
+<link rel="stylesheet" href="letterhead.css?v=5" />
 </head>
 <body>
 <header class="topbar no-print">
@@ -21,7 +21,6 @@
     <span id="engineBadge" class="badge">loading…</span>
     <button id="newPatientBtn" type="button" title="Clear the screen and start a new patient">↺ New patient</button>
     <button id="profileOpenBtn" type="button" title="View or edit the clinic profile">⚙ Profile</button>
-    <button id="letterheadOpenBtn" type="button" title="Print prescriptions on your own letterhead">📄 Letterhead</button>
   </div>
 </header>
 
@@ -42,6 +41,7 @@
       <span id="timer" class="timer">00:00</span>
       <span id="wave" class="rec-dot" aria-hidden="true">● REC</span>
     </div>
+    <p id="correctingCue" class="correcting-cue no-print" role="status" hidden></p>
 
     <ol id="steps" class="steps" aria-label="Assistant status">
       <li class="step" data-step="listening"><span class="dot" aria-hidden="true"></span>Listening</li>
@@ -105,7 +105,7 @@
         <div class="disclaimer">AI draft — doctor must verify before signing. STT + LLM may mishear drug names.</div>
       </div>
     </section>
-    <button id="saveBtn" class="save no-print" type="button" hidden>💾 Save &amp; Print</button>
+    <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden>💾 Save</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button></div>
   </section>
 </div>
 
@@ -132,6 +132,12 @@
     <label class="field">Phone
       <input id="profPhone" type="tel" autocomplete="tel" />
     </label>
+    <section class="prof-lh" aria-labelledby="profLhTitle">
+      <h3 id="profLhTitle">Letterhead</h3>
+      <p id="profLhStatus" class="prof-lh-status" role="status" aria-live="polite">Checking your letterhead…</p>
+      <button id="profileLetterheadBtn" type="button" aria-describedby="profLhHint">Upload or manage letterhead…</button>
+      <p id="profLhHint" class="panel-hint" hidden>Save your profile changes first, then upload a letterhead.</p>
+    </section>
     <div id="profileStatus" class="panel-status" role="status" aria-live="polite"></div>
     <div class="panel-actions">
       <button id="profileCancelBtn" type="button">Cancel</button>
@@ -194,7 +200,7 @@
   </div>
 </dialog>
 
-<script src="app.js?v=13"></script>
-<script src="letterhead.js?v=4"></script>
+<script src="app.js?v=18"></script>
+<script src="letterhead.js?v=5"></script>
 </body>
 </html>

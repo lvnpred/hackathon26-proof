@@ -96,6 +96,8 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 
 /* --- document pane --------------------------------------------------------- */
 .doc-pane { min-width:0; }
+.correcting-cue { margin:8px 0 0; font-size:12px; font-weight:600; color:var(--accent); background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:6px 10px; text-align:center; overflow-wrap:anywhere; }
+.correcting-cue[hidden] { display:none; }
 .resave-note { font-size:12px; color:var(--accent); background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:6px 10px; margin-bottom:10px; }
 .profile-hint { font-size:12px; color:var(--muted); text-align:center; margin:2px 0 6px; }
 
@@ -155,6 +157,10 @@ table.rx th:last-child, table.rx td.del { width:34px; padding:2px; text-align:ce
 .save { display:block; margin:16px auto 0; background:var(--accent); color:#fff; border-color:var(--accent);
   font-weight:700; font-size:16px; padding:14px 34px; }
 .save[hidden] { display:none; }
+.save-row { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:16px; }
+.save-row .save { margin:0; flex:0 1 auto; }
+.save.print { background:#fff; color:var(--accent); }
+.save:disabled { opacity:.45; cursor:not-allowed; }
 
 /* --- settings panel (dialog) ----------------------------------------------- */
 dialog.panel { border:none; border-radius:var(--radius); padding:0; width:min(520px, 92vw); color:var(--ink); box-shadow:0 20px 60px rgba(15,23,42,.3); }

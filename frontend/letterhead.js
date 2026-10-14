@@ -47,10 +47,31 @@
     try {
       const r = await call(API + "/active");
       lh.active = r.status === 200; syncStop();
+      profileStatusLine(r.status === 200 ? "active" : r.status === 404 ? "builtin" : "unknown");
       status(r.status === 200 ? "Your own letterhead is active: prescriptions print on it."
         : r.status === 404 ? "Using the built-in layout (no letterhead is active)."
         : "Could not check the current letterhead (code " + r.status + ").");
-    } catch (e) { lh.active = false; syncStop(); status("Could not check the current letterhead. " + netMessage(e)); }
+    } catch (e) { lh.active = false; syncStop(); profileStatusLine("unknown"); status("Could not check the current letterhead. " + netMessage(e)); }
+  }
+  // ---- Profile dialog entry point (the Letterhead section of #profilePanel) ----
+  const PROF_IDS = { doctor_name: "profDoctor", qualifications: "profQual", reg_no: "profReg",
+    clinic_name: "profClinic", address: "profAddress", phone: "profPhone" };
+  const PROF_LINE = {
+    builtin: "Using the built-in layout. Your clinic details above print at the top of every prescription.",
+    active: "Your own letterhead is active: prescriptions print on it.",
+    unknown: "Could not check the current letterhead right now. You can still open the letterhead manager.",
+  };
+  function profileStatusLine(kind) { el("profLhStatus").textContent = PROF_LINE[kind]; }
+  // Dirty = any of the six inputs differs from the last loaded/saved profile (state.profile).
+  function profileDirty() {
+    const saved = (typeof state !== "undefined" && state.profile) || {};
+    return Object.keys(PROF_IDS).some((k) => el(PROF_IDS[k]).value !== (saved[k] || ""));
+  }
+  function syncProfileBtn() {
+    const dirty = profileDirty(), b = el("profileLetterheadBtn");
+    b.disabled = dirty || (typeof state !== "undefined" && state.working === true);
+    if (dirty) b.title = "Save your clinic profile first"; else b.removeAttribute("title");
+    el("profLhHint").hidden = !dirty;
   }
   function show(view) {
     el("lhUpload").hidden = view !== "upload";
@@ -167,6 +188,7 @@
       if (!r.ok) { showErr(httpMessage(r.status, "accept")); return; }
       lh.draft = null;
       if (typeof loadProfile === "function") await loadProfile();
+      syncProfileBtn();
       show("upload"); el("lhFile").value = "";
       el("lhDone").hidden = false;
       el("lhDone").textContent = "Done. Your letterhead is saved, and its clinic details were saved to your Profile and shown at the top of the page. New prescriptions print on it.";
@@ -192,6 +214,7 @@
       if (!r.ok) { showErr(httpMessage(r.status, "use-details")); return; }
       lh.draft = null;
       if (typeof loadProfile === "function") await loadProfile();
+      syncProfileBtn();
       el("lhFile").value = ""; show("upload");
       await refreshStatus();
       el("lhDone").hidden = false;
@@ -210,7 +233,15 @@
       el("lhDone").textContent = "Done. Prescriptions now print on the built-in layout with your clinic details.";
     } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
-  el("letterheadOpenBtn").addEventListener("click", openPanel);
+  el("profileLetterheadBtn").addEventListener("click", openPanel);
+  el("profileForm").addEventListener("input", syncProfileBtn);
+  // app.js's own click handler (bound earlier) has already filled the form when this runs.
+  el("profileOpenBtn").addEventListener("click", () => { syncProfileBtn(); refreshStatus(); });
+  el("lhPanel").addEventListener("close", () => {
+    syncProfileBtn();
+    const b = el("profileLetterheadBtn");
+    if (el("profilePanel").open && !b.disabled) b.focus();
+  });
   el("lhCloseBtn").addEventListener("click", closePanel);
   el("lhPanel").addEventListener("close", () => { if (lh.abort && !lh.draft) lh.abort.abort(); });
   el("lhStopBtn").addEventListener("click", stopUsing);

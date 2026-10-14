@@ -127,11 +127,29 @@ def edit(conn, template_id: int, profile: dict, lines: list, actor=None) -> dict
     return view(tdb.get_template(conn, template_id))
 
 
+def _merge_profile(existing: dict, details: dict) -> dict:
+    """Letterhead value wins when non-blank; a blank one keeps the existing Profile value."""
+    out = {}
+    for k in FIELDS:
+        new = details.get(k)
+        new = new.strip() if isinstance(new, str) else ""
+        out[k] = new or (existing.get(k) or "")
+    return out
+
+
+def _save_details(conn, layout_json: str) -> dict:
+    """Merge the draft's clinic details into the Profile (all six fields written); return what was saved."""
+    row = dbmod.get_profile(conn)
+    existing = {k: row[k] for k in FIELDS} if row is not None else {}
+    merged = _merge_profile(existing, json.loads(layout_json).get("profile", {}))
+    dbmod.save_profile(conn, **merged)
+    return merged
+
+
 def accept(conn, template_id: int, actor=None) -> dict:
     row = _draft(conn, template_id)
-    prof = json.loads(row["layout_json"]).get("profile", {})
     tdb.set_template_active(conn, template_id)
-    dbmod.save_profile(conn, **{k: prof.get(k, "") for k in FIELDS})
+    _save_details(conn, row["layout_json"])
     _unlink(original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_accept", entity="template",
                     entity_id=str(template_id), detail={"clinic": row["clinic"]})
@@ -144,6 +162,17 @@ def discard(conn, template_id: int, actor=None) -> None:
     _unlink(row["logo_path"], original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_discard", entity="template",
                     entity_id=str(template_id), detail={"clinic": row["clinic"]})
+
+
+def use_details(conn, template_id: int, actor=None) -> dict:
+    """Keep the built-in layout: save this draft's clinic details to the Profile, then discard the draft."""
+    row = _draft(conn, template_id)
+    saved = _save_details(conn, row["layout_json"])
+    tdb.delete_template(conn, template_id)
+    _unlink(row["logo_path"], original_path(template_id))
+    dbmod.log_audit(conn, actor=actor, action="template_use_details", entity="template",
+                    entity_id=str(template_id), detail={"clinic": row["clinic"]})
+    return {"profile": saved, "discarded": True}
 
 
 def get_active(conn) -> dict | None:

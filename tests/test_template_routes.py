@@ -210,3 +210,24 @@ def test_purge_failure_does_not_stop_startup_or_fail_requests(tmp_path, monkeypa
     monkeypatch.setattr(service, "purge_expired", boom)
     with TestClient(create_app()) as c:  # startup purge raises: app must still boot
         assert c.get(URL + "/active").status_code == 404  # per-request purge raises: still not a 500
+
+
+def test_use_details_route_saves_profile_and_discards_draft(tclient):
+    tid = _post(tclient).json()["id"]
+    tclient.put(f"{URL}/{tid}", json={"profile": {"doctor_name": "Dr Edited"}})
+    r = tclient.post(f"{URL}/{tid}/use-details")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["discarded"] is True and body["profile"] == {**PROFILE, "doctor_name": "Dr Edited"}
+    assert tclient.get("/api/v1/profile").json() == body["profile"]
+    assert tclient.get(URL + "/active").status_code == 404
+    assert tclient.post(f"{URL}/{tid}/use-details").status_code == 404
+
+
+def test_use_details_route_409_on_active_and_keeps_it_active(tclient):
+    tid = _post(tclient).json()["id"]
+    tclient.post(f"{URL}/{tid}/accept")
+    assert tclient.post(f"{URL}/{tid}/use-details").status_code == 409
+    other = _post(tclient).json()["id"]
+    assert tclient.post(f"{URL}/{other}/use-details").status_code == 200
+    assert tclient.get(URL + "/active").json()["id"] == tid

@@ -144,3 +144,13 @@ def test_save_after_deactivate_route_uses_builtin_layout(tclient, monkeypatch): 
     assert tclient.post("/api/v1/templates/deactivate").json() == {"deactivated": True}
     r = tclient.post("/api/v1/documents", json={**SAVE, "transcript_sha256": "sha-b"})
     assert r.status_code == 200 and seen["layout"] is None and _doc_pdf(r)
+
+
+def test_save_after_use_details_uses_builtin_layout_with_new_profile_header(tclient, monkeypatch):
+    seen = _capture(monkeypatch)
+    tid = tclient.post("/api/v1/templates", files={"image": ("p.jpg", make_jpeg(), "image/jpeg")}).json()["id"]
+    r = tclient.post(f"/api/v1/templates/{tid}/use-details")
+    assert r.status_code == 200
+    assert tclient.post("/api/v1/documents", json=SAVE).status_code == 200
+    assert seen["layout"] is None and seen["meta"]["profile"]["clinic_name"] == "Meridian Clinic"
+    assert seen["meta"]["profile"]["doctor_name"] == "Dr A. Rao"

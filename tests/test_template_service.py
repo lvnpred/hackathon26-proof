@@ -174,3 +174,84 @@ def test_at_most_two_image_decodes_run_at_once(tconn, monkeypatch):
         await asyncio.gather(*(service.upload(tconn, make_jpeg(), get_settings()) for _ in range(5)))
     asyncio.run(burst())
     assert state["peak"] == 2
+
+
+# ---- letterhead details -> Profile (merge rule, use-details) ----
+_OLD = {"doctor_name": "Old Doc", "qualifications": "Old Qual", "reg_no": "OLD-1",
+        "clinic_name": "Old Clinic", "address": "Old Address", "phone": "999 000 1111"}
+
+
+def _blank_layout(monkeypatch, **blank):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["profile"].update({k: "" for k in blank})
+    lay["profile"]["qualifications"] = "   "          # whitespace-only counts as blank
+    monkeypatch.setenv("STUB_LLM_JSON", json.dumps(lay))
+
+
+def _profile(conn):
+    row = dbmod.get_profile(conn)
+    return {k: row[k] for k in _OLD}
+
+
+def test_merge_profile_blank_keeps_existing_nonblank_wins():
+    out = service._merge_profile(_OLD, {"doctor_name": " New ", "qualifications": "  ", "phone": ""})
+    assert out["doctor_name"] == "New" and out["qualifications"] == "Old Qual" and out["phone"] == "999 000 1111"
+    assert out["reg_no"] == "OLD-1" and set(out) == set(_OLD)
+    assert service._merge_profile({}, {"doctor_name": "X"})["phone"] == ""
+
+
+def test_accept_keeps_existing_profile_values_for_blank_letterhead_fields(tconn, monkeypatch):
+    dbmod.save_profile(tconn, **_OLD)
+    _blank_layout(monkeypatch, phone=1, reg_no=1)
+    service.accept(tconn, _up(tconn)["id"])
+    p = _profile(tconn)
+    assert p["phone"] == "999 000 1111" and p["reg_no"] == "OLD-1" and p["qualifications"] == "Old Qual"
+    assert p["doctor_name"] == "Dr A. Rao" and p["clinic_name"] == "Meridian Clinic"
+    assert p["address"] == "12 MG Road, Hyderabad"
+
+
+def test_use_details_saves_profile_deletes_draft_and_files_and_audits(tconn):
+    v = _up(tconn)
+    logo = service.templates_dir() / f"{v['id']}_logo.jpg"
+    out = service.use_details(tconn, v["id"], actor="demo")
+    assert out["discarded"] is True and out["profile"]["clinic_name"] == "Meridian Clinic"
+    assert _profile(tconn)["doctor_name"] == "Dr A. Rao"
+    assert tdb.get_template(tconn, v["id"]) is None
+    assert not service.original_path(v["id"]).exists() and not logo.exists()
+    row = tconn.execute("SELECT * FROM audit_log WHERE action = 'template_use_details'").fetchone()
+    assert row["actor"] == "demo" and row["entity"] == "template" and row["entity_id"] == str(v["id"])
+    assert json.loads(row["detail"]) == {"clinic": "default"}
+
+
+def test_use_details_merges_blanks_with_existing_profile(tconn, monkeypatch):
+    dbmod.save_profile(tconn, **_OLD)
+    _blank_layout(monkeypatch, phone=1)
+    out = service.use_details(tconn, _up(tconn)["id"])
+    assert out["profile"]["phone"] == "999 000 1111" and out["profile"]["doctor_name"] == "Dr A. Rao"
+
+
+def test_use_details_saves_the_edited_value(tconn):
+    v = _up(tconn)
+    service.edit(tconn, v["id"], {"doctor_name": "Dr Edited"}, [])
+    assert service.use_details(tconn, v["id"])["profile"]["doctor_name"] == "Dr Edited"
+    assert _profile(tconn)["doctor_name"] == "Dr Edited"
+
+
+def test_use_details_leaves_active_template_active(tconn):
+    active = _up(tconn)
+    service.accept(tconn, active["id"])
+    draft = _up(tconn)
+    service.use_details(tconn, draft["id"])
+    assert tdb.get_template(tconn, active["id"])["status"] == "active"
+    assert service.get_active(tconn)["id"] == active["id"]
+
+
+def test_use_details_404_and_409(tconn):
+    with pytest.raises(TemplateError) as e:
+        service.use_details(tconn, 999)
+    assert e.value.status == 404
+    v = _up(tconn)
+    service.accept(tconn, v["id"])
+    with pytest.raises(TemplateError) as e2:
+        service.use_details(tconn, v["id"])
+    assert e2.value.status == 409

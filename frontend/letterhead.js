@@ -169,7 +169,7 @@
       if (typeof loadProfile === "function") await loadProfile();
       show("upload"); el("lhFile").value = "";
       el("lhDone").hidden = false;
-      el("lhDone").textContent = "Done. Your letterhead is saved and the clinic details at the top of the page have been updated. New prescriptions print on it.";
+      el("lhDone").textContent = "Done. Your letterhead is saved, and its clinic details were saved to your Profile and shown at the top of the page. New prescriptions print on it.";
       refreshStatus();
     } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
@@ -182,6 +182,21 @@
       refreshStatus();
       if (thenUpload) { setBusy(false); el("lhFile").focus(); }  // a disabled input cannot take focus
       else { el("lhDone").hidden = false; el("lhDone").textContent = "The draft was discarded. Nothing about your prescriptions changed."; }
+    } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
+  }
+  async function useDetails() {
+    showErr(""); setBusy(true, "Saving your clinic details…");
+    try {
+      if (!(await saveEdits())) return;
+      const r = await call(API + "/" + lh.draft.id + "/use-details", { method: "POST" });
+      if (!r.ok) { showErr(httpMessage(r.status, "use-details")); return; }
+      lh.draft = null;
+      if (typeof loadProfile === "function") await loadProfile();
+      el("lhFile").value = ""; show("upload");
+      await refreshStatus();
+      el("lhDone").hidden = false;
+      el("lhDone").textContent = "Your clinic details were saved to your Profile. " +
+        (lh.active ? "Your accepted letterhead stays active." : "The built-in layout stays in use.");
     } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
   async function stopUsing() {
@@ -203,5 +218,5 @@
   el("lhUpdateBtn").addEventListener("click", updatePreview);
   el("lhAcceptBtn").addEventListener("click", accept);
   el("lhReuploadBtn").addEventListener("click", () => discard(true));
-  el("lhBuiltinBtn").addEventListener("click", () => discard(false));
+  el("lhBuiltinBtn").addEventListener("click", useDetails);
 })();

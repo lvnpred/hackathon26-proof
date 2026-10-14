@@ -348,7 +348,7 @@ async function beginRecording() {
   }
   // No sheet yet -> first dictation. A sheet exists -> the mic is a correction.
   // After a save the next dictation is a fresh encounter, not a correction.
-  state.pendingMode = (state.structured && !state.saved) ? "correct" : "dictate";
+  state.pendingMode = canCorrect() ? "correct" : "dictate";
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => { stopStream(stream); onRecordingStop(); };
   mr.start();
@@ -374,7 +374,14 @@ function endRecordingUI() {
   refreshMicLabel();
 }
 function setMicLabel(t) { const l = recBtn.querySelector(".mic-label"); if (l) l.textContent = t; }
-function refreshMicLabel() { setMicLabel((state.structured && !state.saved) ? "Dictate correction" : "Start dictation"); }
+// The mic follows the visible sheet: a sheet that is unsaved, or tied to a saved
+// document (just saved, or opened from Today), takes corrections that re-save in
+// place. Only "New patient" (no sheet, no document) makes a dictation a fresh visit.
+function canCorrect() { return !!state.structured && (!state.saved || state.documentId != null); }
+// Any change to the sheet after a save leaves that change unsaved (guards in
+// openDocument/newPatient protect it); a successful save sets saved again.
+function markDirty() { if (state.saved) state.saved = false; }
+function refreshMicLabel() { setMicLabel(canCorrect() ? "Dictate correction" : "Start dictation"); }
 
 async function onRecordingStop() {
   const mode = state.pendingMode;
@@ -493,6 +500,7 @@ async function applyCorrection(transcript) {
   try {
     const j = await postJson("/api/v1/correct", { transcript, current_form: current }, CORRECT_TIMEOUT_MS);
     state.structured = j.structured || current;
+    markDirty();
     // A correction re-grounds rows, so prior confirmations are no longer trusted.
     state.retry = null;
     state.confirmed.clear();
@@ -694,6 +702,7 @@ function deleteRow(tr) {
   renumberRx();
   updateGrounding();
   if (!blockPanel.hidden) refreshBlockPanel();
+  markDirty();
   setUndo(rec, "Deleted medicine row " + (pos + 1) + ".");
 }
 function deleteItem(li) {
@@ -702,6 +711,7 @@ function deleteItem(li) {
   const rec = { type: "item", ulId: ul.id, pos: lis.indexOf(li), txt: liText(li) };
   li.remove();
   if (!ul.children.length) ul.appendChild(makeLi(""));
+  markDirty();
   setUndo(rec, "Deleted item.");
 }
 function undoDelete() {
@@ -730,6 +740,7 @@ function undoDelete() {
     ul.insertBefore(li, only ? null : (lis[r.pos] || null));
     focusEl = li.querySelector(".x-btn");
   }
+  markDirty();
   showUndo();
   if (focusEl) focusEl.focus();
 }
@@ -887,6 +898,7 @@ function updateGrounding() {
 
 // ---- inline-edit invalidation (Review Focus #2) ----------------------------
 sheetEl.addEventListener("input", (e) => {
+  markDirty();
   const tr = e.target && e.target.closest ? e.target.closest("tr[data-index]") : null;
   if (!tr) return;
   // Any hand-edit of an Rx cell clears verification AND any confirmation, so a
@@ -989,7 +1001,8 @@ async function saveAndPrint() {
     refreshMicLabel();
     loadToday();
     window.print();
-    setStatus(verb + " — document " + j.document_id + ". Press “New patient” before the next visit.");
+    setStatus(verb + " — document " + j.document_id + ". Need a change? Edit the sheet or dictate a correction, " +
+      "then Save & Print again to update this document. Press “New patient” before the next visit.");
   } catch (e) {
     setWorking(false);
     if (e && e.status === 409 && e.data && Array.isArray(e.data.block)) {

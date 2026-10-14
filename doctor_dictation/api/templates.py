@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from doctor_dictation import db as dbmod
+from doctor_dictation.api.profile import profile_dict
 from doctor_dictation.config import get_settings
 from doctor_dictation.db import templates as tdb
 from doctor_dictation.pdf import PdfUnavailable, render_prescription, validate_layout
@@ -132,6 +133,18 @@ def accept_template(template_id: int, request: Request):
     conn = _open()
     try:
         return service.accept(conn, template_id, actor=_actor(request))
+    except TemplateError as exc:
+        return _err(exc)
+    finally:
+        conn.close()
+
+
+@router.post("/{template_id}/use-details")
+def use_template_details(template_id: int, request: Request):
+    conn = _open()
+    try:
+        out = service.use_details(conn, template_id, actor=_actor(request))
+        return {"profile": profile_dict(dbmod.get_profile(conn)), "discarded": out["discarded"]}
     except TemplateError as exc:
         return _err(exc)
     finally:

@@ -1,0 +1,32 @@
+# HTTPS reverse proxy. SITE_ADDRESS comes from the env file; "localhost" gives a local self-signed cert.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>headers>Authorization delete
+				request>headers>Cookie delete
+				resp_headers>Set-Cookie delete
+			}
+		}
+	}
+	# Limit sits just above MAX_AUDIO_BYTES (10 MiB) and TEMPLATE_MAX_IMAGE_BYTES (8 MiB), so the
+	# app explains the normal "too large" case. Raise UPLOAD_LIMIT if you raise either setting.
+	@uploads path /api/transcribe /api/v1/templates
+	request_body @uploads {
+		max_size {$UPLOAD_LIMIT:11MiB}
+	}
+	@json not path /api/transcribe /api/v1/templates
+	request_body @json {
+		max_size 1MiB
+	}
+	reverse_proxy app:8000 {
+		# /api/format may wait 60 s for the LLM; the proxy gives up at 90 s.
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 90s
+		}
+	}
+}

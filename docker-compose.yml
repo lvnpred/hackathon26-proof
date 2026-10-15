@@ -1,0 +1,43 @@
+# App + Caddy (HTTPS proxy) on any Docker or Podman host with a domain; ports 80 and 443 must be public there.
+# Runbook: docs/deploy/runbook.md. Always pass the env file:
+#   podman compose --env-file .env.production up -d --build   (or: docker compose ...)
+name: doctor-dictation            # fixes the volume name: doctor-dictation_data
+services:
+  app:
+    build: .
+    image: doctor-dictation:${APP_TAG:-local}
+    env_file: ${APP_ENV_FILE:-.env.production}
+    volumes:
+      - data:/data                   # the only state (directory.db and clinics/<slug>/); back it up
+    ports:
+      - "127.0.0.1:${APP_LOCAL_PORT:-8000}:8000"   # loopback only: local checks and the load test
+    healthcheck:                     # declared here too: Podman's default OCI image format drops the Dockerfile one
+      test: ["CMD", "python", "-c", "import os,urllib.request as u; u.urlopen('http://127.0.0.1:%s/health' % os.environ['PORT'], timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    # mem_limit: 2g    # uncomment on a small host so Chromium cannot starve it
+  caddy:
+    image: docker.io/library/caddy:2
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in the env file}
+      UPLOAD_LIMIT: ${UPLOAD_LIMIT:-11MiB}
+    ports:
+      # Rootless Podman cannot bind below 1024 by default: set HTTP_PORT=8080 and HTTPS_PORT=8443 for local tests.
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data             # certificates; losing it means re-issuing them
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  data:
+  caddy_data:
+  caddy_config:

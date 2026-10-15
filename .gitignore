@@ -7,6 +7,7 @@ venv/
 .env
 .env.*
 !.env.example
+!.env.production.example
 doctor_dictation/secrets.json
 
 # Python

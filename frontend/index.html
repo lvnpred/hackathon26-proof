@@ -4,8 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=6" />
-<link rel="stylesheet" href="letterhead.css?v=5" />
+<link rel="stylesheet" href="styles.css?v=7" />
+<link rel="stylesheet" href="letterhead.css?v=7" />
+<link rel="stylesheet" href="team.css?v=1" />
 </head>
 <body>
 <header class="topbar no-print">
@@ -21,6 +22,7 @@
     <span id="engineBadge" class="badge">loading…</span>
     <button id="newPatientBtn" type="button" title="Clear the screen and start a new patient">↺ New patient</button>
     <button id="profileOpenBtn" type="button" title="View or edit the clinic profile">⚙ Profile</button>
+    <button id="teamOpenBtn" type="button" hidden title="Your clinic's users: add a colleague, disable an account, reset a password">Team</button>
     <button id="signOutBtn" type="button" hidden title="Sign out">Sign out</button>
   </div>
 </header>
@@ -29,6 +31,10 @@
   <!-- Left: the patients completed today. Clicking one reopens its document. -->
   <aside id="today" class="sidebar no-print" aria-label="Patients completed today">
     <h2 class="pane-title">Today</h2>
+    <div id="todayScope" class="today-scope" role="group" aria-label="Which prescriptions to show" hidden>
+      <button type="button" data-scope="mine" aria-pressed="true">My prescriptions</button>
+      <button type="button" data-scope="clinic" aria-pressed="false">Whole clinic</button>
+    </div>
     <div id="todayList" class="today-list"></div>
   </aside>
 
@@ -71,6 +77,7 @@
 
   <!-- Right: the prescription document. Only #sheet prints. -->
   <section class="doc-pane" aria-label="Prescription document">
+    <div id="viewOnlyBanner" class="view-only-banner no-print" role="status" hidden></div>
     <div id="resaveNote" class="resave-note no-print" hidden></div>
     <section id="sheet" class="empty">
       <div class="clinic-head" id="clinicHead">
@@ -113,29 +120,42 @@
 <!-- Clinic-profile settings panel (view/edit; printed on every prescription). -->
 <dialog id="profilePanel" class="panel no-print" aria-labelledby="profilePanelTitle">
   <form id="profileForm">
-    <h2 id="profilePanelTitle">Clinic profile</h2>
+    <h2 id="profilePanelTitle">Profile</h2>
     <p class="panel-hint">These details print at the top of every prescription.</p>
-    <label class="field">Doctor name
-      <input id="profDoctor" type="text" autocomplete="name" />
+    <fieldset id="profClinicPart" class="prof-part">
+      <legend>Clinic details</legend>
+      <p class="panel-hint">Shared by everyone in this clinic.</p>
+      <label class="field">Clinic name
+        <input id="profClinic" type="text" autocomplete="organization" />
+      </label>
+      <label class="field">Address
+        <textarea id="profAddress" rows="2"></textarea>
+      </label>
+      <label class="field">Phone
+        <input id="profPhone" type="tel" autocomplete="tel" />
+      </label>
+    <label class="field">OP number prefix (2 to 6 letters or digits, for example RAO)
+      <input id="profOpPrefix" type="text" maxlength="6" pattern="[A-Za-z0-9]{2,6}" autocapitalize="characters" spellcheck="false" />
     </label>
-    <label class="field">Qualifications
-      <input id="profQual" type="text" />
-    </label>
-    <label class="field">Registration no.
-      <input id="profReg" type="text" />
-    </label>
-    <label class="field">Clinic name
-      <input id="profClinic" type="text" autocomplete="organization" />
-    </label>
-    <label class="field">Address
-      <textarea id="profAddress" rows="2"></textarea>
-    </label>
-    <label class="field">Phone
-      <input id="profPhone" type="tel" autocomplete="tel" />
-    </label>
+    </fieldset>
+    <fieldset id="profMinePart" class="prof-part">
+      <legend>My details</legend>
+      <p class="panel-hint">Yours only: they print on the prescriptions you write.</p>
+      <label class="field">Doctor name
+        <input id="profDoctor" type="text" autocomplete="name" />
+      </label>
+      <label class="field">Qualifications
+        <input id="profQual" type="text" />
+      </label>
+      <label class="field">Registration no.
+        <input id="profReg" type="text" />
+      </label>
+    </fieldset>
     <section class="prof-lh" aria-labelledby="profLhTitle">
       <h3 id="profLhTitle">Letterhead</h3>
       <p id="profLhStatus" class="prof-lh-status" role="status" aria-live="polite">Checking your letterhead…</p>
+      <p id="profLhMine" class="prof-lh-status" hidden></p>
+      <button id="profUseClinicBtn" type="button" hidden>Use the clinic letterhead</button>
       <button id="profileLetterheadBtn" type="button" aria-describedby="profLhHint">Upload or manage letterhead…</button>
       <p id="profLhHint" class="panel-hint" hidden>Save your profile changes first, then upload a letterhead.</p>
     </section>
@@ -186,6 +206,19 @@
           </div>
           <div class="lh-form-col">
             <div id="lhLinesBox"><h3>Text lines on the pad</h3><div id="lhLines"></div></div>
+            <fieldset id="lhDoctorsBox" class="lh-choice" hidden>
+              <legend>Doctors this letterhead lists</legend>
+              <p id="lhHints" class="panel-hint" hidden></p>
+              <label><input type="radio" name="lhDoctorsMode" value="author" checked /> Only the doctor who writes the prescription</label>
+              <label><input type="radio" name="lhDoctorsMode" value="all" /> All doctors of the clinic</label>
+              <label><input type="radio" name="lhDoctorsMode" value="selected" /> Only these doctors:</label>
+              <div id="lhDoctorPicks" class="lh-picks" hidden></div>
+            </fieldset>
+            <fieldset id="lhScopeBox" class="lh-choice" hidden>
+              <legend>Who prints on this letterhead</legend>
+              <label><input type="radio" name="lhScope" value="clinic" checked /> For the whole clinic</label>
+              <label><input type="radio" name="lhScope" value="mine" /> For my prescriptions only</label>
+            </fieldset>
             <h3>Clinic details</h3>
             <div id="lhProfileFields"></div>
           </div>
@@ -201,8 +234,10 @@
   </div>
 </dialog>
 
-<script src="auth.js?v=1"></script>
-<script src="app.js?v=18"></script>
-<script src="letterhead.js?v=5"></script>
+<script src="auth.js?v=2"></script>
+<script src="authorship.js?v=2"></script>
+<script src="app.js?v=21"></script>
+<script src="letterhead.js?v=7"></script>
+<script src="team.js?v=1"></script>
 </body>
 </html>

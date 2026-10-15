@@ -60,3 +60,12 @@ def get_clinic(conn, slug):
 def list_clinics(conn, active_only=False) -> list:
     sql = "SELECT * FROM clinics" + (" WHERE status = 'active'" if active_only else "") + " ORDER BY slug"
     return conn.execute(sql).fetchall()
+
+
+def set_clinic_op_prefix(conn, slug, op_prefix) -> bool:
+    """Change a clinic's OP prefix (the record; the clinic database keeps a copy). True when the clinic exists."""
+    if not isinstance(op_prefix, str) or PREFIX_RE.fullmatch(op_prefix) is None:
+        raise DirectoryError("OP prefix must be 2-6 uppercase letters or digits")
+    cur = conn.execute("UPDATE clinics SET op_prefix = ? WHERE slug = ?", (op_prefix, slug))
+    conn.commit()
+    return cur.rowcount == 1

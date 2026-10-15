@@ -85,7 +85,8 @@ def test_connection_pragmas(conn):
 def test_init_db_idempotent(tmp_path):
     path = tmp_path / "idem.db"
     first = dbmod.init_db(path)
-    assert first == ["001_init.sql", "002_document_pdf.sql", "003_clinic_profile.sql", "004_templates.sql", "005_users_profile.sql"]
+    assert first == ["001_init.sql", "002_document_pdf.sql", "003_clinic_profile.sql", "004_templates.sql", "005_users_profile.sql",
+                     "006_doctor_details_to_users.sql", "007_templates_scope.sql", "008_clinic_profile_prefix.sql"]
     # Second run is a no-op: nothing new applied, version row not duplicated.
     second = dbmod.init_db(path)
     assert second == []
@@ -94,7 +95,7 @@ def test_init_db_idempotent(tmp_path):
         n = c.execute("SELECT COUNT(*) AS n FROM schema_migrations").fetchone()["n"]
     finally:
         c.close()
-    assert n == 5
+    assert n == 8
 
 
 def test_migration_adds_pdf_path(conn):

@@ -5,15 +5,16 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation import db as dbmod
-from doctor_dictation.api.profile import profile_dict
+from doctor_dictation.api import authorship
 from doctor_dictation.core.correction import preserve_untouched_rx_status
 from doctor_dictation.core.determinism import validate_structured
 from doctor_dictation.core.safety import screen_unverified
+from doctor_dictation.db import authorship as adb
 from doctor_dictation.db.opno import create_patient_with_new_op
 from doctor_dictation.pdf import PdfUnavailable, render_prescription
 from doctor_dictation.templates import service as template_service
@@ -66,14 +67,16 @@ def list_encounters(patient_id: int | None = None, limit: int = 100, offset: int
 
 
 @router.post("/api/v1/encounters", status_code=201)
-def create_encounter(req: EncounterCreate):
+def create_encounter(req: EncounterCreate, request: Request):
+    """Signed in, the encounter is the signed-in doctor's: a body ``doctor_id`` is ignored."""
+    ident = authorship.identity(request)
     conn = dbmod.get_conn()
     try:
         try:
             eid = dbmod.create_encounter(
                 conn,
                 req.patient_id,
-                doctor_id=req.doctor_id,
+                doctor_id=ident.user_id if ident else req.doctor_id,
                 op_no=req.op_no,
                 status=req.status,
                 consent_at=req.consent_at,
@@ -89,13 +92,21 @@ def create_encounter(req: EncounterCreate):
 
 
 @router.get("/api/v1/encounters/today")
-def list_today_encounters():
-    """Saved documents for the server-local calendar day (the "Today" sidebar)."""
+def list_today_encounters(request: Request, scope: str = "mine"):
+    """Saved documents for the server-local calendar day (the "Today" sidebar).
+
+    Signed in: ``scope=mine`` (default) keeps the signed-in doctor's prescriptions, ``scope=clinic`` the whole
+    clinic; rows gain ``author_id`` and ``doctor_name``. Single-database mode: every row, in the old shape (``scope`` is ignored).
+    """
+    ident = authorship.identity(request)
+    if ident is not None and scope not in ("mine", "clinic"):
+        return JSONResponse(status_code=400, content={"error": "scope must be mine or clinic"})
     conn = dbmod.get_conn()
     try:
         start, end = dbmod.local_day_bounds_utc()
-        rows = dbmod.list_documents_between(conn, start, end)
-        return [dict(r) for r in rows]
+        if ident is None:
+            return [dict(r) for r in dbmod.list_documents_between(conn, start, end)]
+        return adb.list_today(conn, start, end, ident.user_id if scope == "mine" else None)
     finally:
         conn.close()
 
@@ -108,10 +119,11 @@ class DocumentCreate(BaseModel):
     document_id: int | None = None
 
 
-def _pdf_inputs(conn, structured, day):
+def _pdf_inputs(conn, structured, day, encounter_id):
     """Render meta + layout for a document: the ONE place save and re-print share.
 
-    The clinic's active letterhead template supplies layout and logo; any
+    ``meta["profile"]`` carries the clinic's fields and the AUTHOR's doctor fields (never the viewer's).
+    The author's own active letterhead, else the clinic's, supplies layout, logo and the doctors list; any
     template problem (corrupt row, missing logo, bad layout) drops to the plain
     profile header (``layout`` None, no logo).
     """
@@ -119,11 +131,16 @@ def _pdf_inputs(conn, structured, day):
         "date": day.isoformat(),
         "opNo": structured.get("opNo") or "",
         "patientName": structured.get("patientName") or "",
-        "profile": profile_dict(dbmod.get_profile(conn)),
+        "profile": adb.print_profile(conn, encounter_id),
     }
     layout = None
     try:
-        layout, logo_path = template_service.active_layout_for_save(conn)
+        author_id = adb.encounter_author_id(conn, encounter_id)                          # never the viewer
+        meta["authored"] = author_id is not None        # an author's blank doctor field stays blank, never the pad's
+        row = template_service.active_row_for(conn, author_id)        # ONE lookup: layout and doctors from the same row
+        layout, logo_path = template_service.active_layout_for_save(conn, author_id, row)   # the author's own, else the clinic's
+        if layout is not None:
+            meta["doctors"] = template_service.print_doctors(conn, author_id, row)          # None = the author
         if layout is not None and logo_path:
             logo = template_service.logo_data_uri(logo_path)
             if logo:
@@ -132,6 +149,7 @@ def _pdf_inputs(conn, structured, day):
         log.warning("active template unusable; saving with the plain header", exc_info=True)
         layout = None
         meta.pop("logo", None)
+        meta.pop("doctors", None)
     return meta, layout
 
 
@@ -150,7 +168,7 @@ def _render_with_fallback(structured, meta, layout, out_path):
 
 
 @router.post("/api/v1/documents")
-def create_document(req: DocumentCreate):
+def create_document(req: DocumentCreate, request: Request):
     """Save & Print: enforce the verify gate, then persist encounter/document/audit.
 
     The gate blocks while any Rx row is not ``verified`` and the doctor did not
@@ -162,7 +180,16 @@ def create_document(req: DocumentCreate):
     runs first, then that existing document row is updated in place (no
     duplicate), reusing its encounter and that encounter's patient. The patient
     is not upserted from the payload on this path.
+
+    Signed in: the first save records the saver as author (``encounters.doctor_id``) and saver
+    (``documents.finalized_by``); a re-save needs ``document.edit`` (only the author; 403 otherwise),
+    keeps the author and records the new saver.
     """
+    ident = authorship.identity(request)
+    if req.document_id is not None:
+        denied = authorship.check_document(request, "document.edit", req.document_id)
+        if denied is not None:
+            return denied
     structured = req.structured if isinstance(req.structured, dict) else {}
     block = screen_unverified(structured, req.confirmed_rows)
     if block:
@@ -213,6 +240,7 @@ def create_document(req: DocumentCreate):
             encounter_id = dbmod.create_encounter(
                 conn,
                 patient_id,
+                doctor_id=ident.user_id if ident else None,
                 op_no=validated.get("opNo") or None,
                 status="finalized",
             )
@@ -222,7 +250,7 @@ def create_document(req: DocumentCreate):
         # browser print-to-PDF.
         pdf_path = None
         out_path = dbmod.pdf_dir() / f"encounter_{encounter_id}.pdf"
-        meta, layout = _pdf_inputs(conn, validated, datetime.now().astimezone().date())  # server-local day, same as the OP number
+        meta, layout = _pdf_inputs(conn, validated, datetime.now().astimezone().date(), encounter_id)  # server-local day, same as the OP number
         try:
             pdf_path = str(_render_with_fallback(validated, meta, layout, out_path))
         except Exception:
@@ -243,6 +271,8 @@ def create_document(req: DocumentCreate):
                     content={"error": f"document_id {req.document_id} not found"},
                 )
             document_id = req.document_id
+            if ident is not None:
+                adb.set_finalized_by(conn, document_id, ident.user_id)
             action = "resave"
         else:
             document_id = dbmod.save_document(
@@ -251,6 +281,7 @@ def create_document(req: DocumentCreate):
                 req.transcript_sha256,
                 validated,
                 engine=req.engine or None,
+                finalized_by=ident.user_id if ident else None,
                 finalized_at=dbmod._utcnow(),
                 pdf_path=pdf_path,
             )
@@ -282,8 +313,12 @@ def _record_op_no(conn, encounter_id) -> str:
 
 
 @router.get("/api/v1/documents/{document_id}")
-def get_document(document_id: int):
-    """Load a saved document back onto the sheet (re-open / re-print)."""
+def get_document(document_id: int, request: Request):
+    """Load a saved document back onto the sheet (re-open / re-print).
+
+    Any user of the clinic may view (``document.view``). Signed in, the answer adds ``author`` (who wrote it,
+    with the doctor fields it prints) and ``can_edit``, so the sheet opens read-only for a colleague's.
+    """
     conn = dbmod.get_conn()
     try:
         row = dbmod.get_document(conn, document_id)
@@ -292,6 +327,9 @@ def get_document(document_id: int):
                 status_code=404,
                 content={"error": f"document_id {document_id} not found"},
             )
+        denied = authorship.check(conn, request, "document.view", document_id)
+        if denied is not None:
+            return denied
         return {
             "document_id": row["id"],
             "structured": json.loads(row["structured_json"])
@@ -300,6 +338,7 @@ def get_document(document_id: int):
             "engine": row["engine"] or "",
             "transcript_sha256": row["transcript_sha"],
             "created_at": row["created_at"],
+            **authorship.author_view(conn, request, document_id),
         }
     finally:
         conn.close()
@@ -330,8 +369,11 @@ def _pdf_response(path, document_id):
 
 
 @router.get("/api/v1/documents/{document_id}/pdf")
-def get_document_pdf(document_id: int):
-    """The saved document as a PDF: the stored file, else rendered on demand."""
+def get_document_pdf(document_id: int, request: Request):
+    """The saved document as a PDF: the stored file, else rendered on demand.
+
+    Any user of the clinic may reprint (``document.reprint``); the doctor fields are the author's.
+    """
     conn = dbmod.get_conn()
     try:
         row = dbmod.get_document(conn, document_id)
@@ -340,14 +382,17 @@ def get_document_pdf(document_id: int):
                 status_code=404,
                 content={"error": f"document_id {document_id} not found"},
             )
+        denied = authorship.check(conn, request, "document.reprint", document_id)
+        if denied is not None:
+            return denied
         stored = _stored_pdf(row)
         if stored is not None:
             return _pdf_response(stored, document_id)
         try:
             structured = json.loads(row["structured_json"]) if row["structured_json"] else {}
             created = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
-            meta, layout = _pdf_inputs(conn, structured, created.astimezone().date())
             encounter_id = row["encounter_id"]
+            meta, layout = _pdf_inputs(conn, structured, created.astimezone().date(), encounter_id)
         except Exception:
             log.warning("cannot prepare on-demand PDF", exc_info=True)
             return _pdf_unavailable()

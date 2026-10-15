@@ -117,7 +117,7 @@ def test_save_ok_with_no_pdf_when_renderer_always_fails(tclient, monkeypatch):
 def test_save_ok_when_template_lookup_raises(tclient, monkeypatch):
     seen = _capture(monkeypatch)
 
-    def boom(conn):
+    def boom(*a, **k):
         raise RuntimeError("db unreadable")
     monkeypatch.setattr("doctor_dictation.templates.service.active_layout_for_save", boom)
     r = tclient.post("/api/v1/documents", json=SAVE)

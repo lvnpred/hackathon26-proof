@@ -1,6 +1,7 @@
 """Auth routes: login, logout, me, change-password, and the login page. 404 when MULTI_CLINIC is off."""
 import asyncio
 import sqlite3
+import time
 from contextlib import closing
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from pydantic import BaseModel, Field
 
 from doctor_dictation import accounts, authn
 from doctor_dictation import db as dbmod
+from doctor_dictation.directory import open_directory
+from doctor_dictation.directory.revocations import revoke_session
 from doctor_dictation.passwords import PasswordError
 from doctor_dictation.scope import multi_clinic_enabled
 from doctor_dictation.sessions import COOKIE_NAME, LIFETIME_SECONDS, sign
@@ -72,11 +75,21 @@ async def logout(request: Request):
     if not multi_clinic_enabled():
         return JSONResponse(status_code=404, content=OFF)
     ident = request.state.identity
+    if not ident.sid:
+        raise RuntimeError("identity without a session id")       # load_identity always sets it; never skip the revocation
+
+    def _revoke():
+        with closing(open_directory()) as d:
+            revoke_session(d, ident.sid, int(time.time()) + LIFETIME_SECONDS)
 
     def _audit():
         with closing(dbmod.get_conn()) as conn:                    # scope set by the middleware
             dbmod.log_audit(conn, action="logout", entity="user", entity_id=str(ident.user_id))
 
+    try:
+        await asyncio.to_thread(_revoke)
+    except sqlite3.Error:                                          # fail closed: the session is still valid, the cookie stays
+        return JSONResponse(status_code=503, content={"error": "try again"})
     await asyncio.to_thread(_audit)
     response = JSONResponse({"ok": True})
     response.delete_cookie(COOKIE_NAME, path="/")

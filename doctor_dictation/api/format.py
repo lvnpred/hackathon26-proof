@@ -1,10 +1,11 @@
 """Structuring endpoints: /api/format (extract, ground, repair) and /api/v1/correct."""
 import asyncio
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from doctor_dictation.api import authorship
 from doctor_dictation.config import get_settings
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
@@ -29,6 +30,7 @@ from doctor_dictation.core.determinism import (
 )
 from doctor_dictation.core.fallback import fallback_format
 from doctor_dictation.providers.llm.factory import make_llm
+from doctor_dictation.scope import current_scope
 
 router = APIRouter()
 
@@ -83,7 +85,9 @@ async def format_transcript(req: FormatRequest):
     # P1: deterministic normalization (numbers + lexicon) before any engine.
     normalized = await _normalize(raw)
     key = transcript_sha(normalized)
-    hit = cache_get(key)
+    sc = current_scope()
+    ckey = f"{sc.clinic_slug if sc else ''}:{key}"   # per-clinic cache: one clinic never sees another's hit
+    hit = cache_get(ckey)
     if hit is not None:
         return {"structured": hit["structured"], "engine": hit["engine"],
                 "normalized_transcript": normalized, "warnings": hit.get("warnings", []),
@@ -96,7 +100,7 @@ async def format_transcript(req: FormatRequest):
                   f"(set OPENAI_API_KEY for default LLM, or DEEPSEEK_API_KEY with LLM_PROVIDER=deepseek)")
         grounding = {"rounds": 0, "open_issues": open_issues(structured),
                      "llm_calls": 0}
-        cache_put(key, {"structured": structured, "engine": engine,
+        cache_put(ckey, {"structured": structured, "engine": engine,
                         "warnings": warnings, "grounding": grounding})
         return {"structured": structured, "engine": engine,
                 "normalized_transcript": normalized, "warnings": warnings,
@@ -145,7 +149,7 @@ async def format_transcript(req: FormatRequest):
                   f"+loop{repairs}")
         grounding = {"rounds": repairs, "open_issues": open_issues(structured),
                      "llm_calls": llm_calls}
-        cache_put(key, {"structured": structured, "engine": engine,
+        cache_put(ckey, {"structured": structured, "engine": engine,
                         "warnings": warnings, "grounding": grounding})
         return {"structured": structured, "engine": engine,
                 "normalized_transcript": normalized, "warnings": warnings,
@@ -155,7 +159,7 @@ async def format_transcript(req: FormatRequest):
     structured, warnings = await _validate(fallback_format(normalized), normalized)
     engine = f"fallback-after-error v{lexicon_version()}: {last_err}".strip()[:300]
     grounding = {"rounds": 0, "open_issues": open_issues(structured), "llm_calls": llm_calls}
-    cache_put(key, {"structured": structured, "engine": engine,
+    cache_put(ckey, {"structured": structured, "engine": engine,
                     "warnings": warnings, "grounding": grounding})
     return {"structured": structured, "engine": engine,
             "normalized_transcript": normalized, "warnings": warnings,
@@ -166,10 +170,11 @@ async def format_transcript(req: FormatRequest):
 class CorrectRequest(BaseModel):
     transcript: str = ""
     current_form: dict = {}
+    document_id: int | None = None   # the saved prescription being corrected; None for an unsaved draft
 
 
 @router.post("/api/v1/correct")
-async def correct(req: CorrectRequest):
+async def correct(req: CorrectRequest, request: Request):
     """Merge a spoken correction into the current form, then re-ground it.
 
     `extract_correction` returns the *patch* the correction states; offline
@@ -177,7 +182,13 @@ async def correct(req: CorrectRequest):
     correction never wipes the form. The merge is re-validated so the rx
     `status` pills are recomputed for the changed rows, while rows the patch
     does not name keep their prior verification state.
+
+    Correcting a saved prescription (``document_id``) needs ``document.edit``: only its author (403 otherwise).
     """
+    if req.document_id is not None:
+        denied = await asyncio.to_thread(authorship.check_document, request, "document.edit", req.document_id)
+        if denied is not None:
+            return denied
     current = req.current_form if isinstance(req.current_form, dict) else {}
     text = (req.transcript or "").strip()
     normalized = await _normalize(text) if text else ""

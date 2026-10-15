@@ -11,11 +11,11 @@ from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from doctor_dictation import db as dbmod
-from doctor_dictation.api.profile import profile_dict
+from doctor_dictation.api.profile import profile_response
 from doctor_dictation.config import get_settings
 from doctor_dictation.db import templates as tdb
 from doctor_dictation.pdf import PdfUnavailable, render_prescription, validate_layout
-from doctor_dictation.templates import TemplateError, service
+from doctor_dictation.templates import TemplateError, doctors, service
 
 router = APIRouter(prefix="/api/v1/templates", tags=["templates"])
 
@@ -46,8 +46,30 @@ def _open():
     return conn
 
 
+class ScopeBody(BaseModel):
+    # Validated by the service so a bad value answers 400, not 422.
+    scope: Any = "clinic"
+
+
+class DoctorsBody(BaseModel):
+    mode: Any = "author"
+    ids: Any = Field(default_factory=list)
+
+
 def _actor(request: Request):
-    return getattr(request.state, "username", None)
+    """The signed-in username for the audit row (set by the session middleware); None in single-database mode."""
+    ident = getattr(request.state, "identity", None)
+    return ident.username if ident is not None else None
+
+
+def _ident(request: Request):
+    """The signed-in user (multi-clinic mode), or None in single mode."""
+    return getattr(request.state, "identity", None)
+
+
+def _uid(request: Request):
+    ident = _ident(request)
+    return ident.user_id if ident is not None else None
 
 
 def _err(exc: TemplateError) -> JSONResponse:
@@ -86,27 +108,51 @@ def get_active():
         conn.close()
 
 
-@router.post("/deactivate")
-def deactivate(request: Request):
+@router.get("/current")
+def get_current(request: Request):
+    """Both letterhead states for the Profile section: the clinic's and the signed-in doctor's own."""
     conn = _open()
     try:
-        return {"deactivated": service.deactivate(conn, actor=_actor(request))}
+        return service.current(conn, _uid(request))
+    finally:
+        conn.close()
+
+
+@router.get("/doctors")
+def get_doctor_choices():
+    """The clinic's active doctors, for the review screen's "only these doctors" ticks."""
+    conn = _open()
+    try:
+        return {"doctors": doctors.choices(conn)}
+    finally:
+        conn.close()
+
+
+@router.post("/deactivate")
+def deactivate(request: Request, body: ScopeBody | None = None):
+    conn = _open()
+    try:
+        scope = (body or ScopeBody()).scope
+        return {"deactivated": service.deactivate(conn, actor=_actor(request), scope=scope, user_id=_uid(request))}
+    except TemplateError as exc:
+        return _err(exc)
     finally:
         conn.close()
 
 
 @router.get("/{template_id}/preview.pdf")
-def preview(template_id: int):
+def preview(template_id: int, request: Request):
     conn = _open()
     try:
         row = tdb.get_template(conn, template_id)
-        if row is None or row["status"] == "archived":
+        if row is None or row["status"] == "archived" or not service.visible(row, _ident(request)):
             return JSONResponse(status_code=404, content={"error": "template not found"})
         v = service.view(row)
         out = service.templates_dir() / f"preview_{template_id}_{uuid.uuid4().hex}.pdf"
         out.parent.mkdir(parents=True, exist_ok=True)
         meta = {"date": dbmod._utcnow()[:10], "opNo": SAMPLE["opNo"], "patientName": SAMPLE["patientName"],
-                "profile": v["profile"], "logo": service.logo_data_uri(row["logo_path"])}
+                "profile": v["profile"], "logo": service.logo_data_uri(row["logo_path"]),
+                "doctors": doctors.for_print(conn, row)}
         try:
             layout = validate_layout({**v["layout"], "profile": v["profile"]})
             render_prescription(SAMPLE, meta, out, layout=layout)
@@ -121,7 +167,18 @@ def preview(template_id: int):
 def edit_template(template_id: int, body: EditBody, request: Request):
     conn = _open()
     try:
-        return service.edit(conn, template_id, body.profile, body.lines, actor=_actor(request))
+        return service.edit(conn, template_id, body.profile, body.lines, actor=_actor(request), user=_ident(request))
+    except TemplateError as exc:
+        return _err(exc)
+    finally:
+        conn.close()
+
+
+@router.put("/{template_id}/doctors")
+def set_template_doctors(template_id: int, body: DoctorsBody, request: Request):
+    conn = _open()
+    try:
+        return service.set_doctors(conn, template_id, body.mode, body.ids, user=_ident(request), actor=_actor(request))
     except TemplateError as exc:
         return _err(exc)
     finally:
@@ -129,10 +186,11 @@ def edit_template(template_id: int, body: EditBody, request: Request):
 
 
 @router.post("/{template_id}/accept")
-def accept_template(template_id: int, request: Request):
+def accept_template(template_id: int, request: Request, body: ScopeBody | None = None):
     conn = _open()
     try:
-        return service.accept(conn, template_id, actor=_actor(request))
+        return service.accept(conn, template_id, actor=_actor(request), scope=(body or ScopeBody()).scope,
+                              user_id=_uid(request), user=_ident(request))
     except TemplateError as exc:
         return _err(exc)
     finally:
@@ -143,8 +201,9 @@ def accept_template(template_id: int, request: Request):
 def use_template_details(template_id: int, request: Request):
     conn = _open()
     try:
-        out = service.use_details(conn, template_id, actor=_actor(request))
-        return {"profile": profile_dict(dbmod.get_profile(conn)), "discarded": out["discarded"]}
+        out = service.use_details(conn, template_id, actor=_actor(request), user_id=_uid(request),
+                                  user=_ident(request))
+        return {"profile": profile_response(conn, getattr(request.state, "identity", None)), "discarded": out["discarded"]}
     except TemplateError as exc:
         return _err(exc)
     finally:
@@ -155,7 +214,7 @@ def use_template_details(template_id: int, request: Request):
 def discard_template(template_id: int, request: Request):
     conn = _open()
     try:
-        service.discard(conn, template_id, actor=_actor(request))
+        service.discard(conn, template_id, actor=_actor(request), user=_ident(request))
         return Response(status_code=204)
     except TemplateError as exc:
         return _err(exc)

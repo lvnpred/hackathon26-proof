@@ -14,7 +14,10 @@ def secret(monkeypatch):
 
 def test_round_trip():
     token = S.sign("rao", 7, 3, now=1000)
-    assert S.verify(token, now=1001) == {"clinic": "rao", "uid": 7, "ver": 3, "iat": 1000, "exp": 1000 + S.LIFETIME_SECONDS}
+    payload = S.verify(token, now=1001)
+    sid = payload.pop("sid")
+    assert payload == {"clinic": "rao", "uid": 7, "ver": 3, "iat": 1000, "exp": 1000 + S.LIFETIME_SECONDS}
+    assert len(sid) == 22
 
 
 def test_tampered_payload_is_rejected():
@@ -47,7 +50,7 @@ def test_garbage_tokens_return_none_without_raising():
 
 
 def test_verified_payload_with_bad_field_types_is_rejected():
-    good = {"clinic": "rao", "uid": 1, "ver": 0, "iat": 1, "exp": 10**12}
+    good = {"clinic": "rao", "uid": 1, "ver": 0, "iat": 1, "exp": 10**12, "sid": "a" * 22}
     assert S.verify(S._encode(good), now=2) is not None
     for field, bad in (("clinic", "../x"), ("clinic", 5), ("uid", "1"), ("uid", True), ("ver", None), ("exp", "9"), ("exp", True)):
         assert S.verify(S._encode({**good, field: bad}), now=2) is None, (field, bad)

@@ -3,10 +3,11 @@ import re
 from dataclasses import dataclass
 
 PROFILE_KEYS = ("doctor_name", "qualifications", "reg_no", "clinic_name", "address", "phone")
-ALIGNS, MAX_TEXT, MAX_BLOCKS = ("left", "center", "right"), 200, 12   # characters per line; blocks per header/footer
+ALIGNS, MAX_TEXT, MAX_BLOCKS, MAX_DOCTORS = ("left", "center", "right"), 200, 12, 12   # chars per line; blocks per header/footer; doctors printed
 _ENUMS = {"role": (("title", "subtitle", "normal", "small"), "normal"), "align": (ALIGNS, "left"),
           "thickness": (("thin", "medium"), "thin")}
-_FIELDS = {"text": ("role", "align"), "logo": ("align",), "rule": ("thickness",)}   # enum keys each block type takes
+_FIELDS = {"text": ("role", "align"), "logo": ("align",), "rule": ("thickness",),
+           "doctors": ("role", "align")}   # enum keys each block type takes; "doctors" is filled at print time
 _HEX = re.compile(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})")
 
 

@@ -1,0 +1,23 @@
+/* Team panel (team.js). Reuses dialog.panel, .field and button.primary from styles.css; every rule is scoped here. */
+.team-panel [hidden] { display:none !important; }
+dialog.team-panel { width:min(780px, 96vw); max-height:92vh; }
+dialog.team-panel[open] { display:flex; flex-direction:column; }
+.team-panel .team-head { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid var(--soft); }
+.team-panel .team-head h2 { margin:0; font-size:18px; }
+.team-panel .team-body { padding:14px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+.team-panel .team-error { background:#fdecea; border:1px solid var(--bad); color:var(--bad); border-radius:8px; padding:10px 14px; font-size:14px; }
+.team-panel .team-secret { background:#fff8e1; border:2px solid var(--warn); border-radius:8px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+.team-panel .team-secret-for, .team-panel .team-secret-warn { margin:0; font-size:14px; }
+.team-panel .team-secret-warn { font-weight:600; }
+.team-panel .team-secret-value { align-self:flex-start; font-size:20px; letter-spacing:1px; padding:6px 10px; background:#fff; border:1px solid var(--soft); border-radius:6px; user-select:all; }
+.team-panel .team-secret-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.team-panel .team-copy-status { font-size:13px; color:var(--muted); }
+.team-panel .team-table-box { overflow-x:auto; }
+.team-panel .team-table { width:100%; border-collapse:collapse; font-size:14px; }
+.team-panel .team-table th, .team-panel .team-table td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--soft); vertical-align:middle; }
+.team-panel .team-table tr.team-off td { color:var(--muted); }
+.team-panel .team-row-actions button { margin:0 6px 4px 0; }
+.team-panel form.team-add { padding:12px 0 0; border-top:1px solid var(--soft); display:flex; flex-direction:column; gap:8px; }
+.team-panel form.team-add h3 { margin:0; font-size:14px; }
+.team-panel form.team-add button { align-self:flex-start; }
+.team-panel button:focus-visible, .team-panel input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }

@@ -375,14 +375,16 @@ def get_document(conn, document_id):
 TOP_MEDICINES_WINDOW = 500  # newest finalized documents scanned
 
 
-def top_medicines(conn, limit: int = 30) -> list[str]:
-    """Finalized documents' medicine names, most used first; malformed rows are skipped."""
+def top_medicines(conn, limit: int = 30, doctor_id=None) -> list[str]:
+    """Finalized documents' medicine names, most used first; malformed rows are skipped.
+    ``doctor_id`` keeps only that doctor's prescriptions (their encounters); None keeps every one."""
     if limit <= 0:
         return []
+    mine, args = ("", ()) if doctor_id is None else (" AND encounter_id IN (SELECT id FROM encounters WHERE doctor_id = ?)", (doctor_id,))
     rows = conn.execute(
         "SELECT structured_json FROM documents"
-        " WHERE finalized_at IS NOT NULL AND structured_json IS NOT NULL"
-        " ORDER BY id DESC LIMIT ?", (TOP_MEDICINES_WINDOW,)).fetchall()
+        " WHERE finalized_at IS NOT NULL AND structured_json IS NOT NULL" + mine +
+        " ORDER BY id DESC LIMIT ?", (*args, TOP_MEDICINES_WINDOW)).fetchall()
     counts: dict[str, int] = {}
     display: dict[str, str] = {}
     for (raw,) in rows:                      # newest first: dict order is recency order

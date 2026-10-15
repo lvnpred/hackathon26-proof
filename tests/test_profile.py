@@ -48,3 +48,10 @@ def test_profile_endpoint_put_then_get(client):
     assert client.get("/api/v1/profile").json()["clinic_name"] == ""
     client.put("/api/v1/profile", json={"doctor_name": "A. Rao", "clinic_name": "Meridian"})
     assert client.get("/api/v1/profile").json()["clinic_name"] == "Meridian"
+
+
+def test_single_mode_put_cleans_hidden_and_control_characters(client):
+    r = client.put("/api/v1/profile", json={"doctor_name": "Dr.‮ A​\nRao", "clinic_name": " Clinic One ",
+                                            "reg_no": "ಕ‍"})
+    body = client.get("/api/v1/profile").json()
+    assert r.status_code == 200 and (body["doctor_name"], body["clinic_name"], body["reg_no"]) == ("Dr. A Rao", "Clinic One", "ಕ‍")

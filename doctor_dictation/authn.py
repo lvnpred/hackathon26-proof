@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import closing
+from dataclasses import replace
 
 from doctor_dictation import db as dbmod
 from doctor_dictation import passwords, sessions
 from doctor_dictation.directory import get_clinic, open_directory
+from doctor_dictation.directory.revocations import is_revoked
 from doctor_dictation.directory.logins import clear_failures, is_locked, lookup_username, record_failure
 from doctor_dictation.scope import clinic_dir
 from doctor_dictation.sessions import Identity
@@ -70,12 +72,12 @@ def load_identity(token, now=None, failed_clinics=frozenset()) -> Identity | Non
         return None
     with closing(open_directory()) as d:
         clinic = get_clinic(d, payload["clinic"])
-    if clinic is None or clinic["status"] != "active":
-        return None
+        if clinic is None or clinic["status"] != "active" or is_revoked(d, payload["sid"]):
+            return None
     row = _user_row(payload["clinic"], payload["uid"])
     if row is None or not row["is_active"] or row["session_version"] != payload["ver"]:
         return None
-    return _identity(payload["clinic"], row)
+    return replace(_identity(payload["clinic"], row), sid=payload["sid"])
 
 
 def clinic_name(slug) -> str:

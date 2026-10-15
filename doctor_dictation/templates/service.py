@@ -8,13 +8,16 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from doctor_dictation import db as dbmod
+from doctor_dictation.db import details
 from doctor_dictation.db import templates as tdb
+from doctor_dictation.policy import can
 from doctor_dictation.pdf import LayoutError, validate_layout
-from doctor_dictation.templates import TemplateError
+from doctor_dictation.templates import TemplateError, doctors
 from doctor_dictation.templates.builder import PROFILE_FIELDS as FIELDS, build_draft
 from doctor_dictation.templates.images import clean_image
 
 CLINIC = "default"
+SCOPES = ("clinic", "mine")
 _FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -27,16 +30,32 @@ def original_path(template_id: int) -> Path:
     return templates_dir() / f"{template_id}_original.jpg"
 
 
+def _confined(path) -> Path | None:
+    """``path`` resolved, only when it lies inside this clinic's templates folder. A stored path is never trusted:
+    another clinic's file, a symlink or ``..`` out of the folder, and non-path values are refused."""
+    if not path:
+        return None
+    try:
+        p = Path(path).resolve()
+        return p if p.is_relative_to(templates_dir().resolve()) else None
+    except (OSError, TypeError, ValueError):
+        return None
+
+
 def _unlink(*paths) -> None:
     for p in paths:
-        if p:
-            Path(p).unlink(missing_ok=True)
+        safe = _confined(p)
+        if safe is not None and safe != templates_dir().resolve() and (safe.is_file() or not safe.exists()):
+            safe.unlink(missing_ok=True)
 
 
 def view(row) -> dict:
     lay = json.loads(row["layout_json"])
     return {"id": row["id"], "status": row["status"],
-            "layout": {k: v for k, v in lay.items() if k != "profile"}, "profile": lay.get("profile", {})}
+            "layout": {k: v for k, v in lay.items() if k != "profile"}, "profile": lay.get("profile", {}),
+            "scope": "clinic" if row["owner_user_id"] is None else "mine",
+            "doctors": {"mode": row["doctors_mode"], "ids": doctors.stored_ids(row)},
+            "warnings": doctors.literal_warnings(lay)}
 
 
 def purge_expired(conn, settings, now=None) -> int:
@@ -88,17 +107,17 @@ async def upload(conn, raw: bytes, settings, actor=None, now=None) -> dict:
     return view(tdb.get_template(conn, tid))
 
 
-def _draft(conn, template_id):
+def _draft(conn, template_id, user=None):
     row = tdb.get_template(conn, template_id)
-    if row is None:
+    if row is None or not visible(row, user):        # a colleague's personal letterhead does not exist for me
         raise TemplateError(404, "template not found")
     if row["status"] != "draft":
         raise TemplateError(409, "only a draft can be changed")
     return row
 
 
-def edit(conn, template_id: int, profile: dict, lines: list, actor=None) -> dict:
-    row = _draft(conn, template_id)
+def edit(conn, template_id: int, profile: dict, lines: list, actor=None, user=None) -> dict:
+    row = _draft(conn, template_id, user)
     lay = json.loads(row["layout_json"])
     profile = {} if profile is None else profile
     lines = [] if lines is None else lines
@@ -137,37 +156,64 @@ def _merge_profile(existing: dict, details: dict) -> dict:
     return out
 
 
-def _save_details(conn, layout_json: str) -> dict:
-    """Merge the draft's clinic details into the Profile (all six fields written); return what was saved."""
+def _save_details(conn, layout_json: str, clinic_only: bool = False) -> dict:
+    """Merge the draft's details into the Profile; return what was saved. ``clinic_only`` (signed in): the three
+    clinic fields only. A pad's doctor names are never written to anyone's own details (spec 9.2: no guessing)."""
     row = dbmod.get_profile(conn)
     existing = {k: row[k] for k in FIELDS} if row is not None else {}
     merged = _merge_profile(existing, json.loads(layout_json).get("profile", {}))
+    if clinic_only:
+        details.save_clinic_details(conn, merged["clinic_name"], merged["address"], merged["phone"])
+        return {k: merged[k] for k in details.CLINIC_KEYS}
     dbmod.save_profile(conn, **merged)
     return merged
 
 
-def accept(conn, template_id: int, actor=None) -> dict:
-    row = _draft(conn, template_id)
-    tdb.set_template_active(conn, template_id)
-    _save_details(conn, row["layout_json"])
+def _owner(scope, user_id):
+    """``owner_user_id`` for an accept or stop: None for the clinic, the signed-in user for ``mine``."""
+    if scope not in SCOPES:
+        raise TemplateError(400, "scope must be clinic or mine")
+    if scope == "clinic":
+        return None
+    if user_id is None:
+        raise TemplateError(400, "sign in to keep a letterhead for your own prescriptions")
+    return user_id
+
+
+def visible(row, user) -> bool:
+    """Drafts and the clinic letterhead belong to everyone in the clinic; a doctor's own only to that doctor.
+    ``user`` None means single-database mode (no one signs in, nothing is personal): everything is visible."""
+    return row is not None and (user is None or can(user, "letterhead.manage", dict(row)))
+
+
+def accept(conn, template_id: int, actor=None, scope="clinic", user_id=None, user=None) -> dict:
+    """Draft -> active for the whole clinic (default) or for the signed-in doctor's prescriptions only."""
+    row = _draft(conn, template_id, user)
+    owner = _owner(scope, user_id)
+    tdb.set_template_active(conn, template_id, owner_user_id=owner)
+    if owner is None:                 # a clinic letterhead's details become the clinic's; a personal one changes nothing shared
+        _save_details(conn, row["layout_json"], clinic_only=user_id is not None)
     _unlink(original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_accept", entity="template",
-                    entity_id=str(template_id), detail={"clinic": row["clinic"]})
+                    entity_id=str(template_id), detail={"clinic": row["clinic"], "scope": scope})
+    if owner is not None:
+        dbmod.log_audit(conn, actor=actor, action="letterhead_scope_change", entity="template",
+                        entity_id=str(template_id), detail={"scope": "mine"})
     return view(tdb.get_template(conn, template_id))
 
 
-def discard(conn, template_id: int, actor=None) -> None:
-    row = _draft(conn, template_id)
+def discard(conn, template_id: int, actor=None, user=None) -> None:
+    row = _draft(conn, template_id, user)
     tdb.delete_template(conn, template_id)
     _unlink(row["logo_path"], original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_discard", entity="template",
                     entity_id=str(template_id), detail={"clinic": row["clinic"]})
 
 
-def use_details(conn, template_id: int, actor=None) -> dict:
+def use_details(conn, template_id: int, actor=None, user_id=None, user=None) -> dict:
     """Keep the built-in layout: save this draft's clinic details to the Profile, then discard the draft."""
-    row = _draft(conn, template_id)
-    saved = _save_details(conn, row["layout_json"])
+    row = _draft(conn, template_id, user)
+    saved = _save_details(conn, row["layout_json"], clinic_only=user_id is not None)
     tdb.delete_template(conn, template_id)
     _unlink(row["logo_path"], original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_use_details", entity="template",
@@ -180,9 +226,27 @@ def get_active(conn) -> dict | None:
     return view(row) if row else None
 
 
-def active_layout_for_save(conn):
-    """(Layout, logo_path) of the active template, or (None, None) so saves use the built-in layout."""
-    row = tdb.get_active_template(conn, CLINIC)
+def current(conn, user_id=None) -> dict:
+    """Both letterhead states for the Profile section: the clinic's and the signed-in doctor's own."""
+    clinic = tdb.get_active_template(conn, CLINIC)
+    mine = tdb.get_active_template(conn, CLINIC, user_id) if user_id is not None else None
+    return {"clinic": view(clinic) if clinic else None, "mine": view(mine) if mine else None,
+            "personal": user_id is not None}
+
+
+def active_row_for(conn, author_id=None):
+    """Spec 9.1: the author's own active letterhead, else the clinic's, else None (the built-in layout)."""
+    if author_id is not None:
+        own = tdb.get_active_template(conn, CLINIC, author_id)
+        if own is not None:
+            return own
+    return tdb.get_active_template(conn, CLINIC)
+
+
+def active_layout_for_save(conn, author_id=None, row=None):
+    """(Layout, logo_path) of the letterhead this author prints on, or (None, None) for the built-in layout.
+    Pass ``row`` (from ``active_row_for``) to reuse one lookup for the layout and the doctors."""
+    row = active_row_for(conn, author_id) if row is None else row
     if row is None:
         return None, None
     try:
@@ -191,20 +255,47 @@ def active_layout_for_save(conn):
         return None, None
 
 
+def print_doctors(conn, author_id=None, row=None):
+    """``meta["doctors"]`` for this author's print (None = the author). ``row`` as in ``active_layout_for_save``."""
+    return doctors.for_print(conn, active_row_for(conn, author_id) if row is None else row)
+
+
+def set_doctors(conn, template_id: int, mode, ids, user=None, actor=None) -> dict:
+    """Choose which doctors a letterhead lists; works on a draft or an active letterhead (no re-upload)."""
+    row = tdb.get_template(conn, template_id)
+    if not visible(row, user):
+        raise TemplateError(404, "template not found")
+    if row["status"] == "archived":
+        raise TemplateError(409, "this letterhead is no longer in use")
+    mode, ids = doctors.check_choice(conn, mode, ids)
+    tdb.set_template_doctors(conn, template_id, mode, ids)
+    dbmod.log_audit(conn, actor=actor, action="template_doctors", entity="template",
+                    entity_id=str(template_id), detail={"mode": mode, "ids": ids})
+    return view(tdb.get_template(conn, template_id))
+
+
 def logo_data_uri(path) -> str | None:
-    """The stored logo crop as a data URI for the PDF builder, or None when missing."""
+    """The stored logo crop as a data URI for the PDF builder; None when missing or outside this clinic's folder."""
+    safe = _confined(path)
+    if safe is None:
+        return None
     try:
-        return "data:image/jpeg;base64," + base64.b64encode(Path(path).read_bytes()).decode("ascii")
-    except (OSError, TypeError):
+        return "data:image/jpeg;base64," + base64.b64encode(safe.read_bytes()).decode("ascii")
+    except OSError:
         return None
 
 
-def deactivate(conn, actor=None) -> bool:
-    """Stop using the accepted letterhead: saves print on the built-in layout again."""
-    row = tdb.get_active_template(conn, CLINIC)
+def deactivate(conn, actor=None, scope="clinic", user_id=None) -> bool:
+    """Stop using one scope's letterhead: ``clinic`` prints on the built-in layout again; ``mine`` returns this
+    doctor to the clinic letterhead ("Use the clinic letterhead")."""
+    owner = _owner(scope, user_id)
+    row = tdb.get_active_template(conn, CLINIC, owner)
     if row is None:
         return False
-    tdb.deactivate_templates(conn, CLINIC)
+    tdb.deactivate_templates(conn, CLINIC, owner)
     dbmod.log_audit(conn, actor=actor, action="template_deactivate", entity="template",
-                    entity_id=str(row["id"]), detail={"clinic": CLINIC})
+                    entity_id=str(row["id"]), detail={"clinic": CLINIC, "scope": scope})
+    if owner is not None:
+        dbmod.log_audit(conn, actor=actor, action="letterhead_scope_change", entity="template",
+                        entity_id=str(row["id"]), detail={"scope": "clinic"})
     return True

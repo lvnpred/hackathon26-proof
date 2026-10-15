@@ -2,7 +2,7 @@
 import re
 from html import escape
 
-from .layout import ALIGNS, PROFILE_KEYS, Layout
+from .layout import ALIGNS, MAX_DOCTORS, PROFILE_KEYS, Layout
 
 DISCLAIMER = (
     "AI draft — doctor must verify before signing. "
@@ -96,46 +96,107 @@ _LOGO = re.compile(r"data:image/(?:png|jpeg);base64,[A-Za-z0-9+/=]+")
 _DANGER = set("\\\"'<>&") | {chr(c) for c in (*range(32), 0x7F, 0x2028, 0x2029)}
 
 
-def _css_str(value) -> str:
+def _css_str(value, cap: int = 80) -> str:
     """Body of a CSS string: quotes, backslashes, angle brackets and controls become hex escapes."""
-    return "".join(f"\\{ord(c):x} " if c in _DANGER else c for c in str(value or "")[:80])
+    return "".join(f"\\{ord(c):x} " if c in _DANGER else c for c in str(value or "")[:cap])
 
 
-def _line(b: dict, layout: Layout) -> str:
-    return str(layout.profile.get(b["field"], "") if "field" in b else b["text"]).strip()
+_CAP_NAME, _CAP_QUALS, _CAP_REG, _CAP_LINE = 60, 80, 30, 80      # per-field footer caps (a doctors line is at most ~185)
+_JUSTIFY = {"left": "flex-start", "center": "center", "right": "flex-end"}
 
 
-def _layout_header(layout: Layout, logo) -> str:
-    """Page-1 header blocks as flowing HTML; a blank profile line or an absent logo prints nothing."""
+_DOCTOR_KEYS = ("doctor_name", "qualifications", "reg_no")
+
+
+def _resolved(layout: Layout, live, authored: bool = False) -> dict:
+    """Spec 9.4: a live value (clinic fields from the clinic, doctor fields from the author) wins over the
+    layout's stored snapshot when it is not blank. When the print has an author the doctor fields come from the
+    author ONLY (a blank stays blank), so one doctor's name is never printed beside another's registration number."""
+    live = live if isinstance(live, dict) else {}
+    out = {}
+    for k in PROFILE_KEYS:
+        value = live.get(k)
+        value = value.strip() if isinstance(value, str) else ""
+        out[k] = value if authored and k in _DOCTOR_KEYS else value or str(layout.profile.get(k, ""))
+    return out
+
+
+def _doctor_entries(doctors, values: dict) -> list:
+    """``(name, qualifications, reg_no)`` per doctor: ``meta["doctors"]`` when it is a non-empty list, else the one
+    author from the resolved profile. Entries without a name are skipped; at most MAX_DOCTORS."""
+    rows = doctors if isinstance(doctors, list) and doctors else [
+        {"name": values["doctor_name"], "qualifications": values["qualifications"], "reg_no": values["reg_no"]}]
+    out = []
+    for d in rows:
+        if isinstance(d, dict) and str(d.get("name") or "").strip():
+            out.append(tuple(str(d.get(k) or "").strip() for k in ("name", "qualifications", "reg_no")))
+    return out[:MAX_DOCTORS]
+
+
+def _line(b: dict, values: dict) -> str:
+    return str(values.get(b["field"], "") if "field" in b else b["text"]).strip()
+
+
+def _lines(b: dict, values: dict, entries: list) -> list:
+    """The printable lines of a text or doctors block, blank ones dropped (the footer margin boxes use these)."""
+    if b["type"] == "doctors":
+        # each field is capped on its own, so a long qualification can never cut the registration number off
+        return [", ".join(p for p in (name[:_CAP_NAME], quals[:_CAP_QUALS]) if p)
+                + (f"  Reg. No: {reg[:_CAP_REG]}" if reg else "") for name, quals, reg in entries]
+    line = _line(b, values)[:_CAP_LINE] if b["type"] == "text" else ""
+    return [line] if line else []
+
+
+def _doctors_html(b: dict, entries: list) -> str:
+    """One entry per doctor (name, qualifications, registration no.) side by side; every value escaped."""
+    if not entries:
+        return ""
+    color, bold = (f";color:{b['color']}" if "color" in b else ""), 700 if b["role"] == "title" else 400
+    cells = []
+    for name, quals, reg in entries:
+        parts = [f'<div style="font-size:{_PX[b["role"]]}px;font-weight:{bold}">{_esc(name)}</div>']
+        parts += [f'<div style="font-size:10px">{_esc(t)}</div>' for t in (quals, f"Reg. No: {reg}" if reg else "") if t]
+        cells.append("<div>" + "".join(parts) + "</div>")
+    return (f'<div class="lh-doctors" style="display:flex;flex-wrap:wrap;gap:2mm 10mm;'
+            f'justify-content:{_JUSTIFY[b["align"]]};text-align:{b["align"]}{color}">' + "".join(cells) + "</div>")
+
+
+def _layout_header(layout: Layout, logo, values: dict, entries: list) -> str:
+    """Page-1 header blocks as flowing HTML; a blank line, an empty doctors list or an absent logo prints nothing."""
     out = []
     for b in layout.header:
-        align, line = f"text-align:{b.get('align', 'left')}", _line(b, layout) if b["type"] == "text" else ""
+        align, line = f"text-align:{b.get('align', 'left')}", _line(b, values) if b["type"] == "text" else ""
         if b["type"] == "rule":
             out.append(f'<hr style="border:0;border-top:{2 if b["thickness"] == "medium" else 1}px solid {b.get("color", "#999")}">')
         elif b["type"] == "logo" and isinstance(logo, str) and _LOGO.fullmatch(logo):
             out.append(f'<div style="{align}"><img src="{logo}" style="max-height:25mm"></div>')
+        elif b["type"] == "doctors":
+            out.append(_doctors_html(b, entries))
         elif line:
             color, bold = f";color:{b['color']}" if "color" in b else "", 700 if b["role"] == "title" else 400
             out.append(f'<div style="{align}{color};font-size:{_PX[b["role"]]}px;font-weight:{bold}">{_esc(line)}</div>')
     return '<div class="lh">' + "".join(out) + "</div>"
 
 
-def _footer_boxes(layout: Layout) -> str:
-    """Page-1 footer as @bottom-* margin boxes, one per alignment, styled by the box's first line."""
+def _footer_boxes(layout: Layout, values: dict, entries: list) -> str:
+    """Page-1 footer as @bottom-* margin boxes, one per alignment, styled by the box's first printed block."""
     css = []
     for align in ALIGNS:
-        mine = [b for b in layout.footer if b["type"] == "text" and b["align"] == align and _line(b, layout)]
+        mine = [(b, _lines(b, values, entries)) for b in layout.footer
+                if b["type"] in ("text", "doctors") and b["align"] == align]
+        mine = [(b, lines) for b, lines in mine if lines]
         if mine:
-            text = "\\A ".join(_css_str(_line(b, layout)) for b in mine)
+            text = "\\A ".join(_css_str(ln, 200) for _b, lines in mine for ln in lines)
             css.append(f'@bottom-{align} {{ content:"{text}"; white-space:pre-line; vertical-align:top; '
-                       f'font-size:{_PX[mine[0]["role"]]}px; text-align:{align}; }}')
+                       f'font-size:{_PX[mine[0][0]["role"]]}px; text-align:{align}; }}')
     return "\n".join(css)
 
 
-def _page_css(layout, name, op_no, date) -> str:
+def _page_css(layout, name, op_no, date, values=None, entries=()) -> str:
     """Page 1 follows the layout; pages 2+ get an identifier line so a loose page is never anonymous."""
+    values = values or {}
     ident = " | ".join(p for p in (_css_str(name), f"OP/IP No: {_css_str(op_no)}" if op_no else "", _css_str(date)) if p)
-    top, bottom, footer = (18, 16, "") if layout is None else (8, max(10, round((1 - layout.body_bottom) * 297)), _footer_boxes(layout))
+    top, bottom, footer = (18, 16, "") if layout is None else (8, max(10, round((1 - layout.body_bottom) * 297)), _footer_boxes(layout, values, list(entries)))
     return f"""@page {{ size: A4; margin: 18mm 14mm 16mm;
     @top-left {{ content: "{ident}"; font-size: 9px; color: #444; }}
     @top-right {{ content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #444; }} }}
@@ -148,7 +209,10 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 
     ``structured`` is the validated form (see ``determinism.validate_structured``)
     and ``meta`` carries the header fields ``date`` / ``opNo`` and an optional
-    ``profile`` (the six clinic fields). The result is a deterministic string
+    ``profile`` (the six clinic fields), an optional ``doctors`` list for a
+    ``doctors`` block, ``authored`` (True when the prescription has an author: doctor fields then never fall back to the
+    layout's snapshot); with a layout, non-blank ``profile`` values win over the
+    layout's stored snapshot. The result is a deterministic string
     with every value HTML-escaped.
     """
     s = structured if isinstance(structured, dict) else {}
@@ -158,9 +222,12 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
     name = _esc(s.get("patientName"))
     age_sex = _esc(s.get("ageSex"))
     review = _esc(s.get("review")) or "—"
-    header = _profile_header(m.get("profile")) if layout is None else _layout_header(layout, m.get("logo"))
+    values = _resolved(layout, m.get("profile"), m.get("authored") is True) if layout is not None else {}
+    entries = _doctor_entries(m.get("doctors"), values) if layout is not None else []
+    header = _profile_header(m.get("profile")) if layout is None else _layout_header(layout, m.get("logo"), values, entries)
     lh_mm = 0 if layout is None else max(0, round(layout.body_top * 297) - 8)    # the header fills down to body.top
-    page_css = _page_css(layout, m.get("patientName") or s.get("patientName"), m.get("opNo") or s.get("opNo"), m.get("date"))
+    page_css = _page_css(layout, m.get("patientName") or s.get("patientName"), m.get("opNo") or s.get("opNo"),
+                         m.get("date"), values, entries)
 
     return f"""<!doctype html>
 <html lang="en">

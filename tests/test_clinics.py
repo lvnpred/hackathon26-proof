@@ -94,3 +94,22 @@ def test_migrate_all_reports_a_lost_clinic_instead_of_recreating_it(multi):
     shutil.rmtree(multi / "clinics" / "iyer")
     _, failed = clinics.migrate_all()
     assert set(failed) == {"rao", "iyer"} and not (multi / "clinics" / "iyer").exists()
+
+
+def test_migrate_all_puts_a_mirror_failure_only_in_failed(multi, monkeypatch):
+    clinics.provision_clinic("rao", "Rao Clinic")
+
+    def boom(slug, prefix):
+        raise RuntimeError("mirror broke")
+    monkeypatch.setattr(clinics, "_mirror_prefix", boom)
+    done, failed = clinics.migrate_all()
+    assert "rao" not in done and "mirror broke" in failed["rao"]
+
+
+def test_migrate_all_does_not_let_the_mirror_create_a_missing_clinic(multi):
+    clinics.provision_clinic("rao", "Rao Clinic")
+    import shutil
+    shutil.rmtree(multi / "clinics" / "rao")
+    done, failed = clinics.migrate_all()
+    assert done == {} and list(failed) == ["rao"]
+    assert not (multi / "clinics" / "rao").exists()

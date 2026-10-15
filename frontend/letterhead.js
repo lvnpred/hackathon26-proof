@@ -14,7 +14,8 @@
     502: "The AI could not read this letterhead, and nothing was saved. Try a clearer, straight-on photo, or use the built-in layout.",
     503: "Reading letterheads is not set up on this server (no AI model that can read pictures is configured). Ask your administrator. The built-in layout still works.",
   };
-  const lh = { draft: null, abort: null, blobUrl: null, active: false };
+  const lh = { draft: null, abort: null, blobUrl: null, active: false, mine: false, personal: false, choices: null };
+  const WARN_TEXT = "This line may be a doctor's name or degree. Doctor names should come from the doctors choice below, so they stay correct for each prescription.";
   const el = (id) => document.getElementById(id);
   const status = (m) => { el("lhStatus").textContent = m; };
   function showErr(m) { const e = el("lhError"); e.textContent = m || ""; e.hidden = !m; }
@@ -45,26 +46,48 @@
   function syncStop() { el("lhStopBtn").hidden = !(lh.active && !el("lhUpload").hidden); }
   async function refreshStatus() {
     try {
-      const r = await call(API + "/active");
-      lh.active = r.status === 200; syncStop();
-      profileStatusLine(r.status === 200 ? "active" : r.status === 404 ? "builtin" : "unknown");
-      status(r.status === 200 ? "Your own letterhead is active: prescriptions print on it."
-        : r.status === 404 ? "Using the built-in layout (no letterhead is active)."
-        : "Could not check the current letterhead (code " + r.status + ").");
-    } catch (e) { lh.active = false; syncStop(); profileStatusLine("unknown"); status("Could not check the current letterhead. " + netMessage(e)); }
+      const r = await call(API + "/current");
+      const j = r.ok ? await json(r) : null;
+      lh.active = !!(j && j.clinic); lh.mine = !!(j && j.mine); lh.personal = !!(j && j.personal); syncStop();
+      profileStatusLine(!j ? "unknown" : j.clinic ? "active" : "builtin");
+      profileMineLine(j);
+      status(!j ? "Could not check the current letterhead (code " + r.status + ")."
+        : (j.clinic ? "The clinic letterhead is active: prescriptions print on it." : "Using the built-in layout (no clinic letterhead is active).")
+          + (j.mine ? " Your own letterhead is active for your prescriptions." : ""));
+    } catch (e) {
+      lh.active = false; syncStop(); profileStatusLine("unknown"); profileMineLine(null);
+      status("Could not check the current letterhead. " + netMessage(e));
+    }
   }
   // ---- Profile dialog entry point (the Letterhead section of #profilePanel) ----
   const PROF_IDS = { doctor_name: "profDoctor", qualifications: "profQual", reg_no: "profReg",
     clinic_name: "profClinic", address: "profAddress", phone: "profPhone" };
   const PROF_LINE = {
-    builtin: "Using the built-in layout. Your clinic details above print at the top of every prescription.",
-    active: "Your own letterhead is active: prescriptions print on it.",
+    builtin: "Clinic letterhead: none. Prescriptions print on the built-in layout with your clinic details.",
+    active: "Clinic letterhead: active. Prescriptions print on it.",
     unknown: "Could not check the current letterhead right now. You can still open the letterhead manager.",
   };
   function profileStatusLine(kind) { el("profLhStatus").textContent = PROF_LINE[kind]; }
-  // Dirty = any of the six inputs differs from the last loaded/saved profile (state.profile).
+  function profileMineLine(j) {
+    const line = el("profLhMine"), btn = el("profUseClinicBtn");
+    line.hidden = !(j && j.personal); btn.hidden = !(j && j.mine);
+    if (j && j.personal) line.textContent = j.mine ? "My own letterhead: active. Only my prescriptions print on it." : "My own letterhead: none.";
+  }
+  async function useClinic() {
+    if (!window.confirm("Your prescriptions will print on the clinic letterhead again. Your own letterhead is kept but no longer used. Continue?")) return;
+    const btn = el("profUseClinicBtn"); btn.disabled = true;
+    try {
+      const r = await call(API + "/deactivate", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "mine" }) });
+      if (!r.ok) { el("profLhMine").textContent = "Could not switch back (code " + r.status + "). Try again."; return; }
+      await refreshStatus();
+    } catch (e) { el("profLhMine").textContent = netMessage(e); }
+    finally { btn.disabled = false; }
+  }
+  // Dirty = any of the six inputs or the OP prefix differs from the last loaded/saved profile (state.profile).
   function profileDirty() {
     const saved = (typeof state !== "undefined" && state.profile) || {};
+    if (el("profOpPrefix").value.toUpperCase() !== (saved.op_prefix || "").toUpperCase()) return true;
     return Object.keys(PROF_IDS).some((k) => el(PROF_IDS[k]).value !== (saved[k] || ""));
   }
   function syncProfileBtn() {
@@ -79,11 +102,12 @@
     el("lhFoot").hidden = view !== "review";
     syncStop();
   }
-  function openPanel() {
+  async function openPanel() {
     showErr(""); el("lhDone").hidden = true;
+    lh.choices = null;                      // colleagues may have been added or disabled since the last opening
     const p = el("lhPanel");
     if (typeof p.showModal === "function") p.showModal(); else p.setAttribute("open", "");
-    refreshStatus();
+    await refreshStatus();                  // lh.personal must be fresh before the review shows its scope box
     if (lh.draft) renderReview(lh.draft); else { show("upload"); el("lhFile").focus(); }
   }
   function closePanel() {
@@ -123,6 +147,75 @@
     i.id = id; i.value = value || ""; if (tag === "textarea") i.rows = 2;
     w.appendChild(i); return w;
   }
+  function radioValue(name, fallback) {
+    const r = document.querySelector('input[name="' + name + '"]:checked');
+    return r ? r.value : fallback;
+  }
+  function renderWarnings(d) {
+    el("lhLines").querySelectorAll("input").forEach((inp) => {
+      const id = inp.id + "Warn", old = el(id);
+      if (old) old.remove();
+      inp.removeAttribute("aria-describedby");
+      const hit = (d.warnings || []).some((w) => w.section === inp.dataset.section && w.index === Number(inp.dataset.index));
+      if (!hit) return;
+      const p = document.createElement("p");
+      p.id = id; p.className = "lh-line-warn"; p.textContent = WARN_TEXT;
+      inp.setAttribute("aria-describedby", id);
+      inp.parentNode.insertAdjacentElement("afterend", p);
+    });
+  }
+  function renderDoctors(d) {
+    const mode = (d.doctors && d.doctors.mode) || "author";
+    document.querySelectorAll('input[name="lhDoctorsMode"]').forEach((r) => { r.checked = r.value === mode; });
+    const names = [];
+    [(d.profile || {}).doctor_name].concat((d.layout || {}).doctor_hints || []).forEach((n) => {
+      if (n && names.indexOf(n) < 0) names.push(n);
+    });
+    el("lhHints").hidden = !names.length;
+    el("lhHints").textContent = names.length ? "Names read from the pad: " + names.join("; ") + ". The app never guesses who they are: choose below." : "";
+    el("lhDoctorsBox").hidden = !lh.personal;   // signed in only: single mode has no doctors to choose
+    el("lhScopeBox").hidden = !lh.personal;
+    document.querySelectorAll('input[name="lhScope"]').forEach((r) => { r.checked = r.value === "clinic"; });
+    el("lhDoctorPicks").textContent = "";
+    syncPicks();
+  }
+  async function syncPicks() {
+    const box = el("lhDoctorPicks"), selected = radioValue("lhDoctorsMode", "author") === "selected";
+    box.hidden = !selected;
+    if (!selected || box.querySelector("input") || lh.loadingPicks) return;
+    lh.loadingPicks = true;
+    try { await fillPicks(box); } finally { lh.loadingPicks = false; }
+  }
+  async function fillPicks(box) {
+    if (!lh.choices) {
+      box.textContent = "Loading the clinic's doctors…";
+      try { const r = await call(API + "/doctors"); lh.choices = r.ok ? ((await json(r)).doctors || []) : null; }
+      catch (e) { lh.choices = null; }
+      if (!lh.choices) { box.textContent = "Could not load the clinic's doctors. Close and reopen this panel to try again."; return; }
+    }
+    const ticked = (lh.draft && lh.draft.doctors && lh.draft.doctors.ids) || [];
+    box.textContent = lh.choices.length ? "" : "This clinic has no doctor accounts yet.";
+    lh.choices.forEach((doc) => {
+      const w = document.createElement("label"), c = document.createElement("input");
+      c.type = "checkbox"; c.value = String(doc.id); c.checked = ticked.indexOf(doc.id) >= 0;
+      w.appendChild(c); w.appendChild(document.createTextNode(" " + doc.name + (doc.qualifications ? ", " + doc.qualifications : "")));
+      box.appendChild(w);
+    });
+  }
+  function collectDoctors() {
+    const mode = radioValue("lhDoctorsMode", "author"), ids = [];
+    el("lhDoctorPicks").querySelectorAll("input:checked").forEach((c) => ids.push(Number(c.value)));
+    return { mode: mode, ids: mode === "selected" ? ids : [] };
+  }
+  async function saveDoctors() {
+    if (el("lhDoctorsBox").hidden) return true;   // single mode: nothing to send, the draft stays on author mode
+    const r = await call(API + "/" + lh.draft.id + "/doctors", { method: "PUT",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify(collectDoctors()) });
+    const j = await json(r);
+    if (!r.ok) { showErr(j.error || httpMessage(r.status, "doctors")); return false; }
+    if (j && j.doctors) lh.draft = Object.assign({}, lh.draft, j);
+    return true;
+  }
   function renderReview(d) {
     show("review");
     const lines = el("lhLines"); lines.textContent = "";
@@ -136,6 +229,7 @@
     const pf = el("lhProfileFields"); pf.textContent = "";
     PROFILE_KEYS.forEach((k) => pf.appendChild(field("lhProf_" + k, PROFILE_LABEL[k],
       (d.profile || {})[k], k === "address" ? "textarea" : "input")));
+    renderWarnings(d); renderDoctors(d);
     loadPreview();
     const first = lines.querySelector("input") || el("lhProf_doctor_name"); first.focus();
   }
@@ -178,20 +272,24 @@
   }
   async function updatePreview() {
     showErr(""); setBusy(true, "Saving your edits…");
-    try { if (await saveEdits()) await loadPreview(); } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
+    try { if (await saveEdits() && await saveDoctors()) { renderWarnings(lh.draft); await loadPreview(); } } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
   async function accept() {
     showErr(""); setBusy(true, "Saving your letterhead…");
     try {
-      if (!(await saveEdits())) return;
-      const r = await call(API + "/" + lh.draft.id + "/accept", { method: "POST" });
+      if (!(await saveEdits()) || !(await saveDoctors())) return;
+      const mine = lh.personal && radioValue("lhScope", "clinic") === "mine";
+      const r = await call(API + "/" + lh.draft.id + "/accept", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope: mine ? "mine" : "clinic" }) });
       if (!r.ok) { showErr(httpMessage(r.status, "accept")); return; }
       lh.draft = null;
       if (typeof loadProfile === "function") await loadProfile();
       syncProfileBtn();
       show("upload"); el("lhFile").value = "";
       el("lhDone").hidden = false;
-      el("lhDone").textContent = "Done. Your letterhead is saved, and its clinic details were saved to your Profile and shown at the top of the page. New prescriptions print on it.";
+      el("lhDone").textContent = mine
+        ? "Done. Your own letterhead is saved. Only your prescriptions print on it; colleagues keep the clinic letterhead."
+        : "Done. The clinic letterhead is saved, and its clinic details were saved to the Profile. New prescriptions print on it.";
       refreshStatus();
     } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
@@ -248,6 +346,8 @@
   el("lhUploadForm").addEventListener("submit", upload);
   el("lhUpdateBtn").addEventListener("click", updatePreview);
   el("lhAcceptBtn").addEventListener("click", accept);
+  document.querySelectorAll('input[name="lhDoctorsMode"]').forEach((r) => r.addEventListener("change", syncPicks));
+  el("profUseClinicBtn").addEventListener("click", useClinic);
   el("lhReuploadBtn").addEventListener("click", () => discard(true));
   el("lhBuiltinBtn").addEventListener("click", useDetails);
 })();

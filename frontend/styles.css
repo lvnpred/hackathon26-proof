@@ -204,3 +204,13 @@ dialog.panel h2 { margin:0; font-size:18px; }
   ul.editable-list li.blank:not(:focus)::before { content:""; }
   ul.editable-list li { padding-right:3px; }
 }
+
+/* Authorship (M3): Today scope toggle, view-only banner, Profile split into two parts. */
+.today-scope { display:flex; gap:4px; margin:0 0 10px; }
+.today-scope[hidden] { display:none; }
+.today-scope button { flex:1; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid var(--soft); background:transparent; }
+.today-scope button[aria-pressed="true"] { background:#eaf1ff; border-color:#bcd2ff; font-weight:600; }
+.view-only-banner { font-size:13px; font-weight:600; color:#7a4b00; background:#fff6e0; border:1px solid #f0d28a; border-radius:8px; padding:6px 10px; margin-bottom:10px; }
+#sheet.view-only .x-btn, #sheet.view-only .confirm-btn { display:none; }
+.prof-part { border:1px solid var(--soft); border-radius:8px; margin:0; padding:8px 12px 12px; display:flex; flex-direction:column; gap:8px; }
+.prof-part legend { font-size:13px; font-weight:600; color:var(--ink); padding:0 4px; }

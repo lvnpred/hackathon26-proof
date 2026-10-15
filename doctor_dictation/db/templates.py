@@ -1,4 +1,8 @@
-"""Template storage helpers (contract 4.4). Callers own the connection."""
+"""Template storage helpers (contract 4.4). Callers own the connection.
+
+A template's scope is ``owner_user_id``: None is the clinic letterhead, a user id is that doctor's own. Each scope
+keeps at most one active row; accepting or stopping one scope never touches the other.
+"""
 import json
 
 from doctor_dictation.db import _utcnow
@@ -28,15 +32,16 @@ def set_template_logo(conn, template_id, logo_path) -> None:
     conn.commit()
 
 
-def set_template_active(conn, template_id, accepted_at=None) -> bool:
-    """Draft -> active; the clinic's previous active row becomes archived (one commit)."""
+def set_template_active(conn, template_id, accepted_at=None, owner_user_id=None) -> bool:
+    """Draft -> active in one scope (``owner_user_id`` None = the clinic); that scope's previous active row
+    becomes archived (one commit)."""
     row = get_template(conn, template_id)
     if row is None or row["status"] != "draft":
         return False
-    conn.execute("UPDATE templates SET status = 'archived' WHERE clinic = ? AND status = 'active'",
-                 (row["clinic"],))
-    conn.execute("UPDATE templates SET status = 'active', accepted_at = ? WHERE id = ?",
-                 (accepted_at or _utcnow(), template_id))
+    conn.execute("UPDATE templates SET status = 'archived' WHERE clinic = ? AND status = 'active'"
+                 " AND owner_user_id IS ?", (row["clinic"], owner_user_id))
+    conn.execute("UPDATE templates SET status = 'active', accepted_at = ?, owner_user_id = ? WHERE id = ?",
+                 (accepted_at or _utcnow(), owner_user_id, template_id))
     conn.commit()
     return True
 
@@ -63,12 +68,29 @@ def count_uploads_since(conn, clinic: str, since_iso: str) -> int:
         " AND json_extract(detail, '$.clinic') = ? AND at >= ?", (clinic, since_iso)).fetchone()[0]
 
 
-def get_active_template(conn, clinic="default"):
-    return conn.execute("SELECT * FROM templates WHERE clinic = ? AND status = 'active'", (clinic,)).fetchone()
+def get_active_template(conn, clinic="default", owner_user_id=None):
+    """The active row of one scope (``owner_user_id`` None = the clinic letterhead), or None."""
+    return conn.execute("SELECT * FROM templates WHERE clinic = ? AND status = 'active' AND owner_user_id IS ?",
+                        (clinic, owner_user_id)).fetchone()
 
 
-def deactivate_templates(conn, clinic="default") -> int:
-    """Active -> archived for the clinic (drafts are untouched); returns the rows changed."""
-    cur = conn.execute("UPDATE templates SET status = 'archived' WHERE clinic = ? AND status = 'active'", (clinic,))
+def deactivate_templates(conn, clinic="default", owner_user_id=None) -> int:
+    """Active -> archived for one scope (drafts and the other scope are untouched); returns the rows changed."""
+    cur = conn.execute("UPDATE templates SET status = 'archived' WHERE clinic = ? AND status = 'active'"
+                       " AND owner_user_id IS ?", (clinic, owner_user_id))
     conn.commit()
     return cur.rowcount
+
+
+def set_template_doctors(conn, template_id, mode: str, ids: list) -> bool:
+    """Store which doctors the letterhead lists (the caller validated ``mode`` and ``ids``)."""
+    cur = conn.execute("UPDATE templates SET doctors_mode = ?, doctors_ids = ? WHERE id = ?",
+                       (mode, json.dumps(ids), template_id))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def clinic_doctors(conn) -> list:
+    """Active users with the doctor role, oldest account first: the stable order a letterhead lists them in."""
+    return conn.execute("SELECT id, username, display_name, doctor_name, qualifications, reg_no FROM users"
+                        " WHERE is_active = 1 AND role = 'doctor' ORDER BY id").fetchall()

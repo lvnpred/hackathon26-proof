@@ -42,6 +42,7 @@
     if (me.must_change_password) { toLogin(); return; }   // the login page shows the change-password step
     const clinic = document.getElementById("topClinic");
     const doctor = document.getElementById("topDoctor");
+    window.DDUser = me;                       // app.js keeps the top bar on the signed-in user's own name
     if (clinic && me.clinic_name) clinic.textContent = me.clinic_name;
     if (doctor && me.display_name) doctor.textContent = me.display_name;
     if (out) {

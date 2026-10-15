@@ -1,5 +1,6 @@
-"""Signed session cookie: HMAC-SHA256 over a small JSON payload. Stateless; revocation is the per-user
-``session_version`` check ``authn.load_identity`` does on every request."""
+"""Signed session cookie: HMAC-SHA256 over a small JSON payload. Revocation has two levels, both checked by
+``authn.load_identity`` on every request: the per-user ``session_version`` (ends all of a user's sessions) and the
+cookie's random ``sid`` listed in the directory's ``revoked_sessions`` (logout, ends that one session)."""
 from __future__ import annotations
 
 import base64
@@ -7,6 +8,8 @@ import hashlib
 import hmac
 import json
 import os
+import re
+import secrets
 import time
 from dataclasses import dataclass
 
@@ -16,6 +19,7 @@ COOKIE_NAME = "dd_session"
 LIFETIME_SECONDS = 12 * 60 * 60
 MIN_SECRET_LENGTH = 32
 DEV_FLAG_ENV = "DEV_INSECURE_SESSION_SECRET"
+_SID_RE = re.compile(r"[A-Za-z0-9_-]{16,64}")
 _DEV_SECRET = b"dev-only-insecure-session-secret!"   # 33 bytes; used only with DEV_INSECURE_SESSION_SECRET=1
 
 
@@ -32,6 +36,7 @@ class Identity:
     display_name: str = ""
     must_change_password: bool = False
     session_version: int = 0
+    sid: str = ""
 
 
 def session_secret() -> bytes:
@@ -61,9 +66,10 @@ def _encode(payload: dict) -> str:
     return f"{body}.{_mac(body)}"
 
 
-def sign(clinic_slug: str, user_id: int, session_version: int, now=None) -> str:
+def sign(clinic_slug: str, user_id: int, session_version: int, now=None, sid=None) -> str:
     issued = int(time.time() if now is None else now)
-    return _encode({"clinic": clinic_slug, "uid": user_id, "ver": session_version, "iat": issued, "exp": issued + LIFETIME_SECONDS})
+    return _encode({"clinic": clinic_slug, "uid": user_id, "ver": session_version, "iat": issued, "exp": issued + LIFETIME_SECONDS,
+                    "sid": secrets.token_urlsafe(16) if sid is None else sid})
 
 
 def verify(token, now=None) -> dict | None:
@@ -75,7 +81,8 @@ def verify(token, now=None) -> dict | None:
         payload = json.loads(_unb64(body))
         current = time.time() if now is None else now
         if not (valid_slug(payload["clinic"]) and type(payload["uid"]) is int and type(payload["ver"]) is int
-                and type(payload["exp"]) is int and payload["exp"] > current):
+                and type(payload["exp"]) is int and payload["exp"] > current
+                and type(payload["sid"]) is str and _SID_RE.fullmatch(payload["sid"])):
             return None
     except (ValueError, TypeError, KeyError, AttributeError):
         return None

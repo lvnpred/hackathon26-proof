@@ -123,6 +123,7 @@ function setWorking(on, msg) {
   if (rb) rb.disabled = on;
   document.querySelectorAll("#sheet .x-btn, #undoBtn").forEach(b => { b.disabled = on; });
   recBtn.classList.toggle("busy", on);
+  if (window.Authorship) Authorship.enforce();      // last word: view-only must not rest on CSS hiding the x/confirm buttons
 }
 
 // ---- clinic profile --------------------------------------------------------
@@ -131,16 +132,17 @@ function setWorking(on, msg) {
 // fine: Save is never blocked, and a hint nudges a first-run entry.
 function renderProfileHeader(p) {
   p = p || {};
-  setText($("cDoctor"), [p.doctor_name, p.qualifications].filter(Boolean).join(" "));
+  const viewOnly = !!(window.Authorship && (Authorship.isViewOnly() || Authorship.keepsOwnHeader()));   // an opened prescription keeps its author's doctor lines
+  if (!viewOnly) setText($("cDoctor"), [p.doctor_name, p.qualifications].filter(Boolean).join(" "));
   setText($("cClinic"), p.clinic_name || "");
-  setText($("cReg"), p.reg_no ? "Reg. No: " + p.reg_no : "");
+  if (!viewOnly) setText($("cReg"), p.reg_no ? "Reg. No: " + p.reg_no : "");
   setText($("cPhone"), p.phone ? "Ph: " + p.phone : "");
   setText($("cAddr"), p.address || "");
   const any = !!(p.doctor_name || p.qualifications || p.reg_no || p.clinic_name || p.address || p.phone);
   const hint = $("profileHint");
   if (hint) hint.hidden = any;
   setText($("topClinic"), p.clinic_name || "Clinic");
-  setText($("topDoctor"), p.doctor_name || "Doctor");
+  setText($("topDoctor"), (window.DDUser && window.DDUser.display_name) || p.doctor_name || "Doctor");   // the signed-in user, never the sheet's author
 }
 
 function fillProfileForm(p) {
@@ -151,6 +153,7 @@ function fillProfileForm(p) {
   setInput("profClinic", p.clinic_name || "");
   setInput("profAddress", p.address || "");
   setInput("profPhone", p.phone || "");
+  setInput("profOpPrefix", p.op_prefix || "");
 }
 
 async function loadProfile() {
@@ -172,7 +175,7 @@ function openProfilePanel() {
   setText($("profileStatus"), "");
   if (profilePanel && typeof profilePanel.showModal === "function") profilePanel.showModal();
   else if (profilePanel) profilePanel.setAttribute("open", "");
-  const first = $("profDoctor");
+  const first = $("profClinic") || $("profDoctor");   // the first field of the first fieldset
   if (first) first.focus();
 }
 
@@ -191,6 +194,7 @@ async function saveProfile(e) {
     clinic_name: inputVal("profClinic"),
     address: inputVal("profAddress"),
     phone: inputVal("profPhone"),
+    op_prefix: inputVal("profOpPrefix").toUpperCase() || undefined,   // blank: not sent, the prefix stays as it is
   };
   setText($("profileStatus"), "Saving…");
   try {
@@ -243,6 +247,8 @@ function renderToday(rows) {
     if (row.op_no) bits.push("OP " + row.op_no);
     const t = fmtClock(row.created_at);
     if (t) bits.push(t);
+    const who = window.Authorship ? Authorship.authorLabel(row) : "";
+    if (who) bits.push(who);
     meta.textContent = bits.join(" · ");
     btn.append(name, meta);
     btn.title = "Reopen this prescription";
@@ -259,11 +265,15 @@ function highlightToday() {
   });
 }
 
+let todaySeq = 0;   // only the newest request may render (a late answer to an earlier scope click is dropped)
 async function loadToday() {
+  const seq = ++todaySeq;
   try {
-    const r = await fetch("/api/v1/encounters/today");
+    const r = await fetch("/api/v1/encounters/today" + (window.Authorship ? Authorship.todayQuery() : ""));
     if (!r.ok) throw new Error("today " + r.status);
-    renderToday(await safeJson(r));
+    const rows = await safeJson(r);
+    if (seq !== todaySeq) return;
+    renderToday(rows);
   } catch {
     // Leave the sidebar as-is; a refresh failure must not disturb the sheet.
   }
@@ -314,10 +324,16 @@ async function openDocument(row) {
     renderTranscript();
     renderSheet(state.structured);
     updateResaveNote();
+    if (window.Authorship) Authorship.onOpen(j);   // a colleague's prescription opens view-only
     highlightToday();
     refreshPrintButton();
     setStep("ready");
-    setStatus("Reopened " + (row.patient_name || "document") + " — Print it as is, or edit and Save to update this document.");
+    const viewOnlyNow = !!(window.Authorship && Authorship.isViewOnly());
+    const author = viewOnlyNow ? window.Authorship.viewOnlyAuthor() : "";
+    refreshMicLabel();
+    setStatus(viewOnlyNow
+      ? "Viewing " + (row.patient_name || "document") + " (" + author + "'s prescription). You can print it, not edit it."
+      : "Reopened " + (row.patient_name || "document") + " — Print it as is, or edit and Save to update this document.");
   } catch (e) {
     setStatus("");
     showError(errorMessage(e, "Could not load the document"));
@@ -408,6 +424,7 @@ function refreshPrintButton() {
   printBtn.title = !saved ? "Save first, then print"
     : state.dirty ? "Save your changes first"
     : "Print this prescription (letterhead PDF)";
+  if (window.Authorship) Authorship.enforce();      // setWorking/setPrinting re-enable the mic and Save
 }
 // Persistent cue next to the mic: which prescription a dictation would correct.
 function updateCue() {
@@ -419,7 +436,11 @@ function updateCue() {
   el.textContent = "Correcting: " + (name || "this prescription") + (op ? " · " + op : "") +
     (state.documentId != null ? " (document " + state.documentId + ")" : " (not saved yet)");
 }
-function refreshMicLabel() { setMicLabel(canCorrect() ? "Dictate correction" : "Start dictation"); updateCue(); }
+function refreshMicLabel() {
+  const off = !!(window.Authorship && Authorship.isViewOnly());   // a colleague's prescription: the mic is off
+  setMicLabel(off ? "Dictation off" : canCorrect() ? "Dictate correction" : "Start dictation");
+  updateCue();
+}
 
 async function onRecordingStop() {
   const mode = state.pendingMode;
@@ -537,7 +558,7 @@ async function applyCorrection(transcript) {
   setWorking(true, "Applying your correction…");
   setStep("working");
   try {
-    const j = await postJson("/api/v1/correct", { transcript, current_form: current }, CORRECT_TIMEOUT_MS);
+    const j = await postJson("/api/v1/correct", { transcript, current_form: current, document_id: state.documentId }, CORRECT_TIMEOUT_MS);
     state.structured = j.structured || current;
     markDirty();
     // A correction re-grounds rows, so prior confirmations are no longer trusted.
@@ -1012,7 +1033,7 @@ $("confirmAllBtn").addEventListener("click", async () => {
 
 // ---- Save, then Print (two separate actions) ---------------------------------
 async function saveDocument() {
-  if (state.working) return;
+  if (state.working || (window.Authorship && Authorship.isViewOnly())) return;
   clearError();
   const { structured, confirmed_rows, indexToRowid } = serializeForm();
   state.structured = structured;
@@ -1212,6 +1233,7 @@ function newPatient() {
   clearError();
   renderTranscript();
   updateResaveNote();
+  if (window.Authorship) Authorship.clear();
   sheetEl.classList.add("empty");
   saveBtn.hidden = true;
   printBtn.hidden = true;

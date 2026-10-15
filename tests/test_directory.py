@@ -21,7 +21,7 @@ def test_open_directory_creates_the_tables_and_is_idempotent(multi):
 def test_directory_holds_no_patient_data_tables(multi):
     with closing(D.open_directory()) as conn:
         names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {n for n in names if not n.startswith("sqlite_")} == {"clinics", "login_index", "login_attempts", "schema_migrations"}
+    assert {n for n in names if not n.startswith("sqlite_")} == {"clinics", "login_index", "login_attempts", "revoked_sessions", "schema_migrations"}
 
 
 def test_create_and_list_clinics(multi):

@@ -12,16 +12,18 @@ from doctor_dictation.config import get_settings
 from doctor_dictation.core.hints import build_hints
 from doctor_dictation.providers.stt.base import SttChainError
 from doctor_dictation.providers.stt.factory import failure_response, make_stt, success_body
-from doctor_dictation.scope import NoScope
+from doctor_dictation.scope import NoScope, current_scope
 
 router = APIRouter()
 
 
 def _doctor_top(limit: int) -> list[str]:
-    """The doctor's most-used medicines; any database problem means no personalisation."""
+    """The signed-in doctor's most-used medicines (every prescription in single-database mode, where no one
+    signs in); any database problem means no personalisation."""
+    sc = current_scope()
     try:
         with closing(dbmod.get_conn()) as conn:
-            return dbmod.top_medicines(conn, min(30, limit))
+            return dbmod.top_medicines(conn, min(30, limit), doctor_id=sc.user_id if sc is not None else None)
     except NoScope:
         raise                      # a missing scope is an auth bug, not "no hints"
     except Exception as exc:  # noqa: BLE001 - hints are optional

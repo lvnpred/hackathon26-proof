@@ -31,3 +31,8 @@ dialog.lh-panel[open] { display:flex; }
 .prof-lh h3 { margin:0; font-size:14px; }
 .prof-lh-status { margin:0; font-size:13px; }
 .prof-lh .panel-hint[hidden] { display:none; }
+/* Doctors list, scope choice and doctor-name warnings in the review form (M4) */
+.lh-choice { border:1px solid var(--soft); border-radius:8px; padding:8px 12px; margin:0 0 10px; display:flex; flex-direction:column; gap:4px; font-size:14px; }
+.lh-choice legend { font-weight:600; padding:0 4px; }
+.lh-picks { display:flex; flex-direction:column; gap:2px; padding-left:22px; }
+.lh-line-warn { margin:-4px 0 8px; font-size:13px; color:var(--bad); }

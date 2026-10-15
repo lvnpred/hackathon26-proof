@@ -116,6 +116,40 @@ To give each clinic its own data and logins:
 - Keep today's single-clinic data: stop the app, then `python -m doctor_dictation.admin adopt-existing --slug rao --first-user dr.rao`.
 - Forgotten password: `python -m doctor_dictation.admin reset-password --user dr.shah` (prints a new temporary password and ends that user's sessions).
 
+## Multi-clinic demo (about 5 minutes)
+Fake data only. `seed-demo` refuses to run unless `DEMO_MODE=1`, and only into a new, empty data folder (never the
+default `doctor_dictation/data`). Its three doctors have fixed, published demo passwords (`demo-rao-pass-1`,
+`demo-mehta-pass-1`, `demo-iyer-pass-1`, also printed by the command), so never point it at real data. The stub
+providers need no API key: dictation is canned (it always produces the same fever prescription for "Kiran Joshi").
+
+```bash
+export DEMO_DIR="$(mktemp -d)" MULTI_CLINIC=1 DEMO_MODE=1
+export DATA_DIR="$DEMO_DIR" SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+eval "$(python scripts/demo_browser.py --print-env)"   # stub STT and LLM: ALLOW_STUB_PROVIDERS=1 STT_CHAIN=stub LLM_PROVIDER=stub ...
+python -m doctor_dictation.admin seed-demo         # Rao Clinic: dr.rao, dr.mehta; Iyer Clinic: dr.iyer
+uvicorn doctor_dictation.main:app --port 8000
+```
+
+Use two browsers, or one normal and one private window (one window per clinic: they must not share cookies).
+1. Sign in as `dr.rao` in one window and `dr.iyer` in the other: different clinic names and different Today lists.
+2. Rao dictates and saves: it appears in Rao's Today only. Open `/api/v1/documents/1` in each window: both clinics
+   have a document 1, with different patients.
+3. Sign in as `dr.mehta` (a third window, or after Rao signs out), switch Today to "Whole clinic" and open Rao's
+   prescription: a "view only" banner, mic and Save disabled. Print works and shows Dr. A. Rao as the author. The
+   reprint lists BOTH Dr. A. Rao and Dr. S. Mehta because Rao Clinic's shared pad lists all its doctors. A re-save is refused.
+4. Print a Rao Clinic prescription: the shared letterpad lists both doctors. Print an Iyer Clinic one: its own letterhead.
+5. Copy the PDF link of Rao's new prescription (`/api/v1/documents/<id>/pdf`) into Iyer's window: 404.
+6. Show the audit actors and the folder: `sqlite3 "$DEMO_DIR/clinics/rao/app.db" "SELECT actor, action FROM audit_log"`
+   (and the same for `iyer`), then `ls -R "$DEMO_DIR"`: `directory.db` plus one `app.db` per clinic.
+
+When done, stop the server (Ctrl+C) and delete the demo data: `rm -rf "$DEMO_DIR"`.
+
+Automated run with screenshots for review: `scripts/demo_browser.py` (writes to `.superpowers/demo-evidence/`). It needs
+Playwright (`pip install -r doctor_dictation/requirements-pdf.txt && python -m playwright install chromium`; the same
+package renders the PDFs) and a server started as above:
+`python scripts/demo_browser.py --base http://127.0.0.1:8000 --data-dir "$DEMO_DIR"`. It refuses the default data folder
+and any non-loopback server (unless `--allow-remote`). The text checks on the PDFs use `pdftotext` when it is on PATH.
+
 ## Notes
 - STT: **cloud-first, the default.** With `OPENAI_API_KEY` set, `/api/transcribe`
   sends the recorded audio to the OpenAI Whisper API (seconds, no model load). If

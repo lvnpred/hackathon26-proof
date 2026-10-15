@@ -27,7 +27,7 @@ def test_post_201_shape(tclient):
     r = _post(tclient)
     body = r.json()
     assert r.status_code == 201 and body["status"] == "draft" and body["profile"] == PROFILE
-    assert set(body) == {"id", "status", "layout", "profile"} and "profile" not in body["layout"]
+    assert set(body) == {"id", "status", "layout", "profile", "scope", "doctors", "warnings"} and "profile" not in body["layout"]
 
 
 def test_post_without_image_or_with_text_is_400(tclient):
@@ -218,7 +218,7 @@ def test_use_details_route_saves_profile_and_discards_draft(tclient):
     r = tclient.post(f"{URL}/{tid}/use-details")
     assert r.status_code == 200
     body = r.json()
-    assert body["discarded"] is True and body["profile"] == {**PROFILE, "doctor_name": "Dr Edited"}
+    assert body["discarded"] is True and body["profile"] == {**PROFILE, "doctor_name": "Dr Edited", "op_prefix": "OP"}
     assert tclient.get("/api/v1/profile").json() == body["profile"]
     assert tclient.get(URL + "/active").status_code == 404
     assert tclient.post(f"{URL}/{tid}/use-details").status_code == 404

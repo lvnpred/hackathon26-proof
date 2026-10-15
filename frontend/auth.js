@@ -43,7 +43,7 @@
     const clinic = document.getElementById("topClinic");
     const doctor = document.getElementById("topDoctor");
     window.DDUser = me;                       // app.js keeps the top bar on the signed-in user's own name
-    if (clinic && me.clinic_name) clinic.textContent = me.clinic_name;
+    if (clinic && me.clinic_name && clinic.textContent.trim() === "Clinic") clinic.textContent = me.clinic_name;   // the Profile's clinic name (app.js) wins once known; the account's name is only the fallback
     if (doctor && me.display_name && doctor.textContent.trim() === "Doctor") doctor.textContent = me.display_name;   // app.js's profile name wins once known
     if (out) {
       out.hidden = false;

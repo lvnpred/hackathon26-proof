@@ -115,7 +115,7 @@ def test_the_top_bar_keeps_the_signed_in_users_own_name():
     assert 'setText($("topDoctor"), p.doctor_name || (window.DDUser && window.DDUser.display_name) || "Doctor")' in app
     assert 'doctor.textContent.trim() === "Doctor"' in auth          # the login name never overwrites a known profile name
     html = _read("index.html")
-    assert all(v in html for v in ("auth.js?v=3", "authorship.js?v=4", "app.js?v=25"))
+    assert all(v in html for v in ("auth.js?v=4", "authorship.js?v=4", "app.js?v=26"))
 
 
 def test_the_engine_badge_is_hidden_unless_debug_or_offline():
@@ -145,3 +145,11 @@ def test_the_sheet_header_order_and_doctor_table_match_the_pad():
     body = _function(js, "renderDoctorLines")
     assert 'createElement("table")' in body and 'createElement("tr")' in body and "n % 2 === 0" in body
     assert "innerHTML" not in body and "clinic-rule" in body            # rule hidden when there are no doctors
+
+
+def test_the_top_bar_clinic_name_is_the_profiles_and_the_accounts_name_is_only_a_fallback():
+    """Regression: auth.js used to overwrite the Profile's clinic name with the account's name ("Rao Clinic")."""
+    auth, app = _read("auth.js"), _read("app.js")
+    assert 'clinic.textContent.trim() === "Clinic"' in auth            # only replaces the placeholder
+    assert 'clinic.textContent = me.clinic_name' in auth and 'trim() === "Clinic"' in auth.split("clinic.textContent = me.clinic_name")[0].splitlines()[-1]
+    assert 'setText($("topClinic"), p.clinic_name || (window.DDUser && window.DDUser.clinic_name) || "Clinic")' in app

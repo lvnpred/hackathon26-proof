@@ -143,7 +143,7 @@ function renderProfileHeader(p) {
   const any = !!(p.doctor_name || p.qualifications || p.reg_no || p.clinic_name || p.address || p.phone);
   const hint = $("profileHint");
   if (hint) hint.hidden = any;
-  setText($("topClinic"), p.clinic_name || "Clinic");
+  setText($("topClinic"), p.clinic_name || (window.DDUser && window.DDUser.clinic_name) || "Clinic");   // Profile name first, the account's clinic name only as a fallback
   setText($("topDoctor"), p.doctor_name || (window.DDUser && window.DDUser.display_name) || "Doctor");   // the signed-in user's own details, never the sheet's author
 }
 

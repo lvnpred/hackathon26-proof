@@ -37,7 +37,7 @@ def test_letterhead_js_never_builds_markup_from_server_text():
 
 def test_letterhead_assets_are_cache_busted():
     html = _read("index.html")
-    assert "letterhead.js?v=7" in html and "letterhead.css?v=7" in html
+    assert "letterhead.js?v=10" in html and "letterhead.css?v=8" in html
 
 
 def test_clinic_details_have_the_op_prefix_field_wired_both_ways():
@@ -93,3 +93,10 @@ def test_open_panel_reloads_the_doctor_list_and_waits_for_the_status_before_the_
     assert "await refreshStatus()" in body
     assert body.index("await refreshStatus()") < body.index("renderReview(lh.draft)")   # lh.personal is fresh for the scope box
     assert "loadingPicks" in _read("letterhead.js")
+
+
+def test_the_review_screen_says_the_accepters_details_are_filled_in_author_mode():
+    html, js = _read("index.html"), _read("letterhead.js")
+    assert 'id="lhFillHint"' in html and "Your own doctor details will be filled from this letterhead." in html
+    assert 'el("lhFillHint").hidden = !(lh.personal && mode === "author");' in js
+    assert 'lhFillHint").innerHTML' not in js

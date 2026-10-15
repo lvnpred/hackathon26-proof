@@ -2,6 +2,7 @@
 import re
 from html import escape
 
+from .doctors_text import block, doctor_groups, group_lines
 from .layout import ALIGNS, MAX_DOCTORS, PROFILE_KEYS, Layout
 
 DISCLAIMER = (
@@ -30,11 +31,30 @@ def _list_items(values) -> str:
     return "".join(rendered) or "<li>—</li>"
 
 
+def _doctor_table(groups, table_attrs: str, name_cls: str, qual_cls: str, reg_cls: str, styles=None) -> str:
+    """The doctors side by side: two cells per row, doctor 1 left, doctor 2 right, then row by row (an odd last row gets
+    an empty cell). Each cell: line 1 name then the qualifications, line 2 'Reg. No: x'. Every value is escaped.
+    ``styles`` (name, qualifications) are inline styles for letterhead blocks, whose look comes from the layout."""
+    nst, qst = (f' style="{t}"' for t in (styles or ("", "")))
+    cells = []
+    for g in groups:
+        name, quals, reg_line = (_esc(t) for t in block(g))
+        first = (f'<span class="{name_cls}"{nst}>{name}</span>' if name else "")
+        if quals:
+            first += f'<span class="{qual_cls}"{qst}>{", " if name else ""}{quals}</span>'
+        cells.append("<td>" + (f"<div>{first}</div>" if first else "")
+                     + (f'<div class="{reg_cls}">{reg_line}</div>' if reg_line else "") + "</td>")
+    rows = ["<tr>" + "".join(cells[i:i + 2]) + ("<td></td>" if len(cells[i:i + 2]) == 1 else "") + "</tr>"
+            for i in range(0, len(cells), 2)]
+    return f"<table {table_attrs}>" + "".join(rows) + "</table>"
+
+
 def _profile_header(profile) -> str:
     """Doctor/clinic header for the top of the sheet, or ``""`` when unset.
 
-    ``profile`` is ``meta["profile"]``: a dict of the six fields above. Every
-    value is HTML-escaped and blank lines are dropped, so a missing profile
+    ``profile`` is ``meta["profile"]``: a dict of the six fields above. Order,
+    as on the pad: clinic name, address, phone, a rule, then the doctors side by side in a two-column table, each
+    cell two lines (name, qualifications / Reg. No; see ``doctors_text``). Every value is HTML-escaped and blank lines are dropped, so a missing profile
     (``None`` or all-empty) renders no header at all — the sheet never shows
     ``None``.
     """
@@ -44,20 +64,16 @@ def _profile_header(profile) -> str:
     if not any(fields.values()):
         return ""
     lines = []
-    who = " ".join(p for p in (fields["doctor_name"], fields["qualifications"]) if p)
-    if who:
-        lines.append(f'<div class="clinic-doctor">{who}</div>')
     if fields["clinic_name"]:
         lines.append(f'<div class="clinic-name">{fields["clinic_name"]}</div>')
-    meta_bits = []
-    if fields["reg_no"]:
-        meta_bits.append(f'Reg. No: {fields["reg_no"]}')
-    if fields["phone"]:
-        meta_bits.append(f'Ph: {fields["phone"]}')
-    if meta_bits:
-        lines.append(f'<div class="clinic-meta">{" &nbsp;|&nbsp; ".join(meta_bits)}</div>')
     if fields["address"]:
         lines.append(f'<div class="clinic-addr">{fields["address"]}</div>')
+    if fields["phone"]:
+        lines.append(f'<div class="clinic-meta">Ph: {fields["phone"]}</div>')
+    groups = doctor_groups(profile.get("doctor_name"), profile.get("qualifications"), profile.get("reg_no"))
+    if groups:
+        lines.append('<hr class="clinic-rule">' if lines else "")
+        lines.append(_doctor_table(groups, 'class="clinic-doctors"', "clinic-doctor", "clinic-qual", "clinic-reg"))
     return '<div class="clinic-head">' + "".join(lines) + "</div>"
 
 
@@ -91,17 +107,17 @@ def _rx_rows(rx) -> str:
     return "".join(out)
 
 
+MAX_LINE = 2000                       # anti-abuse bound on one printed line; nothing real is ever cut by it
 _PX = {"title": 20, "subtitle": 15, "normal": 12, "small": 10}      # fixed role -> font size
 _LOGO = re.compile(r"data:image/(?:png|jpeg);base64,[A-Za-z0-9+/=]+")
 _DANGER = set("\\\"'<>&") | {chr(c) for c in (*range(32), 0x7F, 0x2028, 0x2029)}
 
 
-def _css_str(value, cap: int = 80) -> str:
+def _css_str(value, cap: int = MAX_LINE) -> str:
     """Body of a CSS string: quotes, backslashes, angle brackets and controls become hex escapes."""
     return "".join(f"\\{ord(c):x} " if c in _DANGER else c for c in str(value or "")[:cap])
 
 
-_CAP_NAME, _CAP_QUALS, _CAP_REG, _CAP_LINE = 60, 80, 30, 80      # per-field footer caps (a doctors line is at most ~185)
 _JUSTIFY = {"left": "flex-start", "center": "center", "right": "flex-end"}
 
 
@@ -137,41 +153,69 @@ def _line(b: dict, values: dict) -> str:
     return str(values.get(b["field"], "") if "field" in b else b["text"]).strip()
 
 
-def _lines(b: dict, values: dict, entries: list) -> list:
-    """The printable lines of a text or doctors block, blank ones dropped (the footer margin boxes use these)."""
+def _entry_groups(entries: list) -> list:
+    """Every doctor of every entry as ``(name, qualifications, reg_no)``: an entry that itself lists several doctors
+    ('A; B') is split like a profile, so each prints as its own block."""
+    return [g for e in entries for g in doctor_groups(*e)]
+
+
+def _group_footer_lines(groups: list) -> list:
+    """Footer margin boxes cannot hold a table, so the doctors stack there (documented limitation): two lines each, a
+    blank line between doctors."""
+    out = []
+    for g in groups:
+        out += (["" ] if out else []) + group_lines(g)
+    return out
+
+
+def _lines(b: dict, values: dict, entries: list, groups: list | None = None) -> list:
+    """The printable lines of a text or doctors block, blank ones dropped (the footer margin boxes use these).
+    ``groups`` set: the block stands for all the profile's doctors (see ``_collapsed``)."""
+    if groups is not None:
+        return _group_footer_lines(groups)
     if b["type"] == "doctors":
-        # each field is capped on its own, so a long qualification can never cut the registration number off
-        return [", ".join(p for p in (name[:_CAP_NAME], quals[:_CAP_QUALS]) if p)
-                + (f"  Reg. No: {reg[:_CAP_REG]}" if reg else "") for name, quals, reg in entries]
-    line = _line(b, values)[:_CAP_LINE] if b["type"] == "text" else ""
+        return _group_footer_lines(_entry_groups(entries))
+    line = _line(b, values) if b["type"] == "text" else ""
     return [line] if line else []
 
 
-def _doctors_html(b: dict, entries: list) -> str:
-    """One entry per doctor (name, qualifications, registration no.) side by side; every value escaped."""
-    if not entries:
+def _collapsed(blocks, values: dict) -> dict:
+    """Several doctors in the profile: the layout's doctor-field text blocks become ONE per-doctor group, shown at
+    the first such block and skipped at the others. Returns ``{index: groups or None}`` (None = skip); empty for
+    zero or one doctor, where every field block stays its own line."""
+    ids = [i for i, b in enumerate(blocks) if b["type"] == "text" and b.get("field") in _DOCTOR_KEYS]
+    groups = doctor_groups(*(values.get(k) for k in _DOCTOR_KEYS))
+    if len(groups) < 2 or not ids:
+        return {}
+    return {i: (groups if n == 0 else None) for n, i in enumerate(ids)}
+
+
+def _doctors_html(b: dict, groups: list) -> str:
+    """The doctors of a letterhead block as the same two-column table as the default header (name in the block's
+    role and weight, qualifications small and lighter, Reg. No on line 2); every value escaped."""
+    if not groups:
         return ""
     color, bold = (f";color:{b['color']}" if "color" in b else ""), 700 if b["role"] == "title" else 400
-    cells = []
-    for name, quals, reg in entries:
-        parts = [f'<div style="font-size:{_PX[b["role"]]}px;font-weight:{bold}">{_esc(name)}</div>']
-        parts += [f'<div style="font-size:10px">{_esc(t)}</div>' for t in (quals, f"Reg. No: {reg}" if reg else "") if t]
-        cells.append("<div>" + "".join(parts) + "</div>")
-    return (f'<div class="lh-doctors" style="display:flex;flex-wrap:wrap;gap:2mm 10mm;'
-            f'justify-content:{_JUSTIFY[b["align"]]};text-align:{b["align"]}{color}">' + "".join(cells) + "</div>")
+    table = _doctor_table(groups, f'class="lh-doctors" style="width:100%;border-collapse:collapse{color}"', "lh-name",
+                          "lh-qual", "lh-reg", (f"font-size:{_PX[b['role']]}px;font-weight:{bold}", "font-size:10px;color:#555"))
+    return table
 
 
 def _layout_header(layout: Layout, logo, values: dict, entries: list) -> str:
     """Page-1 header blocks as flowing HTML; a blank line, an empty doctors list or an absent logo prints nothing."""
-    out = []
-    for b in layout.header:
+    out, grouped = [], _collapsed(layout.header, values)
+    for i, b in enumerate(layout.header):
+        if i in grouped:
+            if grouped[i] is not None:
+                out.append(_doctors_html(b, grouped[i]))
+            continue
         align, line = f"text-align:{b.get('align', 'left')}", _line(b, values) if b["type"] == "text" else ""
         if b["type"] == "rule":
             out.append(f'<hr style="border:0;border-top:{2 if b["thickness"] == "medium" else 1}px solid {b.get("color", "#999")}">')
         elif b["type"] == "logo" and isinstance(logo, str) and _LOGO.fullmatch(logo):
             out.append(f'<div style="{align}"><img src="{logo}" style="max-height:25mm"></div>')
         elif b["type"] == "doctors":
-            out.append(_doctors_html(b, entries))
+            out.append(_doctors_html(b, _entry_groups(entries)))
         elif line:
             color, bold = f";color:{b['color']}" if "color" in b else "", 700 if b["role"] == "title" else 400
             out.append(f'<div style="{align}{color};font-size:{_PX[b["role"]]}px;font-weight:{bold}">{_esc(line)}</div>')
@@ -180,13 +224,13 @@ def _layout_header(layout: Layout, logo, values: dict, entries: list) -> str:
 
 def _footer_boxes(layout: Layout, values: dict, entries: list) -> str:
     """Page-1 footer as @bottom-* margin boxes, one per alignment, styled by the box's first printed block."""
-    css = []
+    css, grouped = [], _collapsed(layout.footer, values)
     for align in ALIGNS:
-        mine = [(b, _lines(b, values, entries)) for b in layout.footer
-                if b["type"] in ("text", "doctors") and b["align"] == align]
+        mine = [(b, _lines(b, values, entries, grouped.get(i))) for i, b in enumerate(layout.footer)
+                if b["type"] in ("text", "doctors") and b["align"] == align and grouped.get(i, 0) is not None]
         mine = [(b, lines) for b, lines in mine if lines]
         if mine:
-            text = "\\A ".join(_css_str(ln, 200) for _b, lines in mine for ln in lines)
+            text = "\\A ".join(_css_str(ln) for _b, lines in mine for ln in lines)
             css.append(f'@bottom-{align} {{ content:"{text}"; white-space:pre-line; vertical-align:top; '
                        f'font-size:{_PX[mine[0][0]["role"]]}px; text-align:{align}; }}')
     return "\n".join(css)
@@ -248,8 +292,13 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
   table.rx th, table.rx td {{ border: 1px solid #999; padding: 4px 6px; text-align: left; }}
   .disclaimer {{ margin-top: 18px; font-size: 11px; color: #555; font-style: italic; }}
   .clinic-head {{ text-align: center; margin-bottom: 12px; }}
-  .clinic-doctor {{ font-size: 14px; font-weight: bold; }}
-  .clinic-name {{ font-size: 13px; }}
+  .clinic-rule {{ border: 0; border-top: 1px solid #999; margin: 6px 0; }}
+  table.clinic-doctors, table.lh-doctors {{ width: 100%; border-collapse: collapse; margin-top: 4px; }}
+  table.clinic-doctors td, table.lh-doctors td {{ width: 50%; vertical-align: top; text-align: left; padding: 0 6px 6px 0; }}
+  .clinic-doctor {{ font-size: 13px; font-weight: bold; }}
+  .clinic-qual {{ font-size: 11px; color: #555; }}
+  .clinic-reg {{ font-size: 11px; color: #333; }}
+  .clinic-name {{ font-size: 18px; font-weight: bold; }}
   .clinic-meta, .clinic-addr {{ font-size: 11px; color: #333; }}
 </style>
 </head>

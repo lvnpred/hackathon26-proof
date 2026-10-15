@@ -11,11 +11,61 @@ window.Authorship = (function () {
   let ownHeader = false;    // an opened prescription's own doctor lines are on the sheet header
   let scope = "mine";       // the Today list: "mine" | "clinic"
 
+  // Several doctors are written 'A; B' / 'quals A; quals B' / 'reg A; reg B' (the backend's doctors_text.py): doctor i
+  // takes part i of each field. The doctors sit side by side in a two-column table (the pad's layout), each cell two
+  // lines: the name then the qualifications, and 'Reg. No: x'. Text wraps in its cell and is never cut.
+  const parts = (v) => (typeof v === "string" && v.trim() ? v.split(";").map((t) => t.trim()) : []);   // empty parts kept: index pairing
+  function renderDoctorLines(box, name, quals, reg) {
+    if (!box) return;
+    const cols = [parts(name), parts(quals), parts(reg)];
+    const idx = [];                                  // a doctor is skipped only when all three of its parts are empty
+    for (let i = 0; i < Math.max(cols[0].length, cols[1].length, cols[2].length); i++) {
+      if (cols[0][i] || cols[1][i] || cols[2][i]) idx.push(i);
+    }
+    const count = idx.length;
+    box.textContent = "";
+    if (box.previousElementSibling && box.previousElementSibling.classList.contains("clinic-rule")) {
+      box.previousElementSibling.hidden = !count;
+    }
+    if (!count) return;
+    const table = document.createElement("table");
+    table.className = "clinic-doctors";
+    let row = null;
+    for (let n = 0; n < count; n++) {
+      const i = idx[n];
+      if (n % 2 === 0) { row = document.createElement("tr"); table.appendChild(row); }
+      const cell = document.createElement("td");
+      if (cols[0][i] || cols[1][i]) {
+        const first = document.createElement("div");
+        if (cols[0][i]) {
+          const n = document.createElement("span");
+          n.className = "clinic-doctor";
+          n.textContent = cols[0][i];
+          first.appendChild(n);
+        }
+        if (cols[1][i]) {
+          const q = document.createElement("span");
+          q.className = "clinic-qual";
+          q.textContent = (cols[0][i] ? ", " : "") + cols[1][i];
+          first.appendChild(q);
+        }
+        cell.appendChild(first);
+      }
+      if (cols[2][i]) {
+        const r = document.createElement("div");
+        r.className = "clinic-reg";
+        r.textContent = "Reg. No: " + cols[2][i];
+        cell.appendChild(r);
+      }
+      row.appendChild(cell);
+      if (n === count - 1 && n % 2 === 0) row.appendChild(document.createElement("td"));   // an odd last row keeps two cells
+    }
+    box.appendChild(table);
+  }
+
   // The sheet header shows the doctor who prints on this prescription: its author.
   function showAuthor(a) {
-    const dr = el("cDoctor"), reg = el("cReg");
-    if (dr) dr.textContent = [a.doctor_name || a.name, a.qualifications].filter(Boolean).join(" ");
-    if (reg) reg.textContent = a.reg_no ? "Reg. No: " + a.reg_no : "";
+    renderDoctorLines(el("cDoctor"), a.doctor_name || a.name, a.qualifications, a.reg_no);
   }
 
   // Re-applied from app.js refreshPrintButton(), which runs after every setWorking/setPrinting: those
@@ -101,5 +151,5 @@ window.Authorship = (function () {
   }
   init();
 
-  return { onOpen, clear, enforce, isViewOnly, viewOnlyAuthor, keepsOwnHeader, todayQuery, authorLabel };
+  return { renderDoctorLines, onOpen, clear, enforce, isViewOnly, viewOnlyAuthor, keepsOwnHeader, todayQuery, authorLabel };
 })();

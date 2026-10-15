@@ -43,7 +43,7 @@ def test_authorship_js_shows_the_banner_and_locks_the_sheet():
 def test_app_js_calls_authorship_only_through_a_guard():
     js = _read("app.js")
     calls = re.findall(r"Authorship\.(\w+)\(", js)
-    assert sorted(set(calls)) == ["authorLabel", "clear", "enforce", "isViewOnly", "keepsOwnHeader", "onOpen", "todayQuery", "viewOnlyAuthor"]
+    assert sorted(set(calls)) == ["authorLabel", "clear", "enforce", "isViewOnly", "keepsOwnHeader", "onOpen", "renderDoctorLines", "todayQuery", "viewOnlyAuthor"]
     for line in (ln for ln in js.splitlines() if "Authorship." in ln):
         assert "window.Authorship" in line, line
 
@@ -64,7 +64,7 @@ def test_profile_header_leaves_the_authors_doctor_lines_alone_while_view_only():
     body = _function(_read("app.js"), "renderProfileHeader")
     guard = body.index("Authorship.isViewOnly()")
     assert "window.Authorship" in body[:guard].splitlines()[-1] or "window.Authorship" in body[body.rindex("\n", 0, guard):guard]
-    assert guard < body.index('setText($("cDoctor")') and guard < body.index('setText($("cReg")')
+    assert guard < body.index('renderDoctorLines($("cDoctor")')
 
 
 def test_set_working_ends_by_enforcing_view_only():
@@ -94,7 +94,7 @@ def test_an_opened_prescription_keeps_its_own_header_lines_until_cleared():
     assert "ownHeader = true" in _function(js, "onOpen") and "ownHeader = false" in _function(js, "clear")
     assert js.index("ownHeader = true") > js.index("if (!a) return")   # single mode sends no author: live profile header
     body = _function(_read("app.js"), "renderProfileHeader")
-    assert "Authorship.keepsOwnHeader()" in body and body.index("keepsOwnHeader") < body.index('setText($("cDoctor")')
+    assert "Authorship.keepsOwnHeader()" in body and body.index("keepsOwnHeader") < body.index('renderDoctorLines($("cDoctor")')
 
 
 def test_the_profile_dialog_focuses_the_first_field_of_the_clinic_fieldset():
@@ -112,6 +112,36 @@ def test_a_view_only_sheet_says_so_in_the_status_and_the_mic_label():
 def test_the_top_bar_keeps_the_signed_in_users_own_name():
     app, auth = _read("app.js"), _read("auth.js")
     assert "window.DDUser = me;" in auth
-    assert 'setText($("topDoctor"), (window.DDUser && window.DDUser.display_name) || p.doctor_name' in app
+    assert 'setText($("topDoctor"), p.doctor_name || (window.DDUser && window.DDUser.display_name) || "Doctor")' in app
+    assert 'doctor.textContent.trim() === "Doctor"' in auth          # the login name never overwrites a known profile name
     html = _read("index.html")
-    assert all(v in html for v in ("auth.js?v=2", "authorship.js?v=2", "app.js?v=21"))
+    assert all(v in html for v in ("auth.js?v=3", "authorship.js?v=4", "app.js?v=25"))
+
+
+def test_the_engine_badge_is_hidden_unless_debug_or_offline():
+    app, html = _read("app.js"), _read("index.html")
+    assert '<span id="engineBadge" class="badge" hidden></span>' in html
+    block = app.split("// ---- health badge")[1].split("// ---- working state")[0]
+    assert 'get("debug") === "1"' in block and "if (!DEBUG_BADGE) return;" in block
+    assert block.index("if (!DEBUG_BADGE) return;") < block.index("stt_engine")        # the technical text is debug only
+    assert '.catch(() => { $("engineBadge").textContent = "backend offline"; $("engineBadge").hidden = false; })' in block
+
+
+def test_the_sheet_header_prints_one_block_per_doctor_with_text_only():
+    js, app, html = _read("authorship.js"), _read("app.js"), _read("index.html")
+    body = _function(js, "renderDoctorLines")
+    assert 'split(";")' in js and "Reg. No: " in body and "textContent" in body and "innerHTML" not in body
+    assert "renderDoctorLines" in js.split("return {")[-1]
+    assert 'window.Authorship) Authorship.renderDoctorLines($("cDoctor"), p.doctor_name, p.qualifications, p.reg_no)' in app
+    assert 'id="cDoctor"' in html and 'id="cReg"' not in html          # Reg. No is a line of its doctor's block
+    assert "renderDoctorLines(el(\"cDoctor\"), a.doctor_name || a.name, a.qualifications, a.reg_no)" in _function(js, "showAuthor")
+
+
+def test_the_sheet_header_order_and_doctor_table_match_the_pad():
+    html, js = _read("index.html"), _read("authorship.js")
+    head = html.split('id="clinicHead"')[1].split("</div>\n      <div id=")[0]
+    order = [head.index(m) for m in ('id="cClinic"', 'id="cAddr"', 'id="cPhone"', 'class="clinic-rule"', 'id="cDoctor"')]
+    assert order == sorted(order)                                       # clinic, address, phone, rule, then the doctors
+    body = _function(js, "renderDoctorLines")
+    assert 'createElement("table")' in body and 'createElement("tr")' in body and "n % 2 === 0" in body
+    assert "innerHTML" not in body and "clinic-rule" in body            # rule hidden when there are no doctors

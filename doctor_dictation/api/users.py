@@ -24,9 +24,9 @@ UserId = Annotated[int, Path(ge=1, le=2**63 - 1)]  # SQLite's INTEGER range; any
 class NewUserBody(BaseModel):
     username: str = Field("", max_length=64)
     display_name: str = Field("", max_length=120)
-    doctor_name: str = Field("", max_length=120)
-    qualifications: str = Field("", max_length=120)
-    reg_no: str = Field("", max_length=120)
+    doctor_name: str = Field("", max_length=600)
+    qualifications: str = Field("", max_length=600)
+    reg_no: str = Field("", max_length=600)
 
 
 def _gate(request: Request, action: str, resource=None):

@@ -3,7 +3,8 @@ import re
 from dataclasses import dataclass
 
 PROFILE_KEYS = ("doctor_name", "qualifications", "reg_no", "clinic_name", "address", "phone")
-ALIGNS, MAX_TEXT, MAX_BLOCKS, MAX_DOCTORS = ("left", "center", "right"), 200, 12, 12   # chars per line; blocks per header/footer; doctors printed
+ALIGNS, MAX_TEXT, MAX_BLOCKS, MAX_DOCTORS = ("left", "center", "right"), 200, 12, 12   # chars per literal line; blocks per header/footer; doctors printed
+MAX_PROFILE = 600                     # chars per profile value: room for several doctors joined with "; "
 _ENUMS = {"role": (("title", "subtitle", "normal", "small"), "normal"), "align": (ALIGNS, "left"),
           "thickness": (("thin", "medium"), "thin")}
 _FIELDS = {"text": ("role", "align"), "logo": ("align",), "rule": ("thickness",),
@@ -70,7 +71,7 @@ def validate_layout(raw) -> Layout:
     top, bottom, profile = _num(raw["body"].get("top"), "body.top"), _num(raw["body"].get("bottom"), "body.bottom"), raw.get("profile", {})
     _check(0 <= top <= 0.5 <= bottom <= 1, "body", "needs 0 <= top <= 0.5 and 0.5 <= bottom <= 1")
     _check(top < bottom, "body", "needs top < bottom")
-    _check(all(isinstance(v, str) and len(v) <= MAX_TEXT for v in profile.values()), "profile", "values must be short text")
+    _check(all(isinstance(v, str) and len(v) <= MAX_PROFILE for v in profile.values()), "profile", "values must be short text")
     return Layout(_blocks(raw.get("header", []), "header"), _blocks(raw.get("footer", []), "footer"),
                   top, bottom, {k: profile.get(k, "") for k in PROFILE_KEYS})
 

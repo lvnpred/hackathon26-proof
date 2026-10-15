@@ -30,7 +30,7 @@ def test_valid_layout_is_normalised_with_defaults_filled():
     lambda r: r["header"][1].update(text="both"),
     lambda r: r["header"].extend([{"type": "rule"}] * 12),
     lambda r: r["footer"].append({"type": "logo", "crop": [0, 0, 1, 1]}),
-    lambda r: r["profile"].update(phone="9" * 201),
+    lambda r: r["profile"].update(phone="9" * 601),
 ])
 def test_invalid_layouts_raise(change):
     raw = copy.deepcopy(GOOD)

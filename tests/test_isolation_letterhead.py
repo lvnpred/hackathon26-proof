@@ -14,18 +14,18 @@ NURSE = "Nurse Pooja Assistant"
 
 
 class _Doctors(HTMLParser):
-    """Collects the markup inside the printed ``lh-doctors`` div (nesting-aware)."""
+    """Collects the markup inside the printed ``lh-doctors`` table (nesting-aware)."""
     def __init__(self):
         super().__init__()
         self.depth, self.text, self.found = 0, [], False
 
     def handle_starttag(self, tag, attrs):
-        if tag == "div" and (self.depth or ("class", "lh-doctors") in attrs):
+        if tag == "table" and (self.depth or ("class", "lh-doctors") in attrs):
             self.depth += 1
             self.found = True
 
     def handle_endtag(self, tag):
-        if tag == "div" and self.depth:
+        if tag == "table" and self.depth:
             self.depth -= 1
 
     def handle_data(self, data):

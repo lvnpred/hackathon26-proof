@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=7" />
-<link rel="stylesheet" href="letterhead.css?v=7" />
+<link rel="stylesheet" href="styles.css?v=9" />
+<link rel="stylesheet" href="letterhead.css?v=8" />
 <link rel="stylesheet" href="team.css?v=1" />
 </head>
 <body>
@@ -19,7 +19,7 @@
   </div>
   <div class="topbar-actions">
     <span id="agentChip" class="agent-chip idle" role="status" aria-live="polite">Idle</span>
-    <span id="engineBadge" class="badge">loading…</span>
+    <span id="engineBadge" class="badge" hidden></span>
     <button id="newPatientBtn" type="button" title="Clear the screen and start a new patient">↺ New patient</button>
     <button id="profileOpenBtn" type="button" title="View or edit the clinic profile">⚙ Profile</button>
     <button id="teamOpenBtn" type="button" hidden title="Your clinic's users: add a colleague, disable an account, reset a password">Team</button>
@@ -81,10 +81,11 @@
     <div id="resaveNote" class="resave-note no-print" hidden></div>
     <section id="sheet" class="empty">
       <div class="clinic-head" id="clinicHead">
-        <div class="clinic-doctor" id="cDoctor"></div>
         <div class="clinic-name" id="cClinic"></div>
-        <div class="clinic-meta"><span id="cReg"></span><span id="cPhone"></span></div>
         <div class="clinic-addr" id="cAddr"></div>
+        <div class="clinic-meta"><span id="cPhone"></span></div>
+        <hr class="clinic-rule" hidden>
+        <div class="clinic-doctors" id="cDoctor"></div>
       </div>
       <div id="profileHint" class="profile-hint no-print">Add your clinic details in ⚙ Profile so they print on every prescription.</div>
       <h2>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h2>
@@ -141,15 +142,11 @@
     <fieldset id="profMinePart" class="prof-part">
       <legend>My details</legend>
       <p class="panel-hint">Yours only: they print on the prescriptions you write.</p>
-      <label class="field">Doctor name
-        <input id="profDoctor" type="text" autocomplete="name" />
-      </label>
-      <label class="field">Qualifications
-        <input id="profQual" type="text" />
-      </label>
-      <label class="field">Registration no.
-        <input id="profReg" type="text" />
-      </label>
+      <!-- the three joined strings stay here (the form reads and saves them); doctorgrid.js edits them side by side -->
+      <input id="profDoctor" type="hidden" />
+      <input id="profQual" type="hidden" />
+      <input id="profReg" type="hidden" />
+      <div id="profDoctorGrid"></div>
     </fieldset>
     <section class="prof-lh" aria-labelledby="profLhTitle">
       <h3 id="profLhTitle">Letterhead</h3>
@@ -219,8 +216,11 @@
               <label><input type="radio" name="lhScope" value="clinic" checked /> For the whole clinic</label>
               <label><input type="radio" name="lhScope" value="mine" /> For my prescriptions only</label>
             </fieldset>
+            <p id="lhFillHint" class="panel-hint" hidden>Your own doctor details will be filled from this letterhead.</p>
             <h3>Clinic details</h3>
             <div id="lhProfileFields"></div>
+            <h3>Doctors</h3>
+            <div id="lhDoctorGrid"></div>
           </div>
         </div>
       </section>
@@ -234,10 +234,11 @@
   </div>
 </dialog>
 
-<script src="auth.js?v=2"></script>
-<script src="authorship.js?v=2"></script>
-<script src="app.js?v=21"></script>
-<script src="letterhead.js?v=7"></script>
+<script src="auth.js?v=3"></script>
+<script src="authorship.js?v=4"></script>
+<script src="doctorgrid.js?v=1"></script>
+<script src="app.js?v=25"></script>
+<script src="letterhead.js?v=10"></script>
 <script src="team.js?v=1"></script>
 </body>
 </html>

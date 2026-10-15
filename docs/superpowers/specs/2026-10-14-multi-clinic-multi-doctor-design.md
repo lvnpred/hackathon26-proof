@@ -167,6 +167,8 @@ The layout vocabulary (`pdf/layout.py`) gains a **`doctors` block**: `{"type": "
 - `selected`: the ticked subset; disabled or unknown ids are skipped.
 - The mode and ids are set in the review screen and editable on an active template without re-uploading (`PUT /api/v1/templates/{id}/doctors`).
 - The vision model never guesses which user a printed name belongs to. Names it reads from the pad appear as hints on the review screen; the human chooses the mode.
+- User decision 2026-10-15: accepting a letterhead (or using its details) populates the *accepting user's own* doctor name, qualifications and registration number from the pad, a blank pad value keeping theirs; a login name is independent of the printed doctor details.
+- User decision 2026-10-15: a pad listing several doctors fills the accepting user's profile with all names, qualifications and registration numbers joined by '; '; the doctors block is no longer produced by the reader (the block type and the manual choice remain).
 
 ### 9.3 Guard against wrong names on a pad
 

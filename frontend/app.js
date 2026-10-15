@@ -102,12 +102,15 @@ function setStep(name) {
   if (agentChip) agentChip.className = "agent-chip " + (STEP_LABEL[name] ? name : "idle");
 }
 
-// ---- health badge (engine info only; no model selection) -------------------
+// ---- health badge: hidden from end users; ?debug=1 shows the engine, an offline backend always says so --------
+const DEBUG_BADGE = new URLSearchParams(window.location.search).get("debug") === "1";
 fetch("/api/health").then(r => r.json()).then(h => {
+  if (!DEBUG_BADGE) return;
   const llm = h.llm_configured ? `${h.llm_provider}:${h.llm_model}`
     : (h.deepseek_configured ? "DeepSeek" : "rules-fallback");
   $("engineBadge").textContent = `${h.stt_engine || h.whisper_model} • ${llm}`;
-}).catch(() => { $("engineBadge").textContent = "backend offline"; });
+  $("engineBadge").hidden = false;
+}).catch(() => { $("engineBadge").textContent = "backend offline"; $("engineBadge").hidden = false; });
 
 // ---- working state ---------------------------------------------------------
 function setWorking(on, msg) {
@@ -133,16 +136,15 @@ function setWorking(on, msg) {
 function renderProfileHeader(p) {
   p = p || {};
   const viewOnly = !!(window.Authorship && (Authorship.isViewOnly() || Authorship.keepsOwnHeader()));   // an opened prescription keeps its author's doctor lines
-  if (!viewOnly) setText($("cDoctor"), [p.doctor_name, p.qualifications].filter(Boolean).join(" "));
+  if (!viewOnly && window.Authorship) Authorship.renderDoctorLines($("cDoctor"), p.doctor_name, p.qualifications, p.reg_no);
   setText($("cClinic"), p.clinic_name || "");
-  if (!viewOnly) setText($("cReg"), p.reg_no ? "Reg. No: " + p.reg_no : "");
   setText($("cPhone"), p.phone ? "Ph: " + p.phone : "");
   setText($("cAddr"), p.address || "");
   const any = !!(p.doctor_name || p.qualifications || p.reg_no || p.clinic_name || p.address || p.phone);
   const hint = $("profileHint");
   if (hint) hint.hidden = any;
   setText($("topClinic"), p.clinic_name || "Clinic");
-  setText($("topDoctor"), (window.DDUser && window.DDUser.display_name) || p.doctor_name || "Doctor");   // the signed-in user, never the sheet's author
+  setText($("topDoctor"), p.doctor_name || (window.DDUser && window.DDUser.display_name) || "Doctor");   // the signed-in user's own details, never the sheet's author
 }
 
 function fillProfileForm(p) {
@@ -154,6 +156,7 @@ function fillProfileForm(p) {
   setInput("profAddress", p.address || "");
   setInput("profPhone", p.phone || "");
   setInput("profOpPrefix", p.op_prefix || "");
+  if (typeof DoctorGrid !== "undefined") DoctorGrid.refresh("profDoctorGrid");   // redraw the doctors' cells from the hidden inputs
 }
 
 async function loadProfile() {

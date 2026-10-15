@@ -31,14 +31,14 @@ def test_put_shares_the_clinic_details_and_keeps_my_details_mine(team):
 
 
 def test_profile_fields_are_length_checked(team, tmp_path, monkeypatch):
-    long = {**MINE, "address": "x" * 301}
+    long = {**MINE, "address": "x" * 601}
     assert as_user(team.client, team.rao).put("/api/v1/profile", json=long, headers=H).status_code == 422
     monkeypatch.setenv("MULTI_CLINIC", "0")
     monkeypatch.setenv("DB_PATH", str(tmp_path / "single.db"))
     from doctor_dictation.api.app import create_app
     with TestClient(create_app()) as c:
         assert c.put("/api/v1/profile", json=long).status_code == 422
-        assert c.put("/api/v1/profile", json={**MINE, "address": "x" * 300}).status_code == 200
+        assert c.put("/api/v1/profile", json={**MINE, "address": "x" * 600}).status_code == 200
 
 
 def _request(state):

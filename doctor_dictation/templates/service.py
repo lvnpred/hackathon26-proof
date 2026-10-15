@@ -12,6 +12,7 @@ from doctor_dictation.db import details
 from doctor_dictation.db import templates as tdb
 from doctor_dictation.policy import can
 from doctor_dictation.pdf import LayoutError, validate_layout
+from doctor_dictation.textclean import clean_text
 from doctor_dictation.templates import TemplateError, doctors
 from doctor_dictation.templates.builder import PROFILE_FIELDS as FIELDS, build_draft
 from doctor_dictation.templates.images import clean_image
@@ -150,23 +151,41 @@ def _merge_profile(existing: dict, details: dict) -> dict:
     """Letterhead value wins when non-blank; a blank one keeps the existing Profile value."""
     out = {}
     for k in FIELDS:
-        new = details.get(k)
-        new = new.strip() if isinstance(new, str) else ""
+        new = clean_text(details.get(k))      # pad text is model output: no control, bidi or newline characters
         out[k] = new or (existing.get(k) or "")
     return out
 
 
-def _save_details(conn, layout_json: str, clinic_only: bool = False) -> dict:
-    """Merge the draft's details into the Profile; return what was saved. ``clinic_only`` (signed in): the three
-    clinic fields only. A pad's doctor names are never written to anyone's own details (spec 9.2: no guessing)."""
-    row = dbmod.get_profile(conn)
-    existing = {k: row[k] for k in FIELDS} if row is not None else {}
-    merged = _merge_profile(existing, json.loads(layout_json).get("profile", {}))
-    if clinic_only:
+def _save_my_doctor_details(conn, user_id: int, layout_json: str) -> dict:
+    """Merge the pad's three doctor fields into this user's own details (a blank pad value keeps theirs)."""
+    pad = json.loads(layout_json).get("profile", {})
+    merged = _merge_profile(details.my_details(conn, user_id), pad)
+    mine = {k: merged[k] for k in details.DOCTOR_KEYS}
+    details.save_my_details(conn, user_id, **mine)
+    return mine
+
+
+def _save_details(conn, layout_json: str, user_id=None, clinic: bool = True, fill_doctor: bool = True) -> dict:
+    """Merge the draft's details into the Profile; return what was saved. Single mode (``user_id`` None): all six
+    fields into ``clinic_profile``. Signed in: the pad's doctor name, qualifications and registration number go to
+    the accepting user's own details (a login name is independent of the printed doctor details; a blank pad value
+    keeps theirs), and, when ``clinic`` is set, its three clinic fields go to the shared clinic details. A personal
+    letterhead passes ``clinic=False`` so shared details stay untouched. ``fill_doctor`` False (doctors mode ``all`` or
+    ``selected``, where the doctors block prints each user's own details) skips the doctor-field write."""
+    if user_id is None:
+        row = dbmod.get_profile(conn)
+        existing = {k: row[k] for k in FIELDS} if row is not None else {}
+        merged = _merge_profile(existing, json.loads(layout_json).get("profile", {}))
+        dbmod.save_profile(conn, **merged)
+        return merged
+    saved = _save_my_doctor_details(conn, user_id, layout_json) if fill_doctor else details.my_details(conn, user_id)
+    if clinic:
+        row = dbmod.get_profile(conn)
+        existing = {k: row[k] for k in FIELDS} if row is not None else {}
+        merged = _merge_profile(existing, json.loads(layout_json).get("profile", {}))
         details.save_clinic_details(conn, merged["clinic_name"], merged["address"], merged["phone"])
-        return {k: merged[k] for k in details.CLINIC_KEYS}
-    dbmod.save_profile(conn, **merged)
-    return merged
+        saved.update({k: merged[k] for k in details.CLINIC_KEYS})
+    return saved
 
 
 def _owner(scope, user_id):
@@ -191,8 +210,9 @@ def accept(conn, template_id: int, actor=None, scope="clinic", user_id=None, use
     row = _draft(conn, template_id, user)
     owner = _owner(scope, user_id)
     tdb.set_template_active(conn, template_id, owner_user_id=owner)
-    if owner is None:                 # a clinic letterhead's details become the clinic's; a personal one changes nothing shared
-        _save_details(conn, row["layout_json"], clinic_only=user_id is not None)
+    # a clinic letterhead's details also become the clinic's; a personal one changes nothing shared
+    _save_details(conn, row["layout_json"], user_id=user_id, clinic=owner is None,
+                  fill_doctor=row["doctors_mode"] == "author")
     _unlink(original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_accept", entity="template",
                     entity_id=str(template_id), detail={"clinic": row["clinic"], "scope": scope})
@@ -213,7 +233,7 @@ def discard(conn, template_id: int, actor=None, user=None) -> None:
 def use_details(conn, template_id: int, actor=None, user_id=None, user=None) -> dict:
     """Keep the built-in layout: save this draft's clinic details to the Profile, then discard the draft."""
     row = _draft(conn, template_id, user)
-    saved = _save_details(conn, row["layout_json"], clinic_only=user_id is not None)
+    saved = _save_details(conn, row["layout_json"], user_id=user_id, fill_doctor=row["doctors_mode"] == "author")
     tdb.delete_template(conn, template_id)
     _unlink(row["logo_path"], original_path(template_id))
     dbmod.log_audit(conn, actor=actor, action="template_use_details", entity="template",

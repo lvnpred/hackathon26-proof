@@ -70,7 +70,7 @@ def test_a_colleagues_reprint_uses_the_authors_letterhead_and_details(rao, monke
         conn.commit()
     assert rao.mehta.get(f"/api/v1/documents/{doc}/pdf").status_code == 200
     html = _html(calls[-1])
-    assert "Rao pad" in html and "Dr. A. Rao" in html and "Dr. S. Mehta" not in html
+    assert "Rao pad" in html and "Dr A. Rao" in html and "Dr. S. Mehta" not in html   # Rao's details came from the pad he accepted
 
 
 def test_doctors_block_all_lists_the_active_doctors_and_skips_the_disabled(rao, monkeypatch):
@@ -79,7 +79,7 @@ def test_doctors_block_all_lists_the_active_doctors_and_skips_the_disabled(rao, 
     _save(rao.mehta)
     assert [d["name"] for d in calls[-1][1]["doctors"]] == ["Dr. A. Rao", "Dr. S. Mehta"]
     html = _html(calls[-1])
-    assert "Dr. A. Rao" in html and "Reg. No: TS-2" in html and "Dr. Old" not in html
+    assert "Dr. A. Rao" in html and "Reg. No: TS-2" in html and "Dr Pad Name" not in html and "Dr. Old" not in html
 
 
 def test_doctors_block_selected_skips_a_doctor_disabled_later(rao, monkeypatch):
@@ -96,8 +96,10 @@ def test_doctors_block_in_author_mode_prints_only_the_author(rao, monkeypatch):
     calls = record_renders(monkeypatch)
     _accept(rao.rao, DOCTORS_LAYOUT, monkeypatch)
     _save(rao.mehta)
+    assert calls[-1][1]["doctors"] is None and calls[-1][2] is not None          # author mode on a doctors-block letterhead
     html = _html(calls[-1])
-    assert "Dr. S. Mehta" in html and "Dr. A. Rao" not in html and "Dr Pad Name" not in html
+    assert "Dr. S. Mehta" in html and "Reg. No: TS-2" in html
+    assert "Dr. A. Rao" not in html and "Dr Pad Name" not in html and "TS-1" not in html
 
 
 def test_preview_lists_the_chosen_doctors(rao, monkeypatch):

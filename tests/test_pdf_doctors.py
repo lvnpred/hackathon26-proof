@@ -27,7 +27,7 @@ def test_doctors_block_prints_one_escaped_entry_per_doctor_in_order():
                             _layout([{"type": "doctors", "role": "title", "align": "center"}]))
     assert "Dr. &lt;b&gt;X&lt;/b&gt;" in html and "<b>X</b>" not in html
     assert html.index("Dr. &lt;b&gt;") < html.index("Dr. A. Rao") < html.index("Dr. S. Mehta")
-    assert "Reg. No: TS-1" in html and "justify-content:center" in html
+    assert "Reg. No: TS-1" in html and '<table class="lh-doctors"' in html
 
 
 def test_doctors_block_without_a_list_prints_the_author_from_the_resolved_profile():
@@ -35,7 +35,7 @@ def test_doctors_block_without_a_list_prints_the_author_from_the_resolved_profil
     assert "Dr. Live" in build_sheet_html(FORM, {**META, "profile": {"doctor_name": "Dr. Live"}}, lay)
     assert "Dr. Snapshot" in build_sheet_html(FORM, META, lay)
     assert "Dr. Snapshot" in build_sheet_html(FORM, {**META, "doctors": []}, lay)        # empty list: the author
-    assert "lh-doctors" not in build_sheet_html(FORM, META, _layout([{"type": "doctors"}]))
+    assert 'class="lh-doctors"' not in build_sheet_html(FORM, META, _layout([{"type": "doctors"}]))
 
 
 def test_live_profile_values_win_over_the_snapshot_only_when_not_blank():
@@ -48,7 +48,7 @@ def test_live_profile_values_win_over_the_snapshot_only_when_not_blank():
 def test_doctors_block_in_the_footer_becomes_margin_box_lines():
     lay = _layout(footer=[{"type": "doctors", "role": "small", "align": "center"}])
     html = build_sheet_html(FORM, {**META, "doctors": TWO}, lay)
-    assert '@bottom-center { content:"Dr. A. Rao, MBBS  Reg. No: TS-1\\A Dr. S. Mehta, DNB"' in html
+    assert '@bottom-center { content:"Dr. A. Rao, MBBS\\A Reg. No: TS-1\\A \\A Dr. S. Mehta, DNB"' in html
     assert "font-size:10px" in html.split("@bottom-center")[1]
 
 
@@ -102,7 +102,7 @@ def test_an_authored_print_never_borrows_the_pads_registration_number():
 def test_an_authored_print_with_blank_doctor_fields_prints_no_snapshot_doctor_line():
     lay = _layout(BOTH, [{"type": "doctors", "align": "left"}], profile=SNAP)
     html = build_sheet_html(FORM, {**META, "authored": True, "profile": {"clinic_name": "Live Clinic"}}, lay)
-    assert "Dr. Pad Rao" not in html and "TS-1" not in html and "lh-doctors" not in html
+    assert "Dr. Pad Rao" not in html and "TS-1" not in html and 'class="lh-doctors"' not in html
 
 
 def test_an_authored_print_still_fills_blank_clinic_fields_from_the_snapshot():

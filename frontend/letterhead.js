@@ -4,6 +4,7 @@
   const API = "/api/v1/templates";
   const MAX_BYTES = 8 * 1024 * 1024;            // mirrors TEMPLATE_MAX_IMAGE_BYTES
   const UPLOAD_TIMEOUT_MS = 120000;             // the vision call dominates
+  const DOCTOR_KEYS = ["doctor_name", "qualifications", "reg_no"];
   const PROFILE_KEYS = ["doctor_name", "qualifications", "reg_no", "clinic_name", "address", "phone"];
   const PROFILE_LABEL = { doctor_name: "Doctor name", qualifications: "Qualifications",
     reg_no: "Registration no.", clinic_name: "Clinic name", address: "Address", phone: "Phone" };
@@ -168,7 +169,7 @@
     const mode = (d.doctors && d.doctors.mode) || "author";
     document.querySelectorAll('input[name="lhDoctorsMode"]').forEach((r) => { r.checked = r.value === mode; });
     const names = [];
-    [(d.profile || {}).doctor_name].concat((d.layout || {}).doctor_hints || []).forEach((n) => {
+    (((d.profile || {}).doctor_name || "").split(";").map((t) => t.trim())).concat((d.layout || {}).doctor_hints || []).forEach((n) => {
       if (n && names.indexOf(n) < 0) names.push(n);
     });
     el("lhHints").hidden = !names.length;
@@ -180,7 +181,8 @@
     syncPicks();
   }
   async function syncPicks() {
-    const box = el("lhDoctorPicks"), selected = radioValue("lhDoctorsMode", "author") === "selected";
+    const box = el("lhDoctorPicks"), mode = radioValue("lhDoctorsMode", "author"), selected = mode === "selected";
+    el("lhFillHint").hidden = !(lh.personal && mode === "author");
     box.hidden = !selected;
     if (!selected || box.querySelector("input") || lh.loadingPicks) return;
     lh.loadingPicks = true;
@@ -227,11 +229,23 @@
     });
     el("lhLinesBox").hidden = !lines.children.length;
     const pf = el("lhProfileFields"); pf.textContent = "";
-    PROFILE_KEYS.forEach((k) => pf.appendChild(field("lhProf_" + k, PROFILE_LABEL[k],
-      (d.profile || {})[k], k === "address" ? "textarea" : "input")));
+    const grid = el("lhDoctorGrid"), hidden = [];     // the doctors are edited side by side; the joined strings live in hidden inputs
+    grid.textContent = "";
+    grid.parentNode.querySelectorAll('input[type="hidden"][id^="lhProf_"]').forEach((n) => n.remove());   // a re-render starts clean
+    PROFILE_KEYS.forEach((k) => {
+      if (DOCTOR_KEYS.indexOf(k) < 0) {
+        pf.appendChild(field("lhProf_" + k, PROFILE_LABEL[k], (d.profile || {})[k], k === "address" ? "textarea" : "input"));
+        return;
+      }
+      const h = document.createElement("input");
+      h.type = "hidden"; h.id = "lhProf_" + k; h.value = (d.profile || {})[k] || "";
+      grid.parentNode.insertBefore(h, grid);
+      hidden.push(h);
+    });
+    DoctorGrid.mount(grid, hidden);
     renderWarnings(d); renderDoctors(d);
     loadPreview();
-    const first = lines.querySelector("input") || el("lhProf_doctor_name"); first.focus();
+    const first = lines.querySelector("input") || el("lhProf_clinic_name"); first.focus();
   }
   function collect() {
     const profile = {};

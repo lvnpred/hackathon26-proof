@@ -55,7 +55,7 @@ def test_use_the_clinic_letterhead_switches_back(rao):
         assert [d for _a, d in _scope_changes(conn)] == [{"scope": "mine"}, {"scope": "clinic"}]
 
 
-def test_only_a_clinic_accept_changes_the_shared_clinic_details_and_never_a_doctors(rao):
+def test_only_a_clinic_accept_changes_the_shared_clinic_details_and_only_the_accepters_doctor_fields(rao):
     with clinic_conn() as conn:
         conn.execute("INSERT INTO clinic_profile(id, clinic_name, updated_at) VALUES (1, 'Rao Clinic', 'x')"
                      " ON CONFLICT(id) DO UPDATE SET clinic_name = 'Rao Clinic'")
@@ -70,7 +70,7 @@ def test_only_a_clinic_accept_changes_the_shared_clinic_details_and_never_a_doct
         shared = conn.execute("SELECT clinic_name, doctor_name FROM clinic_profile").fetchone()
         assert (shared[0], shared[1]) == ("Meridian Clinic", "")      # clinic fields merged, doctor column untouched
         names = dict(conn.execute("SELECT username, doctor_name FROM users").fetchall())
-    assert names["dr.mehta"] == "Dr. S. Mehta" and names["dr.rao"] == "Dr. A. Rao"
+    assert names["dr.mehta"] == "Dr A. Rao" and names["dr.rao"] == "Dr. A. Rao"   # only the accepter takes the pad's name
 
 
 def test_doctors_choice_on_a_draft_and_on_an_active_letterhead(rao):

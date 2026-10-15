@@ -20,7 +20,7 @@ from doctor_dictation.scope import multi_clinic_enabled, require_scope  # M4
 from doctor_dictation.textclean import clean_text
 
 router = APIRouter()
-MAX_FIELD = 300
+MAX_FIELD = 600
 
 
 class ProfileBody(BaseModel):

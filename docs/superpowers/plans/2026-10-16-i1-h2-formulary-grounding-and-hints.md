@@ -191,7 +191,7 @@ def row_extras(name, match, status) -> dict:
 +         for field in ("status", "lexicon_match", "instructions", "source"):
 ```
 
-- [ ] **Step 6: Run.** Run: `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 4 passed (this part's four new tests) and no failure; `wc -l doctor_dictation/core/determinism.py` still prints 411 (the plan adds no net line there).
+- [ ] **Step 6: Run.** Run: `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 4 passed (this part's four new tests) and no failure; `wc -l doctor_dictation/core/determinism.py` still prints 408 (the plan adds no net line there).
 - [ ] **Step 7: Leave uncommitted.**
 
 ---

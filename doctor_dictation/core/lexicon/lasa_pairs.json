@@ -1,0 +1,13 @@
+{
+  "note": "High-risk look-alike pairs that ALWAYS ask the doctor to confirm. Not clinically reviewed: a clinician must review this list before it is relied on.",
+  "pairs": [
+    {"a": "Prednisone", "b": "Prednisolone", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Citalopram", "b": "Escitalopram", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Norfloxacin", "b": "Ofloxacin", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Carbamazepine", "b": "Oxcarbazepine", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Dapagliflozin", "b": "Empagliflozin", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Clonazepam", "b": "Lorazepam", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Acyclovir", "b": "Valacyclovir", "source": "plan 2026-10-16-medication-name-accuracy, gap 1", "reviewed": false},
+    {"a": "Hydroxyzine", "b": "Hydralazine", "source": "plan 2026-10-16-medication-name-accuracy, P3 mixed-case row", "reviewed": false}
+  ]
+}

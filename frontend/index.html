@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
 <link rel="stylesheet" href="styles.css?v=9" />
+<link rel="stylesheet" href="rx.css?v=1" />
 <link rel="stylesheet" href="letterhead.css?v=8" />
 <link rel="stylesheet" href="team.css?v=1" />
 </head>
@@ -69,9 +70,8 @@
     </div>
 
     <div class="block-panel" id="blockPanel" hidden>
-      <strong>Confirm these medicines before saving</strong>
+      <strong>The server still blocked these medicines. Resolve them in the sheet.</strong>
       <ul id="blockList"></ul>
-      <button id="confirmAllBtn" type="button">Confirm all &amp; Save</button>
     </div>
   </section>
 
@@ -79,6 +79,14 @@
   <section class="doc-pane" aria-label="Prescription document">
     <div id="viewOnlyBanner" class="view-only-banner no-print" role="status" hidden></div>
     <div id="resaveNote" class="resave-note no-print" hidden></div>
+    <div id="rxBar" class="rx-bar no-print" hidden>
+      <div class="rx-bar-main">
+        <strong id="rxTitle"></strong>
+        <span id="rxReady" class="rx-count" data-state="ok"></span>
+        <span id="rxNeeds" class="rx-count" data-state="dose" role="status"></span>
+      </div>
+      <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden aria-describedby="rxNeeds">Save prescription</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button></div>
+    </div>
     <section id="sheet" class="empty">
       <div class="clinic-head" id="clinicHead">
         <div class="clinic-name" id="cClinic"></div>
@@ -104,7 +112,7 @@
         <ul id="pIx" class="editable-list"></ul>
         <div class="sec-title">Rx (MEDICATIONS)</div>
         <table class="rx">
-          <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th>Check</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th class="check">Check</th><th></th></tr></thead>
           <tbody id="pRx"></tbody>
         </table>
         <div class="sec-title">DIETARY &amp; GENERAL ADVICE</div>
@@ -114,7 +122,6 @@
         <div class="disclaimer">AI draft — doctor must verify before signing. STT + LLM may mishear drug names.</div>
       </div>
     </section>
-    <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden>💾 Save</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button></div>
   </section>
 </div>
 
@@ -237,7 +244,9 @@
 <script src="auth.js?v=4"></script>
 <script src="authorship.js?v=4"></script>
 <script src="doctorgrid.js?v=1"></script>
-<script src="app.js?v=26"></script>
+<script src="rxstate.js?v=1"></script>
+<script src="rxview.js?v=1"></script>
+<script src="app.js?v=27"></script>
 <script src="letterhead.js?v=10"></script>
 <script src="team.js?v=1"></script>
 </body>

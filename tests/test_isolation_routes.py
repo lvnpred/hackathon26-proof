@@ -178,6 +178,7 @@ CLASSIFIED = {
     "POST /api/v1/users": "test_writes_land_in_the_callers_clinic_only[users]",
     "POST /api/transcribe": "reads the caller's own clinic hints: test_transcribe_hints_come_from_the_callers_own_scope",
     "POST /api/format": "per-clinic result cache: test_the_format_cache_is_per_clinic",
+    "POST /api/v1/rx/check-row": "stateless: grounds one row against the global lexicon, reads no clinic data (I1-h revisits)",
     "GET /api/health": "public",
     "GET /health": "public",
     "GET /login": "public page",

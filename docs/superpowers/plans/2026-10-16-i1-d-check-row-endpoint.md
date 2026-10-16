@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - Test command `.venv/bin/python -m pytest tests/ -q`, offline (no network, no LLM). Never commit or push; "leave uncommitted" means that.
-- No file over 500 lines; `core/` pure (`tests/test_core_purity.py`). This plan removes about 46 lines from `determinism.py` (457 to 411).
+- No file over 500 lines; `core/` pure (`tests/test_core_purity.py`). This plan removes about 46 lines from `determinism.py` (457 to 408).
 - Existing endpoints keep their status codes and JSON shapes; existing tests change only where a route table lists the new route.
 - Errors use the repo's shape `{"error": "..."}` (as `api/format.py:84`, `api/session.py:42`).
 - Baseline: run the suite first and note the count; expect baseline + **23** at the end.
@@ -206,7 +206,7 @@ def validate_structured(data: dict, transcript: str, raw_transcript: str = "", a
             out["rx"].append(row)
 ```
 (d) **Carry-across:** done already: Task 1's code carries I1-b's `generic`, I1-a's `lasa_row` (with the `elif status == RX_UNVERIFIED_NAME` branch and `{issue}` warning) and I1-c's hook. Run `grep -n "heard\|lookalike\|generic\|source" doctor_dictation/core/determinism.py` before deleting: any remaining hit inside the block that Task 1 does not carry (I1-h2's `row_extras` is added later, in `rowcheck`) must be moved too. `FIELDS` in the test already lists them.
-- [ ] **Step 4: Run** `.venv/bin/python -m pytest tests/ -q`. Expected: no failures, baseline + 4 passed (every existing `validate_structured` test is the guard). `wc -l doctor_dictation/core/determinism.py` prints 411. Leave uncommitted.
+- [ ] **Step 4: Run** `.venv/bin/python -m pytest tests/ -q`. Expected: no failures, baseline + 4 passed (every existing `validate_structured` test is the guard). `wc -l doctor_dictation/core/determinism.py` prints 408. Leave uncommitted.
 
 ### Task 3: The route, its registration and the route tests
 

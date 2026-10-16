@@ -146,8 +146,11 @@ def test_e2e_llm_picks_candidate_and_row_verifies(monkeypatch):
     repair = calls["messages"][1][-1]["content"]
     assert "Sound-alike names in the medicine list: Cefixime" in repair
     row = j["structured"]["rx"][0]
-    assert (row["name"], row["status"]) == ("Cefixime", RX_VERIFIED)
-    assert j["grounding"]["open_issues"] == [] and j["grounding"]["rounds"] == 1
+    # "cephixime" was auto-corrected to Cefixime, which has look-alikes: one tap, not a silent tick
+    assert (row["name"], row["status"]) == ("Cefixime", "lookalike-check")
+    assert (row["heard"], row["lookalike"]) == ("cephixime", "Cefotaxime")
+    assert j["grounding"]["open_issues"] == ["rx[0] 'Cefixime': lookalike-check"]
+    assert j["grounding"]["rounds"] == 1
 
 
 def test_e2e_ignored_candidate_leaves_row_flagged(monkeypatch):
@@ -177,7 +180,7 @@ def test_very_long_names_get_no_candidates_and_cost_nothing():
 
 
 def test_repair_message_looks_up_candidates_for_at_most_a_few_rows(monkeypatch):
-    import doctor_dictation.core.determinism as D
+    import doctor_dictation.core.repair as D
     calls = []
     monkeypatch.setattr(D, "suggest_candidates", lambda name: calls.append(name) or [])
     issues = [f"rx[{i}] 'Medalpha{i}': {UNKNOWN_MEDICINE_TEXT} (444 entries)" for i in range(30)]

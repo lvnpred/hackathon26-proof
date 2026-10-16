@@ -32,3 +32,21 @@ def test_hostile_patient_name_cannot_leave_the_style_block():
     html = build_sheet_html({"patientName": evil}, {**META, "patientName": evil})
     assert html.count("</style>") == 1 and "<script>" not in html and "\\3c " in html and "\\22 " in html
     assert 'class="clinic-doctor"' in build_sheet_html(FORM, {"profile": {"doctor_name": "A. Rao"}})   # layout=None
+
+
+STATUSES = ["verified", "unknown-medicine", "unverified-name", "unverified-strength", "lookalike-check", "dose-check", "", None]
+
+
+def test_the_printout_has_no_check_column_and_prints_the_same_for_every_status():
+    """Decision 2026-10-16: the printed prescription carries no verification marks; checking is a screen task."""
+    rows = [{"form": "Tab.", "name": "Prednisone", "strength": "10 mg", "dose": "1-0-1", "timing": "After food",
+             "duration": "5 days", "instructions": "with milk", "status": s} for s in STATUSES]
+    html = build_sheet_html({"patientName": "Anita Rao", "rx": rows}, META)
+    table = html[html.index('<table class="rx">'):html.index("</table>")]
+    assert "<th>Check</th>" not in table and table.count("<th>") == 6 and "title=" not in table
+    assert not any(mark in table for mark in ("✓", "≈", "±", "Needs check", "Verified:"))
+    cells = [tr.count("<td>") for tr in table.split("<tr>")[2:]]
+    assert cells == [6] * len(STATUSES)                                    # six cells per medicine, whatever its status
+    printed = {tr.split("</td>", 1)[1].split("</tr>")[0] for tr in table.split("<tr>")[2:]}      # without the row number
+    assert len(printed) == 1                                               # identical rows: the status does not print
+    assert '<td colspan="6">—</td>' in build_sheet_html({"rx": []}, META)

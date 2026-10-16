@@ -62,13 +62,13 @@ Existing fields stay: `form, name, strength, dose, timing, duration, instruction
 | `status` | str | Existing four plus **`lookalike-check`** (I1-a) and **`dose-check`** (I1-c). All are blocking (fact 2). | I1-a, I1-c |
 | `heard` | str | The raw transcript words the name came from when they differ from `name` (case-insensitive); `""` when the same. | I1-a |
 | `lookalike` | str | The twin drug the doctor might have meant, only when status is `lookalike-check`. | I1-a |
-| `generic` | str | The generic when `name` is a brand (`lexicon_match` differs from `name`, case-insensitive); else `""`. Screen only. | I1-b |
+| `generic` | str | The generic when `name` is a brand (`lexicon_match` differs from `name`, case-insensitive); else `""`. Screen only. Derived from `name` + `lexicon_match`; recomputed server-side (`correction.RECOMPUTED_ROW_FIELDS`), the client need not send it. | I1-b |
 | `strength_options` | list[str] | Strengths the drug comes in, usual adult strength first; `[]` when unknown. | I1-c |
 | `usual_strength` | str | The usual adult strength or `""`. | I1-c |
 | `dose_note` | str | Plain reason when status is `dose-check`, for example `3000 mg a day; usual adult maximum 2000 mg`. | I1-c |
 | `source` | str | `"lexicon"` or `"clinic"` (learned by this clinic). | I1-h |
 
-`preserve_untouched_rx_status` (`core/correction.py:247`) restores `status`, `lexicon_match` and `instructions`, and every field of `correction.DERIVED_ROW_FIELDS` (final: `("generic", "heard", "lookalike", "dose_note", "source")`; the prior row's value, `""` if it lacks the field, absent when the prior row had no status); `ops._regrounded` drops the same fields. `strength_options` and `usual_strength` depend on the name only and are recomputed. Each plan that adds a row field adds it to that tuple.
+`preserve_untouched_rx_status` (`core/correction.py:331`) restores `status`, `lexicon_match` and `instructions`, and handles every field of `correction.DERIVED_ROW_FIELDS` (final: `("generic", "heard", "lookalike", "dose_note", "source")`) after them: absent when the prior row had no status; otherwise `generic` is recomputed from the restored `name` + `lexicon_match` (`correction.RECOMPUTED_ROW_FIELDS`; `""` when `_canonical_lookup(name)` no longer equals `lexicon_match`), and the other derived fields are restored from the prior row (its value, `""` if it lacks the field); `ops._regrounded` drops the same fields. `strength_options` and `usual_strength` depend on the name only and are recomputed. Each plan that adds a row field adds it to that tuple.
 
 ### 4.2 Grounding order inside one row (I1-a, I1-c and I1-h extend, I1-d reuses)
 
@@ -118,7 +118,7 @@ request:  {"row": {"form":"Tab.","name":"Prednisone","strength":"10 mg","dose":"
 response: {"row": { ...grounded row with all section 4.1 fields... }, "suggestions": ["Prednisolone","Prednisone"]}
 ```
 
-`suggestions` come from `suggest_candidates` (`core/candidates.py`) plus `twins`. Errors: 400 for a missing or non-object `row`, same JSON error shape as the other routes. A doctor-typed name is never trusted: the row is grounded like any other.
+`suggestions` come from `suggest_candidates` (`core/candidates.py`) plus `twins`. Row-level errors give `400 {"error": str}`: a missing or non-object `row`, a blank row, a non-text field, an over-long field, a name over 60 characters or 8 words. A request body that is not a JSON object, or not JSON at all, gets FastAPI's standard 422 like every other route. The returned `row` equals `/api/format`'s row after `strip_grounding_markers`: stale `[unverified...]` markers are stripped and whitespace in `instructions` is collapsed, as `/api/v1/correct` does. A doctor-typed name is never trusted: the row is grounded like any other.
 
 ### 4.5 Frontend state contract (I1-e)
 
@@ -148,7 +148,7 @@ The monthly rebuild action or scheduler, paediatric ranges, voice spelling, the 
 |---|---|---|
 | 1 | `validate_structured` row block: I1-a and I1-c both assign `extra` and both hook after `_ground_row` | Order is `_ground_row`, `dosing.ground_extra` (`extra`), `lasa_row` (`lextra`), row dict `**extra, **lextra`: dose-check outranks look-alike (4.2). I1-c, I1-d |
 | 2 | I1-d moves that block into `rowcheck.ground_with_notes` | The moved code already carries `generic`, `lextra`, `elif status == RX_UNVERIFIED_NAME` and the `{issue}` warning; I1-h2 adds `row_extras` there, not in `determinism.py`. I1-d, I1-h2 |
-| 3 | `DERIVED_ROW_FIELDS` | Final tuple in 4.1 above. I1-b's restore line is `prev.get(field, "")` (it used the fresh value); I1-c adds `dose_note` to the tuple instead of a separate line (which stamped status-less rows); I1-h2 adds `source` to the tuple instead of the status tuple. I1-b, I1-c, I1-h2 |
+| 3 | `DERIVED_ROW_FIELDS` | Final tuple in 4.1 above. I1-b recomputes `generic` (`RECOMPUTED_ROW_FIELDS`) and restores every other derived field with `prev.get(field, "")` (it used the fresh value); I1-c adds `dose_note` to the tuple instead of a separate line (which stamped status-less rows); I1-h2 adds `source` to the tuple instead of the status tuple. I1-b, I1-c, I1-h2 |
 | 4 | Format cache key (I1-a raw wording, I1-h3 clinic layer) | One key: `clinic:layer-version:key:rawhash` (`api/format.py`). I1-h3. The dosing reference version is not in the key (cached rows keep their old reference until restart; I1-c, unchanged) |
 | 5 | I1-g2's 10% look-alike limit vs I1-a (35% of canonicals have a computed twin) | The share counts only the always-flag (curated) canonicals, 16 of 444 = 3.6%; counting every twin made the bare `build.py --check` fail. I1-g2 |
 | 6 | I1-a Task 2 changes `test_candidates` before the raw transcript is plumbed | The edit moved to I1-a Task 3 Step 3b. I1-a |
@@ -156,4 +156,4 @@ The monthly rebuild action or scheduler, paediatric ranges, voice spelling, the 
 | 8 | I1-f2 pins "team.js has no tab" but I1-h4 adds it | The two assertions were dropped; I1-h4's tab buttons carry `class="team-tab"` and reuse I1-f2's tab CSS. I1-f2, I1-h4 |
 | 9 | I1-e3 CSS heredoc contained a nested code fence (written into `rx.css`); `.rx-sug` never matched the buttons | Fence removed; selector is `.rx-act.sug`. I1-e3 |
 | 10 | I1-a's `PILL`/`statusText` lines are deleted again by I1-e2 | Kept (the old pill needs them until I1-e2); noted in I1-a |
-| 11 | `determinism.py` line claims (484, 439, 483) are stale in the chain | Chain values: 452 (I1-b), 455 (I1-a), 457 (I1-c), 411 (I1-d, unchanged after). I1-h adds no net line |
+| 11 | `determinism.py` line claims (484, 439, 483) are stale in the chain | Chain values: 452 (I1-b), 455 (I1-a), 457 (I1-c), 408 (I1-d, unchanged after). I1-h adds no net line |

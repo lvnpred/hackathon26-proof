@@ -11,7 +11,8 @@ def screen_unverified(structured: dict, confirmed_rows=None) -> list[dict]:
 
     ``structured`` is a validated form; its ``rx`` rows carry a ``status`` field
     (``verified`` / ``unverified-name`` / ``unknown-medicine`` /
-    ``unverified-strength``). ``confirmed_rows`` is the list of rx indices the
+    ``unverified-strength`` / ``lookalike-check``; any status but ``verified``
+    blocks). ``confirmed_rows`` is the list of rx indices the
     doctor explicitly confirmed, so a confirmed row does not block the save.
 
     Returns one ``{"index", "name", "status"}`` per blocking row, in rx order.

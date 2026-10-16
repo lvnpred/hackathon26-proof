@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 from doctor_dictation.config import get_settings, secret_presence
 from doctor_dictation.core.determinism import lexicon_size, lexicon_version
+from doctor_dictation.core.dosing import dosing_version
 from doctor_dictation.providers.llm.factory import make_llm
 from doctor_dictation.providers.stt.factory import make_stt
 from doctor_dictation.providers.stt.local import STT_DECODE, whisper_model_name
@@ -47,5 +48,6 @@ def health():
         "llm_configured": llm is not None,
         "lexicon_version": lexicon_version(),
         "lexicon_entries": lexicon_size(),
+        "dosing_version": dosing_version(),
         "stt_decode": {k: v for k, v in STT_DECODE.items() if k != "initial_prompt"},
     }

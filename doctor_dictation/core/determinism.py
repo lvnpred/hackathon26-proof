@@ -9,7 +9,13 @@ import json
 import re
 from pathlib import Path
 
-from .candidates import suggest_candidates
+from .repair import (  # noqa: F401  (api/format.py and tests import these from here)
+    FORMAT_LLM_CAP, MAX_CANDIDATE_ROWS, RX_VERIFIED, UNKNOWN_MEDICINE_TEXT, _UNKNOWN_ISSUE_RE,
+    build_repair_message, loop_should_continue, open_issues,
+)
+from . import rowcheck
+from .lasa import lasa_row
+from .surface import _generic_of, ambiguous_names, mask_as_dictated, surface_map
 
 LEXICON_PATH = Path(__file__).resolve().parent / "lexicon" / "drugs.json"
 LEXICON_VERSION = "1.0.0"
@@ -26,17 +32,9 @@ RX_ROW_LIMIT = 20
 LIST_ITEM_LIMIT = 12
 
 # Agent-loop grounding statuses (Part A). Deterministic, no LLM involved.
-RX_VERIFIED = "verified"
 RX_UNVERIFIED_NAME = "unverified-name"
 RX_UNKNOWN_MEDICINE = "unknown-medicine"
 RX_UNVERIFIED_STRENGTH = "unverified-strength"
-
-# Wording of the unknown-medicine issue. build_repair_message recognises those
-# issues by this text, so ground_rx and the message builder share one constant.
-UNKNOWN_MEDICINE_TEXT = "not in medicine list"
-
-# Max LLM calls per /api/format request (extract + up to 2 repairs).
-FORMAT_LLM_CAP = 3
 
 NUMBER_WORDS = {
     "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -115,6 +113,18 @@ def _alias_map():
     return m
 
 
+_maps_cache = (None, None, None)  # (lexicon list, surface map, ambiguous names)
+
+
+def _maps():
+    """(surface map, ambiguous names), cached per loaded lexicon list."""
+    global _maps_cache
+    lex = load_lexicon()
+    if _maps_cache[0] is not lex:
+        _maps_cache = (lex, surface_map(lex, _alias_map()), ambiguous_names(lex))
+    return _maps_cache[1], _maps_cache[2]
+
+
 def normalize_numbers(text: str) -> str:
     def _rep(m):
         return str(NUMBER_WORDS[m.group(1).lower()])
@@ -123,7 +133,7 @@ def normalize_numbers(text: str) -> str:
 
 def correct_drugs(text: str) -> str:
     """Fix STT splits/misspellings against the local lexicon (deterministic)."""
-    amap = _alias_map()
+    amap, amb = _maps()  # alias -> text to write (generic, or the brand as spelled); ambiguous names
     if not amap:
         return text
     out = text
@@ -135,7 +145,7 @@ def correct_drugs(text: str) -> str:
     masked = {}
 
     def _mask(s: str) -> str:
-        for i, canon in enumerate(sorted({c for c in amap.values() if " " in c},
+        for i, canon in enumerate(sorted({c for c in amap.values() if " " in c or "-" in c},
                                          key=len, reverse=True)):
             pat = re.compile(r"\b" + re.escape(canon) + r"\b", re.I)
             if pat.search(s):
@@ -150,8 +160,8 @@ def correct_drugs(text: str) -> str:
             s = s.replace(token, canon)
         return s
 
-    out = _mask(out)
-    for alias in sorted((a for a in amap if " " in a), key=len, reverse=True):
+    out = _mask(mask_as_dictated(out, amb, masked))  # a phrase two generics claim: kept whole
+    for alias in sorted((a for a in amap if " " in a or "-" in a), key=len, reverse=True):
         out = re.sub(r"\b" + re.escape(alias) + r"\b", amap[alias], out, flags=re.I)
     out = _mask(out)  # protect canonicals introduced by alias replacement
 
@@ -167,14 +177,17 @@ def correct_drugs(text: str) -> str:
         if len(w1) < 2 or len(w2) < 3:
             continue
         key = (w1 + w2).lower()
-        if key in nospace:
+        if key in nospace and not _ambiguous_for(key):
             canon = nospace[key]
             out = re.sub(r"\b" + re.escape(w1) + r"\s+" + re.escape(w2) + r"\b",
                          canon, out, count=1, flags=re.I)
+    out = _mask(out)  # a hyphenated or spaced brand written by the split must survive pass 2
     # 2) single-word exact alias + fuzzy (cutoff fixed, sorted keys)
     keys = sorted(k for k in amap if len(k) >= 5 and " " not in k)
     for tok in set(re.findall(r"[A-Za-z]{5,}", out)):
         low = tok.lower()
+        if _ambiguous_for(low):  # two generics claim it (or a near spelling): leave it as dictated
+            continue
         if low in amap and " " not in low:
             if tok != amap[low]:
                 out = re.sub(r"\b" + re.escape(tok) + r"\b", amap[low], out, flags=re.I)
@@ -240,6 +253,15 @@ def _canonical_lookup(name: str) -> str:
     return amap[best[0]] if best else ""
 
 
+def _ambiguous_for(low: str) -> tuple:
+    """Generics a dictated name could mean when two claim it (exact or a near spelling); else ()."""
+    amb = _maps()[1]
+    if low in amb:
+        return amb[low]
+    near = difflib.get_close_matches(low, sorted(k for k in amb if len(k) >= 5), n=1, cutoff=0.84)
+    return amb[near[0]] if near and low not in _alias_map() else ()
+
+
 def _norm_strength(s: str) -> str:
     return re.sub(r"\s+", "", (s or "").lower())
 
@@ -250,6 +272,10 @@ def _ground_row(name: str, strength: str, transcript_lower: str):
     Returns (status, lexicon_match, issue_or_None). Never raises.
     """
     try:
+        amb = _ambiguous_for(name.strip().lower())
+        if amb:  # a name two generics claim (a combination brand): never guess
+            return (RX_UNVERIFIED_NAME, "",
+                    f"'{name}': matches more than one medicine ({', '.join(amb)})")
         canon = _canonical_lookup(name)
         if not canon:
             return (RX_UNKNOWN_MEDICINE, "",
@@ -271,7 +297,7 @@ def _ground_row(name: str, strength: str, transcript_lower: str):
         return (RX_UNVERIFIED_NAME, "", f"'{name}': grounding failed")
 
 
-def ground_rx(rx_rows, transcript: str):
+def ground_rx(rx_rows, transcript: str, raw_transcript: str = ""):
     """Agent-loop grounding step (deterministic, no LLM).
 
     Returns (grounded_rows, issues). Each grounded row is a copy of the input
@@ -289,75 +315,19 @@ def ground_rx(rx_rows, transcript: str):
         if not name:
             row["status"] = RX_UNVERIFIED_NAME
             row["lexicon_match"] = ""
+            row.update(generic="", heard="", lookalike="")
             issues.append(f"rx[{i}]: empty medicine name")
             grounded.append(row)
             continue
         status, match, issue = _ground_row(name, strength, tl)
+        status, extra = lasa_row(status, match, name, raw_transcript)
         row["status"] = status
         row["lexicon_match"] = match
+        row.update(generic=_generic_of(name, match), **extra)
         if issue:
             issues.append(f"rx[{i}] {issue}")
         grounded.append(row)
     return grounded, issues
-
-
-MAX_CANDIDATE_ROWS = 5  # unknown rows that get a candidate lookup per repair message
-_UNKNOWN_ISSUE_RE = re.compile(r"^rx\[\d+\] '(.*)': " + re.escape(UNKNOWN_MEDICINE_TEXT))
-
-
-def build_repair_message(issues, transcript: str) -> str:
-    """Deterministic targeted repair prompt naming each offending row.
-
-    For an unknown-medicine issue the row's name is read back out of the issue
-    text and up to 3 sound-alike lexicon names are listed under it. The model
-    may pick exactly one or keep its spelling; nothing here edits a row.
-    """
-    lines = [
-        "Your previous JSON has grounding problems against the dictated",
-        "transcript and the medicine list. Fix EXACTLY these rows:",
-    ]
-    offered = False
-    looked_up = 0
-    for iss in issues:
-        lines.append(f"- {iss}")
-        m = _UNKNOWN_ISSUE_RE.match(iss)
-        cands = []
-        if m and looked_up < MAX_CANDIDATE_ROWS:
-            looked_up += 1
-            cands = suggest_candidates(m.group(1))
-        if cands:
-            offered = True
-            lines.append("  Sound-alike names in the medicine list: " + ", ".join(cands))
-    lines.append(
-        "For each row: either quote the exact transcript words supporting the"
-        " medicine (and use a strength stated in the transcript), or remove"
-        " the row. Never invent medicines, strengths, or durations."
-    )
-    if offered:
-        lines.append(
-            "Where sound-alike names are listed, pick EXACTLY ONE of them only if"
-            " it is what the doctor said (judge by the transcript words);"
-            " otherwise keep your spelling unchanged. Never pick a name that is"
-            " not listed. A name kept as dictated stays flagged for the doctor."
-        )
-    lines.append("Return ONLY the FULL corrected JSON matching the schema.")
-    return "\n".join(lines)
-
-
-def loop_should_continue(prev_open: int, new_open: int, llm_calls_used: int,
-                         cap: int = FORMAT_LLM_CAP) -> bool:
-    """Loop guard: continue only with open issues, budget left, strict progress."""
-    return new_open > 0 and llm_calls_used < cap and new_open < prev_open
-
-
-def open_issues(validated: dict):
-    """Issue strings for validated rows whose status is not verified."""
-    out = []
-    rx = (validated or {}).get("rx") or []
-    for i, row in enumerate(rx):
-        if isinstance(row, dict) and row.get("status", RX_VERIFIED) != RX_VERIFIED:
-            out.append(f"rx[{i}] '{row.get('name', '?')}': {row.get('status')}")
-    return out
 
 
 def _name_in_transcript(name: str, transcript_lower: str) -> bool:
@@ -381,7 +351,7 @@ def _name_in_transcript(name: str, transcript_lower: str) -> bool:
     return best >= 0.8
 
 
-def validate_structured(data: dict, transcript: str):
+def validate_structured(data: dict, transcript: str, raw_transcript: str = "", age_sex: str = ""):
     """Coerce to schema, normalize enums, flag rx names absent from transcript.
 
     Returns (validated_dict, warnings_list). Never raises on bad input.
@@ -417,58 +387,14 @@ def validate_structured(data: dict, transcript: str):
             f"rx: truncated {len(rx) - RX_ROW_LIMIT} rows "
             f"beyond the {RX_ROW_LIMIT}-row limit"
         )
-    tl = (transcript or "").lower()
     for i, item in enumerate(rx[:RX_ROW_LIMIT]):
         if not isinstance(item, dict):
             warnings.append(f"rx[{i}]: dropped non-object")
             continue
-        form = str(item.get("form") or "Tab.")
-        if form not in ALLOWED_FORMS:
-            form = "Tab."
-        name = str(item.get("name") or "").strip().strip(".")
-        strength = str(item.get("strength") or "").strip()
-        dose = str(item.get("dose") or "").strip()
-        if dose not in ALLOWED_DOSES:
-            fixed = normalize_dose(dose.lower()) if dose else ""
-            if fixed:
-                dose = fixed
-            else:
-                warnings.append(f"rx[{i}] {name or '?'}: unknown dose '{dose}' -> '1-0-0'")
-                dose = "1-0-0"
-        timing = str(item.get("timing") or "").strip()
-        if timing not in ALLOWED_TIMINGS:
-            fixed = normalize_timing(timing.lower())
-            if fixed:
-                timing = fixed
-            elif ("food" in timing.lower() or "bedtime" in timing.lower()
-                  or "as needed" in timing.lower()):
-                pass  # legacy combined strings from seeded example
-            else:
-                timing = ""
-        duration = normalize_duration(str(item.get("duration") or "").lower()) or str(item.get("duration") or "")
-        instructions = str(item.get("instructions") or "")
-        if not name and not strength:
-            warnings.append(f"rx[{i}]: dropped empty row")
-            continue
-        # Agent-loop grounding: status + lexicon match on every row.
-        status, match, issue = _ground_row(name, strength, tl)
-        if status == RX_VERIFIED:
-            pass
-        elif status == RX_UNKNOWN_MEDICINE:
-            warnings.append(f"rx[{i}] '{name}': not in medicine list -> flagged {status}")
-            instructions = (instructions + " [unverified: confirm with doctor]").strip()
-        elif status == RX_UNVERIFIED_STRENGTH:
-            warnings.append(f"rx[{i}] '{name}': {issue} -> flagged {status}")
-            instructions = (instructions + " [unverified strength: confirm with doctor]").strip()
-        else:  # RX_UNVERIFIED_NAME
-            warnings.append(f"rx[{i}] '{name}': not clearly dictated -> flagged unverified")
-            instructions = (instructions + " [unverified: confirm with doctor]").strip()
-        out["rx"].append({
-            "form": form, "name": name, "strength": strength,
-            "dose": dose, "timing": timing, "duration": duration,
-            "instructions": instructions, "status": status,
-            "lexicon_match": match,
-        })
+        row, notes = rowcheck.ground_with_notes(item, raw_transcript, transcript, age_sex or out["ageSex"], i)
+        warnings += notes
+        if row is not None:
+            out["rx"].append(row)
     return out, warnings
 
 

@@ -12,7 +12,8 @@ garbage.
 import copy
 import re
 
-from .correction import GROUNDING_MARKERS, LIST_FIELDS, _norm_name, _text
+from .correction import (DERIVED_ROW_FIELDS, GROUNDING_MARKERS, LIST_FIELDS, MIN_ALIAS_LETTERS,
+                         _norm_name, _text, same_medicine_rows)
 
 _FIELDS = ("rx",) + LIST_FIELDS
 
@@ -33,7 +34,9 @@ def _find_rx(rows, ref):
     Exact normalised name first; otherwise ONLY a row whose name starts with
     `ref` at a word boundary ("dolo" -> "dolo 650", never "pan" ->
     "pantoprazole"). There is no reverse direction: a longer ref never matches a
-    shorter row name. Unique matches only.
+    shorter row name. Last, the brand/generic of `ref` by the row's `lexicon_match`
+    ("allopurinol" -> the Zyloric row), only for an exact lexicon name of 5+ letters: short
+    aliases ("levo", "keto", "pan") mean several drugs colloquially. Unique matches only.
     """
     names = [_key(r.get("name")) if isinstance(r, dict) else "" for r in rows]
     exact = [i for i, n in enumerate(names) if n and n == ref]
@@ -41,6 +44,7 @@ def _find_rx(rows, ref):
         return (exact[0], "") if len(exact) == 1 else (None, "many")
     loose = [i for i, n in enumerate(names)
              if n.startswith(ref) and n[len(ref):len(ref) + 1].isspace()]
+    loose = loose or (same_medicine_rows(rows, ref) if len(ref) >= MIN_ALIAS_LETTERS else [])
     return (loose[0], "") if len(loose) == 1 else (None, "many" if loose else "none")
 
 
@@ -74,7 +78,7 @@ def _miss(kind, ref, field):
 
 
 def _regrounded(row, new_name):
-    out = {k: v for k, v in row.items() if k not in ("status", "lexicon_match")}
+    out = {k: v for k, v in row.items() if k not in ("status", "lexicon_match", *DERIVED_ROW_FIELDS)}
     out["name"] = new_name
     if "instructions" in out:
         text = str(out["instructions"] or "")

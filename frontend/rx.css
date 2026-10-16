@@ -1,0 +1,44 @@
+/* Medication rows (rxview.js). Colours come from the design canvas; the state pills are at least 5.4:1 (text on its tint), the muted text 5.8:1 or more on white and the row tints,
+   the usual chip on hover 4.7:1 and the focus ring 4.9:1 on the row tints.
+   Meaning is always icon shape + words, never colour alone. New blocks carry .no-print; the one print rule hides the Check column. */
+:root { --rx-muted:#566660; }
+[data-state="ok"], [data-rxstate="ok"] { --c:#17703a; --bg:#e5f4ea; --bd:#a8d6b6; }
+[data-state="dose"], [data-rxstate="dose"] { --c:#7d5200; --bg:#fff2cf; --bd:#e6c46f; }
+[data-state="confirm"], [data-rxstate="confirm"] { --c:#a8261d; --bg:#fdeceb; --bd:#efb0aa; }
+[data-state="known"], [data-rxstate="known"] { --c:#0e5a6e; --bg:#e2f1f5; --bd:#a7d0db; }
+[data-state="you"], [data-rxstate="you"] { --c:#3a3ea6; --bg:#ececfb; --bd:#bcbdf0; }
+/* Nothing about checking prints (decision 2026-10-16): the Check column is hidden on paper, as the PDF has none. */
+@media print { table.rx th.check, td.check, table.rx th:nth-last-child(2) { display:none !important; } }
+@media screen {
+  td.check { min-width:180px; text-align:left; white-space:normal; }
+  #sheet { overflow-x:auto; }                                   /* a wide table scrolls inside the sheet, never the page */
+  tr[data-rxstate] > td:first-child { border-left:5px solid var(--c); }
+  tr[data-rxstate="dose"] { background:#fffbf0; }
+  tr[data-rxstate="confirm"] { background:#fff8f7; }
+}
+.rx-state:focus-visible, .rx-act:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.rx-pill, .rx-count { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600; color:var(--c); background:var(--bg); border:1px solid var(--bd); }
+.rx-reason, .rx-note, .rx-hint, .rx-sub { font-size:12px; color:var(--rx-muted); }
+.rx-reason { margin:6px 0 8px; }
+.rx-note { color:#a8261d; margin:0 0 6px; }
+.rx-note:empty { display:none; }
+.rx-sub { color:#0e5a6e; margin-top:2px; }
+.rx-acts, .rx-chips { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.rx-chips { margin-top:8px; gap:6px; }
+.rx-act { min-height:44px; padding:0 14px; border-radius:8px; border:1px solid #b5c0ba; background:#fff; color:var(--ink); font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+.rx-act:hover:not(:disabled) { border-color:var(--accent); }
+.rx-act.mini, .rx-act.solid { margin-left:0; font-size:14px; }      /* beat .confirm-btn (12px, 6px left margin) from styles.css */
+.rx-act.solid { background:var(--ink); color:#fff; border-color:var(--ink); }
+.rx-act.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.rx-chip { border:1.5px dashed #8a9a93; }
+.rx-chip:hover:not(:disabled) { border-style:solid; background:#f1f6ff; }
+.rx-chip.usual { border-color:var(--accent); color:var(--accent); }
+.rx-usual { font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+.rx-pill[hidden] { display:none; }
+.rx-bar { position:sticky; top:var(--topbar-h, 64px); z-index:3; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--card); border:1px solid var(--soft); border-radius:var(--radius); padding:10px 16px; margin-bottom:12px; }
+.rx-bar[hidden] { display:none; }
+.rx-bar-main { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.rx-bar .save-row { margin:0; }
+.rx-bar .save { margin:0; min-height:44px; padding:0 22px; font-size:15px; }
+#sheet.view-only .rx-act, #sheet.view-only .rx-chips { display:none; }

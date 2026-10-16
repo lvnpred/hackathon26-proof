@@ -54,14 +54,6 @@ const state = {
 // a different medicine (Review Finding 1).
 let rowSeq = 0;
 
-const PILL = {
-  "verified": ["ok", "✓", "Verified: in transcript and medicine list"],
-  "unverified-name": ["warn", "?", "Needs check: name not clearly dictated"],
-  "unknown-medicine": ["bad", "!", "Needs check: not in medicine list"],
-  "unverified-strength": ["warn", "±", "Needs check: strength not in known list"],
-};
-const PILL_DEFAULT = ["warn", "?", "Needs check"];
-
 // ---- small helpers ---------------------------------------------------------
 const text = (el) => (el ? el.textContent : "").replace(/\s+/g, " ").trim();
 const setText = (el, v) => { if (el) el.textContent = v == null ? "" : String(v); };
@@ -126,6 +118,7 @@ function setWorking(on, msg) {
   if (rb) rb.disabled = on;
   document.querySelectorAll("#sheet .x-btn, #undoBtn").forEach(b => { b.disabled = on; });
   recBtn.classList.toggle("busy", on);
+  RxView.sync();                                     // after :128 Save follows the medicines, not just "busy"
   if (window.Authorship) Authorship.enforce();      // last word: view-only must not rest on CSS hiding the x/confirm buttons
 }
 
@@ -542,7 +535,7 @@ async function formatTranscript(transcript) {
     setStep("ready");
     const open = openRows().length;
     setStatus("Draft ready via " + (j.engine || "engine") + (j.cached ? " (cached)" : "") + ". " +
-      (open ? open + " medicine" + (open > 1 ? "s" : "") + " need" + (open > 1 ? "" : "s") + " a check." : "All medicines verified ✓.") +
+      (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
       " Edit, dictate a correction, or Save.");
   } catch (e) {
     state.retry = { mode: "dictate", transcript };
@@ -573,7 +566,7 @@ async function applyCorrection(transcript) {
     setStep("ready");
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
-      (open ? open + " medicine" + (open > 1 ? "s" : "") + " need" + (open > 1 ? "" : "s") + " a check." : "All medicines verified ✓.") +
+      (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
       " Review, then Save." +
       (j.warnings && j.warnings.length ? " ⚠ " + j.warnings.join(" ") : ""));
   } catch (e) {
@@ -618,6 +611,7 @@ function readRx() {
       status: tr.dataset.status || "",
       lexicon_match: tr.dataset.lexicon || "",
     };
+    Object.assign(rec, RxView.wire(tr));                 // heard + lookalike: the server restores them from this copy of the row
     if (!(rec.form || rec.name || rec.strength || rec.dose || rec.timing || rec.duration || rec.instructions)) {
       tr.remove(); // fully blank row -> drop it and renumber the rest
       continue;
@@ -753,7 +747,7 @@ function setUndo(rec, msg) {
 function snapshotRow(tr) {
   const rec = { status: tr.dataset.status || "", lexicon_match: tr.dataset.lexicon || "" };
   for (const c of ["form", "name", "strength", "dose", "timing", "duration", "instructions"]) rec[c] = cellText(tr, c);
-  return rec;
+  return Object.assign(rec, RxView.meta(tr));       // :756 snapshotRow: heard, generic, chips survive delete + undo
 }
 function deleteRow(tr) {
   const rows = [...rxBody.querySelectorAll("tr[data-index]")];
@@ -785,10 +779,8 @@ function undoDelete() {
     const empty = rxBody.querySelector("tr.rx-empty");
     if (empty) empty.remove();
     const rows = [...rxBody.querySelectorAll("tr[data-index]")];
-    const tr = rxRow(r.data, r.pos);
-    tr.dataset.rowid = r.rowid; // same identity, so a pending block/confirm still matches
-    if (r.wasConfirmed) state.confirmed.add(r.rowid);
-    renderCheck(tr);
+    if (r.wasConfirmed) state.confirmed.add(r.rowid);   // before the first render, so "you chose the strength" survives
+    const tr = rxRow(r.data, r.pos, r.rowid);           // same identity, so a pending block/confirm still matches
     rxBody.insertBefore(tr, rows[r.pos] || null);
     renumberRx();
     updateGrounding();
@@ -842,11 +834,11 @@ function editable(tag, col, value) {
   return el;
 }
 
-function rxRow(r, index) {
+function rxRow(r, index, rowid) {                      // rowid: Undo restores a row under its old id, before the first render
   r = r || {};
   const tr = document.createElement("tr");
   tr.dataset.index = String(index);
-  tr.dataset.rowid = String(++rowSeq);
+  tr.dataset.rowid = rowid != null ? String(rowid) : String(++rowSeq);
   tr.dataset.status = r.status || "";
   tr.dataset.lexicon = r.lexicon_match || "";
 
@@ -871,6 +863,7 @@ function rxRow(r, index) {
   const check = document.createElement("td");
   check.className = "check";
   tr.appendChild(check);
+  RxView.attach(tr, r);                               // :874 rxRow keeps the extra row fields
   renderCheck(tr);
 
   const del = document.createElement("td");
@@ -890,39 +883,8 @@ function renderRx(rows) {
   list.forEach((r, i) => rxBody.appendChild(rxRow(r, i)));
 }
 
-// The check pill: verified ✓ / name ? / unknown ! / strength ±. A hand-edited
-// or explicitly confirmed row never shows a stale ✓ (Review Focus #2).
-function renderCheck(tr) {
-  const check = tr.querySelector(".check");
-  if (!check) return;
-  check.innerHTML = "";
-  const rowid = tr.dataset.rowid || "";
-  const status = tr.dataset.status || "";
-  const confirmed = state.confirmed.has(rowid);
-
-  let cls, sym, title;
-  if (confirmed) { cls = "ok"; sym = "✓"; title = "Confirmed by doctor"; }
-  else if (status === "verified") { [cls, sym, title] = PILL.verified; }
-  else {
-    const m = PILL[status] || PILL_DEFAULT;
-    cls = m[0]; sym = m[1];
-    title = status ? m[2] : "Edited — confirm this row before saving";
-  }
-
-  const pill = document.createElement("span");
-  pill.className = "pill " + cls;
-  pill.textContent = sym;
-  pill.title = title;
-  check.appendChild(pill);
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "confirm-btn no-print" + (confirmed ? " on" : "");
-  btn.dataset.action = "confirm";
-  btn.textContent = confirmed ? "Confirmed" : "Confirm";
-  btn.title = confirmed ? "Click to reopen this row for checking" : "Confirm this medicine is correct";
-  check.appendChild(btn);
-}
+// The row's state cell is built by rxview.js from the rules in rxstate.js.
+function renderCheck(tr) { RxView.renderRow(tr); }
 
 function renderSheet(s) {
   s = s || {};
@@ -948,18 +910,18 @@ function renderSheet(s) {
 
 function openRows() {
   return [...rxBody.querySelectorAll("tr[data-index]")].filter(tr =>
-    tr.dataset.status !== "verified" && !state.confirmed.has(tr.dataset.rowid));
+    tr.dataset.status !== "verified" && !state.confirmed.has(tr.dataset.rowid) && !RxView.isBlank(tr));
 }
 
-function updateGrounding() {
-  if (!state.structured) { groundingEl.hidden = true; return; }
+function updateGrounding() {                            // :954 now a sentence plus the summary bar
+  if (!state.structured) { groundingEl.hidden = true; RxView.sync(); return; }
   const open = openRows().length;
   groundingEl.hidden = false;
   groundingEl.className = "grounding " + (open ? "warn" : "ok");
   groundingEl.textContent = open
-    ? open + " medicine" + (open > 1 ? "s" : "") + " need" + (open > 1 ? "" : "s") +
-      " checking — confirm the row or dictate a correction before Save."
-    : "All medicines checked ✓ — ready to Save.";
+    ? open + (open > 1 ? " medicines need" : " medicine needs") + " you. Resolve each one in the sheet, then Save."
+    : "All medicines are ready. You can Save.";
+  RxView.sync();
 }
 
 // ---- inline-edit invalidation (Review Focus #2) ----------------------------
@@ -972,6 +934,7 @@ sheetEl.addEventListener("input", (e) => {
   // hand-edited medicine can never keep a stale ✓.
   state.confirmed.delete(tr.dataset.rowid);
   tr.dataset.status = "";
+  RxView.onEdit(tr, e.target);                        // :974 a hand edit drops stale reasons
   renderCheck(tr);
   updateGrounding();
   if (!blockPanel.hidden) refreshBlockPanel();
@@ -981,6 +944,7 @@ sheetEl.addEventListener("input", (e) => {
 rxBody.addEventListener("click", (e) => {
   const btn = e.target && e.target.closest ? e.target.closest('[data-action="confirm"]') : null;
   if (!btn) return;
+  if (state.working || (window.Authorship && Authorship.isViewOnly())) return;   // no confirming mid-flight or on a colleague's prescription
   const tr = btn.closest("tr[data-index]");
   if (!tr) return;
   const rowid = tr.dataset.rowid;
@@ -991,13 +955,6 @@ rxBody.addEventListener("click", (e) => {
   if (!blockPanel.hidden) refreshBlockPanel();
 });
 
-function statusText(s) {
-  return s === "unknown-medicine" ? "not in the medicine list"
-    : s === "unverified-strength" ? "strength not recognised"
-    : s === "verified" ? "verified"
-    : "name not clearly dictated";
-}
-
 function refreshBlockPanel() {
   const list = $("blockList");
   const remaining = state.lastBlock.filter(b => b.rowid != null && !state.confirmed.has(b.rowid) &&
@@ -1006,17 +963,15 @@ function refreshBlockPanel() {
   list.innerHTML = "";
   for (const b of remaining) {
     const li = document.createElement("li");
-    li.append((b.name ? b.name + " — " : "row " + (b.index + 1) + " — ") + statusText(b.status) + " ");
-    const btn = document.createElement("button");
+    const rowTr = rxBody.querySelector('tr[data-rowid="' + b.rowid + '"]');
+    const why = rowTr ? RxView.reasonFor(rowTr) : RxState.rowState({ status: b.status }, {}).reason;
+    li.append((b.name ? b.name + " — " : "row " + (b.index + 1) + " — ") + why + " ");
+    const btn = document.createElement("button");        // :1010-1020 refreshBlockPanel: jump to the row, no confirming here
     btn.type = "button";
-    btn.className = "confirm-btn";
-    btn.textContent = b.name ? "Confirm" : "Confirm row " + (b.index + 1);
+    btn.textContent = "Go to row";
     btn.addEventListener("click", () => {
-      state.confirmed.add(b.rowid);
       const tr = rxBody.querySelector('tr[data-rowid="' + b.rowid + '"]');
-      if (tr) renderCheck(tr);
-      updateGrounding();
-      refreshBlockPanel();
+      if (tr) { tr.scrollIntoView({ block: "center" }); const s = tr.querySelector(".rx-state"); if (s) s.focus(); }
     });
     li.appendChild(btn);
     list.appendChild(li);
@@ -1025,14 +980,6 @@ function refreshBlockPanel() {
 }
 
 function hideBlockPanel() { blockPanel.hidden = true; state.lastBlock = []; }
-
-$("confirmAllBtn").addEventListener("click", async () => {
-  for (const b of state.lastBlock) if (b.rowid != null) state.confirmed.add(b.rowid);
-  rxBody.querySelectorAll("tr[data-index]").forEach(tr => renderCheck(tr));
-  refreshBlockPanel();
-  updateGrounding();
-  await saveDocument();
-});
 
 // ---- Save, then Print (two separate actions) ---------------------------------
 async function saveDocument() {
@@ -1102,7 +1049,7 @@ async function saveDocument() {
       const n = state.lastBlock.length;
       setStatus("Some medicines still need confirmation before saving.");
       showError("Save blocked: " + n + " medicine" + (n > 1 ? "s" : "") + " need" + (n > 1 ? "" : "s") +
-        " a check. Confirm below (or in the row) or dictate a correction, then Save again.");
+        " a check. Resolve them in the sheet (the list below jumps to each one), then Save again.");
     } else {
       showError(errorMessage(e, "Save failed"));
     }
@@ -1249,6 +1196,7 @@ function newPatient() {
   rxBody.innerHTML = "";
   setText($("pRev"), "");
   groundingEl.hidden = true;
+  RxView.sync();                                      // :1251 newPatient hides the bar
   highlightToday();
   refreshMicLabel();
   setStep("idle");
@@ -1263,6 +1211,10 @@ $("profileCancelBtn").addEventListener("click", closeProfilePanel);
 $("profileForm").addEventListener("submit", saveProfile);
 
 // ---- init ------------------------------------------------------------------
+RxView.init({
+  body: rxBody, saveBtn, confirmed: () => state.confirmed, working: () => state.working,
+  changed: () => { markDirty(); updateGrounding(); if (!blockPanel.hidden) refreshBlockPanel(); }, hasSheet: () => !sheetEl.classList.contains("empty"),
+});
 setText($("pDate"), today());
 refreshMicLabel();
 setStep("idle");

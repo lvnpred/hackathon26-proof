@@ -18,9 +18,16 @@ Merge rules (see the plan, Task 4):
   overwrite, fields the patch omits are **retained** (a dose-only correction
   keeps the existing strength). The row's `name` keeps the current/canonical
   spelling unless the patch explicitly names a key. A new name is appended (a nameless row never is);
-  rows not named in the patch are left untouched.
+  rows not named in the patch are left untouched. A brand and its generic are one
+  medicine: `match_by_generic` renames such a patch row to the form's row first.
 """
 import json
+
+from .determinism import (  # determinism never imports this module
+    RX_UNVERIFIED_NAME, _alias_map, _ambiguous_for, _canonical_lookup,
+)
+from .dosing import DOSE_CHECK, check_dose
+from .surface import _generic_of
 
 SCALAR_FIELDS = ("patientName", "ageSex", "opNo", "review")
 LIST_FIELDS = ("diagnosis", "complaints", "investigations", "advice")
@@ -36,7 +43,9 @@ CORRECTION_INSTRUCTION = (
     "is about, copied from the current form with its exact spelling. If the doctor "
     "refers to a medicine, find it in the current form and use that name. "
     "A medicine that is not on the current form is a NEW row: use the name the "
-    "doctor dictated. Never return an rx row without a name.\n"
+    "doctor dictated. Never return an rx row without a name. A brand and its generic are the "
+    "same medicine (Zyloric is Allopurinol): when the doctor names the other one, use the name "
+    "on the current form.\n"
     '2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". '
     "Map: once daily/OD -> 1-0-0; twice daily/BD -> 1-0-1; thrice daily/TDS -> 1-1-1; "
     "at bedtime/HS -> 0-0-1; as needed/for pain -> SOS.\n"
@@ -123,6 +132,56 @@ def resolve_blank_names(current: dict, patch: dict):
     return pat, warnings
 
 
+MIN_ALIAS_LETTERS = 5  # shorter names never match by "same medicine" (ops.py applies the same floor)
+
+
+def same_medicine_rows(rows, name) -> list:
+    """Indices of the named rx rows whose `lexicon_match` is the generic `name` is an exact name of.
+
+    Brand and generic are one medicine ("allopurinol" finds the `Zyloric` row). Exact lexicon
+    names only: a fuzzy neighbour is often another drug (Famciclovir is not Acyclovir). `[]` when
+    the name is not in the lexicon or two generics claim it (never guessed). Also used by ops.
+    """
+    low = _norm_name(name)
+    generic = "" if not low or _ambiguous_for(low) else _alias_map().get(low, "").lower()
+    return [i for i, r in enumerate(rows if isinstance(rows, list) else [])
+            if generic and isinstance(r, dict) and _norm_name(r.get("name"))
+            and _norm_name(r.get("lexicon_match")) == generic]
+
+
+def match_by_generic(current: dict, patch: dict):
+    """Rename each patch rx row naming no current row to the ONE current row of its generic.
+
+    "change allopurinol to 300 mg" against a `Zyloric` row would otherwise append a second
+    allopurinol row (both verified). An exact name always wins; with two current rows of that
+    generic nothing is guessed: the row stays new, a warning says so, and its name is returned
+    in `unsure` so the caller blocks it (`flag_unsure_rows`). Returns
+    `(patch_copy, warnings, unsure)`; never mutates its inputs.
+    """
+    pat = dict(patch) if isinstance(patch, dict) else {}
+    rows, cur_rows = pat.get("rx"), current.get("rx") if isinstance(current, dict) else None
+    if not isinstance(rows, list) or not isinstance(cur_rows, list):
+        return pat, [], set()
+    names = {_norm_name(r.get("name")) for r in cur_rows if isinstance(r, dict)}
+    out, warnings, unsure = [], [], set()
+    for row in rows:
+        said = _text(row.get("name")) if isinstance(row, dict) else ""
+        short = len(" ".join(_norm_name(said).split())) < MIN_ALIAS_LETTERS  # keto, levo, pan: many drugs
+        same = [] if not said or short or _norm_name(said) in names else same_medicine_rows(cur_rows, said)
+        if len(same) == 1:
+            target = cur_rows[same[0]]["name"]
+            row = {**row, "name": target}
+            warnings.append(f"'{said}' matched the existing row '{target}' (same medicine).")
+        elif same:
+            listed = ", ".join(_text(cur_rows[i]["name"]) for i in same)
+            unsure.add(_norm_name(said))
+            warnings.append(f"'{said}' could be any of {listed} (same medicine), so it was added "
+                            "as a new row to confirm. Use the x button on the row you do not want.")
+        out.append(row)
+    pat["rx"] = out
+    return pat, warnings, unsure
+
+
 def _merge_row(existing: dict, patch_row: dict) -> dict:
     """Overlay a matching patch row onto an existing rx row.
 
@@ -203,10 +262,48 @@ def merge_form(current: dict, patch: dict) -> dict:
     return out
 
 
+# Row fields validate_structured derives from the name and the grounding (screen only).
+DERIVED_ROW_FIELDS = ("generic", "heard", "lookalike", "dose_note")
+
+
+def _recomputed_generic(row: dict) -> str:
+    """`generic` from the name + restored `lexicon_match`; "" when they no longer agree (a name
+    hand-edited in the UI keeps the old data-lexicon: Febuxostat must not show "Allopurinol")."""
+    name, match = row.get("name", ""), row.get("lexicon_match", "")
+    return _generic_of(name, match) if match and _canonical_lookup(name) == match else ""
+
+
+# DERIVED_ROW_FIELDS that depend on name + lexicon_match only: recomputed for an untouched row, never
+# copied from the prior row (the client's readRx does not send them back). The rest are restored.
+RECOMPUTED_ROW_FIELDS = {"generic": _recomputed_generic}
+
+def _dose_note(row: dict, prev: dict, age_sex) -> str:
+    """Why a restored dose-check row was flagged, recomputed from the validated row (the page does not send
+    `dose_note` back); the prior row's note when nothing is recomputed (reference changed, row edited)."""
+    form = row.get("form") if prev.get("form") == row.get("form") else ""   # same "form given" rule as validate_structured
+    verdict = check_dose(row.get("lexicon_match", ""), row.get("strength", ""), row.get("dose", ""), age_sex, form)
+    return verdict.note or prev.get("dose_note", "")
+
+
 GROUNDING_MARKERS = (
     "[unverified: confirm with doctor]",
     "[unverified strength: confirm with doctor]",
 )
+
+
+def flag_unsure_rows(structured: dict, names) -> dict:
+    """Give the verified rows `match_by_generic` could not place a blocking `unverified-name`.
+
+    The doctor must confirm such a row (save gate), or remove it. Rows already blocked keep their
+    status. Mutates and returns `structured`.
+    """
+    rows = structured.get("rx") if isinstance(structured, dict) else None
+    for row in rows if isinstance(rows, list) and names else []:
+        if isinstance(row, dict) and _norm_name(row.get("name")) in names \
+                and row.get("status") == "verified":
+            row["status"] = RX_UNVERIFIED_NAME
+            row["instructions"] = f"{row.get('instructions') or ''} {GROUNDING_MARKERS[0]}".strip()
+    return structured
 
 
 def _patch_rx_names(patch: dict) -> set:
@@ -275,6 +372,15 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
                 row[field] = prev[field]
             else:
                 row.pop(field, None)
+        for field in DERIVED_ROW_FIELDS:  # follow the restored status; absent when the prior row had none
+            if "status" not in prev:
+                row.pop(field, None)
+            elif field in RECOMPUTED_ROW_FIELDS:  # from the restored name + lexicon_match
+                row[field] = RECOMPUTED_ROW_FIELDS[field](row)
+            elif field == "dose_note" and row.get("status") == DOSE_CHECK:  # the page never sends it back
+                row[field] = _dose_note(row, prev, structured.get("ageSex"))
+            else:
+                row[field] = prev.get(field, "")
     return structured
 
 

@@ -4,6 +4,35 @@ Pure and offline: stdlib `re` only. `main.fallback_format` re-exports this name.
 """
 import re
 
+from .determinism import _maps, load_lexicon
+
+# The no-strength branch also knows the brands of these generics: a dictated brand is no longer
+# rewritten to its generic before this runs.
+_NO_STRENGTH = ("paracetamol", "ibuprofen", "aspirin", "azithromycin", "amoxicillin", "omeprazole", "cetirizine")
+
+
+def _no_strength_names() -> str:
+    names = set(_NO_STRENGTH) | {"crocin", "dolo"}
+    names |= {b.lower() for e in load_lexicon() if str(e.get("canonical", "")).lower() in _NO_STRENGTH
+              for b in e.get("brands", [])}
+    return "|".join(re.escape(n) for n in sorted(names, key=lambda n: (-len(n), n)))
+
+
+def _spelled(name: str) -> str:
+    """A lexicon name in its own casing ("Moxikind-CV", not the title-cased "Moxikind-Cv").
+
+    Case only: the surface map sends an alias to its generic ("amlo" -> "Amlodipine"), and the
+    dictated word must stay (a guessed generic grounds unverified-name).
+    """
+    s = _maps()[0].get(name.lower())
+    return s if s and s.lower() == name.lower() else name
+
+
+# Drug name: a letter, then letters, spaces, hyphens, or digits after a letter, digit or hyphen
+# ("Alpha D3", "B12", "Doxy-1"), or a letter + digit ("D3"). A digit never follows a space, so a
+# bare number is never part of a name and cannot pull in the previous row's words.
+_NAME = r"(?:[A-Za-z](?:[A-Za-z\- ]|(?<=[A-Za-z0-9\-])\d){2,30}?|[A-Za-z]\d)"
+
 
 def fallback_format(transcript: str) -> dict:
     """Rule-based fallback when no DeepSeek key. Seeded example + generic med parser."""
@@ -109,7 +138,7 @@ def fallback_format(transcript: str) -> dict:
         (r"every \d+ hours|q\d+h", "SOS"),
     ]
     # find drug mentions: optional form + capitalized word + strength
-    for m in re.finditer(r"(?:\b(tab(?:let)?|cap(?:sule)?|syr(?:up)?|inj(?:ection)?)\.?\s+)?\b([A-Za-z][A-Za-z\- ]{2,30}?)\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|iu))\b", text, re.I):
+    for m in re.finditer(r"(?:\b(tab(?:let)?|cap(?:sule)?|syr(?:up)?|inj(?:ection)?)\.?\s+)?\b(" + _NAME + r")\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|iu))\b", text, re.I):
         raw_form, name, strength = m.groups()
         name = name.strip().strip(".").title()
         # strip filler words browser STT often adds ("please have/take X") — repeat, they stack
@@ -120,6 +149,7 @@ def fallback_format(transcript: str) -> dict:
             name = new_name
         if len(name.split()) > 2:
             name = name.split()[-1]
+        name = _spelled(name)
         # skip non-drugs
         if name.lower() in {"have", "take", "please", "with", "since", "daily", "twice", "after", "before"}:
             continue
@@ -147,17 +177,17 @@ def fallback_format(transcript: str) -> dict:
                 numwords = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6}
                 n, u = numwords[wm.group(1)], wm.group(2)
                 dur = f"{n} {u}{'s' if n > 1 else ''}"
-        form = {"tab": "Tab.", "tablet": "Tab.", "cap": "Cap.", "capsule": "Cap.", "syr": "Syr.", "syrup": "Syr.", "inj": "Inj.", "injection": "Inj."}.get((raw_form or "tab").lower()[:3], "Tab.")
+        form = {"tab": "Tab.", "tablet": "Tab.", "cap": "Cap.", "capsule": "Cap.", "syr": "Syr.", "syrup": "Syr.", "inj": "Inj.", "injection": "Inj."}.get((raw_form or "").lower()[:3], "")   # "" = no form word spoken (validated later to Tab.)
         out["rx"].append({"form": form, "name": name, "strength": strength, "dose": dose or "1-0-0", "timing": timing, "duration": dur, "instructions": ""})
         if len(out["rx"]) >= 8:
             break
     # fallback single-drug line without strength, e.g. "have paracetamol twice a day"
     if not out["rx"]:
-        m2 = re.search(r"\b(paracetamol|ibuprofen|crocin|dolo|aspirin|azithromycin|amoxicillin|omeprazole|cetirizine)\b([^.]{0,60})", t)
+        m2 = re.search(rf"\b({_no_strength_names()})\b([^.]{{0,60}})", t)
         if m2:
-            name, window = m2.group(1).title(), m2.group(0)
+            name, window = _spelled(m2.group(1).title()), m2.group(0)
             dose = next((c for p, c in freq_map if re.search(p, window)), "1-0-0")
-            out["rx"].append({"form": "Tab.", "name": name, "strength": "", "dose": dose, "timing": "", "duration": "", "instructions": ""})
+            out["rx"].append({"form": "", "name": name, "strength": "", "dose": dose, "timing": "", "duration": "", "instructions": ""})
 
     # --- investigations / advice / review keyword scan ---
     ix_keys = ["blood test", "cbc", "urine", "culture", "creatinine", "sugar", "hba1c", "x-ray", "xray", "usg", "ultrasound", "ct ", "mri", "ecg", "thyroid", "lipid", "esr", "crp"]

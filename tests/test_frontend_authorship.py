@@ -115,7 +115,7 @@ def test_the_top_bar_keeps_the_signed_in_users_own_name():
     assert 'setText($("topDoctor"), p.doctor_name || (window.DDUser && window.DDUser.display_name) || "Doctor")' in app
     assert 'doctor.textContent.trim() === "Doctor"' in auth          # the login name never overwrites a known profile name
     html = _read("index.html")
-    assert all(v in html for v in ("auth.js?v=4", "authorship.js?v=4", "app.js?v=26"))
+    assert all(v in html for v in ("auth.js?v=4", "authorship.js?v=4")) and int(re.search(r"app\.js\?v=(\d+)", html).group(1)) >= 26
 
 
 def test_the_engine_badge_is_hidden_unless_debug_or_offline():

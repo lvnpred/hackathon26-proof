@@ -10,14 +10,6 @@ DISCLAIMER = (
     "STT + LLM may mishear drug names."
 )
 
-# status -> (symbol, label) for the Rx "Check" column (mirrors frontend pill()).
-_CHECK = {
-    "verified": ("✓", "Verified: in transcript and medicine list"),
-    "unknown-medicine": ("!", "Needs check: not in medicine list"),
-    "unverified-strength": ("±", "Needs check: strength not in known list"),
-}
-_CHECK_DEFAULT = ("?", "Needs check: name not clearly dictated")
-
 
 def _esc(value) -> str:
     """HTML-escape any value (``None`` -> ``""``); never emits markup."""
@@ -84,7 +76,7 @@ def _rx_rows(rx) -> str:
         if isinstance(r, dict) and (r.get("name") or r.get("strength"))
     ]
     if not rows:
-        return '<tr><td colspan="7">—</td></tr>'
+        return '<tr><td colspan="6">—</td></tr>'
     out = []
     for index, row in enumerate(rows, 1):
         medicine = " ".join(
@@ -92,7 +84,6 @@ def _rx_rows(rx) -> str:
                 row.get("form") or "", row.get("name") or "", row.get("strength") or ""
             ) if str(part).strip()
         )
-        symbol, label = _CHECK.get(row.get("status"), _CHECK_DEFAULT)
         out.append(
             "<tr>"
             f"<td>{index}</td>"
@@ -101,7 +92,6 @@ def _rx_rows(rx) -> str:
             f"<td>{_esc(row.get('timing'))}</td>"
             f"<td>{_esc(row.get('duration'))}</td>"
             f"<td>{_esc(row.get('instructions'))}</td>"
-            f'<td title="{_esc(label)}">{_esc(symbol)}</td>'
             "</tr>"
         )
     return "".join(out)
@@ -314,7 +304,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 <ul>{_list_items(s.get("investigations"))}</ul>
 <div class="sec-title">Rx (MEDICATIONS)</div>
 <table class="rx">
-<thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th>Check</th></tr></thead>
+<thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th></tr></thead>
 <tbody>{_rx_rows(s.get("rx"))}</tbody>
 </table>
 <div class="sec-title">Dietary &amp; General Advice</div>

@@ -10,6 +10,8 @@ from doctor_dictation.config import get_settings
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     extract_correction,
+    flag_unsure_rows,
+    match_by_generic,
     merge_form,
     preserve_untouched_rx_status,
     resolve_blank_names,
@@ -41,7 +43,7 @@ STRICT RULES:
 1. Extract Diagnosis, Chief Complaints, Investigations Advised, and Medications clearly.
 2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". Map: once daily/OD -> 1-0-0; twice daily/BD -> 1-0-1; thrice daily/TDS -> 1-1-1; at bedtime/HS -> 0-0-1; as needed/for pain -> SOS. Never output OD/BD/TDS/HS text.
 3. Allowed timing ONLY: "After food", "Before food", "At bedtime", or "". Map "after meal" -> After food, "empty stomach" -> Before food, "at night" -> At bedtime.
-4. Copy drug strength VERBATIM from the transcript (e.g. "0.4 mg"). If no strength dictated, use "". Never invent strengths, durations, or drugs. If a field is missing, return empty string or empty array, never hallucinate.
+4. Copy drug strength VERBATIM from the transcript (e.g. "0.4 mg"). If no strength dictated, use "". Never invent strengths, durations, or drugs. Write each medicine name exactly as dictated, including brand names; never replace a brand with its generic. If a field is missing, return empty string or empty array, never hallucinate.
 5. If the doctor dictates patient demographics (e.g. "patient Rahul Sharma, 45 year old male"), extract patientName and ageSex (format "45 / M"). If an OP/registration number is dictated, copy it VERBATIM into opNo (e.g. "OP 1234" -> "OP 1234"); use "" if not dictated. Otherwise return empty strings.
 6. Duration format: "<N> days/weeks/months" with digits (e.g. "14 days"). Map "two weeks" -> "14 days".
 7. Return ONLY valid JSON matching this exact schema, no markdown, no extra text. EXAMPLE input: "right flank pain and burning micturition since 2 days. 5 mm lower ureteric calculus. tablet Tamsulosin 0.4 mg once daily at bedtime after food for 2 weeks, tablet Paracetamol 650 mg as needed for pain." -> rx doses "0-0-1" and "SOS", timings "After food" and "":
@@ -62,9 +64,9 @@ class FormatRequest(BaseModel):
     transcript: str = ""
 
 
-async def _validate(data, transcript):
+async def _validate(data, transcript, raw=""):
     """validate_structured in a worker thread: ~10 ms of CPU must not stall the loop."""
-    return await asyncio.to_thread(validate_structured, data, transcript)
+    return await asyncio.to_thread(validate_structured, data, transcript, raw)
 
 
 async def _normalize(text):
@@ -86,7 +88,7 @@ async def format_transcript(req: FormatRequest):
     normalized = await _normalize(raw)
     key = transcript_sha(normalized)
     sc = current_scope()
-    ckey = f"{sc.clinic_slug if sc else ''}:{key}"   # per-clinic cache: one clinic never sees another's hit
+    ckey = f"{sc.clinic_slug if sc else ''}:{key}:{transcript_sha(raw)[:16]}"   # per clinic and raw wording
     hit = cache_get(ckey)
     if hit is not None:
         return {"structured": hit["structured"], "engine": hit["engine"],
@@ -95,7 +97,7 @@ async def format_transcript(req: FormatRequest):
                 "cached": True, "transcript_sha256": key}
     llm = make_llm(get_settings())
     if llm is None:
-        structured, warnings = await _validate(fallback_format(normalized), normalized)
+        structured, warnings = await _validate(fallback_format(normalized), normalized, raw)
         engine = (f"fallback-rules+lexicon v{lexicon_version()} "
                   f"(set OPENAI_API_KEY for default LLM, or DEEPSEEK_API_KEY with LLM_PROVIDER=deepseek)")
         grounding = {"rounds": 0, "open_issues": open_issues(structured),
@@ -143,7 +145,7 @@ async def format_transcript(req: FormatRequest):
     except Exception as e:
         last_err = str(e)
     if best is not None:
-        structured, warnings = await _validate(best[1], normalized)
+        structured, warnings = await _validate(best[1], normalized, raw)
         repairs = max(0, llm_calls - 1)
         engine = (f"{llm.name}:{llm.model}+lexicon v{lexicon_version()}"
                   f"+loop{repairs}")
@@ -156,7 +158,7 @@ async def format_transcript(req: FormatRequest):
                 "grounding": grounding,
                 "cached": False, "transcript_sha256": key}
     # Graceful fallback so demo never blocks (still validated + cached)
-    structured, warnings = await _validate(fallback_format(normalized), normalized)
+    structured, warnings = await _validate(fallback_format(normalized), normalized, raw)
     engine = f"fallback-after-error v{lexicon_version()}: {last_err}".strip()[:300]
     grounding = {"rounds": 0, "open_issues": open_issues(structured), "llm_calls": llm_calls}
     cache_put(ckey, {"structured": structured, "engine": engine,
@@ -205,10 +207,12 @@ async def correct(req: CorrectRequest, request: Request):
             engine = f"rules-after-error v{lexicon_version()}: {e}".strip()[:300]
     current2, patch2, ops_notes, touched = apply_ops(current, patch)
     patch2, merge_warnings = resolve_blank_names(current2, patch2)
+    patch2, same_notes, unsure = await asyncio.to_thread(match_by_generic, current2, patch2)  # brand <-> generic
     structured, _warnings = await _validate(
-        strip_grounding_markers(merge_form(current2, patch2)), normalized)
+        strip_grounding_markers(merge_form(current2, patch2)), normalized, text)
     preserve_untouched_rx_status(current, patch2, structured, extra_named=touched)
+    flag_unsure_rows(structured, unsure)  # appended, not placed: the doctor must confirm it
     grounding = {"rounds": 0, "open_issues": open_issues(structured),
                  "llm_calls": llm_calls}
     return {"structured": structured, "grounding": grounding, "engine": engine,
-            "warnings": ops_notes + merge_warnings}
+            "warnings": ops_notes + merge_warnings + same_notes}

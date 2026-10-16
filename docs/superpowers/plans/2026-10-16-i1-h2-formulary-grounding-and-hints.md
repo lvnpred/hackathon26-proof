@@ -13,14 +13,14 @@
 **Assumptions about earlier plans** (re-find every anchor with `grep -n`; line numbers below are from the repository as it stood before I1-a..I1-g)**:**
 - I1-h1 is applied. From it this part uses exactly: `core.formulary.key`, `clean_name`, `learnable`, `ClinicLayer(items)` with `.get(name)`, `.version`, `.hint_names()`, `activate(layer)`, `active_layer()`, constants `THRESHOLD`, `MAX_NAME`, `MAX_WORDS`, `MAX_HINTS = 10`, `HINT_CHARS = 150`; and `tests/test_formulary.py` (its head: `D`, `F`, `build_hints`, `MAX_HINT_CHARS`, `layer()`, the autouse fixture that resets the layer).
 - I1-a: `core/lasa.py` and status `lookalike-check`; `lookalike_flag` must return `""` for a row whose `lexicon_match` is empty (check with `grep -n "def lookalike_flag" doctor_dictation/core/lasa.py`). I1-b frees room in `core/determinism.py`; this plan needs only one line there (482 lines now; 483 after).
-- I1-c: `dose-check` never fires for a row with no lexicon match (clinic names are `cannot-check`). I1-d: moves the per-row block of `validate_structured` into `rowcheck.ground_with_notes`; if it has landed, put I1-h2 Task 1's `**formulary.row_extras(...)` addition in that function's returned dict instead (`grep -n '"lexicon_match"' doctor_dictation/core/*.py`), and give `api/rx.py` the same `dependencies=[Depends(use_clinic_layer)]` as `/api/format` (I1-h3 Task 1 Step 6).
+- I1-c: `dose-check` never fires for a row with no lexicon match (clinic names are `cannot-check`). I1-d: moves the per-row block of `validate_structured` into `rowcheck.ground_with_notes`; it has landed (dry-run order: yes), so Task 1 Step 4's `**formulary.row_extras(...)` goes in `rowcheck.ground_with_notes`' returned dict, after `**extra, **lextra,`, and `rowcheck` gets `from . import dosing, formulary`; `determinism.py` imports `from . import formulary, rowcheck`. `api/rx.py` gets the same `dependencies=[Depends(use_clinic_layer)]` as `/api/format` (I1-h3 Task 1 Step 6).
 
 **Produces (consumed by I1-h3 and I1-h4):** `core.formulary.ground_clinic(name, transcript_lower, in_transcript) -> (status, "", issue | None) | None`, `row_extras(name, lexicon_match, status) -> dict`, constants `VERIFIED`, `UNVERIFIED_NAME`, `LOOKALIKE`; rows from `validate_structured` carry `source` (`"clinic"` or `"lexicon"`) and `lookalike` for a flagged clinic name; `build_hints` includes the active layer's names; `preserve_untouched_rx_status` restores `source`.
 
 ## Global Constraints
 
 - `core/` stays pure (`tests/test_core_purity.py`): `core/formulary.py` imports only the standard library and `core.candidates`/`core.determinism` (lazily). Per-clinic data comes in as data.
-- Changes to `core/determinism.py`: at most 4 net lines (this plan: +1). No source file over 500 lines (`db/__init__.py` is 487 lines, so the new SQL lives in `db/formulary.py`).
+- Changes to `core/determinism.py`: at most 4 net lines (this plan: 0 after I1-d). No source file over 500 lines (`db/__init__.py` is 487 lines, so the new SQL lives in `db/formulary.py`).
 - Existing endpoints keep their status codes and JSON shapes; rows gain only `source` (and `lookalike` for a clinic name flagged as a look-alike). `preserve_untouched_rx_status` also restores `source` (`core/correction.py:273`).
 - A clinic name is verified for its NAME only: no strength options, dose check `cannot-check`. Another clinic never sees a name: every query runs on the scoped clinic database (`db/__init__.py:35-44`).
 - Tests offline: stub LLM (`STUB_LLM_JSON`), fake PDF renderer, no network. Test command `.venv/bin/python -m pytest tests/ -q`. No commits: every "commit" step is "leave uncommitted".
@@ -42,7 +42,7 @@
 | File | Change |
 |---|---|
 | `doctor_dictation/core/formulary.py` | grounding half (appended) |
-| `doctor_dictation/core/determinism.py` | +1 net line (482 now, 483 after) |
+| `doctor_dictation/core/determinism.py`, `core/rowcheck.py` | `ground_clinic` in `_ground_row` (net 0 lines); `row_extras` in the row dict that lives in `rowcheck` after I1-d |
 | `doctor_dictation/core/hints.py`, `core/correction.py` | layer names kept and offered; `source` restored |
 | `tests/test_formulary.py` | 4 more tests |
 
@@ -86,7 +86,8 @@ def test_a_correction_keeps_the_source_of_rows_it_does_not_name():
     from doctor_dictation.core.correction import preserve_untouched_rx_status
     current = {"rx": [{"name": "Zorbexin", "status": "verified", "lexicon_match": "", "source": "clinic"}]}
     fresh = {"rx": [{"name": "Zorbexin", "status": "unknown-medicine", "lexicon_match": "", "source": "lexicon"}]}
-    assert preserve_untouched_rx_status(current, {}, fresh)["rx"][0] == current["rx"][0]
+    row = preserve_untouched_rx_status(current, {}, fresh)["rx"][0]      # derived fields (I1-a/b/c) may be added as ""
+    assert {k: row[k] for k in current["rx"][0]} == current["rx"][0]
 
 
 def test_hints_keep_clinic_names_inside_the_budget_and_still_leave_room_for_the_lexicon():
@@ -148,7 +149,7 @@ def row_extras(name, match, status) -> dict:
     return {"source": "clinic", **({"lookalike": _lexicon_twin(name)} if status == LOOKALIKE else {})}
 ```
 
-- [ ] **Step 4: The hook in `core/determinism.py`** (net +1 line: the import; the unknown branch of `_ground_row`, `:254-256`, gains `ground_clinic(...) or` on the same return; the row dict at `:466-471` gains `**formulary.row_extras(...)` on the `lexicon_match` line). If I1-a/I1-c/I1-d changed these lines, apply the same three changes to the same statements wherever they now live.
+- [ ] **Step 4: The hook in `core/determinism.py`** (the import; the unknown branch of `_ground_row` gains `ground_clinic(...) or` on the same return; the row dict gains `**formulary.row_extras(...)`). After I1-d the row dict is in `core/rowcheck.py` (`"lexicon_match": match, ... **extra, **lextra,`): put it there, not in `determinism.py`; the import line in `determinism.py` is `from . import formulary, rowcheck`. The `candidates` import in the diff below is gone after I1-b: ignore that line.
 
 ```diff
 - from .candidates import suggest_candidates
@@ -168,7 +169,7 @@ def row_extras(name, match, status) -> dict:
 +         })
 ```
 
-- [ ] **Step 5: Hints and correction.** In `core/hints.py` the import (`:11`); then the two lines `canon = _canonical_lookup(clean)` / `if canon:` of `_doctor_canonical` (`:31-32`) become the block below, so names on the layer survive; the `for name in [...]` line of `build_hints` (`:42`) gains the newest clinic names; in `core/correction.py` the field tuple (`:273`) gains `"source"`.
+- [ ] **Step 5: Hints and correction.** In `core/hints.py` the import (`:11`); then the two lines `canon = _canonical_lookup(clean)` / `if canon:` of `_doctor_canonical` (`:31-32`) become the block below, so names on the layer survive; the `for name in [...]` line of `build_hints` (`:42`) gains the newest clinic names; in `core/correction.py` add `"source"` to `DERIVED_ROW_FIELDS` (not to the `status`/`lexicon_match`/`instructions` tuple: a derived field follows the status, is `""` for an old row without it, and `ops._regrounded` then drops it on a renamed row).
 
 ```diff
 - from .determinism import _canonical_lookup, load_lexicon
@@ -190,7 +191,7 @@ def row_extras(name, match, status) -> dict:
 +         for field in ("status", "lexicon_match", "instructions", "source"):
 ```
 
-- [ ] **Step 6: Run.** Run: `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 4 passed (this part's four new tests) and no failure; `wc -l doctor_dictation/core/determinism.py` prints 483.
+- [ ] **Step 6: Run.** Run: `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 4 passed (this part's four new tests) and no failure; `wc -l doctor_dictation/core/determinism.py` still prints 411 (the plan adds no net line there).
 - [ ] **Step 7: Leave uncommitted.**
 
 ---

@@ -4,13 +4,13 @@
 
 **Goal:** A prebuilt, versioned adult-dosing reference with a pure dose-range check and strength chips (contract 4.3, `core/dosing.py`), giving rows the status `dose-check` and the fields `strength_options`, `usual_strength`, `dose_note`.
 
-**Architecture:** `core/dosing.py` reads `core/lexicon/dosing.json` (separate from the name lexicon) and exposes `strength_options`, `check_dose`, `dosing_version` and one grounding hook, `ground_extra`, which `validate_structured` calls right after `_ground_row` (so `dose-check` ranks after unverified-strength, before lookalike-check; contract 4.2). `lexicon/build_dosing.py` rebuilds the file from a local CSV: no scheduler, button or UI. Two choices: (1) a form a *reviewed* entry does not allow is flagged `dose-check` (spec 2b) via a fourth `DoseVerdict.state`, `form-mismatch`, and an optional `form=""` argument, a small deviation from contract 4.3's three states; (2) no age plumbing from `api/format.py`: `ageSex` already travels in the extracted form and in `current_form`, so `validate_structured` falls back to `out["ageSex"]` (the `age_sex` keyword is for I1-d).
+**Architecture:** `core/dosing.py` reads `core/lexicon/dosing.json` (separate from the name lexicon) and exposes `strength_options`, `check_dose`, `dosing_version` and one grounding hook, `ground_extra`, which `validate_structured` calls right after `_ground_row` (so `dose-check` ranks after unverified-strength, before lookalike-check; contract 4.2). `lexicon/build_dosing.py` rebuilds the file from a local CSV: no scheduler, button or UI. Two choices: (1) a form a *reviewed* entry does not allow is flagged `dose-check` (spec 2b) via a fourth `DoseVerdict.state`, `form-mismatch`, and an optional `form=""` argument, a deviation from the original three states of contract 4.3, accepted by the owner and now written into the contract (index, Decisions); (2) no age plumbing from `api/format.py`: `ageSex` already travels in the extracted form and in `current_form`, so `validate_structured` falls back to `out["ageSex"]` (the `age_sex` keyword is for I1-d).
 
 **Tech Stack:** Python stdlib (`decimal`, `re`, `json`, `csv`), pytest, FastAPI TestClient.
 
 **Spec:** "Iteration 1" sections 2 and 2b of `docs/superpowers/plans/2026-10-16-medication-name-accuracy.md`; contracts in `docs/superpowers/plans/2026-10-16-i1-00-index-and-contracts.md` (its section 4 wins).
 
-**Assumptions about earlier plans:** I1-a adds status `lookalike-check` and may restructure the status branch of `validate_structured`; I1-b may have moved code out of `determinism.py`. Line numbers below are today's (482 lines): re-find each anchor with `grep -n` before editing.
+**Assumptions about earlier plans:** I1-b and I1-a are applied (`determinism.py` is 455 lines; `validate_structured` already takes `raw_transcript` and calls `lasa_row`). Re-find each anchor with `grep -n` before editing.
 
 > **No clinical data ships** (index, open decision 1: no source or clinician reviewer chosen). `dosing.json` ships with an empty `entries` list, so **until real data is added every drug is `cannot-check` and chips fall back to the lexicon `strengths`.** Tests use an invented fixture whose numbers are meaningless.
 
@@ -18,7 +18,7 @@
 
 - Test command `.venv/bin/python -m pytest tests/ -q`, offline. Never commit or push; "leave uncommitted" means that.
 - No file over 500 lines; `core/` stays pure (stdlib, reads only `dosing.json`). Existing row fields never change; the three new ones are always present (contract 4.1).
-- `determinism.py` edit: at most 3 net lines; this plan adds **net +2** (482 to 484).
+- `determinism.py` edit: at most 3 net lines; this plan adds **net +2** (455 to 457).
 - Dose codes stay the five of `ALLOWED_DOSES` (`core/determinism.py:20`); `SOS` is not countable, and canvas rows like "2-2-2-2" cannot be produced (index fact 3).
 - Code blocks use one blank line between top-level definitions to save space; the repo uses two, either runs.
 - Baseline: run the suite first and note the count (944 passed, 1 skipped when written); expect baseline + **31** at the end.
@@ -439,24 +439,21 @@ def test_preserve_untouched_rows_keep_their_dose_note():
     assert [(r["status"], r["dose_note"]) for r in out] == [("dose-check", NOTE), ("verified", "")]
 ```
 - [ ] **Step 2: Run** `.venv/bin/python -m pytest tests/test_dosing_grounding.py -q`. Expected: `3 failed` (`KeyError: 'strength_options'`, `KeyError: 'dose_note'`).
-- [ ] **Step 3: Edit `core/determinism.py`.** Add above `:12`; change `:384`; add one line after `:454`, make the quiet branch at `:455` accept `dose-check`; append `**extra` at `:470`. If I1-a restructured the branch, keep the hook right after `_ground_row(...)` and keep `dose-check` out of the final `else`, which adds an `[unverified...]` marker.
+- [ ] **Step 3: Edit `core/determinism.py`.** Add `from . import dosing` to the imports; add the `age_sex` keyword after I1-a's `raw_transcript`; insert one line right after `_ground_row(...)`, **before** I1-a's `lasa_row` line (dose-check outranks look-alike, contract 4.2); keep the two result dicts apart (`extra`, `lextra`: I1-a's line also assigns `extra` and would overwrite this one); the quiet branch accepts `dose-check`; spread both dicts. I1-d later moves this block into `rowcheck.ground_with_notes`.
 ```python
 from . import dosing
-from .candidates import suggest_candidates
 # ...
-def validate_structured(data: dict, transcript: str, age_sex: str = ""):
+def validate_structured(data: dict, transcript: str, raw_transcript: str = "", age_sex: str = ""):
 # ...
         status, match, issue = _ground_row(name, strength, tl)
         status, extra = dosing.ground_extra(status, match, form, strength, dose, age_sex or out["ageSex"])
+        status, lextra = lasa_row(status, match, name, raw_transcript)      # I1-a's line, now second and with its own name
         if status in (RX_VERIFIED, dosing.DOSE_CHECK):
 # ...
-            "lexicon_match": match, **extra,
+            "lexicon_match": match, "generic": _generic_of(name, match), **extra, **lextra,
 ```
-- [ ] **Step 4: Edit `core/correction.py`**: after the `for field in (...)` loop at `:273-277`, still inside the row loop, add one line so an untouched row's note travels with its restored status (`strength_options` and `usual_strength` depend only on the unchanged name):
-```python
-        row["dose_note"] = prev.get("dose_note", "")   # "" when the prior row had none
-```
-- [ ] **Step 5: Run** `.venv/bin/python -m pytest tests/test_dosing_grounding.py tests/test_determinism.py tests/test_correction.py tests/test_correction_ops.py tests/test_file_sizes.py tests/test_core_purity.py -q`. Expected: all pass; `wc -l doctor_dictation/core/determinism.py` prints 484. Leave uncommitted.
+- [ ] **Step 4: Edit `core/correction.py`**: add `"dose_note"` to `DERIVED_ROW_FIELDS` (`("generic", "heard", "lookalike", "dose_note")` after I1-a), so an untouched row's note travels with its restored status and a status-less row is not stamped (`strength_options` and `usual_strength` depend only on the unchanged name; no code). A separate `row["dose_note"] = ...` line would stamp status-less rows.
+- [ ] **Step 5: Run** `.venv/bin/python -m pytest tests/test_dosing_grounding.py tests/test_determinism.py tests/test_correction.py tests/test_correction_ops.py tests/test_file_sizes.py tests/test_core_purity.py -q`. Expected: all pass; `wc -l doctor_dictation/core/determinism.py` prints 457. Leave uncommitted.
 
 ### Task 4: Health key, route-level test and full suite
 
@@ -493,4 +490,4 @@ from doctor_dictation.core.dosing import dosing_version
 
 Spec 2 is Tasks 1-2; spec 2b (Decimal totals, five codes, adult only, reviewed only, form check, `cannot-check` never claims a pass) is Task 1, with ranking and fields in Task 3 and the version in Task 4. `ground_extra` returns `(status, dict)` in Task 1 and is unpacked so in Task 3. `/api/format` caches by transcript (`determinism.py:475`), so a cached result keeps its reference until restart; not changed.
 
-**Not done:** real clinical data, paediatric ranges, a wider dose vocabulary, per-row re-check (I1-d), UI (I1-e), cache keyed by reference version. **Decision needed:** approve the `form-mismatch` deviation from contract 4.3's three states, or drop the form check.
+**Not done:** real clinical data, paediatric ranges, a wider dose vocabulary, per-row re-check (I1-d), UI (I1-e), cache keyed by reference version. **Decided 2026-10-16 (owner):** keep `form-mismatch` and the form check (index, Decisions).

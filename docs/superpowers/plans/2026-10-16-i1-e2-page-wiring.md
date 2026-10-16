@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- No `git commit` or `git push`; finish with the changed-file list. Baseline first: run `.venv/bin/python -m pytest tests/ -q`, note the count (944 + 9 from I1-e when written), expect count + 2 at the end.
+- No `git commit` or `git push`; finish with the changed-file list. Baseline first: run `.venv/bin/python -m pytest tests/ -q`, note the count (944 + 9 from I1-e when written), expect count + 2 after Task 1 and count + 3 after Task 3.
 - HTTP codes and JSON shapes do not change: the save request still carries `confirmed_rows` (`app.js:655`, `:1062`).
 - Existing tests keep their assertions. One setup value changes: `tests/test_frontend_authorship.py:118` pins `app.js?v=26`; the script turns that into "version 26 or newer", the precedent of `tests/test_frontend_letterhead.py:62-65`.
 - `setWorking` (`app.js:116`) must keep `Authorship.enforce()` as its last line (`tests/test_frontend_authorship.py:70-74`); the new `RxView.sync()` goes before it.
@@ -34,7 +34,7 @@
 |---|---|---|
 | Keep the old `#blockPanel` / "Confirm all & Save"? | Keep the panel and the 409 handling; **remove "Confirm all & Save"** and the per-row "Confirm" buttons in it. Rows get a "Go to row" button. | With Save disabled while anything needs you, the server's 409 can only happen from a stale page. Bulk-confirming unverified medicines contradicts "resolve each one". The panel still tells the truth if the server disagrees. `confirmed_rows` is untouched. |
 | Where do Save and Print live? | Move `.save-row` into the sticky summary bar (ids unchanged). | The doctor resolves rows far from the bottom of a long sheet; the bar keeps the count and Save in view. Text "💾 Save" becomes "Save prescription". |
-| Printing | Everything new is `no-print`; the old symbol still prints from `span.rx-print-sym`. | Browser print (`app.js:1206`) stays as before. The canvas says statuses never print; the PDF's Check column (`doctor_dictation/pdf/sheet.py:14-19`) still prints `✓ ! ± ?` and maps `lookalike-check` and `dose-check` to `?`. Dropping or extending it is a backend change: **flagged, not done**. |
+| Printing | Everything new is `no-print`; nothing about checking prints. | Owner decision 2026-10-16: the canvas is right, statuses never print. `rx.css` (I1-e) hides the Check column in browser print (`app.js:1206`); Task 3 here removes it from the PDF (`pdf/sheet.py`), where `dose-check` had printed a wrong `?` label. |
 
 ### Why every UI-allowed save is accepted, and every UI block is a server block
 
@@ -186,7 +186,7 @@ Expected: `["5 medicines","3 ready","2 need you","Resolve 2 to save",true]`. (`b
 
 - [ ] **Step 8: Keyboard and size.** Press Tab through a row: the order is the row's cells, then its action buttons, never a hidden control. `browser_evaluate`: `() => [...document.querySelectorAll(".rx-act")].every(b => b.getBoundingClientRect().height >= 44)` -> `true`. `() => getComputedStyle(document.querySelector(".rx-act")).outlineStyle` after focusing it by Tab -> not `none`.
 
-- [ ] **Step 9: Print.** `browser_emulate_media` with `media: "print"`, then `browser_evaluate`: `() => ["#rxBar",".rx-state",".rx-chips",".rx-sub"].map(s => { const n = document.querySelector(s); return n ? getComputedStyle(n).display : "absent"; })` -> every entry `none` or `absent`; `() => getComputedStyle(document.querySelector(".rx-print-sym")).display` -> `inline`. Reset with `media: null`.
+- [ ] **Step 9: Print.** `browser_emulate_media` with `media: "print"`, then `browser_evaluate`: `() => ["#rxBar",".rx-state",".rx-chips",".rx-sub"].map(s => { const n = document.querySelector(s); return n ? getComputedStyle(n).display : "absent"; })` -> every entry `none` or `absent`; `() => getComputedStyle(document.querySelector("td.check")).display` -> `none` (no check marks on paper). Reset with `media: null`.
 
 - [ ] **Step 10: Save, and the safety net.** Make `0 need you` (confirm every open row), wrap fetch with `browser_evaluate`: `() => { window.__r = []; const f = window.fetch; window.fetch = (u, i) => { window.__r.push([u, i && i.body]); return f(u, i); }; }`, click Save. Expected: status `Saved — document 1...`; `browser_evaluate` `() => window.__r.filter(r => r[0] === "/api/v1/documents")` shows a body whose `confirmed_rows` lists the indices you confirmed and the call returned 200 (the status line). Then re-render the fixture, and force a stale save: `() => { saveBtn.disabled = false; saveBtn.click(); }`. Expected: 409 handled: the block panel appears with `Go to row` buttons and no `Confirm all & Save`; clicking one moves focus to that row's state box.
 
@@ -196,10 +196,56 @@ Expected: `["5 medicines","3 ready","2 need you","Resolve 2 to save",true]`. (`b
 
 - [ ] **Step 13: Reopen a saved document.** Reload the page, open the saved patient from the Today list (confirm the dialog). Expected: rows the doctor had confirmed show as needing you again; Save is `Resolve N to save`; Print works as before. Close the browser (`browser_close`), stop uvicorn, and delete the folder the tool created in the repo: `rm -rf .playwright-mcp`.
 
+### Task 3: The printed prescription has no Check column (owner decision 2026-10-16)
+
+**Files:** Modify `doctor_dictation/pdf/sheet.py` (`_CHECK` and `_CHECK_DEFAULT` at `:13-20`, the cell in `_rx_rows`, the header in `build_sheet_html`); test `tests/test_pdf_sheet.py` (append). The browser-print half is `rx.css` (I1-e): `td.check` and the Check header are `display:none` in print. No existing test asserts on the Check column (grep `Check` in `tests/test_pdf*.py`, `tests/test_document_pdf.py`: none).
+
+- [ ] **Step 1: Append the failing test** to `tests/test_pdf_sheet.py` (it already imports `build_sheet_html` and defines `META`):
+
+```python
+STATUSES = ["verified", "unknown-medicine", "unverified-name", "unverified-strength", "lookalike-check", "dose-check", "", None]
+
+
+def test_the_printout_has_no_check_column_and_prints_the_same_for_every_status():
+    """Decision 2026-10-16: the printed prescription carries no verification marks; checking is a screen task."""
+    rows = [{"form": "Tab.", "name": "Prednisone", "strength": "10 mg", "dose": "1-0-1", "timing": "After food",
+             "duration": "5 days", "instructions": "with milk", "status": s} for s in STATUSES]
+    html = build_sheet_html({"patientName": "Anita Rao", "rx": rows}, META)
+    table = html[html.index('<table class="rx">'):html.index("</table>")]
+    assert "<th>Check</th>" not in table and table.count("<th>") == 6 and "title=" not in table
+    assert not any(mark in table for mark in ("✓", "≈", "±", "Needs check", "Verified:"))
+    cells = [tr.count("<td>") for tr in table.split("<tr>")[2:]]
+    assert cells == [6] * len(STATUSES)                                    # six cells per medicine, whatever its status
+    printed = {tr.split("</td>", 1)[1].split("</tr>")[0] for tr in table.split("<tr>")[2:]}      # without the row number
+    assert len(printed) == 1                                               # identical rows: the status does not print
+    assert '<td colspan="6">—</td>' in build_sheet_html({"rx": []}, META)
+```
+
+- [ ] **Step 2: Run it.** `.venv/bin/python -m pytest tests/test_pdf_sheet.py -q` -> expected `1 failed` (the `Check` header is there).
+- [ ] **Step 3: Remove the column.** From the repo root as `python3 - <<'PY' ... PY`:
+
+```python
+def edit(path, old, new):
+    s = open(path, encoding="utf-8").read()
+    assert s.count(old) == 1, (path, old[:60])
+    open(path, "w", encoding="utf-8").write(s.replace(old, new))
+S = "doctor_dictation/pdf/sheet.py"
+s = open(S, encoding="utf-8").read()
+a = s.index("# status -> (symbol, label) for the Rx")
+end = '_CHECK_DEFAULT = ("?", "Needs check: name not clearly dictated")\n\n\n'
+open(S, "w", encoding="utf-8").write(s[:a].rstrip("\n") + "\n\n\n" + s[s.index(end) + len(end):])      # two blank lines before def _esc
+edit(S, '        symbol, label = _CHECK.get(row.get("status"), _CHECK_DEFAULT)\n', "")
+edit(S, """            f'<td title="{_esc(label)}">{_esc(symbol)}</td>'\n""", "")
+edit(S, """'<tr><td colspan="7">—</td></tr>'""", """'<tr><td colspan="6">—</td></tr>'""")
+edit(S, "<th>Instructions</th><th>Check</th></tr>", "<th>Instructions</th></tr>")
+```
+- [ ] **Step 4: Run it, then render a real PDF** to see the table still fits: `.venv/bin/python -m pytest tests/test_pdf_sheet.py tests/test_pdf.py tests/test_document_pdf.py -q` -> pass. With Playwright's Chromium installed, run from the repo root `PYTHONPATH=. .venv/bin/python -c "from pathlib import Path; from doctor_dictation.pdf import render_prescription as r; rows=[{'form':'Tab.','name':n,'strength':'10 mg','dose':'1-0-1','timing':'After food','duration':'5 days','instructions':'with milk','status':s} for n,s in [('Prednisone','lookalike-check'),('Paracetamol','dose-check'),('Amlodipine','verified')]]; print(r({'patientName':'Anita Rao','rx':rows}, {'date':'2026-10-16','opNo':'OP-1'}, Path('/tmp/check_col.pdf')))"` and open the file: six columns (`#`, Medicine, Dosage, Timing, Duration, Instructions), no `Check`, no marks. (Dry-run 2026-10-16: the six columns fill the page width.) Run from the repo root with `PYTHONPATH=.`; a script in another folder would import the installed copy.
+- [ ] **Step 5: Run the suite.** `.venv/bin/python -m pytest tests/ -q` -> baseline + 3 in all (2 from Task 1, 1 here). Leave uncommitted.
+
 ## Self-Review
 
-- Spec coverage: states, chips, generic line, summary bar and Save text (Task 1 plus I1-e); gate agreement proven in tests and the table above; old block panel decided; keyboard, 44px, reduced motion (no animation exists until I1-e3, which adds the rule), print (steps 8-9). Spell it: I1-e3.
+- Spec coverage: states, chips, generic line, summary bar and Save text (Task 1 plus I1-e); gate agreement proven in tests and the table above; old block panel decided; keyboard, 44px, reduced motion (no animation exists until I1-e3, which adds the rule), print (steps 8-9, Task 3). Spell it: I1-e3.
 - Placeholder scan: none.
 - The 409 text and "Go to row" use only existing ids (`state.lastBlock`, `data-rowid`).
 
-**Decision needed:** (1) approve removing "Confirm all & Save"; (2) decide whether the PDF's Check column (`pdf/sheet.py:14-19`) should be dropped or extended with `lookalike-check` and `dose-check` (a backend task, not in these plans). Not done: Spell it, any backend change, any commit.
+**Decision needed:** approve removing "Confirm all & Save". (The PDF's Check column is dropped: owner decision 2026-10-16, Task 3.) Not done: Spell it, any commit.

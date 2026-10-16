@@ -277,8 +277,8 @@ async function open(role, deleteStatus) {
   // "Clinic medicines": the names this clinic has confirmed on two prescriptions. Shown to clinic admins only.
   function buildTabs() {
     const tabs = make("div", { class: "team-tabs", role: "tablist", "aria-label": "Team sections", hidden: true });
-    tabs.append(make("button", { id: "teamTabPeople", type: "button", role: "tab", "aria-selected": "true", "aria-controls": "teamPeople" }, "People"),
-      make("button", { id: "teamTabMeds", type: "button", role: "tab", "aria-selected": "false", "aria-controls": "teamMeds" }, "Clinic medicines"));
+    tabs.append(make("button", { id: "teamTabPeople", type: "button", class: "team-tab", role: "tab", "aria-selected": "true", "aria-controls": "teamPeople" }, "People"),
+      make("button", { id: "teamTabMeds", type: "button", class: "team-tab", role: "tab", "aria-selected": "false", "aria-controls": "teamMeds" }, "Clinic medicines"));
     return tabs;
   }
   function buildMeds() {
@@ -351,13 +351,10 @@ async function open(role, deleteStatus) {
 +     showMedsTab();
 ```
 
-- [ ] **Step 4: CSS and cache-busting.** Rules are scoped under `.team-panel` (a test enforces it); `index.html` bumps both `?v=` (`:9`, `:242`).
+- [ ] **Step 4: CSS and cache-busting.** After I1-f2 the tab strip rules (`.team-tabs`, `.team-tab`, `[aria-selected]`) already exist in `team.css` (that is why the buttons above carry `class: "team-tab"`); add only the two body rules. Also update I1-f2's `test_login_and_team_keep_their_behaviour...` (its `team_js` assertions, already changed in the I1-f2 text: `team.js` may now name the tab). Rules are scoped under `.team-panel` (a test enforces it); `index.html` bumps both `?v=` (`:9`, `:242`).
 
 ```diff
 - .team-panel button:focus-visible
-+ .team-panel .team-tabs { display:flex; gap:6px; border-bottom:1px solid var(--soft); }
-+ .team-panel .team-tabs button { border-radius:8px 8px 0 0; }
-+ .team-panel .team-tabs button[aria-selected="true"] { border-bottom:3px solid var(--accent); font-weight:600; }
 + .team-panel .team-tab-body { display:flex; flex-direction:column; gap:14px; }
 + .team-panel .team-hint { margin:0; font-size:14px; color:var(--muted); }
 + .team-panel button:focus-visible

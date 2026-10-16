@@ -68,7 +68,7 @@ Existing fields stay: `form, name, strength, dose, timing, duration, instruction
 | `dose_note` | str | Plain reason when status is `dose-check`, for example `3000 mg a day; usual adult maximum 2000 mg`. | I1-c |
 | `source` | str | `"lexicon"` or `"clinic"` (learned by this clinic). | I1-h |
 
-`preserve_untouched_rx_status` (`core/correction.py:247`) must keep restoring `status` and `lexicon_match`; each plan that adds a field checks whether that function must also restore it and says so.
+`preserve_untouched_rx_status` (`core/correction.py:247`) restores `status`, `lexicon_match` and `instructions`, and every field of `correction.DERIVED_ROW_FIELDS` (final: `("generic", "heard", "lookalike", "dose_note", "source")`; the prior row's value, `""` if it lacks the field, absent when the prior row had no status); `ops._regrounded` drops the same fields. `strength_options` and `usual_strength` depend on the name only and are recomputed. Each plan that adds a row field adds it to that tuple.
 
 ### 4.2 Grounding order inside one row (I1-a, I1-c and I1-h extend, I1-d reuses)
 
@@ -94,12 +94,12 @@ def lookalike_flag(canonical: str, name: str, raw_transcript: str) -> str: ...  
 # core/dosing.py (I1-c)
 @dataclass(frozen=True)
 class DoseVerdict:
-    state: str          # "in-range" | "above-max" | "cannot-check"
+    state: str          # "in-range" | "above-max" | "form-mismatch" | "cannot-check"   (form-mismatch: decision 2026-10-16)
     daily_mg: float | None
     max_daily_mg: float | None
-    note: str           # "" unless above-max
+    note: str           # "" unless above-max or form-mismatch
 def strength_options(canonical: str) -> tuple[list[str], str]: ...   # (options, usual)
-def check_dose(canonical: str, strength: str, dose: str, age_sex: str) -> DoseVerdict: ...
+def check_dose(canonical: str, strength: str, dose: str, age_sex: str, form: str = "") -> DoseVerdict: ...   # a form a REVIEWED entry does not allow, adult only: form-mismatch
 def dosing_version() -> str: ...
 
 # core/rowcheck.py (I1-d)
@@ -122,7 +122,7 @@ response: {"row": { ...grounded row with all section 4.1 fields... }, "suggestio
 
 ### 4.5 Frontend state contract (I1-e)
 
-`frontend/rxstate.js` exposes `window.RxState.rowState(row, ctx) -> {state, label, reason, canConfirm, canSpell, chips}` where `state` is one of `ok | dose | confirm | you | known`, mapped as: `verified` + source lexicon is `ok`; `verified` + source clinic is `known`; `unverified-strength`, `dose-check` are `dose`; `unknown-medicine`, `unverified-name`, `lookalike-check` are `confirm`; a row the doctor confirmed or spelled is `you`. A pure function, no DOM, so it is testable with node.
+`frontend/rxstate.js` exposes `window.RxState.rowState(row, ctx) -> {state, label, reason, canConfirm, canSpell, chips}` where `state` is one of `ok | dose | confirm | you | known`, mapped as: `verified` + source lexicon is `ok`; `verified` + source clinic is `known`; `unverified-strength`, `dose-check` are `dose`; `unknown-medicine`, `unverified-name`, `lookalike-check` are `confirm`; a row the doctor confirmed is `you`. A spelled name confirms the row only for name questions (`verified`, `unverified-name`, `lookalike-check`); `unknown-medicine`, `dose-check` and `unverified-strength` stay open after spelling, with the note `Name changed to "X". It still needs your decision.` (decision 2026-10-16, I1-e3). A pure function, no DOM, so it is testable with node.
 
 ## 5. Open decisions carried into execution
 
@@ -134,3 +134,26 @@ response: {"row": { ...grounded row with all section 4.1 fields... }, "suggestio
 ## 6. What no plan here does
 
 The monthly rebuild action or scheduler, paediatric ranges, voice spelling, the speech-engine change, drug-interaction checks, any commit or push.
+
+## 7. Decisions (owner, 2026-10-16: "go with your recommendations on all four")
+
+1. **Form mismatch stays.** `DoseVerdict.state` has a fourth value `form-mismatch` and `check_dose` an optional `form=""` (only reviewed entries, adults only). Written into contract 4.3; plan I1-c agrees.
+2. **The Check column is dropped from the printed prescription.** No header, no cells, no marks in the PDF (`pdf/sheet.py`), and none in browser print (`rx.css` hides `td.check` and its header; the print-only symbol span and `RxState.printSymbol` of I1-e are gone). Done as I1-e2 Task 3 (test first: `tests/test_pdf_sheet.py`); I1-a no longer edits `pdf/sheet.py`. A real PDF was rendered in the dry run: six columns, page width kept.
+3. **Spelled rows** follow I1-e3's narrowed rule (contract 4.5 above).
+4. **Fonts:** system fonts with Public Sans and Source Serif 4 listed first (I1-f2); self-hosting the two families is a follow-up outside Iteration 1.
+
+## 8. Integration amendments (dry run of the whole chain on a fresh copy, 2026-10-16; the plans were edited to match)
+
+| # | Where two plans met | Resolution (plans changed) |
+|---|---|---|
+| 1 | `validate_structured` row block: I1-a and I1-c both assign `extra` and both hook after `_ground_row` | Order is `_ground_row`, `dosing.ground_extra` (`extra`), `lasa_row` (`lextra`), row dict `**extra, **lextra`: dose-check outranks look-alike (4.2). I1-c, I1-d |
+| 2 | I1-d moves that block into `rowcheck.ground_with_notes` | The moved code already carries `generic`, `lextra`, `elif status == RX_UNVERIFIED_NAME` and the `{issue}` warning; I1-h2 adds `row_extras` there, not in `determinism.py`. I1-d, I1-h2 |
+| 3 | `DERIVED_ROW_FIELDS` | Final tuple in 4.1 above. I1-b's restore line is `prev.get(field, "")` (it used the fresh value); I1-c adds `dose_note` to the tuple instead of a separate line (which stamped status-less rows); I1-h2 adds `source` to the tuple instead of the status tuple. I1-b, I1-c, I1-h2 |
+| 4 | Format cache key (I1-a raw wording, I1-h3 clinic layer) | One key: `clinic:layer-version:key:rawhash` (`api/format.py`). I1-h3. The dosing reference version is not in the key (cached rows keep their old reference until restart; I1-c, unchanged) |
+| 5 | I1-g2's 10% look-alike limit vs I1-a (35% of canonicals have a computed twin) | The share counts only the always-flag (curated) canonicals, 16 of 444 = 3.6%; counting every twin made the bare `build.py --check` fail. I1-g2 |
+| 6 | I1-a Task 2 changes `test_candidates` before the raw transcript is plumbed | The edit moved to I1-a Task 3 Step 3b. I1-a |
+| 7 | I1-d and I1-h tests use Prednisone (a curated pair) and expect `verified` | They expect `lookalike-check`. I1-d. I1-h2's preserve test compares only the original keys (derived fields are added). I1-h2 |
+| 8 | I1-f2 pins "team.js has no tab" but I1-h4 adds it | The two assertions were dropped; I1-h4's tab buttons carry `class="team-tab"` and reuse I1-f2's tab CSS. I1-f2, I1-h4 |
+| 9 | I1-e3 CSS heredoc contained a nested code fence (written into `rx.css`); `.rx-sug` never matched the buttons | Fence removed; selector is `.rx-act.sug`. I1-e3 |
+| 10 | I1-a's `PILL`/`statusText` lines are deleted again by I1-e2 | Kept (the old pill needs them until I1-e2); noted in I1-a |
+| 11 | `determinism.py` line claims (484, 439, 483) are stale in the chain | Chain values: 452 (I1-b), 455 (I1-a), 457 (I1-c), 411 (I1-d, unchanged after). I1-h adds no net line |

@@ -12,7 +12,7 @@
 
 **Assumptions about earlier plans:** I1-b is done: `core/repair.py` exists, `determinism.py` is 452 lines, `_generic_of`, the `generic` row field and `correction.DERIVED_ROW_FIELDS = ("generic",)` exist. Locate each edit below with `grep -n`; line numbers drift.
 
-**Adds 23 tests.** Run the suite first and note N (967 passed, 1 skipped if I1-b is applied on the 2026-10-16 baseline); expect N + 23 at the end. No commits: leave everything uncommitted.
+**Adds 22 tests.** Run the suite first and note N (the count after I1-b; 966 passed, 1 skipped when the chain was dry-run on 2026-10-16); expect N + 22 at the end. The PDF's Check column is not touched here: the owner dropped it (index, Decisions), see I1-e2 Task 3. No commits: leave everything uncommitted.
 
 ## Global Constraints
 
@@ -43,7 +43,7 @@
 
 ## Changed existing tests
 
-`tests/test_candidates.py:149-150` (`test_e2e_llm_picks_candidate_and_row_verifies`): `status == verified` and `open_issues == []` become `status == lookalike-check`, `heard == "cephixime"`, `lookalike == "Cefotaxime"`, one open issue. "cephixime" was auto-corrected to Cefixime, which has twins: the designed case.
+`tests/test_candidates.py:149-150` (`test_e2e_llm_picks_candidate_and_row_verifies`; edited in Task 3 Step 3b, because the row only becomes look-alike once the raw transcript is plumbed): `status == verified` and `open_issues == []` become `status == lookalike-check`, `heard == "cephixime"`, `lookalike == "Cefotaxime"`, one open issue. "cephixime" was auto-corrected to Cefixime, which has twins: the designed case.
 
 `tests/test_determinism.py:476-484` (`test_grounding_status_schema`) passes untouched: its pipeline passes no raw transcript and no golden drug is on the curated list. `tests/test_core_purity.py` and `tests/test_file_sizes.py` pass (checked).
 
@@ -355,21 +355,14 @@ In `doctor_dictation/core/determinism.py` (`validate_structured`), insert after 
 In `doctor_dictation/core/determinism.py` (`validate_structured`, status chain) replace `else:  # RX_UNVERIFIED_NAME` with `elif status == RX_UNVERIFIED_NAME:`.
 In `doctor_dictation/core/determinism.py` (`validate_structured`, the row dict) replace `"generic": _generic_of(name, match),` with `"generic": _generic_of(name, match), **extra,`.
 In `doctor_dictation/core/correction.py` (module level) replace `DERIVED_ROW_FIELDS = ("generic",)` with `DERIVED_ROW_FIELDS = ("generic", "heard", "lookalike")`.
-- [ ] **Step 4: Change the one existing e2e expectation.** In `tests/test_candidates.py` (`test_e2e_llm_picks_candidate_and_row_verifies`) replace the two assertions on lines 149-150 with:
-```python
-    # "cephixime" was auto-corrected to Cefixime, which has look-alikes: one tap, not a silent tick
-    assert (row["name"], row["status"]) == ("Cefixime", "lookalike-check")
-    assert (row["heard"], row["lookalike"]) == ("cephixime", "Cefotaxime")
-    assert j["grounding"]["open_issues"] == ["rx[0] 'Cefixime': lookalike-check"]
-    assert j["grounding"]["rounds"] == 1
-```
+- [ ] **Step 4: Leave `tests/test_candidates.py` alone for now.** Its e2e test only turns look-alike once Task 3 plumbs the raw transcript; Task 3 Step 3b changes it.
 - [ ] **Step 5: Run the suite.** Expected: all pass (N + 17); `wc -l doctor_dictation/core/determinism.py` prints `455`. Leave uncommitted.
 
 ### Task 3: Plumb the raw transcript from the endpoints
 
-**Files:** Modify `api/format.py`, `pdf/sheet.py:14`, `frontend/app.js:57,994`; test `tests/test_lasa.py`.
+**Files:** Modify `api/format.py`, `frontend/app.js:57,994`, `tests/test_candidates.py:149`; test `tests/test_lasa.py`.
 
-**Interfaces:** Consumes `validate_structured(..., raw_transcript)`. `/api/format` passes `raw` (its stripped request text); `/api/v1/correct` passes `text` (the spoken correction). `_validate(data, transcript, raw="")` keeps its old two-argument calls working. The format cache key gains a short hash of `raw`: the normalized text is the same for "tam sulosin" and "Tamsulosin", but `heard` is not. `_ground` in the repair loop stays raw-less on purpose (no evidence needed there, and look-alikes add no issue). Until the new UI (plan I1-e), the old pill shows `lookalike-check` as the generic amber "Needs check", so two label lines (screen, print) are added.
+**Interfaces:** Consumes `validate_structured(..., raw_transcript)`. `/api/format` passes `raw` (its stripped request text); `/api/v1/correct` passes `text` (the spoken correction). `_validate(data, transcript, raw="")` keeps its old two-argument calls working. The format cache key gains a short hash of `raw` (I1-h3 later puts the clinic's layer version in front of it: `clinic:layer:key:rawhash`): the normalized text is the same for "tam sulosin" and "Tamsulosin", but `heard` is not. `_ground` in the repair loop stays raw-less on purpose (no evidence needed there, and look-alikes add no issue). Until the new UI (plan I1-e2), the old pill shows `lookalike-check` as the generic amber "Needs check", so two label lines (pill, status text) are added. The PDF has no label to add: its Check column is dropped (I1-e2 Task 3).
 - [ ] **Step 1: Write the tests** (append):
 ```python
 
@@ -406,13 +399,9 @@ def test_correct_route_passes_the_spoken_words(monkeypatch):
               transcript="add tam sulosin 0.4 mg")
     assert j["structured"]["rx"][0]["heard"] == "tam sulosin"
 
-
-def test_the_printout_has_a_label_for_the_new_status():
-    from doctor_dictation.pdf.sheet import _CHECK
-    assert _CHECK["lookalike-check"][1].startswith("Needs check")
 ```
-- [ ] **Step 2: Run them.** Expected: three FAIL: `test_format_cache_is_per_raw_wording` (the second wording is served from the cache), `test_correct_route_passes_the_spoken_words` (`assert '' == 'tam sulosin'`) and the label test (`KeyError: 'lookalike-check'`); the repair-loop test already passes (it guards a regression).
-- [ ] **Step 3: Edit `api/format.py`, `pdf/sheet.py`, `frontend/app.js`:**
+- [ ] **Step 2: Run them.** Expected: two FAIL: `test_format_cache_is_per_raw_wording` (the second wording is served from the cache) and `test_correct_route_passes_the_spoken_words` (`assert '' == 'tam sulosin'`); the repair-loop test already passes (it guards a regression).
+- [ ] **Step 3: Edit `api/format.py` and `frontend/app.js`, then Step 3b:**
 
 In `doctor_dictation/api/format.py` (`_validate`) replace `async def _validate(data, transcript):` with `async def _validate(data, transcript, raw=""):`.
 In `doctor_dictation/api/format.py` (`_validate`) replace `return await asyncio.to_thread(validate_structured, data, transcript)` with `return await asyncio.to_thread(validate_structured, data, transcript, raw)`.
@@ -427,7 +416,7 @@ with:
 In `doctor_dictation/api/format.py` (`format_transcript`, the two rules-path calls) replace `await _validate(fallback_format(normalized), normalized)` with `await _validate(fallback_format(normalized), normalized, raw)`.
 In `doctor_dictation/api/format.py` (`format_transcript`, the LLM path) replace `await _validate(best[1], normalized)` with `await _validate(best[1], normalized, raw)`.
 In `doctor_dictation/api/format.py` (`correct`) replace `strip_grounding_markers(merge_form(current2, patch2)), normalized)` with `strip_grounding_markers(merge_form(current2, patch2)), normalized, text)`.
-In `frontend/app.js` (`PILL`), insert after `"unverified-strength": ["warn", "±", "Needs check: strength not in known list"],`:
+In `frontend/app.js` (`PILL`; plan I1-e2 later deletes `PILL` and `statusText`, so these two lines live only until then), insert after `"unverified-strength": ["warn", "±", "Needs check: strength not in known list"],`:
 ```javascript
   "lookalike-check": ["warn", "≈", "Needs check: looks like another medicine (see the row)"],
 ```
@@ -435,11 +424,15 @@ In `frontend/app.js` (`statusText`), insert before `: s === "verified" ? "verifi
 ```javascript
     : s === "lookalike-check" ? "looks like another medicine"
 ```
-In `doctor_dictation/pdf/sheet.py` (`_CHECK`), insert after `"unverified-strength": ("±", "Needs check: strength not in known list"),`:
+In `tests/test_candidates.py` (`test_e2e_llm_picks_candidate_and_row_verifies`) **Step 3b**, replace the two assertions on lines 149-150 with:
 ```python
-    "lookalike-check": ("≈", "Needs check: looks like another medicine"),
+    # "cephixime" was auto-corrected to Cefixime, which has look-alikes: one tap, not a silent tick
+    assert (row["name"], row["status"]) == ("Cefixime", "lookalike-check")
+    assert (row["heard"], row["lookalike"]) == ("cephixime", "Cefotaxime")
+    assert j["grounding"]["open_issues"] == ["rx[0] 'Cefixime': lookalike-check"]
+    assert j["grounding"]["rounds"] == 1
 ```
-- [ ] **Step 4: Run the suite.** Expected: all pass (N + 21). Leave uncommitted.
+- [ ] **Step 4: Run the suite.** Expected: all pass (N + 20). Leave uncommitted.
 
 ### Task 4: Save gate and save path
 
@@ -484,7 +477,7 @@ with:
 ``unverified-strength`` / ``lookalike-check``; any status but ``verified``
     blocks). ``confirmed_rows`` is the list of rx indices the
 ```
-- [ ] **Step 4: Run the suite and leave uncommitted.** `DB_PATH=$(mktemp -u) .venv/bin/python -m pytest tests/ -q` Expected: N + 23 passed (990 if N is 967), 1 skipped. Changed files: `core/lasa.py` and `core/lexicon/lasa_pairs.json` and `tests/test_lasa.py` (new); `core/determinism.py`, `core/correction.py`, `core/safety.py`, `api/format.py`, `pdf/sheet.py`, `frontend/app.js`, `tests/test_candidates.py`.
+- [ ] **Step 4: Run the suite and leave uncommitted.** `DB_PATH=$(mktemp -u) .venv/bin/python -m pytest tests/ -q` Expected: N + 22 passed (988 if N is 966), 1 skipped. Changed files: `core/lasa.py` and `core/lexicon/lasa_pairs.json` and `tests/test_lasa.py` (new); `core/determinism.py`, `core/correction.py`, `core/safety.py`, `api/format.py`, `frontend/app.js`, `tests/test_candidates.py`.
 
 ## Disagreements with the index, and left out
 

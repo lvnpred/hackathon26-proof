@@ -10,12 +10,12 @@
 
 **Spec:** "Iteration 1" section 3 (Spell it) of `docs/superpowers/plans/2026-10-16-medication-name-accuracy.md`; contracts 4.1-4.4 in `docs/superpowers/plans/2026-10-16-i1-00-index-and-contracts.md` (section 4 wins).
 
-**Assumptions about earlier plans:** I1-c is applied (`dosing.ground_extra` in the row block, `age_sex` keyword; `determinism.py` is 484 lines). I1-a provides `core/lasa.py` with `twins(canonical) -> list[str]` (contract 4.3); stop if it is missing. If I1-a/I1-b are applied, their lines are inside the row block too: Task 2 Step 3 says how to carry them across. Line numbers assume only I1-c is applied; re-find each anchor with `grep -n`.
+**Assumptions about earlier plans:** I1-b, I1-a and I1-c are applied (`determinism.py` is 457 lines; its row block holds I1-b's `generic`, I1-a's `lasa_row` and I1-c's `ground_extra`, in that merged form: dose before look-alike, results kept in `extra` and `lextra`). `core/lasa.py` must exist (`twins`, contract 4.3). Task 1's `ground_with_notes` below is already written in that merged form. Re-find each anchor with `grep -n`; line numbers drift.
 
 ## Global Constraints
 
 - Test command `.venv/bin/python -m pytest tests/ -q`, offline (no network, no LLM). Never commit or push; "leave uncommitted" means that.
-- No file over 500 lines; `core/` pure (`tests/test_core_purity.py`). This plan removes about 45 lines from `determinism.py` (484 to 439).
+- No file over 500 lines; `core/` pure (`tests/test_core_purity.py`). This plan removes about 46 lines from `determinism.py` (457 to 411).
 - Existing endpoints keep their status codes and JSON shapes; existing tests change only where a route table lists the new route.
 - Errors use the repo's shape `{"error": "..."}` (as `api/format.py:84`, `api/session.py:42`).
 - Baseline: run the suite first and note the count; expect baseline + **23** at the end.
@@ -30,7 +30,7 @@
 
 ## File Structure
 
-Create `doctor_dictation/core/rowcheck.py`, `doctor_dictation/api/rx.py`, `tests/test_rowcheck.py`, `tests/test_rx_check_row.py`. Modify `core/determinism.py` (`:12`, `:385`, `:421-473`), `api/app.py` (`:18`, `:79`), `tests/test_api_app.py` (`:28`), `tests/test_isolation_routes.py` (after `:180`).
+Create `doctor_dictation/core/rowcheck.py`, `doctor_dictation/api/rx.py`, `tests/test_rowcheck.py`, `tests/test_rx_check_row.py`. Modify `core/determinism.py` (the `dosing` import, the row block), `api/app.py` (`:18`, `:79`), `tests/test_api_app.py` (`:28`), `tests/test_isolation_routes.py` (after `:180`).
 
 ### Task 1: `core/rowcheck.py`
 
@@ -49,12 +49,12 @@ RAW = "patient on tablet prednisone 10 mg twice daily after meals for 5 days, pa
 NORM = normalize_transcript(RAW)
 ROW = {"form": "Tab.", "name": "Prednisone", "strength": "10 mg", "dose": "1-0-1", "timing": "", "duration": "5 days"}
 FIELDS = {"form", "name", "strength", "dose", "timing", "duration", "instructions", "status", "lexicon_match",
-          "strength_options", "usual_strength", "dose_note"}   # add heard, lookalike, generic once I1-a/I1-b are in
+          "strength_options", "usual_strength", "dose_note", "heard", "lookalike", "generic"}
 
 
 def test_ground_one_has_every_field_and_never_trusts_a_name_nobody_said():
     got = rowcheck.ground_one(ROW, RAW, NORM)
-    assert FIELDS <= set(got) and (got["status"], got["lexicon_match"]) == ("verified", "Prednisone")
+    assert FIELDS <= set(got) and (got["status"], got["lexicon_match"]) == ("lookalike-check", "Prednisone")   # curated pair (I1-a)
     for transcript in ("", "tablet metformin 500 mg"):
         typed = rowcheck.ground_one(ROW, transcript, transcript)
         assert (typed["status"], typed["lexicon_match"]) == ("unverified-name", "Prednisone")
@@ -83,6 +83,7 @@ def test_ground_one_refuses_a_row_with_nothing_in_it():
 /api/v1/rx/check-row, so the page and the Spell it popover can never disagree. Pure; no AI, no network."""
 from . import dosing
 from .candidates import suggest_candidates
+from .lasa import lasa_row
 
 SUGGESTION_LIMIT = 5
 
@@ -124,6 +125,7 @@ def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: st
     # Agent-loop grounding: status + lexicon match on every row.
     status, match, issue = D._ground_row(name, strength, (normalized_transcript or "").lower())
     status, extra = dosing.ground_extra(status, match, form, strength, dose, age_sex)
+    status, lextra = lasa_row(status, match, name, raw_transcript)      # after dose-check: contract 4.2
     if status in (D.RX_VERIFIED, dosing.DOSE_CHECK):
         pass
     elif status == D.RX_UNKNOWN_MEDICINE:
@@ -132,14 +134,14 @@ def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: st
     elif status == D.RX_UNVERIFIED_STRENGTH:
         notes.append(f"rx[{index}] '{name}': {issue} -> flagged {status}")
         instructions = (instructions + " [unverified strength: confirm with doctor]").strip()
-    else:  # RX_UNVERIFIED_NAME
-        notes.append(f"rx[{index}] '{name}': not clearly dictated -> flagged unverified")
+    elif status == D.RX_UNVERIFIED_NAME:
+        notes.append(f"rx[{index}] {issue} -> flagged unverified")
         instructions = (instructions + " [unverified: confirm with doctor]").strip()
     return {
         "form": form, "name": name, "strength": strength,
         "dose": dose, "timing": timing, "duration": duration,
         "instructions": instructions, "status": status,
-        "lexicon_match": match, **extra,
+        "lexicon_match": match, "generic": D._generic_of(name, match), **extra, **lextra,
     }, notes
 
 
@@ -188,11 +190,11 @@ def test_ground_one_and_validate_structured_give_identical_rows(monkeypatch, tmp
     assert rowcheck.ground_one(rows[2], RAW, NORM, "45 / M")["status"] == "dose-check"
 ```
 - [ ] **Step 2: Run** `.venv/bin/python -m pytest tests/test_rowcheck.py -q`. Expected: `1 failed`: `AssertionError: validate_structured must ground each row through rowcheck` (or `TypeError ... 'raw_transcript'` if I1-a has not added that keyword; Step 3 adds it).
-- [ ] **Step 3: Edit `core/determinism.py`.** (a) `:12` `from . import dosing` becomes `from . import rowcheck` (nothing else in the file uses `dosing`; check with `grep -n "dosing" doctor_dictation/core/determinism.py`). (b) `:385` signature, keeping I1-a's `raw_transcript` position if it exists:
+- [ ] **Step 3: Edit `core/determinism.py`.** (a) `from . import dosing` becomes `from . import rowcheck` (nothing else in the file uses `dosing`; check with `grep -n "dosing" doctor_dictation/core/determinism.py`; the `lasa_row` import stays: `ground_rx` still calls it). (b) the signature is already this after I1-c; check it:
 ```python
 def validate_structured(data: dict, transcript: str, raw_transcript: str = "", age_sex: str = ""):
 ```
-(c) Delete from `    tl = (transcript or "").lower()` (`:421`, the line just before `for i, item in enumerate(rx[:RX_ROW_LIMIT]):`) through the closing `        })` of `out["rx"].append({` (`:473`), and put this in its place; `return out, warnings` stays:
+(c) Delete from `    tl = (transcript or "").lower()` (the line just before `for i, item in enumerate(rx[:RX_ROW_LIMIT]):`) through the closing `        })` of `out["rx"].append({`, and put this in its place; `return out, warnings` stays:
 ```python
     for i, item in enumerate(rx[:RX_ROW_LIMIT]):
         if not isinstance(item, dict):
@@ -203,8 +205,8 @@ def validate_structured(data: dict, transcript: str, raw_transcript: str = "", a
         if row is not None:
             out["rx"].append(row)
 ```
-(d) **Carry-across:** before deleting, run `grep -n "heard\|lookalike\|generic\|source" doctor_dictation/core/determinism.py` over the block. Every line I1-a (`heard`, `lookalike`, the `lookalike-check` branch with its warning and marker), I1-b (`generic`) or I1-h (`source`) added inside the block moves into `ground_with_notes` at the same relative place (after `_ground_row`, in the status chain, in the returned dict), using `raw_transcript` and `index` where it used `transcript` and `i`. Then add those field names to `FIELDS` in `tests/test_rowcheck.py`.
-- [ ] **Step 4: Run** `.venv/bin/python -m pytest tests/ -q`. Expected: no failures, baseline + 4 passed (every existing `validate_structured` test is the guard). `wc -l doctor_dictation/core/determinism.py` prints 439 (less any carried-across lines). Leave uncommitted.
+(d) **Carry-across:** done already: Task 1's code carries I1-b's `generic`, I1-a's `lasa_row` (with the `elif status == RX_UNVERIFIED_NAME` branch and `{issue}` warning) and I1-c's hook. Run `grep -n "heard\|lookalike\|generic\|source" doctor_dictation/core/determinism.py` before deleting: any remaining hit inside the block that Task 1 does not carry (I1-h2's `row_extras` is added later, in `rowcheck`) must be moved too. `FIELDS` in the test already lists them.
+- [ ] **Step 4: Run** `.venv/bin/python -m pytest tests/ -q`. Expected: no failures, baseline + 4 passed (every existing `validate_structured` test is the guard). `wc -l doctor_dictation/core/determinism.py` prints 411. Leave uncommitted.
 
 ### Task 3: The route, its registration and the route tests
 
@@ -237,7 +239,7 @@ def test_a_known_row_is_grounded_with_every_field_and_suggestions():
     r = _post({"row": ROW, "transcript": RAW, "age_sex": "46 / F"})
     got = r.json()
     assert r.status_code == 200 and "dose_note" in got["row"]
-    assert (got["row"]["status"], got["row"]["lexicon_match"]) == ("verified", "Prednisone")
+    assert (got["row"]["status"], got["row"]["lexicon_match"]) == ("lookalike-check", "Prednisone")   # curated pair (I1-a)
     assert got["suggestions"][0] == "Prednisone" and "Prednisolone" in got["suggestions"]
 
 
@@ -387,7 +389,7 @@ def test_it_is_closed_without_a_session_and_open_after_login(clinic):
     change = {"current_password": "temp-password-1", "new_password": "brand-new-pass-1"}
     assert clinic.post("/api/v1/auth/change-password", json=change, headers=H).status_code == 200
     ok = clinic.post(URL, json=body, headers=H)
-    assert ok.status_code == 200 and ok.json()["row"]["status"] == "verified"
+    assert ok.status_code == 200 and ok.json()["row"]["status"] == "lookalike-check"
 ```
 - [ ] **Step 2: Run** `.venv/bin/python -m pytest tests/test_rx_check_row.py -q`. Expected: `19 passed`.
 - [ ] **Step 3: Run the full suite** `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 23 passed, 1 skipped. Check `wc -l` of every changed file stays under 500.

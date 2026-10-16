@@ -266,7 +266,7 @@ In `doctor_dictation/core/determinism.py` (`correct_drugs`, between the split lo
 
 **Interfaces:** Produces row field `generic` (contract 4.1: set when `lexicon_match` differs from `name` case-insensitively, else `""`; a misspelled generic also fills it, which is harmless), `_generic_of(name, match)`, `_ambiguous_for(low)`, and `correction.DERIVED_ROW_FIELDS = ("generic",)`, which plan I1-a extends.
 
-`preserve_untouched_rx_status` (`correction.py:247`) must restore it: `persistence.py:200-206` re-validates a saved form with an empty transcript, then calls preserve, and a status-less prior row must not be stamped (`tests/test_correction_ops.py:109`). So a derived field follows the status: restored when the prior row had one, removed when not. `ops._regrounded` (`ops.py:77`) drops it too, or a renamed row would keep the old generic.
+`preserve_untouched_rx_status` (`correction.py:247`) must restore it: `persistence.py:200-206` re-validates a saved form with an empty transcript, then calls preserve, and a status-less prior row must not be stamped (`tests/test_correction_ops.py:109`). So a derived field follows the status: restored when the prior row had one (`""` when that row lacks the field, never the freshly derived value), removed when not. `ops._regrounded` (`ops.py:77`) drops it too, or a renamed row would keep the old generic.
 - [ ] **Step 1: Write the failing tests** (append):
 ```python
 
@@ -374,7 +374,7 @@ In `doctor_dictation/core/correction.py` (`preserve_untouched_rx_status`, loop e
 ```python
         for field in DERIVED_ROW_FIELDS:  # follow the restored status; absent when the prior row had none
             if "status" in prev:
-                row[field] = prev.get(field, row.get(field, ""))
+                row[field] = prev.get(field, "")
             else:
                 row.pop(field, None)
 ```

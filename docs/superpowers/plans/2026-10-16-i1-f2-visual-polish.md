@@ -30,7 +30,7 @@
 
 ## Decision: fonts
 
-**Recommendation: keep system fonts, do not load Google Fonts.** The canvas links `fonts.googleapis.com`. For this app that is the wrong default: (1) every page load would tell a third party that this clinic's app is open and from which IP, in a medical product that already promises demo-only data; (2) a clinic on a poor or closed network would wait on a blocked request before the text swaps; (3) the sign-in page runs before the session exists and should make no third-party request at all. Instead the tokens `--font-ui` and `--font-serif` list "Public Sans" and "Source Serif 4" first, so a machine that has them installed uses them, and fall back to `Segoe UI`/`system-ui` and `Georgia`/`Iowan Old Style`. If the owner wants the exact faces everywhere, the follow-up is to self-host the two OFL-licensed families (woff2 files under `frontend/fonts/` plus `@font-face` with `font-display: swap`); it changes only the two tokens' source, and needs files this plan does not have. Serif is applied on screen only (sheet title, clinic name, section bars, medicine names); the fallback print path keeps `Segoe UI`, Arial.
+**Decided 2026-10-16 (owner): keep system fonts, do not load Google Fonts; self-hosting the two families is a noted follow-up, not part of Iteration 1.** The canvas links `fonts.googleapis.com`. For this app that is the wrong default: (1) every page load would tell a third party that this clinic's app is open and from which IP, in a medical product that already promises demo-only data; (2) a clinic on a poor or closed network would wait on a blocked request before the text swaps; (3) the sign-in page runs before the session exists and should make no third-party request at all. Instead the tokens `--font-ui` and `--font-serif` list "Public Sans" and "Source Serif 4" first, so a machine that has them installed uses them, and fall back to `Segoe UI`/`system-ui` and `Georgia`/`Iowan Old Style`. If the owner wants the exact faces everywhere, the follow-up is to self-host the two OFL-licensed families (woff2 files under `frontend/fonts/` plus `@font-face` with `font-display: swap`); it changes only the two tokens' source, and needs files this plan does not have. Serif is applied on screen only (sheet title, clinic name, section bars, medicine names); the fallback print path keeps `Segoe UI`, Arial.
 
 ### Task 1: Tests first
 
@@ -109,8 +109,8 @@ def test_login_and_team_keep_their_behaviour_and_leave_a_named_place_for_the_cli
     login, team_css, team_js = _read("login.html"), _read("team.css"), _read("team.js")
     for token in ('id="loginForm"', 'id="changeForm"', 'id="msg" role="alert"', 'id="signoutLink"', 'autocomplete="current-password"', "Use a different account"):
         assert token in login, token
-    assert ".team-panel .team-tabs" in team_css and "plan I1-h" in team_css and "I1-h" not in team_js and not re.search(r"team-tabs?\b", team_js)
-    assert "Clinic medicines" not in login and "Clinic medicines" not in team_js
+    assert ".team-panel .team-tabs" in team_css and "plan I1-h" in team_css and "I1-h" not in team_js   # plan I1-h4 adds the tab itself, so team.js may name it
+    assert "Clinic medicines" not in login
 
 
 def test_new_controls_are_44px_high():
@@ -298,4 +298,4 @@ Screenshots (`browser_take_screenshot`) can hang in some headless setups; if so 
 - Not applied from the canvas: avatar circles and "Admin/Active" tags in the Team list need new markup in `team.js` (a behaviour-neutral but non-CSS change); the app-wide light/dark theming; the canvas's second accent options. Say if you want them.
 - Placeholder scan: none.
 
-**Decision needed:** approve system fonts over Google Fonts (and say if you want the self-hosting follow-up). Not done: font files, `team.js` markup, any backend or PDF change, any commit.
+**Decided 2026-10-16 (owner):** system fonts, Public Sans and Source Serif 4 listed first; self-hosting is a follow-up. Not done: font files, `team.js` markup, any backend or PDF change, any commit.

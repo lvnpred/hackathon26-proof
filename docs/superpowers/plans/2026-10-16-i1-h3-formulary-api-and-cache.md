@@ -12,7 +12,7 @@
 
 **Assumptions about earlier plans** (re-find every anchor with `grep -n`; line numbers below are from the repository as it stood before I1-a..I1-g)**:**
 - I1-h1 and I1-h2 are applied. Used exactly: `core.formulary.ClinicLayer(items)`, `.version`, `activate`, `active_layer`, `learnable(structured, confirmed_rows)`, `key(name)`; `db.formulary.record_confirmation(conn, key, name, generic, document_id, user_id) -> int`, `list_active(conn) -> list[dict]`, `remove(conn, entry_id) -> str | None`; rows carry `source`.
-- I1-c: `dose-check` never fires for a row with no lexicon match (clinic names are `cannot-check`). I1-d: moves the per-row block of `validate_structured` into `rowcheck.ground_with_notes`; if it has landed, put I1-h2 Task 1's `**formulary.row_extras(...)` addition in that function's returned dict instead (`grep -n '"lexicon_match"' doctor_dictation/core/*.py`), and give `api/rx.py` the same `dependencies=[Depends(use_clinic_layer)]` as `/api/format` (I1-h3 Task 1 Step 6).
+- I1-c: `dose-check` never fires for a row with no lexicon match (clinic names are `cannot-check`). I1-d is applied (the per-row block lives in `rowcheck.ground_with_notes`, where I1-h2 put `row_extras`); `api/rx.py` exists and gets the dependency in Step 6.
 
 **Produces (consumed by I1-h4):** `api.formulary`: `router`, `load_layer() -> ClinicLayer`, `async use_clinic_layer() -> None`, `learn_from_save(conn, structured, confirmed_rows, document_id, user_id) -> None` (never raises); `GET /api/v1/formulary -> {"items": [...]}`; `DELETE /api/v1/formulary/{entry_id} -> {"removed": id, "name": name}` with `403 {"error": "You are not allowed to do that"}`, `404 {"error": "no such medicine"}`, `422` for ids below 1 or not integers; policy action `formulary.manage`; `use_clinic_layer` on `/api/format`, `/api/v1/correct`, `/api/transcribe`; the cache key `clinic:layer-version:key`; `tests/test_formulary_routes.py`.
 
@@ -34,7 +34,7 @@
 
 1. **Trigger.** `api/persistence.py:194` already blocks any row not `verified` unless its index is in `confirmed_rows`. The hook runs after the document is stored (after the audit call, `:289-299`) and learns from rows whose index is in `confirmed_rows` AND whose name the lexicon does not know (`_canonical_lookup`, `core/determinism.py:226`). The row's `status` text is not used: the client could send anything. Names are read from `structured["rx"]` BEFORE `validate_structured` (which drops empty rows and shifts indexes).
 6. **How the layer reaches the matcher.** Passing a layer through `ground_rx -> validate_structured -> _ground_row -> _canonical_lookup` would cost about 8 lines in `determinism.py`. Instead `formulary.activate(layer)` sets a `ContextVar` in a FastAPI dependency (`use_clinic_layer`, async so the value stays in the request's context); `asyncio.to_thread` copies the context (`scope.py:5-6` relies on the same). `core` functions still accept data only; tests call `activate()` directly.
-7. **Cache.** `/api/format` caches per `clinic:key` (`api/format.py:89`). The key becomes `clinic:layer-version:key`; the version is a hash of the sorted names ("0" when empty), so adding or removing a name changes it.
+7. **Cache.** `/api/format` caches per `clinic:key` (`api/format.py:89`). The key becomes `clinic:layer-version:key:rawhash` once I1-a's raw-wording hash is there (the final form, one key, both parts); the version is a hash of the sorted names ("0" when empty), so adding or removing a name changes it.
 9. **Admin.** `policy.py` has roles in `Identity.role` (`doctor`, `assistant`, `admin`, `accounts.py:19`) but enforces none (`policy.py:1-2`). New action `formulary.manage` is true only for `admin`. Single-database mode has no sign-in and no roles (`api/authorship.py:17-19`), so there the Remove call is allowed, like every other call. The permission check runs before the lookup (as `api/users.py:32-39`): a doctor gets 403, an admin of another clinic 404.
 
 ## File Structure
@@ -302,8 +302,8 @@ and `api/app.py` registers the router next to the others (`:79`):
 + @router.post("/api/format", dependencies=[Depends(use_clinic_layer)])
 ```
 ```diff
--     ckey = f"{sc.clinic_slug if sc else ''}:{key}"   # per-clinic cache: one clinic never sees another's hit
-+     ckey = f"{sc.clinic_slug if sc else ''}:{formulary.active_layer().version}:{key}"   # per clinic AND per learned list
+-     ckey = f"{sc.clinic_slug if sc else ''}:{key}:{transcript_sha(raw)[:16]}"   # I1-a: per clinic and raw wording
++     ckey = f"{sc.clinic_slug if sc else ''}:{formulary.active_layer().version}:{key}:{transcript_sha(raw)[:16]}"   # + the learned list
 ```
 ```diff
 - @router.post("/api/v1/correct")
@@ -323,7 +323,7 @@ and `api/app.py` registers the router next to the others (`:79`):
 + @router.post("/api/transcribe", dependencies=[Depends(use_clinic_layer)])
 ```
 
-- [ ] **Step 6: I1-d's route.** If `doctor_dictation/api/rx.py` exists, change its `@router.post("/api/v1/rx/check-row")` to `@router.post("/api/v1/rx/check-row", dependencies=[Depends(use_clinic_layer)])` (import `Depends` and `from doctor_dictation.api.formulary import use_clinic_layer`). `test_every_route_that_matches_names_loads_the_clinic_layer` checks it.
+- [ ] **Step 6: I1-d's route.** Change `doctor_dictation/api/rx.py`'s `@router.post("/api/v1/rx/check-row")` to `@router.post("/api/v1/rx/check-row", dependencies=[Depends(use_clinic_layer)])` (import `Depends` and `from doctor_dictation.api.formulary import use_clinic_layer`). `test_every_route_that_matches_names_loads_the_clinic_layer` checks it.
 - [ ] **Step 7: The route table test** (`tests/test_api_app.py:28` lists every route):
 
 ```diff
@@ -354,7 +354,7 @@ def id_routes(app):
 +     "DELETE /api/v1/formulary/{entry_id}": "admin only: test_isolation_formulary.py",
 ```
 
-- [ ] **Step 9: Run.** Run: `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 5 passed, no failure (`test_formulary_routes.py`: 5 passed; the sweep still counts 11 id routes).
+- [ ] **Step 9: Run.** Run: `.venv/bin/python -m pytest tests/ -q`. Expected: baseline + 5 passed, no failure (the I1-d classification text in `tests/test_isolation_routes.py` for `POST /api/v1/rx/check-row` says "stateless ... reads no clinic data"; with the dependency it now reads the clinic's layer: change it to `"reads the caller's own clinic layer via use_clinic_layer: test_isolation_formulary.py"`) (`test_formulary_routes.py`: 5 passed; the sweep still counts 11 id routes).
 - [ ] **Step 10: Leave uncommitted.**
 
 ---

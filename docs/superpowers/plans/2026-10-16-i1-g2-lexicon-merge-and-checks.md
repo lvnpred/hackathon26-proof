@@ -12,7 +12,7 @@
 
 **Assumptions about earlier plans:**
 - Plan I1-g1 is applied (run it first). From it this part uses exactly: `require_source(args, parser) -> dict | None`; flags `--source-name --licence --source-url --attribution --allow-new-generics --report`; `do_merge(seed_path, source=None, allow_new=False, report_path=None, now=None)` and `do_check(seed_path, source=None, allow_new=False)` (currently they ignore the extra parameters); `lexicon_import.import_rows(path, entries, source_name, allow_new_generics=False) -> (list[dict], dict)`, `alias_map`, `_extend`, `strength_key`; `tests/data/brands_fixture.csv`; and in `tests/test_lexicon_import.py` the helpers `load`, `build`, `run`, `exit_code`, `read`, `adapter`, and the constants `FIXTURE`, `SOURCE`, `MERGE`.
-- Plan I1-a delivers `core/lasa.py` with `twins(canonical) -> list[str]` (contract 4.3) and its threshold "at most 10% of canonicals" (the I1-a file did not exist when this was written; 10% is the number from the task brief, kept in one constant `LOOKALIKE_MAX_SHARE`). If I1-a defines "flags unconditionally" more narrowly than "has a twin", change only the predicate in `lookalike_share`. Until `core/lasa.py` exists, no import can land (Task 2) but the bare `--check` still works.
+- Plan I1-a delivers `core/lasa.py` with `twins(canonical) -> list[str]` (contract 4.3) and its threshold "at most 10% of canonicals" (the I1-a file did not exist when this was written; 10% is the number from the task brief, kept in one constant `LOOKALIKE_MAX_SHARE`). I1-a does define it more narrowly: 35% of canonicals have a computed twin but only the 16 curated ones (3.6%) flag unconditionally, so `load_twins` below returns twins for those only (dry-run 2026-10-16: with every twin counted, a bare `--check` fails at 35.4%). Until `core/lasa.py` exists, no import can land (Task 2) but the bare `--check` still works.
 
 **Produces:** a working `build.py --merge FILE.csv --source-name N --licence L [--allow-new-generics] [--report PATH]`; `layered_seed`, `plan_merge`, `lexicon_import.overlay`, `lookalike_share`, `load_twins`, `lookalike_problem`, `LOOKALIKE_MAX_SHARE = 0.10`; `core/lexicon/imported.json` (written by the first real import); `sources` records in `drugs.json`.
 
@@ -266,14 +266,15 @@ def lookalike_share(entries, twins):
 
 
 def load_twins(entries):
-    """``core.lasa.twins`` reading ``entries`` as the lexicon, or None while core/lasa.py does not exist."""
+    """``core.lasa.twins`` (for the always-flag canonicals only) reading ``entries`` as the lexicon, or None while core/lasa.py does not exist."""
     sys.path.insert(0, str(HERE.parents[2]))
     try:
         from doctor_dictation.core import determinism, lasa
     except ImportError:
         return None
     determinism._lexicon_cache = entries           # lasa reads the lexicon through load_lexicon()
-    return lasa.twins
+    always = lasa.always_flag_names()              # only the curated pairs flag unconditionally (I1-a); computed twins need evidence
+    return lambda name: lasa.twins(name) if name in always else []
 
 
 def lookalike_problem(entries, required):
@@ -318,7 +319,7 @@ def lookalike_problem(entries, required):
 ```
 
 - [ ] **Step 4: Run them.** Run: `.venv/bin/python -m pytest tests/test_lexicon_import.py -q`. Expected: `10 passed`.
-- [ ] **Step 5: Baseline check on the real lexicon.** Run: `.venv/bin/python doctor_dictation/core/lexicon/build.py --check`. Expected before I1-a exists: `check OK: drugs.json in sync (v1.1.0, 444 entries).` and exit 0. After I1-a: an extra line `look-alike share: X% (limit 10%)`. **If X is already above 10 today, stop:** no import can pass; settle I1-a's definition of "flags unconditionally" first. (A rough stand-in, canonicals with another canonical at difflib ratio 0.8 or more, measured 17% on today's lexicon, so the definition matters.)
+- [ ] **Step 5: Baseline check on the real lexicon.** Run: `.venv/bin/python doctor_dictation/core/lexicon/build.py --check`. Expected before I1-a exists: `check OK: drugs.json in sync (v1.1.0, 444 entries).` and exit 0. After I1-a: an extra line `look-alike share: 3.6% (limit 10%)`. **If X is already above 10 today, stop:** no import can pass; settle I1-a's definition of "flags unconditionally" first. (A rough stand-in, canonicals with another canonical at difflib ratio 0.8 or more, measured 17% on today's lexicon, so the definition matters.)
 - [ ] **Step 6: Leave uncommitted.**
 
 ---

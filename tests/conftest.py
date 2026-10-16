@@ -9,6 +9,21 @@ def _clean_clinic_env(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _offline_provider_keys(monkeypatch):
+    """No test may reach a real provider through a developer's .env.
+
+    Set blank, never delete: load_dotenv() does not override a variable that exists, so a blank
+    survives it, and load_secret() treats a present-but-empty env var as winning over secrets.json.
+    The settings snapshot is cached, so drop it too: the next get_settings() rebuilds with blank keys.
+    monkeypatch restores the old snapshot at teardown.
+    """
+    from doctor_dictation import config
+    for name in ("OPENAI_API_KEY", "DEEPSEEK_API_KEY"):
+        monkeypatch.setenv(name, "")
+    monkeypatch.setattr(config, "_settings", None)
+
+
 @pytest.fixture()
 def multi(tmp_path, monkeypatch):
     """Multi-clinic mode on, data under a temp folder, a valid session secret, DB_PATH removed so it cannot leak in."""

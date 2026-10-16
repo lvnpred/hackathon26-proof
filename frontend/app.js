@@ -786,6 +786,10 @@ function undoDelete() {
     updateGrounding();
     if (!blockPanel.hidden) refreshBlockPanel();
     focusEl = tr.querySelector(".x-btn");
+  } else if (r.type === "respell") {                  // undo of Spell it "Use this": the row goes back as it was
+    focusEl = RxView.restore(r);
+    updateGrounding();
+    if (!blockPanel.hidden) refreshBlockPanel();
   } else {
     const ul = $(r.ulId);
     const lis = [...ul.children];
@@ -1213,6 +1217,7 @@ $("profileForm").addEventListener("submit", saveProfile);
 // ---- init ------------------------------------------------------------------
 RxView.init({
   body: rxBody, saveBtn, confirmed: () => state.confirmed, working: () => state.working,
+  transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo,
   changed: () => { markDirty(); updateGrounding(); if (!blockPanel.hidden) refreshBlockPanel(); }, hasSheet: () => !sheetEl.classList.contains("empty"),
 });
 setText($("pDate"), today());

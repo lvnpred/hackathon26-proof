@@ -101,6 +101,28 @@
     if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; }
     return m;
   }
+  // After "Use this": the doctor chose the NAME, so name questions are answered; dose questions and a name the
+  // list still does not know stay open. Returns "you" (mark confirmed) or "stay" (leave to the row's state).
+  function afterSpell(status) {
+    return ["verified", "unverified-name", "lookalike-check"].indexOf(str(status)) >= 0 ? "you" : "stay";
+  }
+
+  // Letters said one by one ("p r e d n i s o l o n e") are joined; anything else only has its spaces tidied.
+  function cleanTyped(s) {
+    const t = str(s).replace(/\s+/g, " ").trim();
+    return /^[A-Za-z]( [A-Za-z])+$/.test(t) ? t.replace(/ /g, "") : t;
+  }
+  // "" when fine, else the sentence to show (limits are the server's: 60 characters, 8 words).
+  // Names are 2-60 characters of letters, digits, space . - / ( ) ' ,
+  function typedProblem(s) {
+    if (!s) return "Type a medicine name first.";
+    if (s.length < 2) return "That is too short for a medicine name.";
+    if (s.length > 60) return "That is too long for a medicine name (60 characters at most).";
+    if (s.split(" ").length > 8) return "That is too many words for a medicine name (8 at most).";
+    if (!/^[A-Za-z0-9][A-Za-z0-9 .\-\/()',]*$/.test(s)) return "Use letters and digits only.";
+    return "";
+  }
+
   // counts: {total, needs, checking} -> the summary bar words and the Save button.
   function summary(counts) {
     counts = counts || {};
@@ -114,5 +136,28 @@
       saveDisabled: checking > 0 || needs > 0,
     };
   }
-  root.RxState = { rowState, metaOf, chipsFor, afterEdit, summary, NEEDS };
+  // The width the Spell panel may use: the content width of whatever element scrolls the table sideways. Under 600px
+  // that is table.rx itself (display:block, overflow-x:auto); otherwise it is #sheet. m holds measured numbers and
+  // computed styles. The panel cell has no padding and no side border (rx.css), so nothing else is subtracted.
+  function paneWidth(m) {
+    m = m || {};
+    const n = (x) => { const v = parseFloat(x); return Number.isFinite(v) ? v : 0; };
+    const own = /^(auto|scroll)$/.test(str(m.tableOverflowX)) && str(m.tableDisplay) === "block";
+    const client = own ? n(m.tableClient) : n(m.sheetClient);
+    const pad = own ? n(m.tablePadL) + n(m.tablePadR) : n(m.sheetPadL) + n(m.sheetPadR);
+    return { scroller: own ? "table" : "sheet", width: Math.max(0, Math.round(client - pad)) };
+  }
+
+  // One sentence for a failed check-row call. err is what postJson throws. postJson's own fallback text
+  // ("Request failed (422)") is dropped: the status is already in the sentence.
+  function errorText(err) {
+    if (err && err.aborted) return "The check took too long and was stopped.";
+    if (err && err.status) {
+      const m = str(err.message).trim();
+      return "The server answered " + err.status + (m && m.indexOf("Request failed") !== 0 ? " (" + m + ")" : "") + ".";
+    }
+    return "Could not reach the server.";
+  }
+
+  root.RxState = { rowState, metaOf, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, paneWidth, NEEDS };
 })(typeof window !== "undefined" ? window : globalThis);

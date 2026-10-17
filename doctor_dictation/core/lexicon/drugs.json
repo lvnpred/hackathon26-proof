@@ -57,12 +57,18 @@
         "n acetylcysteine"
       ],
       "brands": [
-        "Mucomix"
+        "Mucomix",
+        "Mucoblo"
       ],
       "canonical": "Acetylcysteine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Mucoblo": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "600 mg"
       ]
@@ -74,13 +80,23 @@
       ],
       "brands": [
         "Acivir",
-        "Zovirax"
+        "Zovirax",
+        "Axovir",
+        "Herpikind"
       ],
       "canonical": "Acyclovir",
       "forms": [
         "Tab.",
         "Cream"
       ],
+      "lineage": {
+        "Axovir": {
+          "src": "cdci-2026-08-31"
+        },
+        "Herpikind": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "200 mg",
         "400 mg",
@@ -175,12 +191,18 @@
         "allopurinal"
       ],
       "brands": [
-        "Zyloric"
+        "Zyloric",
+        "Zanupirol"
       ],
       "canonical": "Allopurinol",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Zanupirol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg",
         "300 mg"
@@ -261,13 +283,19 @@
         "amiodaron"
       ],
       "brands": [
-        "Cordarone"
+        "Cordarone",
+        "Duron"
       ],
       "canonical": "Amiodarone",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Duron": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg",
         "200 mg"
@@ -297,12 +325,22 @@
         "amitriptaline"
       ],
       "brands": [
-        "Tryptomer"
+        "Tryptomer",
+        "Amypres",
+        "Eliwel"
       ],
       "canonical": "Amitriptyline",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Amypres": {
+          "src": "cdci-2026-08-31"
+        },
+        "Eliwel": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg",
         "25 mg"
@@ -316,12 +354,18 @@
       ],
       "brands": [
         "Amlong",
-        "Amlip"
+        "Amlip",
+        "Amprez"
       ],
       "canonical": "Amlodipine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Amprez": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2.5 mg",
         "5 mg",
@@ -352,13 +396,19 @@
       ],
       "brands": [
         "Moxikind",
-        "Novamox"
+        "Novamox",
+        "Wymox"
       ],
       "canonical": "Amoxicillin",
       "forms": [
         "Cap.",
         "Syr."
       ],
+      "lineage": {
+        "Wymox": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "250 mg",
         "500 mg",
@@ -444,12 +494,22 @@
         "artemether lumefantrin"
       ],
       "brands": [
-        "Coartem"
+        "Coartem",
+        "Abha LM",
+        "Lumerax"
       ],
       "canonical": "Artemether + Lumefantrine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Abha LM": {
+          "src": "cdci-2026-08-31"
+        },
+        "Lumerax": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "20 mg/120 mg"
       ]
@@ -462,12 +522,18 @@
       ],
       "brands": [
         "Disprin",
-        "Ecosprin"
+        "Ecosprin",
+        "Aspin"
       ],
       "canonical": "Aspirin",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Aspin": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "75 mg",
         "150 mg",
@@ -517,12 +583,22 @@
       ],
       "brands": [
         "Storvas",
-        "Atorva"
+        "Atorva",
+        "Aztor",
+        "Tonact"
       ],
       "canonical": "Atorvastatin",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Aztor": {
+          "src": "cdci-2026-08-31"
+        },
+        "Tonact": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg",
         "20 mg",
@@ -574,13 +650,19 @@
       ],
       "brands": [
         "Azithral",
-        "Zithromax"
+        "Zithromax",
+        "Aziwok"
       ],
       "canonical": "Azithromycin",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Aziwok": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "250 mg",
         "500 mg",
@@ -608,12 +690,26 @@
         "beclofen"
       ],
       "brands": [
-        "Lioresal"
+        "Lioresal",
+        "Bacfen",
+        "Baclof",
+        "Liofen"
       ],
       "canonical": "Baclofen",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Bacfen": {
+          "src": "cdci-2026-08-31"
+        },
+        "Baclof": {
+          "src": "cdci-2026-08-31"
+        },
+        "Liofen": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg",
         "20 mg"
@@ -659,13 +755,23 @@
         "betnovate"
       ],
       "brands": [
-        "Betnovate"
+        "Betnovate",
+        "Betnelan",
+        "Betnesol"
       ],
       "canonical": "Betamethasone",
       "forms": [
         "Cream",
         "Oint."
       ],
+      "lineage": {
+        "Betnelan": {
+          "src": "cdci-2026-08-31"
+        },
+        "Betnesol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "0.1%"
       ]
@@ -704,12 +810,26 @@
         "biscodyl"
       ],
       "brands": [
-        "Dulcolax"
+        "Dulcolax",
+        "Dulax",
+        "Dulcoflex",
+        "Gerbisa"
       ],
       "canonical": "Bisacodyl",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Dulax": {
+          "src": "cdci-2026-08-31"
+        },
+        "Dulcoflex": {
+          "src": "cdci-2026-08-31"
+        },
+        "Gerbisa": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg"
       ]
@@ -786,12 +906,18 @@
         "budesonid"
       ],
       "brands": [
-        "Budecort"
+        "Budecort",
+        "Budez CR"
       ],
       "canonical": "Budesonide",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Budez CR": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "0.5 mg/2ml",
         "1 mg/2ml"
@@ -865,13 +991,27 @@
       ],
       "brands": [
         "Shelcal",
-        "Calcitas"
+        "Calcitas",
+        "Bonycal",
+        "Oscal",
+        "Rocal"
       ],
       "canonical": "Calcium Carbonate",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Bonycal": {
+          "src": "cdci-2026-08-31"
+        },
+        "Oscal": {
+          "src": "cdci-2026-08-31"
+        },
+        "Rocal": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg"
       ]
@@ -952,13 +1092,19 @@
       ],
       "brands": [
         "Tegretol",
-        "Zeptol"
+        "Zeptol",
+        "Carmaz"
       ],
       "canonical": "Carbamazepine",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Carmaz": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg",
         "200 mg"
@@ -970,12 +1116,26 @@
         "carbimazol"
       ],
       "brands": [
-        "Neo-Mercazole"
+        "Neo-Mercazole",
+        "Anti-Thyrox",
+        "Thyrocab",
+        "Thyrodip"
       ],
       "canonical": "Carbimazole",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Anti-Thyrox": {
+          "src": "cdci-2026-08-31"
+        },
+        "Thyrocab": {
+          "src": "cdci-2026-08-31"
+        },
+        "Thyrodip": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -1083,13 +1243,23 @@
       ],
       "brands": [
         "Taxim-O",
-        "Zifi"
+        "Zifi",
+        "Milixim",
+        "Ziprax"
       ],
       "canonical": "Cefixime",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Milixim": {
+          "src": "cdci-2026-08-31"
+        },
+        "Ziprax": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg",
         "200 mg"
@@ -1103,12 +1273,18 @@
       ],
       "brands": [
         "Taxim",
-        "Omnatax"
+        "Omnatax",
+        "Sifotaxim"
       ],
       "canonical": "Cefotaxime",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Sifotaxim": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg",
         "1 g"
@@ -1358,13 +1534,23 @@
       ],
       "brands": [
         "Calcirol",
-        "D-Rise"
+        "D-Rise",
+        "HealthVit D3",
+        "Kidrich-D3"
       ],
       "canonical": "Cholecalciferol",
       "forms": [
         "Cap.",
         "Syr."
       ],
+      "lineage": {
+        "HealthVit D3": {
+          "src": "cdci-2026-08-31"
+        },
+        "Kidrich-D3": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "60000 IU",
         "1000 IU"
@@ -1476,13 +1662,19 @@
       ],
       "brands": [
         "Crixan",
-        "Klacid"
+        "Klacid",
+        "Clarigard"
       ],
       "canonical": "Clarithromycin",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Clarigard": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "250 mg",
         "500 mg"
@@ -1495,13 +1687,19 @@
         "clinda"
       ],
       "brands": [
-        "Dalacin"
+        "Dalacin",
+        "Camyda"
       ],
       "canonical": "Clindamycin",
       "forms": [
         "Cap.",
         "Inj."
       ],
+      "lineage": {
+        "Camyda": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "150 mg",
         "300 mg"
@@ -1639,12 +1837,18 @@
       ],
       "brands": [
         "Sizopin",
-        "Clozaril"
+        "Clozaril",
+        "Zaporil"
       ],
       "canonical": "Clozapine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Zaporil": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "25 mg",
         "50 mg",
@@ -1687,13 +1891,19 @@
       ],
       "brands": [
         "Septran",
-        "Bactrim"
+        "Bactrim",
+        "Alcorim F"
       ],
       "canonical": "Co-Trimoxazole",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Alcorim F": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "480 mg",
         "960 mg"
@@ -1980,13 +2190,23 @@
         "dexa"
       ],
       "brands": [
-        "Decadron"
+        "Decadron",
+        "Biodexone",
+        "Dexavac"
       ],
       "canonical": "Dexamethasone",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Biodexone": {
+          "src": "cdci-2026-08-31"
+        },
+        "Dexavac": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "0.5 mg",
         "4 mg"
@@ -2028,13 +2248,19 @@
       ],
       "brands": [
         "Valium",
-        "Calmpose"
+        "Calmpose",
+        "Anxol"
       ],
       "canonical": "Diazepam",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Anxol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -2048,13 +2274,27 @@
       ],
       "brands": [
         "Voveran",
-        "Dynapar"
+        "Dynapar",
+        "Actfit",
+        "Diclodol",
+        "Diclonett"
       ],
       "canonical": "Diclofenac",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Actfit": {
+          "src": "cdci-2026-08-31"
+        },
+        "Diclodol": {
+          "src": "cdci-2026-08-31"
+        },
+        "Diclonett": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "50 mg",
         "75 mg"
@@ -2066,12 +2306,19 @@
         "dicyclomin",
         "dicycloverine"
       ],
-      "brands": [],
+      "brands": [
+        "Bralspas"
+      ],
       "canonical": "Dicyclomine",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Bralspas": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg",
         "20 mg"
@@ -2084,12 +2331,18 @@
         "dec"
       ],
       "brands": [
-        "Hetrazan"
+        "Hetrazan",
+        "Deecee"
       ],
       "canonical": "Diethylcarbamazine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Deecee": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "50 mg",
         "100 mg"
@@ -2101,13 +2354,19 @@
         "digoxine"
       ],
       "brands": [
-        "Lanoxin"
+        "Lanoxin",
+        "Canrythm"
       ],
       "canonical": "Digoxin",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Canrythm": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "0.25 mg"
       ]
@@ -2118,12 +2377,18 @@
         "diltiazam"
       ],
       "brands": [
-        "Dilzem"
+        "Dilzem",
+        "Dilgard"
       ],
       "canonical": "Diltiazem",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Dilgard": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "30 mg",
         "60 mg",
@@ -2221,12 +2486,22 @@
       ],
       "brands": [
         "Donep",
-        "Aricept"
+        "Aricept",
+        "Alzil",
+        "Cognidep"
       ],
       "canonical": "Donepezil",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Alzil": {
+          "src": "cdci-2026-08-31"
+        },
+        "Cognidep": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -2422,12 +2697,18 @@
         "enalapril maleate"
       ],
       "brands": [
-        "Envas"
+        "Envas",
+        "Hytrol"
       ],
       "canonical": "Enalapril",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Hytrol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2.5 mg",
         "5 mg",
@@ -2440,12 +2721,18 @@
         "enoxaparin sodium"
       ],
       "brands": [
-        "Clexane"
+        "Clexane",
+        "Angionox"
       ],
       "canonical": "Enoxaparin",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Angionox": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "20 mg",
         "40 mg",
@@ -2521,12 +2808,18 @@
       ],
       "brands": [
         "Nexito",
-        "Cipralex"
+        "Cipralex",
+        "Rexipra"
       ],
       "canonical": "Escitalopram",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Rexipra": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -2607,12 +2900,18 @@
         "emb"
       ],
       "brands": [
-        "Combutol"
+        "Combutol",
+        "Myambutol"
       ],
       "canonical": "Ethambutol",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Myambutol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "400 mg",
         "800 mg"
@@ -2881,11 +3180,26 @@
         "flunarizine",
         "flunarizin"
       ],
-      "brands": [],
+      "brands": [
+        "Cinzin",
+        "Dulonor",
+        "Migazin"
+      ],
       "canonical": "Flunarizine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Cinzin": {
+          "src": "cdci-2026-08-31"
+        },
+        "Dulonor": {
+          "src": "cdci-2026-08-31"
+        },
+        "Migazin": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -2929,12 +3243,22 @@
       ],
       "brands": [
         "Fludac",
-        "Prozac"
+        "Prozac",
+        "Fludep",
+        "Prodep"
       ],
       "canonical": "Fluoxetine",
       "forms": [
         "Cap."
       ],
+      "lineage": {
+        "Fludep": {
+          "src": "cdci-2026-08-31"
+        },
+        "Prodep": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "20 mg"
       ]
@@ -2945,12 +3269,18 @@
         "fluphenazin"
       ],
       "brands": [
-        "Prolixin"
+        "Prolixin",
+        "Anatensol"
       ],
       "canonical": "Fluphenazine",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Anatensol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -2989,12 +3319,18 @@
         "folvite"
       ],
       "brands": [
-        "Folvite"
+        "Folvite",
+        "Zofol"
       ],
       "canonical": "Folic Acid",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Zofol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg"
       ]
@@ -3035,13 +3371,23 @@
         "frusemide"
       ],
       "brands": [
-        "Lasix"
+        "Lasix",
+        "Frusamide",
+        "Frusenex"
       ],
       "canonical": "Furosemide",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Frusamide": {
+          "src": "cdci-2026-08-31"
+        },
+        "Frusenex": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "40 mg"
       ]
@@ -3090,12 +3436,22 @@
         "genta"
       ],
       "brands": [
-        "Genticyn"
+        "Genticyn",
+        "Biogaracin",
+        "Garacron"
       ],
       "canonical": "Gentamicin",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Biogaracin": {
+          "src": "cdci-2026-08-31"
+        },
+        "Garacron": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "40 mg/ml"
       ]
@@ -3196,13 +3552,23 @@
         "griseo"
       ],
       "brands": [
-        "Fulvin"
+        "Fulvin",
+        "Dermonorm",
+        "Idifulvin"
       ],
       "canonical": "Griseofulvin",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Dermonorm": {
+          "src": "cdci-2026-08-31"
+        },
+        "Idifulvin": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "125 mg",
         "250 mg"
@@ -3263,12 +3629,18 @@
         "hydrochlorthiazide"
       ],
       "brands": [
-        "Esidrex"
+        "Esidrex",
+        "Aquazide"
       ],
       "canonical": "Hydrochlorothiazide",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Aquazide": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "12.5 mg",
         "25 mg"
@@ -3281,7 +3653,8 @@
         "hydrocortisone acetate"
       ],
       "brands": [
-        "Cortef"
+        "Cortef",
+        "Drucort"
       ],
       "canonical": "Hydrocortisone",
       "forms": [
@@ -3289,6 +3662,11 @@
         "Cream",
         "Inj."
       ],
+      "lineage": {
+        "Drucort": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg",
@@ -3303,12 +3681,18 @@
       ],
       "brands": [
         "HCQS",
-        "Plaquenil"
+        "Plaquenil",
+        "Hqtor"
       ],
       "canonical": "Hydroxychloroquine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Hqtor": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "200 mg",
         "400 mg"
@@ -3376,13 +3760,23 @@
       ],
       "brands": [
         "Brufen",
-        "Combiflam"
+        "Combiflam",
+        "Emflam",
+        "Ibugesic"
       ],
       "canonical": "Ibuprofen",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Emflam": {
+          "src": "cdci-2026-08-31"
+        },
+        "Ibugesic": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "200 mg",
         "400 mg",
@@ -3604,12 +3998,22 @@
         "iron sucrose injection"
       ],
       "brands": [
-        "Orofer-S"
+        "Orofer-S",
+        "Biofer S",
+        "Ferizest"
       ],
       "canonical": "Iron Sucrose",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Biofer S": {
+          "src": "cdci-2026-08-31"
+        },
+        "Ferizest": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg/5ml"
       ]
@@ -3622,12 +4026,18 @@
         "isonicotinic acid hydrazide"
       ],
       "brands": [
-        "Isokin"
+        "Isokin",
+        "Isonex"
       ],
       "canonical": "Isoniazid",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Isonex": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "300 mg"
       ]
@@ -3641,12 +4051,18 @@
         "sorbitrate"
       ],
       "brands": [
-        "Sorbitrate"
+        "Sorbitrate",
+        "Isordil"
       ],
       "canonical": "Isosorbide Dinitrate",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Isordil": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -3712,12 +4128,18 @@
       ],
       "brands": [
         "Itrasys",
-        "Sporanox"
+        "Sporanox",
+        "Afitra"
       ],
       "canonical": "Itraconazole",
       "forms": [
         "Cap."
       ],
+      "lineage": {
+        "Afitra": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg"
       ]
@@ -3745,12 +4167,18 @@
         "ivermectine"
       ],
       "brands": [
-        "Ivermec"
+        "Ivermec",
+        "Ivecop"
       ],
       "canonical": "Ivermectin",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Ivecop": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "12 mg"
       ]
@@ -3847,13 +4275,19 @@
         "labeta"
       ],
       "brands": [
-        "Lobet"
+        "Lobet",
+        "Labebet"
       ],
       "canonical": "Labetalol",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Labebet": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg",
         "200 mg"
@@ -3883,12 +4317,26 @@
         "lactulos"
       ],
       "brands": [
-        "Duphalac"
+        "Duphalac",
+        "Abloz",
+        "Actoluse",
+        "Adzolex-Plus"
       ],
       "canonical": "Lactulose",
       "forms": [
         "Syr."
       ],
+      "lineage": {
+        "Abloz": {
+          "src": "cdci-2026-08-31"
+        },
+        "Actoluse": {
+          "src": "cdci-2026-08-31"
+        },
+        "Adzolex-Plus": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -3964,12 +4412,18 @@
       ],
       "brands": [
         "Femara",
-        "Letroz"
+        "Letroz",
+        "Celofem"
       ],
       "canonical": "Letrozole",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Celofem": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2.5 mg"
       ]
@@ -3981,13 +4435,19 @@
       ],
       "brands": [
         "Levipil",
-        "Keppra"
+        "Keppra",
+        "Levesam"
       ],
       "canonical": "Levetiracetam",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Levesam": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "250 mg",
         "500 mg",
@@ -4207,13 +4667,19 @@
       ],
       "brands": [
         "Imodium",
-        "Eldoper"
+        "Eldoper",
+        "Lopidus"
       ],
       "canonical": "Loperamide",
       "forms": [
         "Cap.",
         "Tab."
       ],
+      "lineage": {
+        "Lopidus": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2 mg"
       ]
@@ -4242,13 +4708,23 @@
       ],
       "brands": [
         "Ativan",
-        "Larpose"
+        "Larpose",
+        "Loraz",
+        "Loxum"
       ],
       "canonical": "Lorazepam",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Loraz": {
+          "src": "cdci-2026-08-31"
+        },
+        "Loxum": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "1 mg",
         "2 mg"
@@ -4309,11 +4785,18 @@
         "magnesium",
         "magnesium oxide"
       ],
-      "brands": [],
+      "brands": [
+        "Troymag"
+      ],
       "canonical": "Magnesium",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Troymag": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -4372,12 +4855,22 @@
       ],
       "brands": [
         "Deviry",
-        "Provera"
+        "Provera",
+        "Empeea",
+        "Farlutal"
       ],
       "canonical": "Medroxyprogesterone",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Empeea": {
+          "src": "cdci-2026-08-31"
+        },
+        "Farlutal": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2.5 mg",
         "5 mg",
@@ -4391,13 +4884,27 @@
         "mefanamic acid"
       ],
       "brands": [
-        "Meftal"
+        "Meftal",
+        "Almefkem",
+        "Mefacid",
+        "Meflup"
       ],
       "canonical": "Mefenamic Acid",
       "forms": [
         "Tab.",
         "Susp."
       ],
+      "lineage": {
+        "Almefkem": {
+          "src": "cdci-2026-08-31"
+        },
+        "Mefacid": {
+          "src": "cdci-2026-08-31"
+        },
+        "Meflup": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "250 mg",
         "500 mg"
@@ -4459,12 +4966,18 @@
         "meropenum"
       ],
       "brands": [
-        "Meronem"
+        "Meronem",
+        "Asmero"
       ],
       "canonical": "Meropenem",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Asmero": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg",
         "1 g"
@@ -4478,12 +4991,18 @@
         "5 asa"
       ],
       "brands": [
-        "Mesacol"
+        "Mesacol",
+        "Asacol"
       ],
       "canonical": "Mesalazine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Asacol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "400 mg",
         "500 mg"
@@ -4497,12 +5016,22 @@
       ],
       "brands": [
         "Glycomet",
-        "Glyciphage"
+        "Glyciphage",
+        "Bigomet",
+        "Exermet"
       ],
       "canonical": "Metformin",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Bigomet": {
+          "src": "cdci-2026-08-31"
+        },
+        "Exermet": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg",
         "850 mg",
@@ -4545,13 +5074,23 @@
         "mtx"
       ],
       "brands": [
-        "Folitrax"
+        "Folitrax",
+        "Mexate",
+        "Oncotrex"
       ],
       "canonical": "Methotrexate",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Mexate": {
+          "src": "cdci-2026-08-31"
+        },
+        "Oncotrex": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2.5 mg",
         "7.5 mg"
@@ -4732,12 +5271,26 @@
         "mifepriston"
       ],
       "brands": [
-        "Mifegest"
+        "Mifegest",
+        "Abo Pill",
+        "Abortab",
+        "Mifeprin"
       ],
       "canonical": "Mifepristone",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Abo Pill": {
+          "src": "cdci-2026-08-31"
+        },
+        "Abortab": {
+          "src": "cdci-2026-08-31"
+        },
+        "Mifeprin": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "200 mg"
       ]
@@ -4940,12 +5493,18 @@
         "mmf"
       ],
       "brands": [
-        "Cellcept"
+        "Cellcept",
+        "Keycept"
       ],
       "canonical": "Mycophenolate Mofetil",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Keycept": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "250 mg",
         "500 mg"
@@ -5084,13 +5643,19 @@
       ],
       "brands": [
         "Depin",
-        "Nicardia"
+        "Nicardia",
+        "Depicor"
       ],
       "canonical": "Nifedipine",
       "forms": [
         "Tab.",
         "Cap."
       ],
+      "lineage": {
+        "Depicor": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg",
@@ -5119,12 +5684,22 @@
         "nitrofurantoine"
       ],
       "brands": [
-        "Martifur"
+        "Martifur",
+        "Niftas",
+        "Niftran"
       ],
       "canonical": "Nitrofurantoin",
       "forms": [
         "Cap."
       ],
+      "lineage": {
+        "Niftas": {
+          "src": "cdci-2026-08-31"
+        },
+        "Niftran": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg"
       ]
@@ -5295,7 +5870,10 @@
       ],
       "brands": [
         "Emset",
-        "Ondem"
+        "Ondem",
+        "Emeset",
+        "Onkam",
+        "Zofer"
       ],
       "canonical": "Ondansetron",
       "forms": [
@@ -5303,6 +5881,17 @@
         "Syr.",
         "Inj."
       ],
+      "lineage": {
+        "Emeset": {
+          "src": "cdci-2026-08-31"
+        },
+        "Onkam": {
+          "src": "cdci-2026-08-31"
+        },
+        "Zofer": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "4 mg",
         "8 mg"
@@ -5399,12 +5988,18 @@
       ],
       "brands": [
         "Pitocin",
-        "Syntocinon"
+        "Syntocinon",
+        "Gynotocin"
       ],
       "canonical": "Oxytocin",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Gynotocin": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -5459,13 +6054,23 @@
       ],
       "brands": [
         "Pan",
-        "Pantocid"
+        "Pantocid",
+        "Clipan",
+        "Eracid iv"
       ],
       "canonical": "Pantoprazole",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Clipan": {
+          "src": "cdci-2026-08-31"
+        },
+        "Eracid iv": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "40 mg"
       ]
@@ -5480,13 +6085,19 @@
       "brands": [
         "Crocin",
         "Dolo",
-        "Calpol"
+        "Calpol",
+        "Fepanil"
       ],
       "canonical": "Paracetamol",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Fepanil": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg",
         "650 mg",
@@ -5578,13 +6189,23 @@
         "avil"
       ],
       "brands": [
-        "Avil"
+        "Avil",
+        "Apvil",
+        "Eralet"
       ],
       "canonical": "Pheniramine",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Apvil": {
+          "src": "cdci-2026-08-31"
+        },
+        "Eralet": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -5594,13 +6215,23 @@
       ],
       "brands": [
         "Eptoin",
-        "Dilantin"
+        "Dilantin",
+        "Epsolin",
+        "Phenykem"
       ],
       "canonical": "Phenytoin",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Epsolin": {
+          "src": "cdci-2026-08-31"
+        },
+        "Phenykem": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "100 mg"
       ]
@@ -5612,12 +6243,19 @@
         "vitamin k",
         "vitamin k1"
       ],
-      "brands": [],
+      "brands": [
+        "Phyto K1"
+      ],
       "canonical": "Phytomenadione",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Phyto K1": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg"
       ]
@@ -5628,11 +6266,22 @@
         "pilocarpin",
         "pilocarpine eye drops"
       ],
-      "brands": [],
+      "brands": [
+        "Jogren",
+        "Pilotbg"
+      ],
       "canonical": "Pilocarpine",
       "forms": [
         "Drops"
       ],
+      "lineage": {
+        "Jogren": {
+          "src": "cdci-2026-08-31"
+        },
+        "Pilotbg": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -5732,12 +6381,19 @@
         "potassium chlorid",
         "kcl"
       ],
-      "brands": [],
+      "brands": [
+        "Potplus"
+      ],
       "canonical": "Potassium Chloride",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Potplus": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -5966,12 +6622,18 @@
       ],
       "brands": [
         "Inderal",
-        "Ciplar"
+        "Ciplar",
+        "Betacap"
       ],
       "canonical": "Propranolol",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Betacap": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg",
         "20 mg",
@@ -6002,12 +6664,22 @@
         "pza"
       ],
       "brands": [
-        "Pyzina"
+        "Pyzina",
+        "Copyrazin",
+        "Macrozide"
       ],
       "canonical": "Pyrazinamide",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Copyrazin": {
+          "src": "cdci-2026-08-31"
+        },
+        "Macrozide": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg",
         "750 mg"
@@ -6168,13 +6840,19 @@
         "rifampicine"
       ],
       "brands": [
-        "Rimactane"
+        "Rimactane",
+        "Macox"
       ],
       "canonical": "Rifampicin",
       "forms": [
         "Cap.",
         "Syr."
       ],
+      "lineage": {
+        "Macox": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "150 mg",
         "300 mg"
@@ -6221,12 +6899,18 @@
       ],
       "brands": [
         "Sizodon",
-        "Risperdal"
+        "Risperdal",
+        "Riscon"
       ],
       "canonical": "Risperidone",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Riscon": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "1 mg",
         "2 mg",
@@ -6238,12 +6922,26 @@
         "rituximab"
       ],
       "brands": [
-        "Mabthera"
+        "Mabthera",
+        "Ikgdar",
+        "Reditux",
+        "Ristova"
       ],
       "canonical": "Rituximab",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Ikgdar": {
+          "src": "cdci-2026-08-31"
+        },
+        "Reditux": {
+          "src": "cdci-2026-08-31"
+        },
+        "Ristova": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -6616,11 +7314,18 @@
         "sodium bicarbonat",
         "baking soda"
       ],
-      "brands": [],
+      "brands": [
+        "Auxisoda"
+      ],
       "canonical": "Sodium Bicarbonate",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Auxisoda": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg"
       ]
@@ -6750,12 +7455,22 @@
         "sumatriptin"
       ],
       "brands": [
-        "Suminat"
+        "Suminat",
+        "Sumisun",
+        "Sumitrex"
       ],
       "canonical": "Sumatriptan",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Sumisun": {
+          "src": "cdci-2026-08-31"
+        },
+        "Sumitrex": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "25 mg",
         "50 mg",
@@ -6768,12 +7483,22 @@
         "tacrolimus ointment"
       ],
       "brands": [
-        "Protopic"
+        "Protopic",
+        "Advagraf",
+        "Tacrograf"
       ],
       "canonical": "Tacrolimus",
       "forms": [
         "Oint."
       ],
+      "lineage": {
+        "Advagraf": {
+          "src": "cdci-2026-08-31"
+        },
+        "Tacrograf": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -6853,12 +7578,22 @@
       ],
       "brands": [
         "Telma",
-        "Tazloc"
+        "Tazloc",
+        "Extel",
+        "Hytel"
       ],
       "canonical": "Telmisartan",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Extel": {
+          "src": "cdci-2026-08-31"
+        },
+        "Hytel": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "20 mg",
         "40 mg",
@@ -6871,12 +7606,26 @@
         "teneligliptine"
       ],
       "brands": [
-        "Teniva"
+        "Teniva",
+        "Dynaglipt",
+        "Gliptinita",
+        "Joten"
       ],
       "canonical": "Teneligliptin",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Dynaglipt": {
+          "src": "cdci-2026-08-31"
+        },
+        "Gliptinita": {
+          "src": "cdci-2026-08-31"
+        },
+        "Joten": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "20 mg"
       ]
@@ -7002,11 +7751,18 @@
         "vitamin b1",
         "vit b1"
       ],
-      "brands": [],
+      "brands": [
+        "Amintoz"
+      ],
       "canonical": "Thiamine",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Amintoz": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "10 mg",
         "100 mg"
@@ -7222,13 +7978,23 @@
       ],
       "brands": [
         "Tramazac",
-        "Ultracet"
+        "Ultracet",
+        "Dolfre",
+        "Dolotram"
       ],
       "canonical": "Tramadol",
       "forms": [
         "Cap.",
         "Inj."
       ],
+      "lineage": {
+        "Dolfre": {
+          "src": "cdci-2026-08-31"
+        },
+        "Dolotram": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "50 mg",
         "100 mg"
@@ -7241,13 +8007,23 @@
         "txa"
       ],
       "brands": [
-        "Trapic"
+        "Trapic",
+        "Rheonex",
+        "T-Stat"
       ],
       "canonical": "Tranexamic Acid",
       "forms": [
         "Tab.",
         "Inj."
       ],
+      "lineage": {
+        "Rheonex": {
+          "src": "cdci-2026-08-31"
+        },
+        "T-Stat": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "500 mg"
       ]
@@ -7275,12 +8051,18 @@
         "retinoic acid"
       ],
       "brands": [
-        "Retino-A"
+        "Retino-A",
+        "CA Atra"
       ],
       "canonical": "Tretinoin",
       "forms": [
         "Cream"
       ],
+      "lineage": {
+        "CA Atra": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": []
     },
     {
@@ -7304,12 +8086,22 @@
         "trihexyphenidil"
       ],
       "brands": [
-        "Pacitane"
+        "Pacitane",
+        "Heksi",
+        "Parkitane"
       ],
       "canonical": "Trihexyphenidyl",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Heksi": {
+          "src": "cdci-2026-08-31"
+        },
+        "Parkitane": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "2 mg"
       ]
@@ -7443,12 +8235,18 @@
       ],
       "brands": [
         "Calaptin",
-        "Isoptin"
+        "Isoptin",
+        "Vasopten"
       ],
       "canonical": "Verapamil",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Vasopten": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "40 mg",
         "80 mg"
@@ -7579,13 +8377,27 @@
         "zinconia"
       ],
       "brands": [
-        "Zinconia"
+        "Zinconia",
+        "Ozink",
+        "Warzinc",
+        "Wilzin"
       ],
       "canonical": "Zinc",
       "forms": [
         "Tab.",
         "Syr."
       ],
+      "lineage": {
+        "Ozink": {
+          "src": "cdci-2026-08-31"
+        },
+        "Warzinc": {
+          "src": "cdci-2026-08-31"
+        },
+        "Wilzin": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "20 mg"
       ]
@@ -7598,12 +8410,18 @@
       ],
       "brands": [
         "Aclasta",
-        "Zometa"
+        "Zometa",
+        "Cezol"
       ],
       "canonical": "Zoledronic Acid",
       "forms": [
         "Inj."
       ],
+      "lineage": {
+        "Cezol": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg"
       ]
@@ -7614,12 +8432,18 @@
         "zolpidem tartrate"
       ],
       "brands": [
-        "Zolfresh"
+        "Zolfresh",
+        "Zanlop"
       ],
       "canonical": "Zolpidem",
       "forms": [
         "Tab."
       ],
+      "lineage": {
+        "Zanlop": {
+          "src": "cdci-2026-08-31"
+        }
+      },
       "strengths": [
         "5 mg",
         "10 mg"
@@ -7642,5 +8466,18 @@
       ]
     }
   ],
-  "version": "1.1.0"
+  "version": "1.2.0",
+  "sources": [
+    {
+      "brands_added": 155,
+      "conflict_map_sha256": "bcff12c0b50449b359d107e3eaff5522fdf0235cf7bd8b70d8f91a31784b5807",
+      "id": "cdci-2026-08-31",
+      "input_sha256": "2a1861348337ebc3762fae42b1520c36aff3266de635c687f436c0ea1cd57686",
+      "licence": "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ — C-DAC/NRCeS; redistribution within India",
+      "merged_at": "2026-10-17T09:51:45Z",
+      "name": "Common Drug Codes for India (CDCI) Flat Files, 2026-08-31",
+      "rules": "g-1",
+      "url": "https://www.nrces.in/download/files/zip/CommonDrugCodesForIndia_FlatFilePackage.zip"
+    }
+  ]
 }

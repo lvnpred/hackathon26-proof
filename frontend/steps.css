@@ -1,0 +1,33 @@
+/* Steppers (steps.js): main dictation steps, Profile dialog, Letterhead panel. State is icon or number plus a hidden word
+   ("done", "in progress", "problem"), never colour alone. No motion here. The steppers sit in .middle or in no-print
+   dialogs, so they are hidden in print (styles.css @media print). */
+:root { --st-ok:#17703a; --st-bad:#a8261d; --st-line:#c3cdc8; --st-muted:#566660; --st-ring:#dfe9ff; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+/* The vertical list makes the sticky middle pane taller than a short window: keep its bottom reachable. */
+@media (min-width: 1001px) { .middle { max-height:calc(100vh - var(--topbar-h,70px) - 24px); overflow-y:auto; } }
+.stp-list { list-style:none; margin:0 0 12px; padding:0; }
+.stp-list .stp { display:flex; gap:12px; align-items:flex-start; position:relative; padding-bottom:14px; color:var(--st-muted); }
+.stp-list .stp:not(:last-child)::before { content:""; position:absolute; left:10px; top:24px; bottom:2px; width:2px; background:#d6ded9; }
+.stp-list .stp.done:not(:last-child)::before { background:#bcd4c5; }
+.dot { width:22px; height:22px; flex:0 0 22px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid var(--st-line); background:#fff; font-size:12px; font-weight:700; }
+.stp.done .dot { background:var(--st-ok); border-color:var(--st-ok); color:#fff; }
+.stp.now .dot { border-color:var(--accent); box-shadow:0 0 0 4px var(--st-ring); color:var(--accent); }
+.stp.failed .dot { border-color:var(--st-bad); color:var(--st-bad); box-shadow:0 0 0 4px #fbe0dd; }
+.stp.na .dot, .stp.locked .dot { border-style:dashed; }
+.stp-text { display:block; text-align:left; background:none; border:0; padding:0; font:inherit; color:inherit; }
+.stp-text b { display:block; font-size:13px; }
+.stp-text .sub { display:block; font-size:12px; }
+.stp.now, .stp.failed { color:var(--ink); }
+.stp.failed .sub { color:var(--st-bad); }
+.agent-chip.failed { background:#fdecea; border-color:#f3b6b0; color:var(--st-bad); }
+/* Profile and Letterhead: a row of numbered steps */
+.stepper { display:flex; list-style:none; margin:10px 0 4px; padding:0; }
+.stepper .stp { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; font-size:12px; text-align:center; color:var(--st-muted); }
+.stepper .stp:not(:last-child)::after { content:""; position:absolute; top:11px; left:calc(50% + 16px); right:calc(-50% + 16px); height:2px; background:#d6ded9; }
+.stepper .stp.done:not(:last-child)::after { background:var(--st-ok); }
+button.stp-text { cursor:pointer; min-height:44px; min-width:44px; text-align:center; }
+button.stp-text:focus-visible { outline:3px solid #8fb2ff; outline-offset:2px; }
+.stepper .stp-text { text-align:center; }
+.stp-cancel { margin-top:8px; background:none; border:0; color:var(--accent); text-decoration:underline; min-height:44px; padding:0 8px; }
+.stp-cancel[hidden] { display:none; }
+.lh-panel .stepper { margin:0; padding:0 20px 8px; }

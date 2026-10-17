@@ -59,19 +59,6 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 .rec-dot.on { display:inline; animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity:.3; } }
 
-/* --- assistant coarse steps ------------------------------------------------ */
-.steps { list-style:none; display:flex; gap:6px; margin:0 0 12px; padding:0; }
-.steps .step { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; color:var(--muted);
-  border:1px solid var(--soft); border-radius:8px; padding:6px 4px; background:#fafbfc; }
-.steps .dot { width:8px; height:8px; border-radius:50%; background:#c2cad6; flex:0 0 auto; }
-.steps .step.done { color:var(--ok); border-color:#bfe0c8; background:#f0f9f2; }
-.steps .step.done .dot { background:var(--ok); }
-.steps .step.active { color:#fff; background:var(--accent); border-color:var(--accent); font-weight:600; }
-.steps .step.active .dot { background:#fff; }
-.step[data-step="listening"].active { background:var(--bad); border-color:var(--bad); }
-.step[data-step="working"].active { background:var(--warn); border-color:var(--warn); }
-.step[data-step="ready"].active { background:var(--ok); border-color:var(--ok); }
-
 .status { text-align:center; font-size:12px; color:var(--muted); min-height:16px; margin-bottom:6px; }
 .error { display:flex; align-items:center; justify-content:space-between; gap:12px;
   background:#fdecea; border:1px solid var(--bad); color:var(--bad); border-radius:8px; padding:10px 12px; font-size:13px; margin:8px 0; }

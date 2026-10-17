@@ -80,19 +80,10 @@ function errorMessage(e, fallback) {
   return fallback + ".";
 }
 
-// ---- assistant status: coarse, truthful steps (Listening -> Working -> Ready)
-const STEP_ORDER = ["listening", "working", "ready"];
-const STEP_LABEL = { idle: "Idle", listening: "Listening", working: "Working", ready: "Ready" };
-function setStep(name) {
-  const idx = STEP_ORDER.indexOf(name);
-  document.querySelectorAll("#steps .step").forEach(li => {
-    const i = STEP_ORDER.indexOf(li.dataset.step);
-    li.classList.toggle("done", idx >= 0 && i >= 0 && i < idx);
-    li.classList.toggle("active", idx >= 0 && i === idx);
-  });
-  setText(agentChip, STEP_LABEL[name] || STEP_LABEL.idle);
-  if (agentChip) agentChip.className = "agent-chip " + (STEP_LABEL[name] ? name : "idle");
-}
+// ---- assistant status: four steps the page really knows (steps.js): Listening, Transcribing (/api/transcribe in flight),
+// Structuring and checking (/api/format or /api/v1/correct in flight: one request, so no finer split), Your review.
+const wordCount = (t) => String(t || "").split(/\s+/).filter(Boolean).length;
+function setStep(stage, info) { if (window.Steps) Steps.main(stage, info); }          // steps.js also updates the top-bar chip
 
 // ---- health badge: hidden from end users; ?debug=1 shows the engine, an offline backend always says so --------
 const DEBUG_BADGE = new URLSearchParams(window.location.search).get("debug") === "1";
@@ -323,8 +314,8 @@ async function openDocument(row) {
     if (window.Authorship) Authorship.onOpen(j);   // a colleague's prescription opens view-only
     highlightToday();
     refreshPrintButton();
-    setStep("ready");
     const viewOnlyNow = !!(window.Authorship && Authorship.isViewOnly());
+    setStep("opened", { viewOnly: viewOnlyNow, ...stepCounts() });       // openDocument: nothing was heard this time
     const author = viewOnlyNow ? window.Authorship.viewOnlyAuthor() : "";
     refreshMicLabel();
     setStatus(viewOnlyNow
@@ -361,7 +352,7 @@ async function beginRecording() {
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    showError("Microphone unavailable: " + ((e && e.message) || e) + ". Allow mic access and try again.");
+    showError("Microphone unavailable: " + ((e && e.message) || e) + ". Allow mic access and try again."); setStep("failed-listening", { reason: "Microphone unavailable" });
     return;
   }
   chunks = [];
@@ -370,7 +361,7 @@ async function beginRecording() {
     mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
   } catch (e) {
     stopStream(stream);
-    showError("Recording is not supported in this browser.");
+    showError("Recording is not supported in this browser."); setStep("failed-listening", { reason: "Recording not supported" });
     return;
   }
   // No sheet yet -> first dictation. A sheet exists -> the mic is a correction.
@@ -441,13 +432,13 @@ function refreshMicLabel() {
 async function onRecordingStop() {
   const mode = state.pendingMode;
   endRecordingUI();
-  if (!chunks.length) { showError("No audio was captured — check your microphone and try again."); setStep("idle"); return; }
+  if (!chunks.length) { showError("No audio was captured — check your microphone and try again."); setStep("failed-listening", { reason: "No audio captured" }); return; }
   const blob = new Blob(chunks, { type: (mr && mr.mimeType) || "audio/webm" });
   chunks = [];
-  setStep("working");
+  setStep("transcribing", { recorded: timerEl.textContent });
   try {
     const transcript = await transcribe(blob);
-    if (!transcript) { showError("No speech detected — nothing was changed. Press the mic and speak again."); setStep("idle"); return; }
+    if (!transcript) { showError("No speech detected — nothing was changed. Press the mic and speak again."); setStep("failed-transcribing", { reason: "No words found" }); return; }
     // Transcription is one-shot: show it in the middle pane as soon as we have it.
     state.transcript = transcript;
     renderTranscript();
@@ -455,7 +446,7 @@ async function onRecordingStop() {
     else await formatTranscript(transcript);
   } catch (e) {
     showError(errorMessage(e, "Dictation failed"));
-    setStep("idle");
+    setStep(state.transcript ? "failed-structuring" : "failed-transcribing", { reason: "Dictation failed" });   // a throw after the transcript is a structuring failure
   }
 }
 
@@ -488,7 +479,7 @@ async function postJson(url, body, timeoutMs) {
 
 async function transcribe(blob) {
   setWorking(true, "Transcribing…");
-  setStep("working");
+  setStep("transcribing");
   const fd = new FormData();
   fd.append("audio", blob, "dictation.webm");
   const ctrl = new AbortController();
@@ -520,7 +511,7 @@ async function formatTranscript(transcript) {
   refreshPrintButton();
   updateResaveNote();
   setWorking(true, "Structuring the prescription…");
-  setStep("working");
+  setStep("structuring", { words: wordCount(transcript), mode: "dictate" });
   try {
     const j = await postJson("/api/format", { transcript }, FORMAT_TIMEOUT_MS);
     state.transcriptSha = j.transcript_sha256 || "";
@@ -532,7 +523,7 @@ async function formatTranscript(transcript) {
     state.lastBlock = [];
     hideBlockPanel();
     renderSheet(state.structured);
-    setStep("ready");
+    setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Draft ready via " + (j.engine || "engine") + (j.cached ? " (cached)" : "") + ". " +
       (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
@@ -541,7 +532,7 @@ async function formatTranscript(transcript) {
     state.retry = { mode: "dictate", transcript };
     showError(errorMessage(e, "Could not structure the dictation") +
       " Your dictation is kept — press Retry; there is no need to dictate again.", true);
-    setStep("idle");
+    setStep("failed-structuring", { reason: "Could not structure it" });
   } finally {
     setWorking(false);
   }
@@ -552,7 +543,7 @@ async function applyCorrection(transcript) {
   state.transcript = transcript; // retained before the call (Finding 2)
   renderTranscript();
   setWorking(true, "Applying your correction…");
-  setStep("working");
+  setStep("structuring", { words: wordCount(transcript), mode: "correct" });
   try {
     const j = await postJson("/api/v1/correct", { transcript, current_form: current, document_id: state.documentId }, CORRECT_TIMEOUT_MS);
     state.structured = j.structured || current;
@@ -563,7 +554,7 @@ async function applyCorrection(transcript) {
     state.lastBlock = [];
     hideBlockPanel();
     renderSheet(state.structured);
-    setStep("ready");
+    setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
       (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
@@ -573,7 +564,7 @@ async function applyCorrection(transcript) {
     state.retry = { mode: "correct", transcript };
     showError(errorMessage(e, "Could not apply the correction") +
       " Your form is unchanged and your correction is kept — press Retry, or edit the form directly.", true);
-    setStep("idle");
+    setStep("failed-structuring", { reason: "Could not apply it" });
   } finally {
     setWorking(false);
   }
@@ -912,6 +903,7 @@ function renderSheet(s) {
   updateGrounding();
 }
 
+const stepCounts = () => ({ rows: [...rxBody.querySelectorAll("tr[data-index]")].filter(tr => !RxView.isBlank(tr)).length, needs: openRows().length });
 function openRows() {
   return [...rxBody.querySelectorAll("tr[data-index]")].filter(tr =>
     tr.dataset.status !== "verified" && !state.confirmed.has(tr.dataset.rowid) && !RxView.isBlank(tr));
@@ -926,6 +918,7 @@ function updateGrounding() {                            // :954 now a sentence p
     ? open + (open > 1 ? " medicines need" : " medicine needs") + " you. Resolve each one in the sheet, then Save."
     : "All medicines are ready. You can Save.";
   RxView.sync();
+  if (window.Steps) Steps.needs(stepCounts());                                  // keeps the review line in step with the count
 }
 
 // ---- inline-edit invalidation (Review Focus #2) ----------------------------

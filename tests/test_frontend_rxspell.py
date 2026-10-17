@@ -84,7 +84,7 @@ def test_the_page_hands_over_the_spell_hooks_and_undo_restores_the_row():
     branch = app.split('r.type === "respell"')[1].split("} else {")[0]
     assert "refreshBlockPanel()" in branch and "updateGrounding()" in branch and branch.index("RxView.restore(r)") < branch.index("updateGrounding()")
     html = _read("index.html")
-    assert re.search(r"rxstate\.js\?v=2\b", html) and re.search(r"rxview\.js\?v=2\b", html) and re.search(r"rx\.css\?v=2\b", html) and "app.js?v=28" in html
+    assert re.search(r"rxstate\.js\?v=2\b", html) and re.search(r"rxview\.js\?v=2\b", html) and re.search(r"rx\.css\?v=2\b", html) and int(re.search(r"app\.js\?v=(\d+)", html).group(1)) >= 28
     css = _read("rx.css")
     assert "#sheet.view-only .rx-spell-row" in css and ".rx-spin { animation:none; }" in css
     assert "--rx-focus" not in css and "outline:3px solid var(--accent)" in css.split(".rx-spell-row input:focus-visible")[1].split("\n")[0]

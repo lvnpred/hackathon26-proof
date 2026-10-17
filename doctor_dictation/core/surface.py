@@ -1,8 +1,14 @@
 """Surface forms: what `correct_drugs` writes for a lexicon name. Pure; determinism imports this.
 
+Lexicon entry keys: ``canonical``, ``aliases``, ``brands``, ``forms``, ``strengths``, ``lineage`` and (owner decision (d), I2-a)
+``generic_hidden``: a list of that entry's brands that are combination products not modelled yet (Fefol, Autrin, ...). They stay
+recognised (spelling, grounding) but the row shows and prints NO generic (`generic_hidden` below) and gets no dose check
+(`dosing.ground_extra`). Readers that do not know the key ignore it; build.py merges and checks it byte-stably.
+
 A generic or a misspelling is written as the canonical generic; a brand in its own spelling.
 `_alias_map` still gives the generic for every check. Names two generics claim are left out.
 """
+import difflib
 import re
 
 
@@ -39,12 +45,39 @@ def mask_as_dictated(text: str, names, masked: dict) -> str:
 
 
 def _generic_of(name: str, match: str) -> str:
-    """The generic to show on screen when the name is a brand (never printed); else "".
+    """The generic of a row the lexicon knows: its lexicon match, for a brand AND for a generic-named row (plan I2-a);
+    "" without a match. ``name`` stays for the call sites. Shown on screen; printed under a brand (pdf/sheet.py).
 
     Depends on the name and its `lexicon_match` only, so the server recomputes it for any row
     (correction.preserve_untouched_rx_status); the client need not send it back.
     """
-    return match if match and match.lower() != (name or "").strip().lower() else ""
+    return "" if generic_hidden(name, match) else (match or "").strip()
+
+
+_hidden_cache = (None, frozenset())      # (lexicon list, lower-case brands whose entry lists them in ``generic_hidden``)
+
+
+def _hidden_brands(lex) -> frozenset:
+    global _hidden_cache
+    if _hidden_cache[0] is not lex:
+        _hidden_cache = (lex, frozenset(str(b).strip().lower() for e in lex for b in e.get("generic_hidden", []) if isinstance(b, str)))
+    return _hidden_cache[1]
+
+
+def generic_hidden(name: str, match: str) -> bool:
+    """True when ``name`` is (or is one near spelling from) a brand an entry lists in ``generic_hidden``: a combination product
+    not modelled yet, so no generic is shown or printed and no dose check runs. A generic name or another brand never is.
+    The near-spelling rule is the one `_canonical_lookup` uses (difflib 0.84 over keys of 5+ letters)."""
+    from . import determinism as D     # lazy: determinism imports this module
+    low = (name or "").strip().lower()
+    hidden = _hidden_brands(D.load_lexicon())
+    if not match or not low or not hidden:
+        return False
+    amap = D._alias_map()
+    if low in amap:
+        return low in hidden
+    near = difflib.get_close_matches(low, sorted(k for k in amap if len(k) >= 5), n=1, cutoff=0.84)
+    return bool(near) and near[0] in hidden
 
 
 def surface_map(entries, amap: dict) -> dict:

@@ -1,0 +1,30 @@
+# I2-a Task 5 live browser check
+
+Setup: app on 127.0.0.1:8802 with the mandated command (temp DB, STT_ENGINE=stub, LLM_PROVIDER=stub, blank keys). /api/health before any step: openai_configured false, deepseek_configured false, stt_engine stub, llm_provider stub, lexicon 1.3.0 (444 entries). Nothing left 127.0.0.1:8802 (only blob: and the browser's built-in PDF viewer chrome-extension URLs).
+
+Seeding: the stub LLM returns an empty draft, so /api/format returned rx = []. A second server with LLM_PROVIDER=openai (blank keys) to reach the rules path was refused by the permission classifier, so I did not use it. Rows were instead produced by the repo's own pure functions (fallback_format + validate_structured, in-process, no network, temp DB path) and rendered through the page's real renderSheet. Taps (check-row), Save (POST /api/v1/documents) and Print (GET .../pdf) were real calls to the app.
+
+| Step | Result | Observed |
+|---|---|---|
+| 1 | PASS with note | Crocin row: "generic: Paracetamol" under the name, 12px, colour rgb(14,90,110) (teal, not grey/muted; the tag is grey). At 1440 and 390 it sits under the name and wraps to 2 lines ("generic:" / "Paracetamol") in the narrow Medicine column. Screenshots were taken in .playwright-mcp and deleted at cleanup. |
+| 2 | PASS | Cetirizine, Omeprazole: pill "generic" (11px, grey, 6px left margin), no second line. Tag follows the strength ("10 mg [generic]"), not the name directly. |
+| 3 | PASS | Citrizene: "Did you mean Cetirizine?"; Croissin: "Did you mean Crocin?" plus "generic: Paracetamol" inside the pill. Cell text unchanged (Citrizene, Croissin) until the tap. Citrizene's button shows no generic because it equals the name. |
+| 4 | PASS | Tap: name Cetirizine, tag shown, pill "Confirmed by you / You chose this name.", Reopen shown, counts 4 ready/2 need you -> 5 ready/1 needs you, undo bar "Changed Citrizene to Cetirizine.", the "[unverified...]" instruction text cleared. Check POST carried the suggested spelling with dose/strength/timing kept. Undo restored Citrizene, button, "Confirm medicine", 4/2. Croissin tap: name Crocin + "generic: Paracetamol" + Confirmed by you. Save was disabled until 0 need you (both rows tapped), then enabled. Replacing the name after a tap ("x") dropped the generic and returned the row to "Confirm row / You changed this row" (Save disabled). Only a full replace was tested, not an append edit. |
+| 5 | PASS | Spell panel open: button still shown, tap applied the name and closed the panel. View-only (Authorship.isViewOnly forced): both buttons disabled, click did nothing, no new POST. state.working true: buttons NOT disabled but the click was ignored (name unchanged, no POST); Save disabled. Keyboard: Tab from the Instructions cell reached the button; outline solid 3px rgb(20,86,217) = --accent #1456d9, offset 2px, :focus-visible true; Enter applied the name and focus moved to the status block. |
+| 6 | PASS | No horizontal page scroll at 1440, 1024, 768, 390 (documentElement.scrollWidth equals the viewport). Button text wraps (390: "Did you mean Cetirizine?" on 2 lines, "Did you mean Crocin?" on 3 lines). Generic span: under the name for the generic line; inside the button it sits BESIDE the name (right of it), at all four widths, not under. At 390 the table is 624px wide inside a 322px box and scrolls inside itself (pre-existing: td.check min-width 180px, unchanged by the diff), so the Check column is reached by scrolling the table. |
+| 7 | PASS with note | print media: tag, button, Check column, rxBar and everything outside #sheet hidden; only the sheet renders. The generic line is NOT hidden in print: it prints at 10px, #444 (this is the plan's `@media print { .rx-gen {...} }`, so the browser fallback matches the PDF; your wording said it should be hidden). |
+| 8 | PASS | Saved through the page Save (id 1), Print fetched /api/v1/documents/1/pdf (200). pdftotext -layout: "Tab. Crocin 500 mg / generic: Paracetamol"; "Tab. Cetirizine 10 mg" (no line); "Cap. Omeprazole 20 mg" (none); "Tab. Amlo 5 mg / generic: Amlodipine"; "Tab. Citrizene 10 mg ... [unverified: confirm with doctor]" (unknown, confirmed as is, no line); a Croissin->Crocin row printed "generic: Paracetamol". Columns #, Medicine, Dosage, Timing, Duration, Instructions intact, no Check column. |
+| 9 | PASS | POST /api/v1/documents with two rows lacking a generic key (id 2). Opened in the page: no JS error, rows render Matched with no line/tag; PDF 200, rows print with no generic line, columns intact. |
+| 10 | PASS | Console errors: 404 auth/me (x2), 404 users, 404 favicon.ico, plus one 422 on GET /api/v1/documents/undefined, caused by my own call openDocument(2) with a wrong argument (not an app defect). |
+
+## Defects
+None confirmed.
+
+## Concerns
+1. The generic line is teal accent colour, not muted grey like the tag and sug-gen; the plan text says "small and muted". Cosmetic, owner call.
+2. The generic line wraps to two lines ("generic:" / "Paracetamol") at 1440, 768 and 390 because the Medicine column is narrow. Same visual noise in every branded row.
+3. The tag follows the strength cell, not the name ("Cetirizine 10 mg [generic]"), and wraps to its own line at 390 and in the 1440 layout.
+4. During state.working the Did you mean button stays enabled and looks live, but the click is silently ignored (other row buttons are also not disabled). Minor.
+5. After the first (successful) Print in the same page session, real Playwright clicks on Print did nothing (no request, status unchanged), while calling printDocument() directly worked and fetched /documents/2/pdf. Likely the native print-preview dialog of the first print blocking input in this browser; not confirmed as an app bug. Worth one manual check.
+6. Seeding used in-process grounding plus renderSheet, not /api/format (stub LLM gives no rows, see Setup), so the format-route to row path was not exercised live; check-row, save and PDF were.
+7. Fixture dose was left as "SOS" for every row by my fixture builder in the later runs; irrelevant to I2-a.

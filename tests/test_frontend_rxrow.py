@@ -71,7 +71,7 @@ def test_chips_put_the_usual_strength_first_drop_duplicates_and_only_show_on_dos
 
 def test_a_hand_edit_drops_stale_reasons_and_a_name_edit_drops_the_old_drugs_data():
     name, dose = _node('[RxState.afterEdit({heard:"x",lookalike:"y",dose_note:"z",generic:"G",source:"clinic",usual_strength:"5 mg",strength_options:["5 mg"]}, "name"), RxState.afterEdit({generic:"G",heard:"x",strength_options:["5 mg"]}, "dose")]')
-    assert name == {"heard": "", "lookalike": "", "dose_note": "", "generic": "", "source": "", "usual_strength": "", "strength_options": []}
+    assert name == {"heard": "", "lookalike": "", "dose_note": "", "generic": "", "source": "", "usual_strength": "", "strength_options": [], "did_you_mean": "", "did_you_mean_generic": "", "schedule": ""}   # I2-a: a name edit clears the suggestion too; I2-d: and the schedule badge
     assert dose["generic"] == "G" and dose["heard"] == "" and dose["strength_options"] == ["5 mg"]
 
 def test_summary_words():
@@ -142,7 +142,7 @@ def test_everything_new_is_screen_only_and_the_print_rules_are_untouched():
     blocks = re.findall(r"@media\s+print\s*\{(.*?)\}\s*\}?", css, re.S)
     assert any(re.search(r"td\.check\s*,\s*table\.rx\s+th:nth-last-child\(2\)\s*\{\s*display\s*:\s*none\s*!important", b) for b in blocks)
     assert "rx-print-sym" not in js and "printSymbol" not in _read("rxstate.js")
-    for cls in ('"rx-extra rx-sub no-print"', '"rx-extra rx-chips no-print"', '"rx-state no-print"'):
+    for cls in ('"rx-extra rx-gen-tag no-print"', '"rx-extra rx-chips no-print"', '"rx-state no-print"'):
         assert cls in js, cls
     assert re.search(r"\.no-print\b[^{]*\{\s*display\s*:\s*none\s*!important", base)
     assert ".rx-act { min-height:44px;" in css and "#sheet.view-only .rx-act" in css and "#sheet.view-only .rx-chips" in css
@@ -283,8 +283,8 @@ def _dom(body):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    script = "globalThis.window = globalThis;" + _FAKE_DOM + "require(process.argv[1]); require(process.argv[2]);" + body
-    out = subprocess.run([node, "-e", script, str(FRONT / "rxstate.js"), str(FRONT / "rxview.js")], capture_output=True, text=True, timeout=30)
+    script = "globalThis.window = globalThis;" + _FAKE_DOM + "require(process.argv[1]); require(process.argv[2]); require(process.argv[3]);" + body
+    out = subprocess.run([node, "-e", script, str(FRONT / "rxstate.js"), str(FRONT / "rxview.js"), str(FRONT / "spellmodal.js")], capture_output=True, text=True, timeout=30)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 

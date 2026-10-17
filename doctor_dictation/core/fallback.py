@@ -4,6 +4,7 @@ Pure and offline: stdlib `re` only. `main.fallback_format` re-exports this name.
 """
 import re
 
+from . import rulesplit
 from .determinism import _maps, load_lexicon
 
 # The no-strength branch also knows the brands of these generics: a dictated brand is no longer
@@ -34,6 +35,31 @@ def _spelled(name: str) -> str:
 _NAME = r"(?:[A-Za-z](?:[A-Za-z\- ]|(?<=[A-Za-z0-9\-])\d){2,30}?|[A-Za-z]\d)"
 
 
+# The seeded demo note (ureteric stone) applies only to the whole demo dictation: every one of these phrases, not one keyword.
+_DEMO_PHRASES = ("ureteric", "calculus", "tamsulosin", "deflazacort", "citrate")
+
+
+# Words that follow a medicine name and are not part of it (a frequency, a timing, a unit).
+_NOT_SUFFIX = frozenset("od bd tds tid qid hs sos for the and once daily with at in on of to as if tab cap syp inj pm am mg ml day days week per".split())
+
+
+def _duration(window: str) -> str:
+    """"3 days" from "for 3 days" or "for three days"-style digits in the window; "" when none was dictated."""
+    m = re.search(r"for (\d+)\s*(day|week|month)", window)
+    return f"{m.group(1)} {m.group(2)}{'s' if int(m.group(1)) > 1 else ''}" if m else ""
+
+
+def unparsed_notes(text: str, rx_rows) -> list:
+    """One warning per dictated medicine line that produced no row (only its own words are quoted)."""
+    names = [w.lower() for r in rx_rows for w in re.findall(r"[A-Za-z]{3,}", str(r.get("name", "")))]
+    return [f"A medicine line was not understood: {line}" for line in rulesplit.split(text, frozenset(_maps()[0])).medicine
+            if not any(n in line.lower() for n in names)]
+
+
+def _is_demo(t: str) -> bool:
+    return all(p in t for p in _DEMO_PHRASES)
+
+
 def fallback_format(transcript: str) -> dict:
     """Rule-based fallback when no DeepSeek key. Seeded example + generic med parser."""
     t = transcript.lower()
@@ -54,7 +80,7 @@ def fallback_format(transcript: str) -> dict:
         "advice": [],
         "review": "",
     }
-    if "flank pain" in t or "burning micturition" in t or "ureteric" in t or "calculus" in t:
+    if _is_demo(t):
         out = {
             "patientName": "",
             "ageSex": "",
@@ -81,11 +107,17 @@ def fallback_format(transcript: str) -> dict:
     STOP = {"you", "your", "are", "suffering", "having", "patient", "patients",
             "prescription", "dear", "and", "the", "with", "from", "for", "male",
             "female", "year", "years", "old", "age", "aged", "named", "name",
-            "with", "next", "week", "day", "days", "tablet", "take", "please"}
+            "with", "next", "week", "day", "days", "tablet", "take", "please",
+            "complaining", "presenting", "complains", "complaint", "c"}
 
     def clean_name(s: str) -> str:
-        parts = [p for p in s.strip().title().split()
-                 if p.lower() not in STOP and len(p) > 1 and p.isalpha()]
+        parts = []
+        for p in s.strip().title().split():          # skip leading filler words, stop at the first one after a name word
+            if p.lower() in STOP or len(p) < 2 or not p.isalpha():
+                if parts:
+                    break
+                continue
+            parts.append(p)
         return " ".join(parts[:3])
 
     for pat in [r"patient'?s? name (?:is )?([a-z]+(?: [a-z]+){0,2})",
@@ -117,16 +149,10 @@ def fallback_format(transcript: str) -> dict:
     if age:
         out["ageSex"] = f"{age} / {sex}" if sex else age
 
-    # --- complaints: split into sentences, drop pure prescription sentences ---
-    rx_keywords = r"(paracetamol|ibuprofen|aspirin|amoxi|azithro|tamsulosin|deflazacort|citrate|tablet|tab\.?|capsule|cap\.?|syrup|syr\.?|injection|inj\.?|mg|twice|thrice|daily|od\b|bd\b|tds|hs\b|sos|have |take )"
-    sentences = [s.strip().capitalize() for s in re.split(r"[.|;]+", text) if s.strip()]
-    out["complaints"] = [s for s in sentences if not re.search(r"\b\d+\s*mg\b", s.lower())][:4] or sentences[:2]
-
-    # --- diagnosis hints ---
-    for kw in ["headache", "migraine", "fever", "cough", "cold", "pain", "hypertension", "diabetes", "infection", "allergy", "asthma", "gastritis"]:
-        if kw in t:
-            out["diagnosis"] = [kw.capitalize()]
-            break
+    # --- history / diagnosis / advice / tests / review: each dictated clause to one list, only a dictated "diagnosis X" ---
+    parts = rulesplit.split(text, frozenset(_maps()[0]))
+    out["complaints"], out["diagnosis"] = parts.history, parts.diagnosis
+    out["advice"], out["investigations"], out["review"] = parts.advice, parts.investigations, parts.review
 
     # --- generic Rx parser: "<Drug> <strength> ... <frequency> ... [for X days]" ---
     freq_map = [
@@ -181,22 +207,19 @@ def fallback_format(transcript: str) -> dict:
         out["rx"].append({"form": form, "name": name, "strength": strength, "dose": dose or "1-0-0", "timing": timing, "duration": dur, "instructions": ""})
         if len(out["rx"]) >= 8:
             break
-    # fallback single-drug line without strength, e.g. "have paracetamol twice a day"
+    # fallback single-drug line without a unit strength, e.g. "have paracetamol twice a day", "Tab Dolo 650 thrice a day for 3 days"
     if not out["rx"]:
-        m2 = re.search(rf"\b({_no_strength_names()})\b([^.]{{0,60}})", t)
+        m2 = re.search(rf"(?:\b(tab(?:let)?|cap(?:sule)?|syr(?:up)?|inj(?:ection)?)\.?\s+)?\b({_no_strength_names()})\b(?:[-\s]([A-Za-z]{{1,4}})\b)?", text, re.I)
         if m2:
-            name, window = _spelled(m2.group(1).title()), m2.group(0)
-            dose = next((c for p, c in freq_map if re.search(p, window)), "1-0-0")
-            out["rx"].append({"form": "", "name": name, "strength": "", "dose": dose, "timing": "", "duration": "", "instructions": ""})
+            raw_form, base, suffix = m2.groups()
+            if suffix and suffix.lower() in _NOT_SUFFIX:
+                suffix = None
+            name = _spelled(base.title()) + (f" {suffix.upper()}" if suffix else "")
+            window = text[m2.start(2) + len(base) + (1 + len(suffix) if suffix else 0):][:60].split(".")[0]
+            dose = next((c for p, c in freq_map if re.search(p, window.lower())), "1-0-0")
+            sm = re.match(r"\s*(\d+(?:\.\d+)?)\b(?!\s*(?:day|week|month|time|tab|cap|x\b))", window, re.I)
+            form = {"tab": "Tab.", "cap": "Cap.", "syr": "Syr.", "inj": "Inj."}.get((raw_form or "")[:3].lower(), "")
+            out["rx"].append({"form": form, "name": name, "strength": sm.group(1) if sm else "", "dose": dose, "timing": "",
+                              "duration": _duration(window.lower()), "instructions": ""})
 
-    # --- investigations / advice / review keyword scan ---
-    ix_keys = ["blood test", "cbc", "urine", "culture", "creatinine", "sugar", "hba1c", "x-ray", "xray", "usg", "ultrasound", "ct ", "mri", "ecg", "thyroid", "lipid", "esr", "crp"]
-    out["investigations"] = [k.upper() if len(k) <= 4 else k.title() for k in ix_keys if k.strip() in t]
-    for pat in [r"drink [\w ]+water[a-z ]*", r"(take )?rest[a-z ]*", r"avoid [\w ,]+", r"(low salt|low sugar|soft diet)[\w ]*"]:
-        m = re.search(pat, t)
-        if m:
-            out["advice"].append(m.group(0).strip().capitalize())
-    rm = re.search(r"(review|follow[\s-]?up|come back)[^.]{0,60}", t)
-    if rm:
-        out["review"] = rm.group(0).strip().capitalize()
     return out

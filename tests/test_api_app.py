@@ -26,6 +26,7 @@ EXPECTED_ROUTES = {
     ("GET", "/api/v1/templates/{template_id}/preview.pdf"), ("PUT", "/api/v1/templates/{template_id}"),
     ("POST", "/api/v1/templates/{template_id}/accept"), ("POST", "/api/v1/templates/{template_id}/use-details"), ("DELETE", "/api/v1/templates/{template_id}"),
     ("POST", "/api/v1/rx/check-row"),
+    ("POST", "/api/v1/review-date"),
     ("GET", "/api/v1/formulary"), ("DELETE", "/api/v1/formulary/{entry_id}"),
     ("GET", "/api/v1/users"), ("POST", "/api/v1/users"), ("POST", "/api/v1/users/{user_id}/disable"),
     ("POST", "/api/v1/users/{user_id}/enable"), ("POST", "/api/v1/users/{user_id}/reset-password"),

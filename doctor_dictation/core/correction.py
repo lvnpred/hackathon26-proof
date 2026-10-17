@@ -22,12 +22,15 @@ Merge rules (see the plan, Task 4):
   medicine: `match_by_generic` renames such a patch row to the form's row first.
 """
 import json
+from collections import deque
 
 from .determinism import (  # determinism never imports this module
     RX_UNVERIFIED_NAME, _alias_map, _ambiguous_for, _canonical_lookup,
 )
 from .dosing import DOSE_CHECK, check_dose
 from .formulary import active_layer, source_of
+from .generics import schedule_of
+from .rowcheck import did_you_mean
 from .surface import _generic_of
 
 SCALAR_FIELDS = ("patientName", "ageSex", "opNo", "review")
@@ -264,7 +267,10 @@ def merge_form(current: dict, patch: dict) -> dict:
 
 
 # Row fields validate_structured derives from the name and the grounding (screen only).
-DERIVED_ROW_FIELDS = ("generic", "heard", "lookalike", "dose_note", "source")
+DERIVED_ROW_FIELDS = ("generic", "schedule", "heard", "lookalike", "dose_note", "source", "did_you_mean", "did_you_mean_generic")
+
+
+DID_YOU_MEAN_FIELDS = ("did_you_mean", "did_you_mean_generic")
 
 
 def _recomputed_generic(row: dict) -> str:
@@ -284,6 +290,7 @@ def _backed(row: dict) -> bool:
 # copied from the prior row (the client's readRx does not send them back). The rest are restored.
 RECOMPUTED_ROW_FIELDS = {
     "generic": _recomputed_generic,
+    "schedule": lambda row: schedule_of(_recomputed_generic(row)),     # information only: a hand-edited name gets none
     # the page never sends `source` back: "clinic" when the restored row has no lexicon match and the active layer knows it
     # never "lexicon" without a lexicon match: a name nothing backs gets "" (and its row is regraded below)
     "source": lambda row: source_of(row.get("name", ""), row.get("lexicon_match", ""))
@@ -367,17 +374,18 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
     recomputed. Mutates and returns `structured`.
     """
     named = _patch_rx_names(patch) | {_norm_name(n) for n in extra_named}
-    prior = {}
+    prior = {}       # name key -> the prior rows of that name, in page order: the Nth output row of a name takes the Nth prior one
     cur_rows = current.get("rx") if isinstance(current, dict) else None
     for row in cur_rows if isinstance(cur_rows, list) else []:
         if isinstance(row, dict):
-            prior[_norm_name(row.get("name"))] = row
+            prior.setdefault(_norm_name(row.get("name")), deque()).append(row)
     out_rows = structured.get("rx") if isinstance(structured, dict) else None
     for row in out_rows if isinstance(out_rows, list) else []:
         if not isinstance(row, dict):
             continue
         key = _norm_name(row.get("name"))
-        prev = prior.get(key)
+        queue = prior.get(key)
+        prev = queue.popleft() if queue else None     # popped for a named row too, so later same-name rows keep their own slot
         if key in named or prev is None:
             continue
         for field in ("status", "lexicon_match", "instructions"):
@@ -389,9 +397,13 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
             row["status"] = "unknown-medicine"   # a restored "verified" must be backed: the clinic's name left the list
             if GROUNDING_MARKERS[0] not in str(row.get("instructions") or ""):
                 row["instructions"] = f"{row.get('instructions') or ''} {GROUNDING_MARKERS[0]}".strip()
+        suggestion = None
         for field in DERIVED_ROW_FIELDS:  # follow the restored status; absent when the prior row had none
             if "status" not in prev:
                 row.pop(field, None)
+            elif field in DID_YOU_MEAN_FIELDS:  # one computation per row for both fields, from the restored name + status
+                suggestion = suggestion or did_you_mean(row.get("name", ""), row.get("status", ""))
+                row[field] = suggestion[field]
             elif field in RECOMPUTED_ROW_FIELDS:  # from the restored name + lexicon_match
                 row[field] = RECOMPUTED_ROW_FIELDS[field](row)
             elif field == "dose_note" and row.get("status") == DOSE_CHECK:  # the page never sends it back

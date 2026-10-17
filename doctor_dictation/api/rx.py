@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.core.correction import strip_grounding_markers
 from doctor_dictation.core.determinism import normalize_transcript
-from doctor_dictation.core.rowcheck import ground_one, suggestions
+from doctor_dictation.core.rowcheck import ground_one, options, suggestions
 
 router = APIRouter()
 # Longest accepted text per field. The lookup is a difflib pass, so a huge string must not reach it.
@@ -48,7 +48,8 @@ def _ground(row: dict, raw: str, normalized: str, age_sex: str) -> dict:
     # Known limitation: the row's form is used as given. The page echoes a defaulted 'Tab.' back, so a defaulted
     # form is indistinguishable from a spoken one here (recorded for the frontend plan).
     grounded = ground_one(row, raw, normalized, age_sex)
-    return {"row": grounded, "suggestions": suggestions(grounded)}
+    listed, total = options(grounded)
+    return {"row": grounded, "suggestions": suggestions(grounded), "options": listed, "total": total}
 
 
 @router.post("/api/v1/rx/check-row", dependencies=[Depends(use_clinic_layer)])

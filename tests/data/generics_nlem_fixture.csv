@@ -1,0 +1,12 @@
+generic,list,schedule,source_line,notes
+Cetirizine,NLEM,,17.2,
+PARACETAMOL,NLEM,,1.3,flat case is Capitalised
+Levothyroxine,NLEM,,18.4,synonym of Thyroxine
+Zorbexamide,NLEM,,99.1,invented new generic
+Zorbexonide,NLEM,,99.2,invented twin of Zorbexamide (ratio 0.818)
+Cetirizine,NLEM,,17.2,repeated row
+Ondansetron,NLEM,H,5.1,test value
+Ondansetron,NLEM,H1,5.2,conflicting test value
+Tab. Crocin 500,NLEM,,1.4,not a generic
+Amoxicillin + Clavulanic acid,NLEM,Schedule H,6.2,synonym of Co-Amoxiclav
+Zorbetol,NLEM,Q,7.7,bad schedule

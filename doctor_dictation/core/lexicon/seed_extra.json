@@ -737,6 +737,17 @@
   },
   {
     "aliases": [
+      "calcium carbonate + cholecalciferol"
+    ],
+    "brands": [
+      "Shelcal"
+    ],
+    "canonical": "Calcium Carbonate + Cholecalciferol",
+    "forms": [],
+    "strengths": []
+  },
+  {
+    "aliases": [
       "calcium citrate",
       "calciumcitrate",
       "calcium citrat"
@@ -747,6 +758,9 @@
     "canonical": "Calcium Citrate",
     "forms": [
       "Tab."
+    ],
+    "generic_hidden": [
+      "Calcimax"
     ],
     "strengths": []
   },
@@ -1071,13 +1085,22 @@
       "chlorhexidin",
       "chlorhexidine gluconate"
     ],
-    "brands": [
-      "Savlon"
-    ],
+    "brands": [],
     "canonical": "Chlorhexidine",
     "forms": [
       "Cream"
     ],
+    "strengths": []
+  },
+  {
+    "aliases": [
+      "chlorhexidine + cetrimide"
+    ],
+    "brands": [
+      "Savlon"
+    ],
+    "canonical": "Chlorhexidine + Cetrimide",
+    "forms": [],
     "strengths": []
   },
   {
@@ -1984,9 +2007,7 @@
       "doxylamine",
       "doxylamin"
     ],
-    "brands": [
-      "Doxinate"
-    ],
+    "brands": [],
     "canonical": "Doxylamine",
     "forms": [
       "Tab."
@@ -1994,6 +2015,17 @@
     "strengths": [
       "10 mg"
     ]
+  },
+  {
+    "aliases": [
+      "doxylamine + pyridoxine"
+    ],
+    "brands": [
+      "Doxinate"
+    ],
+    "canonical": "Doxylamine + Pyridoxine",
+    "forms": [],
+    "strengths": []
   },
   {
     "aliases": [
@@ -2418,6 +2450,29 @@
   },
   {
     "aliases": [
+      "ferrous",
+      "iron",
+      "feronia",
+      "ferrous ascorbate"
+    ],
+    "brands": [
+      "Feronia-XT",
+      "Orofer"
+    ],
+    "canonical": "Ferrous Ascorbate",
+    "forms": [
+      "Tab.",
+      "Syr."
+    ],
+    "generic_hidden": [
+      "Feronia-XT"
+    ],
+    "strengths": [
+      "100 mg"
+    ]
+  },
+  {
+    "aliases": [
       "ferrous fumarate",
       "ferrousfumarate",
       "ferrous fumarat",
@@ -2429,6 +2484,9 @@
     "canonical": "Ferrous Fumarate",
     "forms": [
       "Tab."
+    ],
+    "generic_hidden": [
+      "Autrin"
     ],
     "strengths": []
   },
@@ -2446,6 +2504,9 @@
     "canonical": "Ferrous Sulfate",
     "forms": [
       "Tab."
+    ],
+    "generic_hidden": [
+      "Fefol"
     ],
     "strengths": [
       "200 mg"
@@ -3475,6 +3536,9 @@
     "forms": [
       "Syr."
     ],
+    "generic_hidden": [
+      "Adzolex-Plus"
+    ],
     "strengths": []
   },
   {
@@ -4082,6 +4146,9 @@
     "forms": [
       "Tab.",
       "Inj."
+    ],
+    "generic_hidden": [
+      "Nurokind"
     ],
     "strengths": [
       "500 mcg",
@@ -5316,8 +5383,7 @@
       "propranol"
     ],
     "brands": [
-      "Inderal",
-      "Ciplar"
+      "Inderal"
     ],
     "canonical": "Propranolol",
     "forms": [
@@ -5880,6 +5946,9 @@
     "forms": [
       "Tab.",
       "Drops"
+    ],
+    "generic_hidden": [
+      "Neopeptine"
     ],
     "strengths": []
   },
@@ -6468,6 +6537,17 @@
       "20 mg",
       "40 mg"
     ]
+  },
+  {
+    "aliases": [
+      "tramadol + paracetamol"
+    ],
+    "brands": [
+      "Ultracet"
+    ],
+    "canonical": "Tramadol + Paracetamol",
+    "forms": [],
+    "strengths": []
   },
   {
     "aliases": [

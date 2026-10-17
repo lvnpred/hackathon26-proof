@@ -1,0 +1,6 @@
+{"_comment": "TEST DATA ONLY: invented schedule values, not the legal schedule.",
+ "entries": [
+  {"generic": "Paracetamol", "lexicon": "Paracetamol", "lists": {"NLEM": {"line": "1.3", "src": "fx-1"}, "Schedules": {"line": "9", "schedule": "H", "src": "fx-2"}}},
+  {"generic": "Prednisolone", "lexicon": "Prednisolone", "lists": {"Other": {"line": "1", "schedule": "X", "src": "fx-3"}, "Schedules": {"line": "4", "schedule": "H1", "src": "fx-2"}}},
+  {"generic": "Zorbexamide", "lexicon": "", "lists": {"NLEM": {"line": "99.1", "src": "fx-1"}}}],
+ "sources": [], "version": "0.1.0"}

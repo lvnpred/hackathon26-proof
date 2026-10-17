@@ -149,10 +149,10 @@ def test_check_row_returns_the_ranked_list_and_keeps_the_dictated_name(tmp_path,
 
 
 def test_the_page_shows_the_suggestions_in_the_order_the_server_sends():
-    js = (Path(__file__).resolve().parents[1] / "frontend" / "rxview.js").read_text(encoding="utf-8")
-    line = next(t for t in js.splitlines() if "res.suggestions" in t)
-    assert ".slice(0, 6)" in line and ".sort(" not in line and ".reverse(" not in line
-    assert 'list.forEach((s) => { const b = btn("sug", "sug", s)' in js and '"Did you mean"' in js
+    modal = (Path(__file__).resolve().parents[1] / "frontend" / "spellmodal.js").read_text(encoding="utf-8")
+    line = next(t for t in modal.splitlines() if "res.options" in t)
+    assert ".sort(" not in line and ".reverse(" not in line
+    assert "SugList.page(" in modal
 
 
 def test_suggestions_never_leak_another_clinics_names():

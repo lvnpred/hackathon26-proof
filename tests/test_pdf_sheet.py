@@ -50,3 +50,34 @@ def test_the_printout_has_no_check_column_and_prints_the_same_for_every_status()
     printed = {tr.split("</td>", 1)[1].split("</tr>")[0] for tr in table.split("<tr>")[2:]}      # without the row number
     assert len(printed) == 1                                               # identical rows: the status does not print
     assert '<td colspan="6">—</td>' in build_sheet_html({"rx": []}, META)
+
+
+def test_the_medicine_cell_prints_the_generic_on_a_second_line_under_a_brand():
+    rows = [{"form": "Tab.", "name": "Crocin", "strength": "500 mg", "generic": "Paracetamol", "status": "verified"},
+            {"form": "Tab.", "name": "Cetirizine", "strength": "10 mg", "generic": "Cetirizine", "status": "verified"},
+            {"form": "Tab.", "name": "Citrizene", "strength": "10 mg", "generic": "", "status": "unknown-medicine"},
+            {"form": "Cap.", "name": "Zyloric", "strength": "100 mg", "status": "verified"},            # saved before I2-a: no key
+            {"form": "Tab.", "name": "Evil", "generic": "<b>x</b>"},
+            {"form": "Tab.", "name": "Amlo", "strength": "5 mg", "generic": "Amlodipine", "status": "verified"},   # an alias kept as dictated
+            {"form": "Tab.", "name": "cetirizine", "strength": "10 mg", "generic": "CETIRIZINE"}]             # same name, other case: no line
+    html = build_sheet_html({"rx": rows}, META)
+    table = html[html.index('<table class="rx">'):html.index("</table>")]
+    cells = [tr.split("<td>")[2].split("</td>")[0] for tr in table.split("<tr>")[2:]]
+    assert cells == ['Tab. Crocin 500 mg<div class="gen">generic: Paracetamol</div>', "Tab. Cetirizine 10 mg",
+                     "Tab. Citrizene 10 mg", "Cap. Zyloric 100 mg", 'Tab. Evil<div class="gen">generic: &lt;b&gt;x&lt;/b&gt;</div>',
+                     'Tab. Amlo 5 mg<div class="gen">generic: Amlodipine</div>', "Tab. cetirizine 10 mg"]
+    assert table.count("<th>") == 6 and ".gen { font-size: 10px; color: #444;" in html
+    brand = [{"form": "Tab.", "name": "Crocin", "strength": "500 mg", "generic": "Paracetamol", "status": s} for s in STATUSES]
+    again = build_sheet_html({"rx": brand}, META)
+    cells = {tr.split("<td>")[2].split("</td>")[0] for tr in again[again.index('<table class="rx">'):again.index("</table>")].split("<tr>")[2:]}
+    assert cells == {'Tab. Crocin 500 mg<div class="gen">generic: Paracetamol</div>'}      # the status never changes what prints
+
+
+def test_the_pdf_never_loads_frontend_css_and_the_browser_print_shows_the_same_line():
+    from pathlib import Path
+    html = build_sheet_html({"rx": [{"name": "Crocin", "generic": "Paracetamol"}]}, META)
+    assert "<link" not in html and "rx.css" not in html and "<script" not in html        # server HTML, its own <style> only
+    css = (Path(__file__).resolve().parents[1] / "frontend" / "rx.css").read_text(encoding="utf-8")
+    assert "@media print { .rx-gen { font-size:10px; color:#444; } }" in css
+    js = (Path(__file__).resolve().parents[1] / "frontend" / "rxview.js").read_text(encoding="utf-8")
+    assert '"rx-extra rx-sub rx-gen"' in js and '"rx-extra rx-sub rx-gen no-print"' not in js   # the line is not a screen-only element

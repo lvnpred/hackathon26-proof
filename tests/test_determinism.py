@@ -485,14 +485,13 @@ def test_grounding_status_schema():
     assert open_issues(run_pipeline(GOLDEN[0]["transcript"])["structured"]) == []
 
 
-def test_seeded_shortcut_rows_get_flagged():
-    # The flank-pain seeded fallback emits the classic 4-drug prescription;
-    # drugs not literally dictated (Deflazacort here) must be flagged, not
-    # silently presented as verified.
+def test_a_partial_flank_pain_dictation_gets_no_seeded_rows():
+    # The seeded 4-drug note belongs to the whole demo dictation only (I2-b fix round). A noisy dictation that names two
+    # of the drugs must not get Deflazacort or Potassium Magnesium Citrate it never said.
     out = run_pipeline(GOLDEN[1]["transcript"])["structured"]
-    by_name = {m["name"]: m for m in out["rx"]}
-    assert by_name["Tamsulosin"]["status"] == "verified"
-    assert by_name["Deflazacort"]["status"] == "unverified-name"
+    names = {m["name"] for m in out["rx"]}
+    assert "Deflazacort" not in names and "Potassium Magnesium Citrate" not in names and "Paracetamol" in names
+    assert out["review"] == "" and out["investigations"] == [] and out["advice"] == []
 
 
 # ---- Dictated OP number (registration no.), additive to the schema ----

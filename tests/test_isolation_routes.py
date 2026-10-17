@@ -187,6 +187,7 @@ CLASSIFIED = {
     "POST /api/transcribe": "reads the caller's own clinic hints: test_transcribe_hints_come_from_the_callers_own_scope",
     "POST /api/format": "per-clinic result cache: test_the_format_cache_is_per_clinic",
     "POST /api/v1/rx/check-row": "reads the caller's own clinic layer via use_clinic_layer: test_formulary_routes.py (a clinic's names never reach another clinic)",
+    "POST /api/v1/review-date": "stateless: no database, no clinic data (plan I2-b)",
     "GET /api/health": "public",
     "GET /health": "public",
     "GET /login": "public page",

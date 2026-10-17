@@ -93,8 +93,8 @@ def test_brand_row_keeps_brand_and_carries_generic():
     row = _row("Zyloric", "100 mg", "tab zyloric 100 mg once daily")
     assert (row["name"], row["status"]) == ("Zyloric", "verified")
     assert (row["lexicon_match"], row["generic"]) == ("Allopurinol", "Allopurinol")
-    assert _row("Allopurinol", "100 mg", "allopurinol 100 mg")["generic"] == ""
-    assert _row("paracetamol", "", "paracetamol")["generic"] == ""            # case only
+    assert _row("Allopurinol", "100 mg", "allopurinol 100 mg")["generic"] == "Allopurinol"
+    assert _row("paracetamol", "", "paracetamol")["generic"] == "Paracetamol"            # case only
     assert _row("Medalpha")["generic"] == ""
     rows, _issues = ground_rx([{"name": "Zyloric"}, {"name": ""}], "zyloric")
     assert [r["generic"] for r in rows] == ["Allopurinol", ""]
@@ -349,7 +349,7 @@ def test_preserve_recomputes_generic_the_client_did_not_send():
     rows = preserve_untouched_rx_status(cur, {}, {"rx": [dict(fresh, name="Zyloric"),
                                                          dict(fresh, name="Allopurinol")]})["rx"]
     assert [(r["lexicon_match"], r["generic"]) for r in rows] == [("Allopurinol", "Allopurinol"),
-                                                                 ("Allopurinol", "")]
+                                                                 ("Allopurinol", "Allopurinol")]
 
 
 def test_preserve_drops_generic_when_the_name_was_hand_edited():

@@ -6,6 +6,7 @@ nothing here changes a prescription row.
 """
 import difflib
 import re
+from collections import Counter
 
 MIN_SCORE = 0.78
 MIN_LEN = 4  # shorter lexicon keys ("pan", "pcm") are too noisy to rank
@@ -98,6 +99,35 @@ def scored_candidates(name: str, k: int = 3) -> list:
         if sc >= MIN_SCORE and sc > best.get(canon, 0.0):
             best[canon] = sc
     return sorted(best.items(), key=lambda kv: (-round(kv[1], 6), kv[0].lower(), kv[0]))[:k]
+
+
+def _bound(a: str, ca: Counter, ka: str, cka: Counter, b: str, kb: str) -> float:
+    """An upper bound of _score(a, ka, b, kb): difflib's ratio never exceeds 2 * (shared letters) / (len a + len b),
+    and the key bonus is at most 0.15. Never below the real score, so skipping under MIN_SCORE changes no result."""
+    text = 2 * sum((ca & Counter(b)).values()) / (len(a) + len(b))
+    keys = 2 * sum((cka & Counter(kb)).values()) / (len(ka) + len(kb)) if ka and kb else 0.0
+    return 0.5 * text + 0.5 * keys + 0.15
+
+
+def scored_spellings(name: str, k: int = 3) -> list:
+    """[(spelling, canonical, score)] by the same rules as scored_candidates, one entry per lexicon spelling as written
+    (a brand in its own spelling, an alias as its generic), best first; ties by spelling (plan I2-a)."""
+    from .determinism import _maps
+    low = re.sub(r"[^a-z]", "", (name or "").lower())
+    key = phonetic_key(low)
+    if k <= 0 or len(low) < 4 or len(low) > MAX_NAME_LETTERS or len(key) < 3:
+        return []
+    shown, best = _maps()[0], {}
+    cl, ck = Counter(low), Counter(key)
+    for text, tkey, canon in _rows():
+        if _bound(low, cl, key, ck, text, tkey) < MIN_SCORE:         # cannot reach MIN_SCORE: skip the two difflib passes
+            continue
+        sc = _score(low, key, text, tkey)
+        spelling = shown.get(text, canon)                       # a name two generics claim is not in the surface map
+        if sc >= MIN_SCORE and sc > best.get(spelling, (0.0, ""))[0]:
+            best[spelling] = (sc, canon)
+    ranked = sorted(best.items(), key=lambda kv: (-round(kv[1][0], 6), kv[0].lower(), kv[0]))
+    return [(s, c, sc) for s, (sc, c) in ranked[:k]]
 
 
 def suggest_candidates(name: str, k: int = 3) -> list:

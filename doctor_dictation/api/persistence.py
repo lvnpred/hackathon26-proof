@@ -10,11 +10,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation import db as dbmod
-from doctor_dictation.api import authorship
+from doctor_dictation.api import authorship, visit
 from doctor_dictation.api.formulary import learn_from_save, use_clinic_layer
+from doctor_dictation.core import followup
 from doctor_dictation.core.correction import preserve_untouched_rx_status
 from doctor_dictation.core.determinism import validate_structured
-from doctor_dictation.core.safety import screen_unverified
+from doctor_dictation.core.safety import screen_unverified, strip_grounding_markers
 from doctor_dictation.db import authorship as adb
 from doctor_dictation.db.opno import create_patient_with_new_op
 from doctor_dictation.pdf import PdfUnavailable, render_prescription
@@ -204,6 +205,9 @@ def create_document(req: DocumentCreate, request: Request):
     # the verification state the doctor finalized (rows dropped/recomputed with
     # no prior match are left as `validate_structured` produced them).
     preserve_untouched_rx_status(structured, {}, validated)
+    strip_grounding_markers(validated)  # the gate passed: each row is verified or confirmed, so no "confirm with doctor" text prints
+    day = visit.today()  # one visit day for the review date and the PDF
+    followup.stamp(validated, day)
     conn = dbmod.get_conn()
     try:
         resave = req.document_id is not None
@@ -251,7 +255,7 @@ def create_document(req: DocumentCreate, request: Request):
         # browser print-to-PDF.
         pdf_path = None
         out_path = dbmod.pdf_dir() / f"encounter_{encounter_id}.pdf"
-        meta, layout = _pdf_inputs(conn, validated, datetime.now().astimezone().date(), encounter_id)  # server-local day, same as the OP number
+        meta, layout = _pdf_inputs(conn, validated, day, encounter_id)  # server-local day, same as the OP number
         try:
             pdf_path = str(_render_with_fallback(validated, meta, layout, out_path))
         except Exception:

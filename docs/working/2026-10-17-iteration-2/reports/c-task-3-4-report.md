@@ -1,0 +1,64 @@
+# I2-c Tasks 3-4 report (uncommitted)
+
+Status: DONE (code + tests). Live browser check not done (separate job). Suite: 1862 passed, 1 skipped (baseline 1835 + 27 net). Offline guard (netguard) on the 6 changed/new frontend files: 88 passed, no network attempts. node --check clean on every frontend/*.js.
+
+Files: NEW frontend/spellmodal.js (156 lines), tests/test_frontend_spell_modal_dom.py (16), tests/test_frontend_spell_voice_dom.py (13). Changed: frontend/rxview.js (264 -> 215), rxstate.js (paneWidth out, voiceError in), rx.css (dialog rules in, .rx-spell-* out), index.html (dialog, script tag, ?v= rxstate 4, rxview 5, rx.css 5, app.js 33, spellmodal 1), app.js (transcribeName, mic guard, SpellModal.init), tests/test_frontend_rxspell_dom.py (ported, 12 -> 11), test_frontend_rxspell.py (7 -> 5), test_formulary_usage.py (re-pinned), test_frontend_rxrow.py (harness loads spellmodal.js).
+
+RED in the real repo first: 42 failed (Cannot find module spellmodal.js, markup/CSS pins). GREEN after.
+
+## Anchor dry run (scratch i2c3/) and adaptations
+Line numbers in the plan had drifted (rxview sync :93 is :99, onEdit :241 is :248, restore :248 is :255, paneWidth :226-234 is :233-241; rx.css panel lines :49-57 matched). All function anchors were found. Real problems:
+1. Plan step 3 test 3 clicks Close while a check runs, but the plan text says show() disables "every button" while checking. Contradiction. Adaptation: Close stays enabled (Esc and Close allowed while checking, decision 4); input, Use, mic, Prev/Next and list items are disabled.
+2. Plan step 7 never re-renders the row after a successful Use this (the old closePanel did renderRow). Without it the row kept its spinner and "you chose" never showed (5 tests failed). Adaptation: `SpellModal.closeFor(rowid, false); renderRow(tr); H.changed(); focusState(tr);`.
+3. tests/test_frontend_rxrow.py `_dom` harness loads only rxstate.js and rxview.js: ReferenceError on SpellModal. Adaptation: it also requires spellmodal.js (one line, no assert changed).
+4. The old pin `rxstate\.js\?v=3\b` was an exact match; now `>= 4` like the other pins; also pinned app.js >= 33 and spellmodal.js >= 1.
+5. Opener: the Spell button is rebuilt on every renderRow, so a stored element goes stale. `opener` is a getter `() => tr.querySelector('[data-action="spell"]')`.
+6. `.panel-actions` already exists in styles.css: not duplicated; rx.css only adds `.spell-wrap .panel-actions button { min-height:44px }`.
+7. Hardening beyond the plan's code: voice session id (`vid`) so any stale answer (close, another row, Use this) is dropped; phase guard so a double tap or a tap while reading does nothing; the recorder/getUserMedia support check runs BEFORE the permission prompt (no prompt for a browser that cannot record); a stream granted after Close is released; same mime choice as dictation (webm, then mp4, `isTypeSupported` guarded); empty Blob counts as no sound; `use()` says "This prescription is view only." / "Wait for the page to finish, then try again." instead of silence; `SpellModal.sweep()` (closes when the row element is gone, covers delete-then-undo with the same rowid) and `say(rowid, m, focus)` added to the exports; focus is moved to Close when a check disables the focused control, and to the first item when a page change replaces the focused item; second `init()` binds once; dialog `open` guard before `showModal`.
+8. Not done: backdrop click closes (the plan does not ask for it; a stray tap would lose typed text). Native Esc/cancel is handled.
+
+## Retired tests (and why)
+- test_frontend_rxspell_dom.py::test_the_panel_box_is_sized_to_the_scroller_content_and_follows_its_width: tested the panel box and --rx-pane (gone). Its only behavioural content was layout.
+- test_frontend_rxspell.py::test_the_pane_width_comes_from_the_element_that_scrolls_minus_its_padding: RxState.paneWidth is deleted.
+- test_frontend_rxspell.py::test_the_spell_panel_stays_in_the_visible_pane_and_its_buttons_wrap: replaced (renamed) by test_the_spell_modal_fits_a_phone_and_its_targets_are_44px.
+- Reworded, not retired: test_the_panel_follows_the_spell_it_contract -> ..._through_the_modal (dropped the tokens for the panel and the disabled "Say the letters (later)" button; added modal tokens and "no rx-spell/paneWidth/keydown in rxview.js"). test_formulary_usage order test re-pinned on spellmodal.js. All 11 behavioural DOM tests kept, only their selectors changed as the plan says.
+
+## New real-value tests (29)
+Modal (16): plan's 4; typed rules (empty, 1 char, markup, 61 chars, 9 words: old wording, nothing sent, modal stays); second modal impossible + late list for row A dropped; paging clamp, cap note, arrows stop at the ends; Space uses the focused item, hostile name stays text; pick goes through useName (confirmed before render, name questions only, controls disabled but Close usable, focus to row state); failed Use keeps the modal open with the message; failed list load; edit/delete/undo/confirm-from-outside/correction close the modal without stealing focus and drop stale lists; native cancel event; busy/view-only messages; markup/script order/CSS contract; open when the dialog is already open.
+Voice (13): plan's 4; double tap and tap while reading; 4-second timer cap and a manual stop cancels it; unsupported browser and every granted stream released; trimmed/capped/text-only transcript and mic waits for a check; late failure after close; permission answered after close; Use this while recording or reading; mic labelled/44px and one transcribe route; transcribeName run for real under node (route, field name, 20 s timeout cleared, status, abort).
+
+## Mutation testing (scratch i2c3m/, 38 mutants)
+35 killed. 3 survivors, all judged equivalent (a second, independent guard makes the mutation unobservable):
+- use() without the `cur.checking` guard: useName refuses while `r.checking` anyway.
+- onClick without the `b.disabled` guard: browsers do not click disabled buttons, and use()/toggleVoice()/page clamp refuse independently.
+- (third, "no guard on second showModal") was NOT equivalent: killed after adding test_opening_while_the_dialog_is_somehow_already_open_does_not_throw.
+Mutated: tab wrap both ways, Esc, focus return, focus on open, page keys, page clamp, Close disabled, close keeps recording, stale transcript, double tap, view-only mic, trailing full stop, 60 cap, tracks not stopped, Use keeps clip, no time cap, stream granted after close, silent load failure, no render after success, edit/undo/sweep, stale answer applied, alive, voice wording, dictation mic refusal, timeout, filename, aria-modal, maxlength, mic label, focus ring, mic 44px.
+
+## Concerns for the live check (not provable offline)
+- Real focus trap with native showModal and Tab order; focus return to the Spell button; Esc handled by both keydown and cancel.
+- Safari: MediaRecorder mime audio/mp4 sent with filename name.webm (same as dictation does today).
+- 390 px layout: dialog max-height uses 100dvh via @supports; whole dialog scrolls when the list is long (8 items of 44px+ plus controls is about 730 px).
+- A page-level Space/Enter on a focused item is handled in keydown with preventDefault; Firefox may still fire click on keyup for Space, harmless because use() refuses while checking.
+- app.js is 1243 lines (already over 500 before this work, only +24 now).
+- Redundant `.superpowers` ledger not updated (progress.md left to the caller).
+
+## Fix round (after review and live check)
+Status: DONE. Suite 1886 passed, 1 skipped (was 1862). Netguard on the new/changed files: 53 passed. node --check clean. RED first (21 failed) then GREEN. app.js 1243 -> 1245 lines; spellmodal.js 203, rxview.js 224. ?v= bumped: suglist 4, rxstate 5, rxview 6, spellmodal 2, rx.css 6, app.js 34.
+
+A. Debounced re-check (350 ms, `searchMs` hook): >= 2 letters and the 60/8 rules, same check-row request code (`spec.search` -> `H.post(..., signal)`; postJson gained an optional 4th `outer` signal, so a newer search aborts the older). Token (`sid`) drops stale answers; list replaced, page 1, "Searching..." then "N suggestions. Showing 1-8 of N" in the polite status line (`#spellPage`); emptying the field restores the list from open; error keeps the list with "Could not update the names. The list is unchanged. You can still type the name."; Close and Use this cancel timer and request; busy/view-only never search; a voice name is searched too; never applied.
+B. suglist items: aria-label "Name: use for this row" (inline keeps "Did you mean X? Use it for this row"), aria-describedby points at unique ids of the generic and reason spans ("looks alike: a different medicine" is read). Mic aria-label "Say it: say the name". Two live regions: `#spellInfo` (role=status, Listening/Reading/Heard/hints) and `#spellMsg` (role=alert, errors only), one filled at a time.
+C. Dialog is a flex column (`dialog.spell-dlg[open]`, scoped so the closed dialog stays hidden), max-height calc(100dvh - 2rem), the list scrolls (overflow-y:auto, min-height:0), field, pager and Close/Use this stay visible; 390 px rules kept.
+D. `SpellModal.sync()` (called from setWorking): mic, Use this and list items off at once with "Wait for the page to finish." / "This prescription is view only.", recording stopped, back on after. Unsupported browser: mic disabled at open with "Voice input is not available in this browser." (title and status). Spell while working: `notify` hook (setStatus) says "Wait for the page to finish.".
+E. `me.start()` guarded: stream released, phase reset, "Could not start recording. Type the name." (a new try works).
+F. Upload HTTP errors: "Could not read that. Try again or type the name."; timeout, no sound, denied and network wording unchanged.
+G. After a late Use this answer focus moves only if the dialog that asked is still the open one (token) or nothing has focus.
+H. Marker (finding, exact behaviours):
+ - Source: core/rowcheck.py:58-64 appends " [unverified: confirm with doctor]" (name) or " [unverified strength: confirm with doctor]" to Instructions for non-verified rows; the page showed it after Use this because the check-row answer carries it.
+ - Save (api/persistence.py:196-209): screen_unverified 409s any non-verified row that is not in confirmed_rows (marker or not). For confirmed rows validate_structured(structured, "") re-grounds, but preserve_untouched_rx_status (core/correction.py:361-395, current = the incoming form, patch = {}) copies status, lexicon_match and instructions back exactly as the page sent them. So Save and the PDF (pdf/sheet.py:105 prints row.instructions as is) neither add nor keep a marker the page removed; NO server change was needed. Pinned in tests/test_confirmed_marker.py (3 tests: confirmed rows of 3 statuses saved and printed without the marker; unconfirmed rows 409 with or without the marker; a marker the page keeps is stored as sent).
+ - One server edge left as is (not a confirmed-row case): a restored status "verified" that is not backed by the lexicon or clinic list is downgraded to unknown-medicine and the name marker is re-added (correction.py:392-395).
+ - Page fix: RxState.stripMarker removes exactly "[unverified: confirm with doctor]" plus one space before it (case exact, the strength marker is untouched). Applied in useName when the answer settles the name (Use this and one-tap Did you mean), and in the Confirm as is handler (app.js, only when it confirms, markDirty if text changed; Reopen neither strips nor re-adds). A name that stays open (unknown) keeps the marker. Undo of Use this restores the snapshot (name and marker). Not done: the strength marker is left when a strength is confirmed (chip or Confirm): same stale-text issue, outside the ruling.
+ - Known limit: two rows with the same name collapse in preserve_untouched_rx_status (pre-existing).
+
+Mutations: 36 scratch mutants this round (no debounce, abort, stale answer, 2-letter and input-rule gates, page reset, restore on empty, close/use cancel, error empties list, busy search, count text, Use/mic disabling, sync stops recording, start guard and stream release, alert/status split, upload wording, marker regex too wide, no strip on Use this or Confirm, focus always stolen, working message, describedby, unique ids, sync wiring, signal link, label-in-name, status role, closed-dialog display, list scroll). 5 first survived (page reset, sync stopping the clip, sync wiring, Confirm strip wiring, signal link): tests added, all killed, 0 survivors.
+
+Concerns: live re-check at 1024x768 and 390 px not run; the first-page "N suggestions." lead is dropped on page change by design; Firefox/Safari announce of the two live regions is untested; the error text for a failed first list load still uses RxState.errorText (raw "The server answered 500") because F only named upload errors.

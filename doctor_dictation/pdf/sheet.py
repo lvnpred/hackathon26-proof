@@ -2,6 +2,8 @@
 import re
 from html import escape
 
+from doctor_dictation.core.followup import date_label
+
 from .doctors_text import block, doctor_groups, group_lines
 from .layout import ALIGNS, MAX_DOCTORS, PROFILE_KEYS, Layout
 
@@ -21,6 +23,13 @@ def _list_items(values) -> str:
     items = values if isinstance(values, list) else []
     rendered = [f"<li>{_esc(v)}</li>" for v in items if str(v).strip()]
     return "".join(rendered) or "<li>—</li>"
+
+
+def _prose_items(values) -> str:
+    """One ``<p>`` per non-empty value (a sentence or two), or a single ``—`` placeholder."""
+    items = values if isinstance(values, list) else []
+    rendered = [f"<p>{_esc(v)}</p>" for v in items if str(v).strip()]
+    return "".join(rendered) or "<p>—</p>"
 
 
 def _doctor_table(groups, table_attrs: str, name_cls: str, qual_cls: str, reg_cls: str, styles=None) -> str:
@@ -84,10 +93,12 @@ def _rx_rows(rx) -> str:
                 row.get("form") or "", row.get("name") or "", row.get("strength") or ""
             ) if str(part).strip()
         )
+        name, generic = str(row.get("name") or "").strip(), str(row.get("generic") or "").strip()
+        gen = f'<div class="gen">generic: {_esc(generic)}</div>' if generic and generic.casefold() != name.casefold() else ""
         out.append(
             "<tr>"
             f"<td>{index}</td>"
-            f"<td>{_esc(medicine)}</td>"
+            f"<td>{_esc(medicine)}{gen}</td>"
             f"<td>{_esc(row.get('dose'))}</td>"
             f"<td>{_esc(row.get('timing'))}</td>"
             f"<td>{_esc(row.get('duration'))}</td>"
@@ -255,7 +266,8 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
     op_no = _esc(m.get("opNo") or s.get("opNo"))
     name = _esc(s.get("patientName"))
     age_sex = _esc(s.get("ageSex"))
-    review = _esc(s.get("review")) or "—"
+    label = date_label(s.get("review_date")) if str(s.get("review") or "").strip() else ""
+    review = (_esc(s.get("review")) + (f' <span class="rev-date">({_esc(label)})</span>' if label else "")) or "—"
     values = _resolved(layout, m.get("profile"), m.get("authored") is True) if layout is not None else {}
     entries = _doctor_entries(m.get("doctors"), values) if layout is not None else []
     header = _profile_header(m.get("profile")) if layout is None else _layout_header(layout, m.get("logo"), values, entries)
@@ -278,8 +290,11 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
   .sec-title {{ font-size: 12px; font-weight: bold; text-transform: uppercase;
                 border-bottom: 1px solid #999; margin: 14px 0 6px; padding-bottom: 2px; }}
   ul {{ margin: 0 0 6px; padding-left: 20px; }}
+  .prose p {{ margin: 0 0 4px; }}
+  .rev-date {{ color: #333; }}
   table.rx {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
   table.rx th, table.rx td {{ border: 1px solid #999; padding: 4px 6px; text-align: left; }}
+  .gen {{ font-size: 10px; color: #444; margin-top: 1px; }}
   .disclaimer {{ margin-top: 18px; font-size: 11px; color: #555; font-style: italic; }}
   .clinic-head {{ text-align: center; margin-bottom: 12px; }}
   .clinic-rule {{ border: 0; border-top: 1px solid #999; margin: 6px 0; }}
@@ -296,10 +311,10 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 {header}
 <h1>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h1>
 <div class="sub">{date} &nbsp;|&nbsp; OP/IP No: {op_no} &nbsp;|&nbsp; {name} &nbsp; {age_sex}</div>
-<div class="sec-title">Diagnosis / Clinical Impression</div>
-<ul>{_list_items(s.get("diagnosis"))}</ul>
 <div class="sec-title">Chief Complaints &amp; Brief History</div>
-<ul>{_list_items(s.get("complaints"))}</ul>
+<div class="prose">{_prose_items(s.get("complaints"))}</div>
+<div class="sec-title">Diagnosis / Clinical Impression</div>
+<div class="prose">{_prose_items(s.get("diagnosis"))}</div>
 <div class="sec-title">Investigations Advised</div>
 <ul>{_list_items(s.get("investigations"))}</ul>
 <div class="sec-title">Rx (MEDICATIONS)</div>

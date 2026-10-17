@@ -143,11 +143,16 @@ def _dose_verdict(entry: dict, strength: str, dose: str) -> DoseVerdict:
     note = f"{fmt(daily)} mg a day; usual adult maximum {fmt(top)} mg" if daily > top else ""
     return DoseVerdict("above-max" if note else "in-range", float(daily), float(top), note)
 
-def ground_extra(status: str, match: str, form: str, strength: str, dose: str, age_sex: str) -> tuple:
+def ground_extra(status: str, match: str, form: str, strength: str, dose: str, age_sex: str, name: str = "") -> tuple:
     """Grounding hook: (status, the three row fields of contract 4.1).
 
     Only a ``verified`` or ``lookalike-check`` row (both rank below dose-check) can become ``dose-check``.
+    A brand listed in its entry's ``generic_hidden`` (a combination not modelled) gets no strength options and no check:
+    the reference describes the single generic, not the product.
     """
+    from .surface import generic_hidden
+    if generic_hidden(name, match):
+        return status, {"strength_options": [], "usual_strength": "", "dose_note": ""}
     options, usual = strength_options(match)
     note = ""
     if match and status in ("verified", "lookalike-check"):

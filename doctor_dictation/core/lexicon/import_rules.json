@@ -62,6 +62,7 @@
       "Suboxone"
     ]
   },
+  "skip_generics": {},
   "synonyms": {
     "Amoxicillin + Clavulanic acid": "Co-Amoxiclav",
     "Ascorbic acid": "Vitamin C",

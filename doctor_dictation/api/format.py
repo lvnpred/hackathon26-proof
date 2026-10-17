@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from doctor_dictation.api import authorship
+from doctor_dictation.api import authorship, visit
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.config import get_settings
-from doctor_dictation.core import formulary
+from doctor_dictation.core import followup, formulary, prose
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     extract_correction,
@@ -32,7 +32,7 @@ from doctor_dictation.core.determinism import (
     transcript_sha,
     validate_structured,
 )
-from doctor_dictation.core.fallback import fallback_format
+from doctor_dictation.core.fallback import fallback_format, unparsed_notes
 from doctor_dictation.providers.llm.factory import make_llm
 from doctor_dictation.scope import current_scope
 
@@ -42,19 +42,20 @@ SYSTEM_PROMPT = """You are a DETERMINISTIC clinical extraction engine. Same inpu
 Take the raw dictated clinical text and format it into a standardized outpatient prescription and consultation summary.
 
 STRICT RULES:
-1. Extract Diagnosis, Chief Complaints, Investigations Advised, and Medications clearly.
+1. Extract the Brief history (complaints), Diagnosis, Investigations Advised and Medications.
 2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". Map: once daily/OD -> 1-0-0; twice daily/BD -> 1-0-1; thrice daily/TDS -> 1-1-1; at bedtime/HS -> 0-0-1; as needed/for pain -> SOS. Never output OD/BD/TDS/HS text.
 3. Allowed timing ONLY: "After food", "Before food", "At bedtime", or "". Map "after meal" -> After food, "empty stomach" -> Before food, "at night" -> At bedtime.
 4. Copy drug strength VERBATIM from the transcript (e.g. "0.4 mg"). If no strength dictated, use "". Never invent strengths, durations, or drugs. Write each medicine name exactly as dictated, including brand names; never replace a brand with its generic. If a field is missing, return empty string or empty array, never hallucinate.
 5. If the doctor dictates patient demographics (e.g. "patient Rahul Sharma, 45 year old male"), extract patientName and ageSex (format "45 / M"). If an OP/registration number is dictated, copy it VERBATIM into opNo (e.g. "OP 1234" -> "OP 1234"); use "" if not dictated. Otherwise return empty strings.
 6. Duration format: "<N> days/weeks/months" with digits (e.g. "14 days"). Map "two weeks" -> "14 days".
-7. Return ONLY valid JSON matching this exact schema, no markdown, no extra text. EXAMPLE input: "right flank pain and burning micturition since 2 days. 5 mm lower ureteric calculus. tablet Tamsulosin 0.4 mg once daily at bedtime after food for 2 weeks, tablet Paracetamol 650 mg as needed for pain." -> rx doses "0-0-1" and "SOS", timings "After food" and "":
+7. complaints: the brief history as 1 to 3 short sentences, the way a doctor writes it, for example "C/o fever with chills for 3 days, associated body aches, no vomiting." and "No h/o similar episodes.". diagnosis: 1 or 2 short phrases or sentences. Restate ONLY what was dictated: never add a symptom, duration, negative finding, past history or diagnosis the doctor did not say. If nothing was dictated, use []. Each item at most 400 characters.
+8. Return ONLY valid JSON matching this exact schema, no markdown, no extra text. EXAMPLE input: "right flank pain and burning micturition since 2 days. 5 mm lower ureteric calculus. tablet Tamsulosin 0.4 mg once daily at bedtime after food for 2 weeks, tablet Paracetamol 650 mg as needed for pain." -> rx doses "0-0-1" and "SOS", timings "After food" and "":
 {
   "patientName": "string (empty if not dictated)",
   "ageSex": "string like '45 / M' (empty if not dictated)",
   "opNo": "string, OP/registration number copied verbatim (empty if not dictated)",
-  "diagnosis": ["string"],
-  "complaints": ["string"],
+  "complaints": ["short sentence of the dictated history"],
+  "diagnosis": ["short phrase or sentence"],
   "investigations": ["string"],
   "rx": [{"form": "Tab.|Cap.|Syr.|Inj.", "name": "string", "strength": "string", "dose": "1-0-0|1-0-1|1-1-1|0-0-1|SOS", "timing": "After food|Before food|At bedtime|empty", "duration": "e.g. 14 days", "instructions": "string"}],
   "advice": ["string"],
@@ -81,6 +82,13 @@ async def _ground(rows, transcript):
     return await asyncio.to_thread(ground_rx, rows, transcript)
 
 
+def _answer(structured, normalized, raw, **rest):
+    """The response: the visit's review date stamped on a COPY, so the cache never holds a day, and the unheard-words
+    check of the prose sections (information only, never stored; plan I2-b)."""
+    s = followup.stamp(dict(structured), visit.today())
+    return {"structured": s, "prose_check": prose.unheard(s, raw, normalized), "normalized_transcript": normalized, **rest}
+
+
 @router.post("/api/format", dependencies=[Depends(use_clinic_layer)])
 async def format_transcript(req: FormatRequest):
     raw = (req.transcript or "").strip()
@@ -93,23 +101,22 @@ async def format_transcript(req: FormatRequest):
     ckey = f"{sc.clinic_slug if sc else ''}:{formulary.active_layer().version}:{key}:{transcript_sha(raw)[:16]}"   # per clinic, learned list, raw wording
     hit = cache_get(ckey)
     if hit is not None:
-        return {"structured": hit["structured"], "engine": hit["engine"],
-                "normalized_transcript": normalized, "warnings": hit.get("warnings", []),
-                "grounding": hit.get("grounding", {"rounds": 0, "open_issues": [], "llm_calls": 0}),
-                "cached": True, "transcript_sha256": key}
+        return _answer(hit["structured"], normalized, raw, engine=hit["engine"], warnings=hit.get("warnings", []),
+                       grounding=hit.get("grounding", {"rounds": 0, "open_issues": [], "llm_calls": 0}),
+                       cached=True, transcript_sha256=key)
     llm = make_llm(get_settings())
     if llm is None:
-        structured, warnings = await _validate(fallback_format(normalized), normalized, raw)
+        drafted = fallback_format(normalized)
+        structured, warnings = await _validate(drafted, normalized, raw)
+        warnings += prose.cap_items(structured) + unparsed_notes(normalized, drafted["rx"])
         engine = (f"fallback-rules+lexicon v{lexicon_version()} "
                   f"(set OPENAI_API_KEY for default LLM, or DEEPSEEK_API_KEY with LLM_PROVIDER=deepseek)")
         grounding = {"rounds": 0, "open_issues": open_issues(structured),
                      "llm_calls": 0}
         cache_put(ckey, {"structured": structured, "engine": engine,
                         "warnings": warnings, "grounding": grounding})
-        return {"structured": structured, "engine": engine,
-                "normalized_transcript": normalized, "warnings": warnings,
-                "grounding": grounding,
-                "cached": False, "transcript_sha256": key}
+        return _answer(structured, normalized, raw, engine=engine, warnings=warnings, grounding=grounding,
+                       cached=False, transcript_sha256=key)
     base_messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Raw Dictated Audio Transcript:\n\"\"\"\n{normalized}\n\"\"\""},
@@ -148,6 +155,7 @@ async def format_transcript(req: FormatRequest):
         last_err = str(e)
     if best is not None:
         structured, warnings = await _validate(best[1], normalized, raw)
+        warnings += prose.cap_items(structured)
         repairs = max(0, llm_calls - 1)
         engine = (f"{llm.name}:{llm.model}+lexicon v{lexicon_version()}"
                   f"+loop{repairs}")
@@ -155,20 +163,18 @@ async def format_transcript(req: FormatRequest):
                      "llm_calls": llm_calls}
         cache_put(ckey, {"structured": structured, "engine": engine,
                         "warnings": warnings, "grounding": grounding})
-        return {"structured": structured, "engine": engine,
-                "normalized_transcript": normalized, "warnings": warnings,
-                "grounding": grounding,
-                "cached": False, "transcript_sha256": key}
+        return _answer(structured, normalized, raw, engine=engine, warnings=warnings, grounding=grounding,
+                       cached=False, transcript_sha256=key)
     # Graceful fallback so demo never blocks (still validated + cached)
-    structured, warnings = await _validate(fallback_format(normalized), normalized, raw)
+    drafted = fallback_format(normalized)
+    structured, warnings = await _validate(drafted, normalized, raw)
+    warnings += prose.cap_items(structured) + unparsed_notes(normalized, drafted["rx"])
     engine = f"fallback-after-error v{lexicon_version()}: {last_err}".strip()[:300]
     grounding = {"rounds": 0, "open_issues": open_issues(structured), "llm_calls": llm_calls}
     cache_put(ckey, {"structured": structured, "engine": engine,
                     "warnings": warnings, "grounding": grounding})
-    return {"structured": structured, "engine": engine,
-            "normalized_transcript": normalized, "warnings": warnings,
-            "grounding": grounding,
-            "cached": False, "transcript_sha256": key}
+    return _answer(structured, normalized, raw, engine=engine, warnings=warnings, grounding=grounding,
+                   cached=False, transcript_sha256=key)
 
 
 class CorrectRequest(BaseModel):
@@ -214,7 +220,9 @@ async def correct(req: CorrectRequest, request: Request):
         strip_grounding_markers(merge_form(current2, patch2)), normalized, text)
     preserve_untouched_rx_status(current, patch2, structured, extra_named=touched)
     flag_unsure_rows(structured, unsure)  # appended, not placed: the doctor must confirm it
+    followup.stamp(structured, visit.today())  # the date follows the corrected review line
     grounding = {"rounds": 0, "open_issues": open_issues(structured),
                  "llm_calls": llm_calls}
     return {"structured": structured, "grounding": grounding, "engine": engine,
+            "prose_check": prose.unheard({f: patch2.get(f) for f in prose.PROSE_FIELDS}, text, normalized),   # only the lists the patch replaced
             "warnings": ops_notes + merge_warnings + same_notes}

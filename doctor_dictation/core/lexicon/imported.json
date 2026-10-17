@@ -411,11 +411,9 @@
   {
     "aliases": [
       "calcium",
-      "shelcal",
       "calcium carbonate"
     ],
     "brands": [
-      "Shelcal",
       "Calcitas",
       "Bonycal",
       "Oscal",
@@ -1265,7 +1263,6 @@
     ],
     "brands": [
       "Brufen",
-      "Combiflam",
       "Emflam",
       "Ibugesic"
     ],
@@ -2111,7 +2108,6 @@
     ],
     "brands": [
       "Inderal",
-      "Ciplar",
       "Betacap"
     ],
     "canonical": "Propranolol",
@@ -2400,7 +2396,6 @@
     ],
     "brands": [
       "Tramazac",
-      "Ultracet",
       "Dolfre",
       "Dolotram"
     ],

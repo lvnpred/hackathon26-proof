@@ -12,7 +12,7 @@
   const NEEDS = ["dose", "confirm"];
   const ICON = { ok: "check-circle", dose: "capsule", confirm: "triangle", you: "shield-check", known: "book" };
   const LABEL = { ok: "Matched", dose: "Check dose", confirm: "Confirm medicine", you: "Confirmed by you", known: "Known to your clinic" };
-  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source"];
+  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule"];
   const MAX_CHIPS = 8;
   // The extra row fields the server sends (contract 4.1), with safe defaults.
   function metaOf(r) {
@@ -22,6 +22,8 @@
     m.strength_options = optsOf(r.strength_options);
     return m;
   }
+  // The Drugs and Cosmetics Rules mark a screen badge may show: only H, H1 or X (the server sends nothing else); information only.
+  const scheduleOf = (meta) => { const s = str((meta || {}).schedule); return s === "H" || s === "H1" || s === "X" ? s : ""; };
   function chipsFor(row) {
     row = row || {};
     const usual = str(row.usual_strength).trim();
@@ -92,13 +94,15 @@
       canSpell: state === "confirm",
       canReopen: state === "you",
       chips: state === "dose" ? chipsFor(row) : [],
+      didYouMean: state === "confirm" && status === "unknown-medicine" && str(row.did_you_mean).trim() && !same(row.did_you_mean, row.name)
+        ? { name: str(row.did_you_mean).trim(), generic: str(row.did_you_mean_generic).trim() } : null,
     };
   }
   // After an edit by hand the old reasons are stale: drop them (a name edit also drops what belonged to the old name).
   function afterEdit(meta, col) {
     const m = Object.assign({}, meta);
     m.heard = ""; m.lookalike = ""; m.dose_note = "";
-    if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; }
+    if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; m.did_you_mean = ""; m.did_you_mean_generic = ""; m.schedule = ""; }
     return m;
   }
   // After "Use this": the doctor chose the NAME, so name questions are answered; dose questions and a name the
@@ -136,22 +140,11 @@
       saveDisabled: checking > 0 || needs > 0,
     };
   }
-  // The width the Spell panel may use: the content width of whatever element scrolls the table sideways. Under 600px
-  // that is table.rx itself (display:block, overflow-x:auto); otherwise it is #sheet. m holds measured numbers and
-  // computed styles. The panel cell has no padding and no side border (rx.css), so nothing else is subtracted.
-  function paneWidth(m) {
-    m = m || {};
-    const n = (x) => { const v = parseFloat(x); return Number.isFinite(v) ? v : 0; };
-    const own = /^(auto|scroll)$/.test(str(m.tableOverflowX)) && str(m.tableDisplay) === "block";
-    const client = own ? n(m.tableClient) : n(m.sheetClient);
-    const pad = own ? n(m.tablePadL) + n(m.tablePadR) : n(m.sheetPadL) + n(m.sheetPadR);
-    return { scroller: own ? "table" : "sheet", width: Math.max(0, Math.round(client - pad)) };
-  }
-
   // One sentence for a failed check-row call. err is what postJson throws. postJson's own fallback text
   // ("Request failed (422)") is dropped: the status is already in the sentence.
   function errorText(err) {
     if (err && err.aborted) return "The check took too long and was stopped.";
+    if (err && err.status >= 500) return "The medicine check is not available right now.";     // no raw status or server text for a server fault
     if (err && err.status) {
       const m = str(err.message).trim();
       return "The server answered " + err.status + (m && m.indexOf("Request failed") !== 0 ? " (" + m + ")" : "") + ".";
@@ -159,5 +152,24 @@
     return "Could not reach the server.";
   }
 
-  root.RxState = { rowState, metaOf, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, paneWidth, NEEDS };
+  // One sentence for a failed voice capture; phase "mic" (getUserMedia, the recorder, the clip) or "upload" (the transcribe call).
+  function voiceError(e, phase) {
+    const n = str(e && e.name), k = str(e && e.kind);
+    if (n === "NotAllowedError" || n === "SecurityError") return "The microphone is blocked. Allow it in the browser, or type the name.";
+    if (n === "NotFoundError" || n === "OverconstrainedError") return "No microphone was found. Type the name.";
+    if (k === "no-recorder") return "Voice input is not supported in this browser. Type the name.";
+    if (k === "no-audio") return "No sound was recorded. Try again, or type the name.";
+    if (k === "no-speech") return "No name was heard. Try again, or type the name.";
+    if (e && e.aborted) return "Reading the name took too long. Type the name instead.";
+    if (phase === "upload") return e && e.status ? "Could not read that. Try again or type the name." : errorText(e).replace(/\.$/, "") + ". Type the name instead.";
+    return "The microphone could not start. Type the name.";
+  }
+
+  // The "[unverified: confirm with doctor]" and "[unverified strength: confirm with doctor]" texts check-row adds to Instructions; the doctor's
+  // own confirmation removes exactly them (and one space before each). Other words, however similar, stay.
+  function stripMarker(text) {
+    return str(text).replace(/ ?\[unverified(?: strength)?: confirm with doctor\]/g, "").trim();
+  }
+
+  root.RxState = { scheduleOf, rowState, metaOf, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, voiceError, stripMarker, sameName: same, NEEDS };
 })(typeof window !== "undefined" ? window : globalThis);

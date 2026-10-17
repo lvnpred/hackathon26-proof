@@ -55,10 +55,13 @@ def _index() -> dict:
     by_low = {c.lower(): c for c in canons}
     keys = {c: phonetic_key(c) for c in canons}
     twins: dict = {c: {} for c in canons}
+    parts = {c: {p.strip() for p in c.lower().split("+")} for c in canons}     # "Tramadol + Paracetamol" -> its two components
     for i, a in enumerate(canons):
         sm = difflib.SequenceMatcher(None)
         sm.set_seq2(a.lower())
         for b in canons[i + 1:]:
+            if a.lower() in parts[b] or b.lower() in parts[a]:
+                continue   # a combination and one of its own components are the same drug family, not a look-alike
             sm.set_seq1(b.lower())
             fast = sm.real_quick_ratio() >= MIN_RATIO and sm.quick_ratio() >= MIN_RATIO
             ratio = sm.ratio() if fast else 0.0

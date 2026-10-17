@@ -98,6 +98,7 @@ fetch("/api/health").then(r => r.json()).then(h => {
 // ---- working state ---------------------------------------------------------
 function setWorking(on, msg) {
   state.working = on;
+  if (window.SpellModal) SpellModal.sync();
   if (msg) setStatus(msg);
   recBtn.disabled = on;
   saveBtn.disabled = on;
@@ -340,7 +341,7 @@ function updateResaveNote() {
 let mr = null, chunks = [], tick = null, t0 = 0;
 
 recBtn.addEventListener("click", () => {
-  if (state.working) return;
+  if (state.working || (window.SpellModal && SpellModal.busy())) return;
   if (mr && mr.state === "recording") { mr.stop(); return; }
   beginRecording();
 });
@@ -451,8 +452,9 @@ async function onRecordingStop() {
 }
 
 // ---- network ---------------------------------------------------------------
-async function postJson(url, body, timeoutMs) {
+async function postJson(url, body, timeoutMs, outer) {
   const ctrl = new AbortController();
+  if (outer) outer.addEventListener("abort", () => ctrl.abort());   // the caller can cancel (Spell it: a newer search replaces the older)
   const to = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const r = await fetch(url, {
@@ -502,6 +504,18 @@ async function transcribe(blob) {
   }
 }
 
+// Spell it voice input (plan I2-c): the same route as dictation, a short timeout, no page-wide "working" state.
+async function transcribeName(blob) {
+  const fd = new FormData(); fd.append("audio", blob, "name.webm");
+  const ctrl = new AbortController(), to = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const r = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal }), j = await safeJson(r);
+    if (!r.ok) { const err = new Error(j.hint || j.error || ""); err.status = r.status; throw err; }
+    return String(j.transcript || "").trim();
+  } catch (e) { if (e && e.name === "AbortError") { const err = new Error("timed out"); err.aborted = true; throw err; } throw e; }
+  finally { clearTimeout(to); }
+}
+
 async function formatTranscript(transcript) {
   // Retain the transcript immediately, before the LLM call: a slow format must
   // never lose the visit (Finding 2).
@@ -523,6 +537,7 @@ async function formatTranscript(transcript) {
     state.lastBlock = [];
     hideBlockPanel();
     renderSheet(state.structured);
+    Sections.showProseCheck(j.prose_check);
     setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Draft ready via " + (j.engine || "engine") + (j.cached ? " (cached)" : "") + ". " +
@@ -554,6 +569,7 @@ async function applyCorrection(transcript) {
     state.lastBlock = [];
     hideBlockPanel();
     renderSheet(state.structured);
+    Sections.showProseCheck(j.prose_check);
     setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
@@ -807,10 +823,13 @@ $("undoBtn").addEventListener("click", undoDelete);
 function fixLists(e) {
   const ul = e.target && e.target.closest ? e.target.closest("ul.editable-list") : null;
   if (ul) normalizeList(ul);
+  if (ul && ul.id === "pCc") Sections.clearProse("complaints");
+  if (ul && ul.id === "pDx") Sections.clearProse("diagnosis");
 }
 sheetEl.addEventListener("input", fixLists);
 sheetEl.addEventListener("keyup", fixLists);
 sheetEl.addEventListener("paste", (e) => setTimeout(() => fixLists(e), 0));
+$("pRev").addEventListener("input", () => Sections.onReviewInput(text($("pRev"))));
 
 // ---- rendering -------------------------------------------------------------
 function renderList(ul, values) {
@@ -893,6 +912,7 @@ function renderSheet(s) {
   renderList($("pIx"), s.investigations);
   renderList($("pAdv"), s.advice);
   setText($("pRev"), s.review || "");
+  Sections.showDate(s.review_date || "");
   renderRx(s.rx);
   clearUndo(); // any new/reloaded sheet invalidates the one-level undo
   sheetEl.classList.remove("empty");
@@ -946,7 +966,7 @@ rxBody.addEventListener("click", (e) => {
   if (!tr) return;
   const rowid = tr.dataset.rowid;
   if (state.confirmed.has(rowid)) state.confirmed.delete(rowid);
-  else state.confirmed.add(rowid);
+  else { state.confirmed.add(rowid); if (RxView.stripMarker(tr)) markDirty(); }   // the doctor accepted the name: the check-row marker leaves the Instructions
   renderCheck(tr);
   updateGrounding();
   if (!blockPanel.hidden) refreshBlockPanel();
@@ -1192,6 +1212,7 @@ function newPatient() {
   ["pDx", "pCc", "pIx", "pAdv"].forEach(id => { $(id).innerHTML = ""; });
   rxBody.innerHTML = "";
   setText($("pRev"), "");
+  Sections.showDate(""); Sections.showProseCheck([]);
   groundingEl.hidden = true;
   RxView.sync();                                      // :1251 newPatient hides the bar
   highlightToday();
@@ -1208,11 +1229,14 @@ $("profileCancelBtn").addEventListener("click", closeProfilePanel);
 $("profileForm").addEventListener("submit", saveProfile);
 
 // ---- init ------------------------------------------------------------------
+Sections.init({ post: postJson });
 RxView.init({
   body: rxBody, saveBtn, confirmed: () => state.confirmed, working: () => state.working,
-  transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo,
+  transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo, notify: setStatus,
   changed: () => { markDirty(); updateGrounding(); if (!blockPanel.hidden) refreshBlockPanel(); }, hasSheet: () => !sheetEl.classList.contains("empty"),
 });
+SpellModal.init({ dialog: $("spellDlg"), working: () => state.working, recording: () => !!(mr && mr.state === "recording"),
+  viewOnly: () => !!(window.Authorship && Authorship.isViewOnly()), transcribe: transcribeName, media: () => navigator.mediaDevices, Recorder: () => window.MediaRecorder });
 setText($("pDate"), today());
 refreshMicLabel();
 setStep("idle");

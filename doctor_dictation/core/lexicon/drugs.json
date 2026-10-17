@@ -986,11 +986,9 @@
     {
       "aliases": [
         "calcium",
-        "shelcal",
         "calcium carbonate"
       ],
       "brands": [
-        "Shelcal",
         "Calcitas",
         "Bonycal",
         "Oscal",
@@ -1018,6 +1016,17 @@
     },
     {
       "aliases": [
+        "calcium carbonate + cholecalciferol"
+      ],
+      "brands": [
+        "Shelcal"
+      ],
+      "canonical": "Calcium Carbonate + Cholecalciferol",
+      "forms": [],
+      "strengths": []
+    },
+    {
+      "aliases": [
         "calcium citrate",
         "calciumcitrate",
         "calcium citrat"
@@ -1028,6 +1037,9 @@
       "canonical": "Calcium Citrate",
       "forms": [
         "Tab."
+      ],
+      "generic_hidden": [
+        "Calcimax"
       ],
       "strengths": []
     },
@@ -1447,13 +1459,22 @@
         "chlorhexidin",
         "chlorhexidine gluconate"
       ],
-      "brands": [
-        "Savlon"
-      ],
+      "brands": [],
       "canonical": "Chlorhexidine",
       "forms": [
         "Cream"
       ],
+      "strengths": []
+    },
+    {
+      "aliases": [
+        "chlorhexidine + cetrimide"
+      ],
+      "brands": [
+        "Savlon"
+      ],
+      "canonical": "Chlorhexidine + Cetrimide",
+      "forms": [],
       "strengths": []
     },
     {
@@ -2578,9 +2599,7 @@
         "doxylamine",
         "doxylamin"
       ],
-      "brands": [
-        "Doxinate"
-      ],
+      "brands": [],
       "canonical": "Doxylamine",
       "forms": [
         "Tab."
@@ -2588,6 +2607,17 @@
       "strengths": [
         "10 mg"
       ]
+    },
+    {
+      "aliases": [
+        "doxylamine + pyridoxine"
+      ],
+      "brands": [
+        "Doxinate"
+      ],
+      "canonical": "Doxylamine + Pyridoxine",
+      "forms": [],
+      "strengths": []
     },
     {
       "aliases": [
@@ -3068,6 +3098,9 @@
         "Tab.",
         "Syr."
       ],
+      "generic_hidden": [
+        "Feronia-XT"
+      ],
       "strengths": [
         "100 mg"
       ]
@@ -3086,6 +3119,9 @@
       "forms": [
         "Tab."
       ],
+      "generic_hidden": [
+        "Autrin"
+      ],
       "strengths": []
     },
     {
@@ -3102,6 +3138,9 @@
       "canonical": "Ferrous Sulfate",
       "forms": [
         "Tab."
+      ],
+      "generic_hidden": [
+        "Fefol"
       ],
       "strengths": [
         "200 mg"
@@ -3760,7 +3799,6 @@
       ],
       "brands": [
         "Brufen",
-        "Combiflam",
         "Emflam",
         "Ibugesic"
       ],
@@ -4325,6 +4363,9 @@
       "canonical": "Lactulose",
       "forms": [
         "Syr."
+      ],
+      "generic_hidden": [
+        "Adzolex-Plus"
       ],
       "lineage": {
         "Abloz": {
@@ -5109,6 +5150,9 @@
       "forms": [
         "Tab.",
         "Inj."
+      ],
+      "generic_hidden": [
+        "Nurokind"
       ],
       "strengths": [
         "500 mcg",
@@ -6622,7 +6666,6 @@
       ],
       "brands": [
         "Inderal",
-        "Ciplar",
         "Betacap"
       ],
       "canonical": "Propranolol",
@@ -7267,6 +7310,9 @@
       "forms": [
         "Tab.",
         "Drops"
+      ],
+      "generic_hidden": [
+        "Neopeptine"
       ],
       "strengths": []
     },
@@ -7978,7 +8024,6 @@
       ],
       "brands": [
         "Tramazac",
-        "Ultracet",
         "Dolfre",
         "Dolotram"
       ],
@@ -7999,6 +8044,17 @@
         "50 mg",
         "100 mg"
       ]
+    },
+    {
+      "aliases": [
+        "tramadol + paracetamol"
+      ],
+      "brands": [
+        "Ultracet"
+      ],
+      "canonical": "Tramadol + Paracetamol",
+      "forms": [],
+      "strengths": []
     },
     {
       "aliases": [
@@ -8466,7 +8522,7 @@
       ]
     }
   ],
-  "version": "1.2.0",
+  "version": "1.4.0",
   "sources": [
     {
       "brands_added": 155,

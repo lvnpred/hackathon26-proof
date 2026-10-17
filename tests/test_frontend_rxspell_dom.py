@@ -11,7 +11,7 @@ FRONT = Path(__file__).resolve().parents[1] / "frontend"
 
 _DOM = r"""
 class El {
-  constructor(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.parentNode = null; this.dataset = {}; this.attrs = {}; this.className = ""; this._t = ""; this.hidden = false; this.disabled = false; this.handlers = {}; }
+  constructor(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.parentNode = null; this.dataset = {}; this.attrs = {}; this.className = ""; this._t = ""; this.hidden = false; this.disabled = false; this.handlers = {}; this.id = ""; this.value = ""; }
   get classList() { const c = this; return { contains: (n) => c.className.split(/\s+/).includes(n) }; }
   get textContent() { return this._t + this.children.map((c) => c.textContent).join(""); }
   set textContent(v) { this.children.forEach((c) => { c.parentNode = null; }); this.children = []; this._t = String(v); }
@@ -24,6 +24,7 @@ class El {
   after(n) { const p = this.parentNode; if (n.parentNode) n.remove(); n.parentNode = p; p.children.splice(p.children.indexOf(this) + 1, 0, n); }
   setAttribute(k, v) { this.attrs[k] = String(v); }
   getAttribute(k) { return this.attrs[k]; }
+  removeAttribute(k) { delete this.attrs[k]; }
   addEventListener(t, f) { (this.handlers[t] = this.handlers[t] || []).push(f); }
   focus() { document.activeElement = this; }
   matches(sel) {
@@ -46,24 +47,17 @@ class El {
 }
 const ROOT_EL = new El("html");
 const ids = {}; ["rxBar", "rxTitle", "rxReady", "rxNeeds"].forEach((id) => { ids[id] = new El("div"); ROOT_EL.appendChild(ids[id]); });
-const styleProps = {}; ids.sheet = new El("section"); ids.sheet.clientWidth = 777; ROOT_EL.appendChild(ids.sheet);
-ids.sheet.cs = { paddingLeft: "16px", paddingRight: "16px", display: "block", overflowX: "auto" };
-const rxTable = new El("table"); rxTable.className = "rx"; rxTable.clientWidth = 322; rxTable.cs = { paddingLeft: "0px", paddingRight: "0px", display: "table", overflowX: "visible" }; ids.sheet.appendChild(rxTable);
-globalThis.getComputedStyle = (n) => n.cs || {};
-const observed = []; globalThis.ResizeObserver = class { constructor(f) { this.f = f; observed.push(this); } observe(n) { (this.seen = this.seen || []).push(n); } };
+globalThis.ResizeObserver = class { constructor(f) { this.f = f; } observe() {} };
 globalThis.document = { getElementById: (id) => ids[id], createElement: (t) => new El(t), createElementNS: (ns, t) => new El(t), activeElement: null,
-  querySelector: () => ({ offsetHeight: 10 }), documentElement: { style: { setProperty(k, v) { styleProps[k] = v; } } } };
+  querySelector: () => ({ offsetHeight: 10 }), documentElement: { style: { setProperty() {} } } };
 globalThis.addEventListener = () => {};
 const tbody = new El("tbody"); ROOT_EL.appendChild(tbody);
 const COLS = ["form", "name", "strength", "dose", "timing", "duration", "instructions"];
-const confirmed = new Set(), undos = [], posts = [], flags = { working: false, transcript: "heard prednisone", ageSex: "46 / F" };
+const confirmed = new Set(), undos = [], posts = [], notes = [], flags = { working: false, transcript: "heard prednisone", ageSex: "46 / F" };
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const click = (el) => tbody.handlers.click.forEach((f) => f({ target: el }));
-const key = (el, k) => tbody.handlers.keydown.forEach((f) => f({ target: el, key: k, preventDefault() {} }));
 const cell = (tr, c) => tr.querySelector('[data-col="' + c + '"]');
-const panels = () => tbody.querySelectorAll("tr.rx-spell-row").length;
 const spellBtn = (tr) => tr.querySelector('[data-action="spell"]');
-const reply = async (row, sugs) => { posts.shift().res({ row, suggestions: sugs || [] }); await tick(); };
 function mkRow(id, status, cols, meta) {
   const tr = new El("tr"); tr.dataset.index = id; tr.dataset.rowid = id; tr.dataset.status = status;
   const med = new El("td"); med.className = "med"; const chk = new El("td"); chk.className = "check"; tr.append(med, chk);
@@ -72,11 +66,31 @@ function mkRow(id, status, cols, meta) {
 }
 RxView.init({ body: tbody, saveBtn: { textContent: "", disabled: false }, confirmed: () => confirmed, working: () => flags.working, changed() {}, hasSheet: () => true,
   transcript: () => flags.transcript, ageSex: () => flags.ageSex,
-  post: (url, body) => new Promise((res, rej) => { posts.push({ url, body, res, rej }); }),
+  post: (url, body, ms, signal) => new Promise((res, rej) => { posts.push({ url, body, res, rej, signal }); }), notify: (m) => notes.push(m),
   snapshot: (tr) => { const rec = { status: tr.dataset.status || "", lexicon_match: tr.dataset.lexicon || "" }; COLS.forEach((c) => { rec[c] = cell(tr, c).textContent; }); return Object.assign(rec, RxView.meta(tr)); },
   pushUndo: (rec, msg) => undos.push({ rec, msg }) });
-async function openPanel(tr) { click(spellBtn(tr)); await reply({}, ["Allopurinol"]); }
-async function useTyped(text) { tbody.querySelector("tr.rx-spell-row").querySelector("input").value = text; click(tbody.querySelector('[data-action="use"]')); await tick(); }
+const dlg = new El("dialog"); dlg.open = false; dlg.showModal = function () { if (this.open) throw new Error("InvalidStateError"); this.open = true; }; dlg.close = function () { this.open = false; };
+ROOT_EL.appendChild(dlg); ids.spellDlg = dlg;
+[["spellTitle", "h2"], ["spellHint", "p"], ["spellInput", "input"], ["spellMic", "button"], ["spellMsg", "p"], ["spellInfo", "p"], ["spellList", "div"],
+ ["spellPrev", "button"], ["spellPage", "p"], ["spellNext", "button"], ["spellClose", "button"], ["spellUse", "button"]]
+  .forEach(([id, tag]) => { const n = new El(tag); n.id = id; n.value = ""; ids[id] = n; dlg.appendChild(n); });
+const dkey = (k, target, shift) => (dlg.handlers.keydown || []).forEach((f) => f({ target: target || document.activeElement, key: k, shiftKey: !!shift, preventDefault() {} }));
+const dclick = (el) => (dlg.handlers.click || []).forEach((f) => f({ target: el }));
+const dtype = (text) => { ids.spellInput.value = text; (dlg.handlers.input || []).forEach((f) => f({ target: ids.spellInput })); };
+const sleep = (ms) => new Promise((x) => setTimeout(x, ms));
+const said = () => ids.spellMsg.textContent + ids.spellInfo.textContent;
+flags.recording = false; flags.mic = "ok"; flags.audio = ["a1"]; const voice = [], gum = [];
+class FakeRec { constructor() { this.state = "inactive"; this.mimeType = "audio/webm"; FakeRec.last = this; }
+  start() { if (flags.startThrows) throw new Error("start failed"); this.state = "recording"; } stop() { this.state = "inactive"; flags.audio.forEach((d) => this.ondataavailable({ data: d })); this.onstop(); } }
+const stream = { stopped: 0, getTracks: () => [{ stop() { stream.stopped++; } }] };
+SpellModal.init({ dialog: dlg, working: () => flags.working, recording: () => flags.recording,
+  viewOnly: () => !!(globalThis.Authorship && Authorship.isViewOnly()), voiceMs: 0, searchMs: 25,
+  media: () => ({ getUserMedia: () => { gum.push(1); return flags.mic === "ok" ? Promise.resolve(stream) : Promise.reject({ name: flags.mic }); } }),
+  Recorder: () => (flags.noRecorder ? undefined : FakeRec), transcribe: (blob) => new Promise((res, rej) => voice.push({ blob, res, rej })) });
+const reply = async (row, sugs, opts, total) => { posts.shift().res({ row, suggestions: sugs || [], options: opts || (sugs || []).map((n) => ({ name: n, generic: "", reason: "sounds" })), total }); await tick(); };
+const openPanel = async (tr) => { click(spellBtn(tr)); await reply({}, ["Allopurinol"]); };
+const useTyped = async (text) => { ids.spellInput.value = text; dclick(ids.spellUse); await tick(); };
+const panels = () => (dlg.open ? 1 : 0);
 """
 
 
@@ -84,9 +98,9 @@ def _run(body):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    full = ("globalThis.window = globalThis; require(process.argv[1]); require(process.argv[2]);" + _DOM
+    full = ("globalThis.window = globalThis; require(process.argv[1]); require(process.argv[2]); require(process.argv[3]); require(process.argv[4]);" + _DOM
             + "(async () => {" + body + "})().catch((e) => { console.error(e.stack); process.exit(1); });")
-    out = subprocess.run([node, "-e", full, str(FRONT / "rxstate.js"), str(FRONT / "rxview.js")], capture_output=True, text=True, timeout=30)
+    out = subprocess.run([node, "-e", full, str(FRONT / "rxstate.js"), str(FRONT / "suglist.js"), str(FRONT / "rxview.js"), str(FRONT / "spellmodal.js")], capture_output=True, text=True, timeout=30)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 
@@ -128,8 +142,8 @@ def test_confirming_a_row_from_outside_closes_its_spell_panel():
       RxView.renderRow(tr);                                          // an unrelated re-render keeps the panel
       const still = panels();
       confirmed.add("2"); RxView.renderRow(tr);                      // the Confirm button
-      console.log(JSON.stringify({ open, still, after: panels(), spell: !!spellBtn(tr), held: tr._rx.panel }));""")
-    assert r == {"open": [1, "true"], "still": 1, "after": 0, "spell": False, "held": None}
+      console.log(JSON.stringify({ open, still, after: panels(), spell: !!spellBtn(tr), held: SpellModal.isOpenFor("2") }));""")
+    assert r == {"open": [1, "true"], "still": 1, "after": 0, "spell": False, "held": False}
 
 
 def test_buttons_are_disabled_for_view_only_and_for_a_checking_row_and_dose_check_chips_do_not_confirm():
@@ -197,12 +211,12 @@ def test_spell_is_refused_while_working_or_view_only_and_oversize_input_never_re
       flags.working = true; click(spellBtn(tr)); const working = [panels(), posts.length]; flags.working = false;
       await openPanel(tr);
       globalThis.Authorship = { isViewOnly: () => true };
-      const input = tbody.querySelector("tr.rx-spell-row").querySelector("input"); input.value = "Prednisolone";
-      key(input, "Enter"); await tick(); const viewOnly = [posts.length, tr._rx.checking];
+      const input = ids.spellInput; input.value = "Prednisolone";
+      dkey("Enter", input); await tick(); const viewOnly = [posts.length, tr._rx.checking];
       globalThis.Authorship = undefined; flags.working = true;
-      key(input, "Enter"); await tick(); const busyEnter = [posts.length, tr._rx.checking]; flags.working = false;
+      dkey("Enter", input); await tick(); const busyEnter = [posts.length, tr._rx.checking]; flags.working = false;
       const big = mkRow("9", "lookalike-check", { name: "x".repeat(70) });
-      click(spellBtn(big)); const bigMsg = [posts.length, big._rx.panel.querySelector(".rx-msg").textContent];
+      click(spellBtn(big)); const bigMsg = [posts.length, ids.spellMsg.textContent];
       flags.transcript = "t".repeat(20001); flags.ageSex = "a".repeat(41);
       const ok = mkRow("10", "lookalike-check", { name: "Prednisone" });
       click(spellBtn(ok)); const sent = posts[posts.length - 1].body;
@@ -221,23 +235,6 @@ def test_a_hand_edit_during_a_pending_check_drops_the_answer_and_the_panel():
       await reply({ name: "Prednisolone", status: "verified" });
       console.log(JSON.stringify({ during, name: cell(tr, "name").textContent, checking: tr._rx.checking, panels: panels(), conf: confirmed.has("11"), undos: undos.length }));""")
     assert r == {"during": [True, 1, True], "name": "Prednisone", "checking": False, "panels": 0, "conf": False, "undos": 0}
-
-
-def test_the_panel_box_is_sized_to_the_scroller_content_and_follows_its_width():
-    r = _run("""
-      const tr = mkRow("12", "lookalike-check", { name: "Prednisone" });
-      const atInit = styleProps["--rx-pane"];                                   // #sheet: 777 - 2 x 16 padding; the cell has no side border
-      ids.sheet.clientWidth = 1040; await openPanel(tr); const wide = styleProps["--rx-pane"];
-      rxTable.cs.display = "block"; rxTable.cs.overflowX = "auto";               // under 600px table.rx is the scroller
-      const obs = observed.filter((o) => (o.seen || []).length === 2)[0];
-      obs.f(); const narrow = styleProps["--rx-pane"];
-      rxTable.clientWidth = 300; obs.f(); const resized = styleProps["--rx-pane"];
-      const box = tbody.querySelector("tr.rx-spell-row").querySelector("td").children;
-      console.log(JSON.stringify({ atInit, wide, narrow, resized, seen: obs.seen.map((n) => n.tagName), kids: box.length, cls: box[0].className,
-        actions: box[0].querySelectorAll("button").map((b) => b.dataset.action).filter((a) => a !== "sug") }));""")
-    assert (r["atInit"], r["wide"], r["narrow"], r["resized"]) == ("745px", "1008px", "322px", "300px")
-    assert r["seen"] == ["SECTION", "TABLE"]                                  # one observer on both possible scrollers
-    assert r["kids"] == 1 and r["cls"] == "rx-spell-box" and r["actions"] == ["use", "later", "close-spell"]
 
 
 def test_a_late_answer_for_a_deleted_row_never_confirms_it_even_after_undo():

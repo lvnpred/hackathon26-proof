@@ -42,17 +42,33 @@
 .rx-bar .save-row { margin:0; }
 .rx-bar .save { margin:0; min-height:44px; padding:0 22px; font-size:15px; }
 #sheet.view-only .rx-act, #sheet.view-only .rx-chips { display:none; }
-.rx-act.sug { border-radius:999px; border-color:#b9c5ff; }
+.rx-act.sug { flex-direction:column; align-items:flex-start; gap:2px; padding:6px 14px; border-radius:14px; min-height:44px; max-width:100%; box-sizing:border-box; text-align:left; white-space:normal; border-color:#b9c5ff; }
 .rx-checking { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--accent); }
 .rx-spin { width:14px; height:14px; border-radius:50%; border:2px solid #c9d3ff; border-top-color:var(--accent); animation:rx-sp .7s linear infinite; }
 @keyframes rx-sp { to { transform:rotate(360deg); } }
-table.rx .rx-spell-row td { padding:0; background:#f4f6ff; border:1px solid #b9c5ff; border-left:0; border-right:0; }   /* beats styles.css "table.rx td"; no side border, so the box is exactly the pane wide */
-.rx-spell-box { position:sticky; left:0; box-sizing:border-box; width:var(--rx-pane, calc(100vw - 32px)); max-width:100%; padding:12px 14px; }   /* stays in the visible pane while the wide table scrolls */
-.rx-spell-head { display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; }
-.rx-sugs, .rx-spell-line { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-.rx-spell-row input { font:inherit; min-height:44px; flex:1 1 220px; padding:0 12px; border:1px solid #9aa8a1; border-radius:8px; }
-.rx-spell-row input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
 .rx-msg { margin-top:8px; font-size:13px; color:#a8261d; }
-.rx-msg:empty { display:none; }
-#sheet.view-only .rx-spell-row { display:none; }
+.rx-msg:empty, .rx-info:empty { display:none; }
+.rx-info { margin-top:8px; font-size:13px; color:var(--rx-muted); }
 @media (prefers-reduced-motion: reduce) { .rx-spin { animation:none; } }
+/* Spell it dialog (spellmodal.js). Full width up to 560px, 16px from every edge; the list scrolls inside it, the buttons stay in view. Everything touchable is 44px. */
+dialog.spell-dlg { width:min(560px, calc(100vw - 32px)); max-height:calc(100vh - 2rem); overflow:hidden; }
+dialog.spell-dlg[open] { display:flex; flex-direction:column; }      /* scoped: a plain display:flex would show the closed dialog */
+@supports (height:100dvh) { dialog.spell-dlg { max-height:calc(100dvh - 2rem); } }
+.spell-wrap { padding:16px; display:flex; flex-direction:column; gap:10px; min-height:0; flex:1 1 auto; }   /* the list scrolls; the field, the pager and the buttons stay in view */
+.spell-line { display:flex; flex-wrap:wrap; gap:8px; }
+.spell-line input { font:inherit; min-height:44px; flex:1 1 200px; padding:0 12px; border:1px solid #9aa8a1; border-radius:8px; }
+#spellMic { min-width:44px; justify-content:center; }
+#spellMic[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+.spell-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; min-height:0; flex:1 1 auto; padding:3px; }
+.spell-item { min-height:44px; width:100%; justify-content:flex-start; flex-wrap:wrap; text-align:left; flex:none; }
+.spell-pager { display:flex; align-items:center; justify-content:space-between; gap:8px; flex:none; }
+.spell-pager p { margin:0; font-size:12px; color:var(--rx-muted); text-align:center; }
+.spell-wrap .panel-actions { flex:none; }
+.spell-wrap .panel-actions button { min-height:44px; }
+.spell-item:focus-visible, .spell-dlg button:focus-visible, .spell-line input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.rx-gen-tag { display:inline-block; white-space:nowrap; margin-left:6px; font-size:11px; color:var(--rx-muted); border:1px solid #c9d2cd; border-radius:999px; padding:0 6px; }
+.rx-sched { display:inline-block; white-space:nowrap; margin-left:6px; font-size:11px; font-weight:600; color:#5b2a86; background:#f5eefb; border:1px solid #c9b3df; border-radius:4px; padding:0 5px; }   /* words, not colour alone; not a state colour; screen only (Q10) */
+.sug-gen, .sug-why { display:block; font-size:11px; font-weight:400; color:var(--rx-muted); }
+.rx-gen { color:var(--rx-muted); }
+.rx-gen-tag + .cell::before { content:" "; }
+@media print { .rx-gen { font-size:10px; color:#444; } }

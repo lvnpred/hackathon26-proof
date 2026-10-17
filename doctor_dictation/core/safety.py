@@ -6,6 +6,24 @@ row. Keeping this as a pure function makes the rule easy to test without a DB.
 """
 
 
+import re
+
+# The two texts check-row adds to Instructions (core/correction.GROUNDING_MARKERS): exactly these, in brackets, case as written.
+_GROUNDING_MARKER = re.compile(r" ?\[unverified(?: strength)?: confirm with doctor\]")
+
+
+def strip_grounding_markers(structured: dict) -> dict:
+    """Remove the two grounding markers (and one space before each) from every rx row's Instructions; mutates and returns it.
+
+    For a form that passed the Save gate: every row is verified or doctor-confirmed, so the marker no longer says anything true
+    and must not print. Only the exact marker goes; the doctor's own words ("unverified", "confirm with doctor") stay."""
+    rows = structured.get("rx") if isinstance(structured, dict) else None
+    for row in rows if isinstance(rows, list) else []:
+        if isinstance(row, dict) and isinstance(row.get("instructions"), str):
+            row["instructions"] = _GROUNDING_MARKER.sub("", row["instructions"]).strip()
+    return structured
+
+
 def screen_unverified(structured: dict, confirmed_rows=None) -> list[dict]:
     """Rx rows that are not ``verified`` and were not explicitly confirmed.
 

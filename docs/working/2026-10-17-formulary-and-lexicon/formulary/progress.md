@@ -1,0 +1,27 @@
+# SDD ledger — plans: i1-h1..h4 (clinic formulary)
+
+Worktree iteration-1; base commit 23be12c. Baseline 1442 passed, 1 skipped, 1 deselected. Subagent-driven. NO COMMITS without the word commit.
+Owner: prescription may have no medications, Save enabled with zero rows. Lexicon g1/g2 PAUSED until owner supplies dataset (made by opencode) + licence decision. h4 bumps team.css to v=2 (its test asserts v=2).
+
+Preflight: preflight.md (nothing blocks h1; chain h1 +6, h2 +4, h3 +5, h4 +7 tests = +22 after anchor fixes; baseline 1442 not 944). RULINGS (controller), adopt preflight rows unless noted. Execution order h1 -> h2 -> h3 -> h4, each: implementer, task review, fixes; one final whole-branch review on opus after h4.
+Ruling R1 (h2/h3): `source` must survive /correct and Save: add `source` to RECOMPUTED_ROW_FIELDS (core/correction.py ~:278), add use_clinic_layer to POST /api/v1/documents, rewrite the h2 test with a page-shaped row (page sends only status, lexicon_match, heard, lookalike; rxview.js:255 untouched unless unavoidable). Page shows 'Known to your clinic' for a clinic-only name after /correct and Save.
+Ruling R2 (h2): ground_clinic returns issue None for look-alike (no extra LLM repair calls).
+Ruling T3 (h2): rewrite the Step 4/5 edits against the real files (rowcheck.py:73-76 row dict, `from . import rowcheck`, 'source' in the correct tuple).
+Ruling T4 (h3): fix anchors (api/app.py import + module loop include rx; ckey old text is '# per clinic and raw wording' at api/format.py:91).
+Ruling R5 (h3): add an autouse DB_PATH temp-dir fixture in tests/conftest.py so single-mode tests never open the default DB (memory: single mode writes the real dev DB); must not break tests that set their own DB_PATH.
+Ruling R4 (OWNER-FLAG, ruled provisionally): correct_drugs rewrites near-lexicon clinic names before grounding (metformn -> Metformin, amlodipin besy -> Amlodipine besy), so such names never reach the clinic layer; the no-key fallback cannot extract clinic names. Ruling: do NOT change normalize_transcript behaviour; add a test through normalize_transcript that pins the current behaviour and state the limit in the plan text/report. Cost if wrong: a clinic's own drug within edit distance of a lexicon drug is read as that lexicon drug (safe direction: it is a verified lexicon drug, clinician still sees the row). Flag to owner at the end.
+Ruling R9 (h3): formulary routes catch sqlite3.Error -> 503 {"error":"try again"} like api/users.py.
+Ruling R15 (h4): team.css/team.js version tests use >= regex pins; do not edit the polish test. R17: node helper flat at tests/team_medicines_fakedom.js. R18/T7: refresh stale line references; no file crosses 500 (db/__init__.py 487, persistence.py 421, correction.py 414: watch growth).
+Ruling R13/R16/R12 (optional): clinic look-alike vs lexicon only (kept); tablist arrow keys deferred; single mode has the API but no Team button (kept).
+
+h1: complete (uncommitted). Review clean after fix round (person-like reject, known_patient_words param for h3 to wire, added_by activator fix). Suite 1450 passed, 1 skipped, 1 deselected. Rulings: scoped re-review skipped (9 mutants killed, pinned cases); final opus review at end. OWNER RISKS recorded: (c) distinct users/patients not required before learning; a genuine two-word Capitalised brand (Zorbexin Forte) is never learned (same shape as a person name; safe: it stays unknown-medicine, clinician sees it); person-like heuristic is not a guarantee.
+h3 must: wire known_patient_words from the clinic's patients table, activate the ClinicLayer ContextVar per request (stale layer must not leak across clinics), pin added_by user.
+h4 must: add the new tables (clinic_formulary, clinic_formulary_docs) to tests/isolation_fixtures.py TABLES.
+
+h2: complete (uncommitted). Task review: PASS after fix round (restored 'verified' must be backed: unbacked restored verified row regrades to unknown-medicine + marker; source '' for unbacked). Suite 1459 passed, 1 skipped, 1 deselected. correction.py 429 lines.
+Ruling (h3): empty-layer default fails open: h3 adds (1) a pin test enumerating every route that grounds rows (transcribe, format, correct, check-row, POST /documents) and asserting each carries use_clinic_layer, (2) a once-per-process warning when a request-scoped caller reads the default empty layer, without breaking CLI/bench callers (bench/run.py:125 calls build_hints with no layer on purpose). ContextVar caveat: a sync dependency's ContextVar set may not reach the endpoint (threadpool context copy): use an async dependency or set in the handler before to_thread; a bare Thread/ThreadPoolExecutor gets an empty context.
+Ruling (ranking): user chose rows 1 and 3 of the usage-ranking brainstorm: plan i1-r1-usage-ranking.md (+ backlog doc) being written; runs AFTER h3 and h4, before the final whole-branch review.
+
+h3: complete (uncommitted). Task review PASS (0 Critical/Important; Minor: 422 before 403 for bad id, 422 body is detail not error, distinct documents not distinct doctors, learning failures only logged). Suite 1484 passed, 1 skipped, 1 deselected.
+Ruling (h4): UI handles non-error shapes (detail fallback) so a 422 reads sensibly; arrow-key tablist deferred (backlog card h).
+Pending owner answers (do not block h4): ranking Q1 (clinic names in Spell it: yes clinic names or hints only) and Q2 (card f: two different patients before learning).

@@ -1,4 +1,5 @@
 # Lexicon Import, Part 1: Licence Gate and CSV Adapter Implementation Plan
+> **Superseded by 2026-10-17-i1-g-lexicon-simple.md (2026-10-17). Do not execute.**
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

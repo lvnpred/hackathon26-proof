@@ -141,7 +141,8 @@ def test_api_health_reports_lexicon(monkeypatch):
     client = _client(monkeypatch)
     h = client.get("/api/health").json()
     assert h["lexicon_entries"] >= 300
-    assert h["lexicon_version"] == "1.1.0"
+    from doctor_dictation.core.determinism import LEXICON_PATH
+    assert h["lexicon_version"] == json.loads(LEXICON_PATH.read_text(encoding="utf-8"))["version"]   # the file, not a pin
     assert h["stt_engine_requested"] == "auto"
     assert h["stt_engine_active"] in ("faster-whisper", "onnx",
                                       "openai-whisper-api", "browser-webspeech")

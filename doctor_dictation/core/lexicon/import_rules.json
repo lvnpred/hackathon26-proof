@@ -1,0 +1,71 @@
+{
+  "_comment": "skip_brands: clinician/owner curated exclusions, never imported (report id curated-skip). Classes: english-or-clinical-word-rewritten-in-transcripts (correct_drugs would rewrite a one-slip ordinary word to the brand; measured on OPD sentences and the macOS dictionary), surname, generic-or-salt-name-used-as-a-brand, wrong-link-or-combination-drug (the CDCI generic is not what the name means), suggestion-junk (made 'the doctor' suggest Atorvastatin). Stopgap: a runtime dictionary guard is backlog.",
+  "short_brands_allowed": [],
+  "skip_brands": {
+    "english-or-clinical-word-rewritten-in-transcripts": [
+      "Alpyrin",
+      "Amiodon",
+      "Angiblock",
+      "Anolet",
+      "Anzidin",
+      "Arden",
+      "Azimune",
+      "Basugine",
+      "Belar",
+      "Bencolic",
+      "Blastofen",
+      "Blaztere",
+      "Blisfer",
+      "Bunide",
+      "Cavibutol",
+      "Cebalol",
+      "Clobium",
+      "Coligon",
+      "Diamet",
+      "Elarin",
+      "Ellet",
+      "Ematra",
+      "Eracid",
+      "Eurythmic",
+      "Gastrium",
+      "Graftin",
+      "Hydronol",
+      "Intramet",
+      "Limitex",
+      "Magneon",
+      "Pilomax",
+      "Propal",
+      "Rumorf",
+      "Senorm",
+      "Singulair",
+      "Synclar",
+      "Tetradox",
+      "Vanking",
+      "Ventryl",
+      "Veramil"
+    ],
+    "generic-or-salt-name-used-as-a-brand": [
+      "Magnesium Sulphate",
+      "Pyridoxine Hcl"
+    ],
+    "suggestion-junk": [
+      "Tg-Tor"
+    ],
+    "surname": [
+      "Iwata",
+      "Salazar"
+    ],
+    "wrong-link-or-combination-drug": [
+      "Advent",
+      "Duodopa",
+      "Gris ODT",
+      "Suboxone"
+    ]
+  },
+  "synonyms": {
+    "Amoxicillin + Clavulanic acid": "Co-Amoxiclav",
+    "Ascorbic acid": "Vitamin C",
+    "Levothyroxine": "Thyroxine"
+  },
+  "version": "g-1"
+}

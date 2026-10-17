@@ -1,0 +1,117 @@
+{
+ "a3_distinct": 23610,
+ "wrong_before": 834,
+ "wrong_after": 824,
+ "new_rewrites": [
+  {
+   "brand": "Amozid-CV",
+   "a3_generic": "Amoxicillin + Clavulanic acid",
+   "own_canonical": "Co-Amoxiclav",
+   "before": "Amozid-CV",
+   "after": "Amzid-CV",
+   "after_drug": "",
+   "different_drug": false
+  },
+  {
+   "brand": "Medflow-CV",
+   "a3_generic": "Amoxicillin + Clavulanic acid",
+   "own_canonical": "Co-Amoxiclav",
+   "before": "Medflow-CV",
+   "after": "Edeflow-CV",
+   "after_drug": "",
+   "different_drug": false
+  }
+ ],
+ "new_count": 2,
+ "new_different_drug": 0,
+ "fixed_count": 12,
+ "fixed": {
+  "Amiodon": "Amiodarone",
+  "Anti-Thyrox": "Anti-Thyroxine",
+  "Aspin": "Aspirin",
+  "Bacfen": "Baclofen",
+  "Baclof": "Baclofen",
+  "Baclof OD": "Baclofen OD",
+  "Baclof-OD": "Baclofen-OD",
+  "Emeset": "Emset",
+  "Emeset Odt": "Emset Odt",
+  "Frusamide": "Furosemide",
+  "Mifeprin": "Mifepristone",
+  "Veramil": "Verapamil"
+ },
+ "a1_added": 205,
+ "a1_bad": [],
+ "opd_n": 320,
+ "opd_changed": [
+  {
+   "in": "Advised iron and calcium supplements",
+   "before": "Advised iron and Calcium Carbonate supplements",
+   "after": "Advised iron and Calcium Carbonate supplements"
+  },
+  {
+   "in": "Tenderness in the epigastrium",
+   "before": "Tenderness in the epigastrium",
+   "after": "Tenderness in the Gastrium"
+  },
+  {
+   "in": "Echo shows left atrium mildly dilated",
+   "before": "Echo shows left atrium mildly dilated",
+   "after": "Echo shows left Gastrium mildly dilated"
+  },
+  {
+   "in": "Limited range of movement in the right shoulder",
+   "before": "Limited range of movement in the right shoulder",
+   "after": "Limitex range of movement in the right shoulder"
+  },
+  {
+   "in": "Ventral hernia, advised surgical opinion",
+   "before": "Ventral hernia, advised surgical opinion",
+   "after": "Ventryl hernia, advised surgical opinion"
+  },
+  {
+   "in": "Stone of 6 mm diameter in the right kidney",
+   "before": "Stone of 6 mm diameter in the right kidney",
+   "after": "Stone of 6 mm Diamet in the right kidney"
+  },
+  {
+   "in": "Blister on the left foot, keep it dry",
+   "before": "Blister on the left foot, keep it dry",
+   "after": "Blisfer on the left foot, keep it dry"
+  },
+  {
+   "in": "Works in the garden, allergic rhinitis since spring",
+   "before": "Works in the garden, allergic rhinitis since spring",
+   "after": "Works in the Arden, allergic rhinitis since spring"
+  },
+  {
+   "in": "Skin grafting done last year",
+   "before": "Skin grafting done last year",
+   "after": "Skin Graftin done last year"
+  },
+  {
+   "in": "Proposal for surgery explained to the patient",
+   "before": "Proposal for surgery explained to the patient",
+   "after": "Propal for surgery explained to the patient"
+  },
+  {
+   "in": "Rumor of food poisoning in the hostel",
+   "before": "Rumor of food poisoning in the hostel",
+   "after": "Rumorf of food poisoning in the hostel"
+  },
+  {
+   "in": "Singular lesion on the scalp",
+   "before": "Singular lesion on the scalp",
+   "after": "Singulair lesion on the scalp"
+  }
+ ],
+ "latency_ms": {
+  "before": 1.7258679200313054,
+  "before_suggest": 6.676666650309926,
+  "after": 1.9495945901144296,
+  "after_suggest": 7.679788550012745
+ },
+ "batch_secs": {
+  "before": 43.153451165999286,
+  "after": 48.89355991600314
+ }
+}

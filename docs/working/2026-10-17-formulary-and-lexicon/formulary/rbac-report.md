@@ -1,0 +1,37 @@
+# RBAC stopgap: team actions admin-only, new users default to admin
+
+Status: complete, uncommitted. Suite 1535 passed, 1 skipped, 1 deselected; `ls doctor_dictation/data` after the run: no such directory.
+
+## Code
+- policy.py: `ADMIN_ONLY = {formulary.manage, user.create, user.disable, user.reset_password}`; `can` returns `role == "admin"` for them. `user.view` (the list) stays open to every signed-in user. Enable uses `user.disable` (api/users.py:_set_active), so it is covered. Route answers 403 `{"error":"You are not allowed to do that"}` (existing gate). Team routes are 404 in single mode (unchanged). Single mode and formulary.manage: the formulary DELETE has no identity there and stays allowed (unchanged, as before).
+- accounts.py: one constant `DEFAULT_ROLE = "admin"` (comment: until RBAC, see backlog card); `create_user(role=DEFAULT_ROLE)`. Every path inherits it: Team route (NewUserBody has no role field, so extra body fields are ignored), `create-clinic --first-user`, `adopt-existing --first-user`, `create-user` (admin.py `--role` default is `accounts.DEFAULT_ROLE`; explicit `--role` wins).
+- admin_demo.py: demo seed now passes `role="doctor"` explicitly (the demo/isolation world are doctors; without it they would have become admins).
+- DB schema default left as 'doctor' (001_init.sql, `db.create_user` helper): every app path passes a role through accounts, so no migration and no db/__init__.py change. Existing users are not migrated.
+- team.js (?v=2 kept, unreleased): the role is read once from /api/v1/auth/me before the dialog is built (`t.admin`, `isAdmin()`); the add-user form is built only for admins, Disable/Enable/Reset buttons come from `rowActions(u)` which returns [] for non-admins, the medicines tab uses the same flag (one /auth/me call instead of two). A doctor still sees the people list read-only.
+
+## Tests
+Files touched (existing): tests/test_accounts.py, test_accounts_team.py, test_auth_routes.py, test_authn.py, test_session_middleware.py, test_rx_check_row.py, test_revocations.py, test_users_routes.py, test_policy_audit.py, test_isolation_routes.py, test_isolation_auth.py, test_isolation_letterhead.py, test_isolation_formulary.py, test_frontend_team_medicines.py, tests/authorship_fixtures.py, tests/isolation_fixtures.py.
+Files new: tests/test_team_admin_only.py.
+- Fixtures now create doctors explicitly (role="doctor"); test_users_routes world: dr.rao and dr.iyer are admins (they perform the team actions), dr.mehta and dr.shah doctors.
+- isolation_fixtures: new `admin_client` helper; `world.rao_admin` / `world.iyer_admin` (adm.rao, adm.iyer); the adm.* names added to A_MARKERS/B_MARKERS (leak checks now cover them); admin clients join the list/leak sweep.
+- test_isolation_routes: ADMIN_ONLY = formulary + `/api/v1/users/`; doctor-sweepable id operations 11 -> 8; three CLASSIFIED entries for the user actions. test_isolation_formulary admin sweep now covers all four admin-only ops: doctor 403 (no temp password), other clinic's admin 404 with nothing leaked or changed, other clinic's doctor 403, own admin 200.
+- Assertions changed (not weakened): default-role expectations ('doctor' -> 'admin') in test_accounts, test_users_routes (role and audit role of the actor); test_policy_audit's "any signed-in user" list lost user.create/disable and test_accounts_team's policy test now asserts doctor/assistant False and admin True for the three actions.
+- New: doctor 403 on create/disable/enable/reset (own admin and colleague targets), users unchanged, list still readable; escalation chain closed end to end (doctor reset/disable of an admin -> 403, no temp password, admin still logs in); admin succeeds; Team-route default role admin and body cannot choose; create-clinic --first-user and create-user default admin, `--role doctor`/assistant honoured; demo seed still doctors; team.js static pin and fake-DOM doctor vs admin view (form absent, no row buttons, list visible; admin: form, Disable/Enable/Reset, none on own row).
+
+## Mutations (scratch copies, all KILLED)
+doctor counts as admin; user.create dropped from ADMIN_ONLY; user.reset_password dropped; user.disable/enable dropped; DEFAULT_ROLE back to doctor; CLI default hardcoded doctor; demo seed loses explicit doctor; row buttons shown to doctors; add form shown to doctors; role decided after the dialog is built. Survivors: none.
+
+## Concerns
+- Letterhead doctor lists: db/templates.py:96 lists only `role = 'doctor'` users. Every user created from now on (Team form, first-user, create-user without --role) is an admin, so they will NOT appear in a letterhead's doctor names or "selected doctors" until given the doctor role (CLI `--role doctor`; the Team form cannot choose). This is a real behaviour change for new users and needs an owner decision (or the letterhead query should include admins).
+- Doctor accounts for new clinics: `create-clinic --first-user` now makes an admin; existing users are unchanged. Anyone created via the Team form is an admin, i.e. everyone a clinic adds can manage the team (the stated stopgap).
+- Demo/seed: admin_demo seeds explicit doctors; scripts/demo_browser.py not changed (it uses the seeded users).
+- A clinic whose only users are doctors (created before this change) has nobody able to add or disable users until the operator creates an admin (`create-user --role admin`) or updates a role by hand. Runbook not touched, per instruction.
+- Role is read from /api/v1/auth/me when the page loads: a role change needs a reload.
+
+## Letterhead doctors
+Suite: 1536 passed, 1 skipped, 1 deselected; no doctor_dictation/data afterwards.
+- Fix: db/templates.py `clinic_doctors` now filters `role IN ('doctor', 'admin')` (was `= 'doctor'`). It is the single source for the letterhead's doctors block in all modes (templates/doctors.py:46 list, :62 validation of selected ids, :75/:78 print-time lists), so 'all', 'selected' and the validation all follow. Assistant stays excluded (as before).
+- Role-filter audit (package incl. db/, api/, core/, pdf/, admin*.py, scripts/, frontend): the ONLY query that filters users by role is db/templates.py:96 (fixed). Other hits, left unchanged: accounts.py ROLES/DEFAULT_ROLE and role validation; admin.py --role; admin_demo.py explicit role="doctor" (seed) and the audit role label; authn/api auth/api session pass the role through (audit, Scope, /auth/me); policy.py ADMIN_ONLY (authorization, untouched); db/__init__.py:241 `create_user(role="doctor")` helper and 001_init.sql default/CHECK (schema, untouched); frontend team.js `me.role === "admin"` (UI gating). No role comparisons in core/, pdf/, or other api/ modules.
+- Tests: new `test_a_default_role_user_prescribes_so_they_are_listed_with_doctors_and_an_assistant_is_not` in tests/test_isolation_letterhead.py (default-role user and the seeded doctors appear, an assistant does not, in 'all' and 'selected' mode). No existing test pinned doctor-only, so none changed (the seeded world's adm.rao/adm.iyer admins now also print in the doctors block; existing assertions use `in`/`not in` and pass).
+- Mutations (scratch copies): filter back to doctor only: KILLED (new test); assistant added to the filter: KILLED (existing assistant test and the new one).
+- Side effect to know: in a clinic with an admin who has no doctor_name, the printed doctors block shows that user's display name/username like any doctor (same `_entry` rule as before).

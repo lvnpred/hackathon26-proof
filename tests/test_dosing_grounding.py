@@ -20,7 +20,7 @@ def _row(age="45 / M", transcript=TEXT, **row):
     out, warnings = validate_structured({"ageSex": age, "rx": [{**base, **row}]}, transcript)
     return out["rx"][0], warnings
 
-def test_above_max_is_dose_check_ranked_by_contract_and_age_aware(monkeypatch, tmp_path):
+def test_above_max_is_dose_check_ranked_by_contract_and_age_aware(monkeypatch, tmp_path, frozen_lexicon):
     use_fixture(monkeypatch, tmp_path)
     row, warnings = _row()                                                     # 650 x 3 = 1950 > 1500
     assert (row["status"], row["lexicon_match"], row["dose_note"]) == ("dose-check", "Paracetamol", NOTE)

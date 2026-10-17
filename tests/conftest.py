@@ -1,5 +1,20 @@
 """Shared fixtures. Only the multi-clinic tests use `multi`; every other test is unaffected."""
+from pathlib import Path
+
 import pytest
+
+FROZEN_LEXICON = Path(__file__).parent / "data" / "lexicon_frozen.json"
+
+
+@pytest.fixture()
+def frozen_lexicon(monkeypatch):
+    """A test that pins lexicon CONTENT (a drug's strengths, a sound-alike) reads this frozen copy of drugs.json v1.1.0,
+    so a reviewed import never breaks it. Properties of the live list (round trips, short names) stay on drugs.json."""
+    from doctor_dictation.core import determinism as D
+    monkeypatch.setattr(D, "LEXICON_VERSION", D.lexicon_version())       # restored, with the cache, after the test
+    monkeypatch.setattr(D, "LEXICON_PATH", FROZEN_LEXICON)
+    monkeypatch.setattr(D, "_lexicon_cache", None)
+    D.load_lexicon()
 
 
 @pytest.fixture(autouse=True)

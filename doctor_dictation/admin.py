@@ -1,6 +1,7 @@
 """Operator command line: ``python -m doctor_dictation.admin <command>``. Run on the host, never over HTTP.
 
 Commands: create-clinic, list-clinics, migrate-all, adopt-existing, create-user, reset-password, seed-demo (demo only).
+promote-candidates and promote-apply (doctor_dictation/promotion.py).
 create-clinic and adopt-existing take ``--first-user``. A temporary password is printed once on stdout
 and is never logged or audited.
 """
@@ -16,7 +17,7 @@ from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
 
-from doctor_dictation import accounts, admin_demo, clinics
+from doctor_dictation import accounts, admin_demo, clinics, promotion
 from doctor_dictation import db as dbmod
 from doctor_dictation.directory import DirectoryError, check_clinic_fields, create_clinic, get_clinic, list_clinics, open_directory
 from doctor_dictation.directory.logins import lookup_username
@@ -210,6 +211,7 @@ def main(argv=None) -> int:
     a.add_argument("--first-user", help="also create this user from the saved profile and print a temporary password once")
     a.add_argument("--display-name", help="display name for --first-user")
     admin_demo.register(sub, COMMANDS)          # seed-demo: DEMO_MODE=1 only
+    promotion.register(sub, COMMANDS)           # promote-candidates, promote-apply (plan I1-g simple, Task 4)
     args = parser.parse_args(argv)
     try:
         return COMMANDS[args.cmd](args)

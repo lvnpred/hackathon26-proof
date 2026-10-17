@@ -14,6 +14,7 @@ from .repair import (  # noqa: F401  (api/format.py and tests import these from 
     build_repair_message, loop_should_continue, open_issues,
 )
 from . import formulary, rowcheck
+from .commonwords import WORDS as COMMON_WORDS
 from .lasa import lasa_row
 from .surface import _generic_of, ambiguous_names, mask_as_dictated, surface_map
 
@@ -174,7 +175,7 @@ def correct_drugs(text: str) -> str:
     tokens = re.findall(r"[A-Za-z]+", out)
     for i in range(len(tokens) - 1):
         w1, w2 = tokens[i], tokens[i + 1]
-        if len(w1) < 2 or len(w2) < 3:
+        if len(w1) < 2 or len(w2) < 3 or {w1.lower(), w2.lower()} <= COMMON_WORDS:
             continue
         key = (w1 + w2).lower()
         if key in nospace and not _ambiguous_for(key):
@@ -186,7 +187,8 @@ def correct_drugs(text: str) -> str:
     keys = sorted(k for k in amap if len(k) >= 5 and " " not in k)
     for tok in set(re.findall(r"[A-Za-z]{5,}", out)):
         low = tok.lower()
-        if _ambiguous_for(low):  # two generics claim it (or a near spelling): leave it as dictated
+        # two generics claim it (or a near spelling), or it is an ordinary word ("twice", "after"): leave it as dictated
+        if _ambiguous_for(low) or low in COMMON_WORDS:
             continue
         if low in amap and " " not in low:
             if tok != amap[low]:

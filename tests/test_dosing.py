@@ -6,6 +6,8 @@ from doctor_dictation.core.determinism import ALLOWED_DOSES
 from doctor_dictation.core.dosing import check_dose, strength_options
 from dosing_fixtures import use_fixture
 
+pytestmark = pytest.mark.usefixtures("frozen_lexicon")   # pins strengths of drugs.json v1.1.0 (plan I1-g simple, Task 3)
+
 @pytest.fixture()
 def ref(monkeypatch, tmp_path):
     use_fixture(monkeypatch, tmp_path)

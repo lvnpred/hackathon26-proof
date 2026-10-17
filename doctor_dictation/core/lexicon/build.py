@@ -10,6 +10,12 @@ doctor_dictation/core/lexicon/seed_extra.json. Seed entries win on a case-insens
 `canonical` collision; the semver minor is bumped only when the entry set
 actually changes, so running `--merge` twice is byte-identical.
 
+Import brands from a CSV (offline; five checks, brands only; plan I1-g simple). Needs --source-id, --source-name,
+--licence, --conflict-map and --report (outside the repository). Writes drugs.json (a `sources` record and per-brand
+`lineage`) and imported.json (the changed entries, laid over seed_extra.json by later runs):
+    python doctor_dictation/core/lexicon/build.py --merge BRANDS.csv --source-id ID --source-name NAME --licence TEXT \
+        --conflict-map MAP.csv --report REPORT.json
+
 Verify the on-disk drugs.json is in sync (offline, never writes):
     python doctor_dictation/core/lexicon/build.py --check [--merge SEED_FILE]
 Exits 0 when in sync, 1 when the bytes differ.
@@ -22,15 +28,25 @@ drugs.json — never calls an API.
 """
 import argparse
 import json
+import re
 import sys
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parents[2]
+sys.path[:0] = [str(HERE), str(HERE.parents[2])]     # run as a script: the sibling module and the package
+import lexicon_import  # noqa: E402
+
 DRUGS_JSON = HERE / "drugs.json"
 CACHE_JSON = HERE / "rxnav_cache.json"
 DEFAULT_SEED = HERE / "seed_extra.json"
+IMPORTED_JSON = HERE / "imported.json"   # every entry an import changed, complete; laid over the seed
+MIN_SOURCE_NAME, MIN_LICENCE = 3, 10
+SOURCE_ID = re.compile(r"[a-z0-9][a-z0-9.-]{2,40}")
+RESERVED_IDS = ("seed", "clinic", "promoted-")       # lineage ids the CSV import may not use
 
 
 def load_drugs():
@@ -128,27 +144,109 @@ def compute_merged(current_data, seed_entries):
     return data, changed
 
 
-def do_merge(seed_path):
+def check_source(source):
+    """The licence gate for any import: a source id, a name and a licence text, or SystemExit (nothing written)."""
+    if len(source.get("name", "")) < MIN_SOURCE_NAME or len(source.get("licence", "")) < MIN_LICENCE \
+            or not SOURCE_ID.fullmatch(source.get("id", "")):
+        raise ValueError("an import needs --source-id (a-z0-9.-), --source-name (3+ chars) and --licence "
+                         "(10+ chars). Nothing was read or written. See plan I1-g simple, Task 5: confirm the licence first.")
+    return source
+
+
+def require_source(args, parser, writes=True):
+    """The CLI gate: a CSV merge names its data, licence and CDCI map (and, when it writes, a --report).
+
+    A JSON seed (the repo's seed_extra.json or any other seed array) is not gated: no source or flags needed."""
+    if Path(args.merge).suffix.lower() != ".csv":
+        return None
+    sid = (args.source_id or "").strip()
+    fields = {"id": sid, "name": (args.source_name or "").strip(), "licence": (args.licence or "").strip(),
+              **{k: v.strip() for k, v in (("url", args.source_url), ("attribution", args.attribution)) if v and v.strip()}}
+    if sid.startswith(RESERVED_IDS) or not args.conflict_map or (writes and not args.report):
+        parser.error("a CSV merge needs --conflict-map (the full CDCI brand map) and --report (--check needs no report), "
+                     "and a --source-id that is not seed, clinic or promoted-*. Nothing was read or written.")
+    if args.report and Path(args.report).resolve().is_relative_to(REPO_ROOT):
+        parser.error("--report must be outside the repository (it lists skipped brands and may hold licensed data). "
+                     "Nothing was read or written.")
+    try:
+        return check_source(fields)
+    except ValueError as exc:
+        parser.error(f"ERROR: {exc}")
+
+
+def layered_seed(seed_path):
+    """The seed's entries; for the default seed, with the recorded imports laid on top (additions only)."""
+    entries = load_seed(seed_path)
+    if seed_path.resolve() == DEFAULT_SEED.resolve() and IMPORTED_JSON.exists():
+        entries = lexicon_import.overlay(entries, load_seed(IMPORTED_JSON))
+    return entries
+
+
+def plan_merge(seed_path, source, conflict_path=None):
+    """(seed entries, report). A .csv goes through the five checks; anything else is a JSON seed array."""
+    if seed_path.suffix.lower() != ".csv":
+        return layered_seed(seed_path), None
+    check_source(source or {})                       # do_merge called from Python without a source: ValueError, nothing read
+    for path in (seed_path, Path(conflict_path)):
+        if not path.is_file():
+            raise SystemExit(f"ERROR: CSV file not found: {path}")
+    report = {}
+    rows = lexicon_import.read_csv(seed_path, report)
+    conflict = lexicon_import.read_csv(Path(conflict_path), report, "conflict_map_sha256")
+    changed, plan = lexicon_import.plan_import(rows, load_drugs()["entries"], conflict, lexicon_import.load_rules(), source["id"])
+    return changed, {**plan, **report}
+
+
+def apply_import(changed, source, report, now=None):
+    """Merge COMPLETE changed entries, record them in imported.json and one ``sources`` record; True when written."""
     current = load_drugs()
-    before = len(current.get("entries", []))
-    version_before = current.get("version")
-    seed = load_seed(seed_path)
-    data, changed = compute_merged(current, seed)
-    after = len(data["entries"])
-
+    data, did_change = compute_merged(current, changed)
+    if not did_change:
+        return False
+    if any(s.get("id") == source["id"] for s in current.get("sources", [])):
+        raise SystemExit(f"ERROR: source id {source['id']!r} was already used for an import; pick a new id.")
+    recorded = {e["canonical"]: e for e in load_seed(IMPORTED_JSON)} if IMPORTED_JSON.exists() else {}
+    recorded.update((e["canonical"], e) for e in changed)
+    IMPORTED_JSON.write_text(json.dumps(sort_entries(recorded.values()), indent=2, ensure_ascii=False) + "\n",
+                             encoding="utf-8", newline="\n")
+    record = {**source, "brands_added": report["brands_added"], "input_sha256": report["input_sha256"],
+              "merged_at": now or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "rules": report["rules"],
+              **({"conflict_map_sha256": report["conflict_map_sha256"]} if "conflict_map_sha256" in report else {})}
+    data["sources"] = [*current.get("sources", []), dict(sorted(record.items()))]
     write_drugs(data)
+    return True
+
+
+def do_merge(seed_path, source=None, conflict_path=None, report_path=None, now=None):
+    before = load_drugs()
+    seed, report = plan_merge(seed_path, source, conflict_path)
+    if report is None:
+        data, changed = compute_merged(before, seed)
+        write_drugs(data)
+    else:
+        changed = apply_import(seed, source, report, now)
+        if changed:                                  # a no-change re-run keeps the first run's report
+            Path(report_path).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+        else:
+            print("no change: drugs.json, imported.json and the report were not rewritten")
+    after = load_drugs()
     note = "version bumped" if changed else "no change (version unchanged)"
-    print(
-        f"merge {seed_path.name}: entries {before} -> {after}, "
-        f"version {version_before} -> {data.get('version')} [{note}]"
-    )
-    print(f"wrote {DRUGS_JSON} (sorted by canonical, offline)")
+    print(f"merge {seed_path.name}: entries {len(before['entries'])} -> {len(after['entries'])}, "
+          f"version {before.get('version')} -> {after.get('version')} [{note}]")
+    if report is not None:
+        first = {}
+        for s in report["skipped"]:
+            first[s["checks"][0]] = first.get(s["checks"][0], 0) + 1
+        print(f"import: rows_read={report['rows_read']} brands_added={report['brands_added']} "
+              f"already_present={report['already_present']} generics={report['generics']} skipped={dict(sorted(first.items()))}")
+    if report is None or changed:
+        print(f"wrote {DRUGS_JSON} (sorted by canonical, offline)")
 
 
-def do_check(seed_path):
+def do_check(seed_path, source=None, conflict_path=None):
     """Recompute in memory and compare bytes; never writes. 0 in sync, 1 drift."""
     current = load_drugs()
-    seed = load_seed(seed_path)
+    seed, _report = plan_merge(seed_path, source, conflict_path)
     data, _ = compute_merged(current, seed)
     expected = serialize(data).encode("utf-8")
     # Compare canonical (LF) bytes: a CRLF working-tree checkout (core.autocrlf)
@@ -208,6 +306,13 @@ def main():
         "--check", action="store_true",
         help="verify drugs.json matches the seed byte-for-byte (offline, never writes)",
     )
+    ap.add_argument("--source-id", help="REQUIRED to merge a CSV: lineage id written on every brand (e.g. cdci-2026-08-31)")
+    ap.add_argument("--source-name", help="REQUIRED to merge a CSV: the dataset's name (recorded)")
+    ap.add_argument("--licence", help="REQUIRED to merge a CSV: the licence text or URL (recorded)")
+    ap.add_argument("--source-url", help="where the dataset came from (recorded)")
+    ap.add_argument("--attribution", help="attribution text the licence requires (recorded)")
+    ap.add_argument("--conflict-map", metavar="CSV", help="REQUIRED with a CSV: the full CDCI brand,generic map (checks 2, 5)")
+    ap.add_argument("--report", metavar="PATH", help="REQUIRED to merge a CSV (not for --check): the skipped-row report (JSON), written only when the merge changed entries; keep it outside the repository")
     args = ap.parse_args()
 
     if args.enrich:
@@ -224,11 +329,11 @@ def main():
         return
 
     if args.check:
-        seed_path = Path(args.merge) if args.merge else DEFAULT_SEED
-        sys.exit(do_check(seed_path))
+        args.merge = args.merge or str(DEFAULT_SEED)
+        sys.exit(do_check(Path(args.merge), require_source(args, ap, writes=False), args.conflict_map))
 
     if args.merge is not None:
-        do_merge(Path(args.merge))
+        do_merge(Path(args.merge), require_source(args, ap), args.conflict_map, args.report)
         return
 
     data = load_drugs()

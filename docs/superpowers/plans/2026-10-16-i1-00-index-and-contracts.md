@@ -17,8 +17,8 @@ This file is the single source of truth for **names, paths and interfaces that c
 | 5c | `2026-10-16-i1-e3-spell-it.md` | Spell it, check-row call, undo | I1-e2 |
 | 6a | `2026-10-16-i1-f-steppers-and-polish.md` | `steps.js`: main, Profile and Letterhead steppers | I1-e3 |
 | 6b | `2026-10-16-i1-f2-visual-polish.md` | Tokens, fonts decision, `polish.css`, login and Team look | I1-f |
-| 7a | `2026-10-16-i1-g1-lexicon-gate-and-adapter.md` | Licence gate in `build.py`, CSV import adapter | I1-a |
-| 7b | `2026-10-16-i1-g2-lexicon-merge-and-checks.md` | Merge wiring, `sources`, `imported.json`, look-alike share check, real import under human review | I1-g1, I1-a |
+| 7a | `2026-10-16-i1-g1-lexicon-gate-and-adapter.md` | Licence gate in `build.py`, CSV import adapter. Superseded by I1-g simple (2026-10-17-i1-g-lexicon-simple.md). | I1-a |
+| 7b | `2026-10-16-i1-g2-lexicon-merge-and-checks.md` | Merge wiring, `sources`, `imported.json`, look-alike share check, real import under human review. Superseded by I1-g simple (2026-10-17-i1-g-lexicon-simple.md). | I1-g1, I1-a |
 | 8a | `2026-10-16-i1-h1-formulary-rules-and-table.md` | Pure rules, `ClinicLayer`, migration 009, ledger | I1-a |
 | 8b | `2026-10-16-i1-h2-formulary-grounding-and-hints.md` | Grounding hook, hints, row `source` | I1-h1, I1-b |
 | 8c | `2026-10-16-i1-h3-formulary-api-and-cache.md` | Layer loading, learning on save, cache key, admin routes | I1-h2, I1-d |
@@ -129,7 +129,7 @@ response: {"row": { ...grounded row with all section 4.1 fields... }, "suggestio
 1. **Dosage reference source and clinician reviewer** (I1-c). The plan builds the file format, loader, check and rebuild script, plus a small fixture for tests. It ships **no real clinical data** until a source and reviewer exist; until then every drug is `cannot-check` and chips come from the lexicon `strengths` only.
 2. **Dose vocabulary** (fact 3). Daily-total checks work only on the five codes. Widening them touches the LLM prompt, the schema and the PDF, so it is a separate decision.
 3. **Whether "both" brand and generic should also print** (open since the brand-policy answer).
-4. **Dataset licence** for the lexicon import (I1-g starts with a gate task).
+4. **Dataset licence** for the lexicon import (I1-g starts with a gate task). Decided 2026-10-17: use the proposed CDCI wording, revisit later (I1-g simple, Task 5).
 
 ## 6. What no plan here does
 

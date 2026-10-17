@@ -72,10 +72,20 @@ def test_suggest_k_and_dedupe():
     assert suggest_candidates("metformin")[0] == "Metformin"  # exact name ranks first
 
 
-def test_suggest_garbage_returns_empty():
+JUNK = ["", "ab", "12345", "xyzzy", "qqqq", "asdfgh", "kkkkk", "wxyz",
+        "fever", "hello", "medalpha", "medbeta", "the doctor"]
+
+
+def test_suggest_garbage_returns_empty(frozen_lexicon):
     assert 0.5 < MIN_SCORE < 1.0
-    for junk in ["", "ab", "12345", "xyzzy", "qqqq", "asdfgh", "kkkkk", "wxyz",
-                 "fever", "hello", "medalpha", "medbeta", "the doctor"]:
+    for junk in JUNK:
+        assert suggest_candidates(junk) == [], junk
+
+
+def test_suggest_garbage_returns_empty_on_the_live_lexicon():
+    """Import gate (plan I1-g simple, Task 5): the SAME junk list on the LIVE drugs.json, no frozen copy.
+    Run after a real import; refuse to commit the import if it fails."""
+    for junk in JUNK:
         assert suggest_candidates(junk) == [], junk
 
 

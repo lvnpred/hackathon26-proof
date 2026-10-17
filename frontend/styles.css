@@ -2,12 +2,14 @@
    middle pane + the prescription document. Vanilla CSS, no build step. Symbols
    (✓/?/!/±) carry meaning in print too. Print shows only #sheet. */
 :root {
-  --ink:#1a1a1a; --muted:#5f6b7a; --line:#333; --soft:#d7dde5;
-  --accent:#0b5fff; --warn:#9a6700; --bad:#b3261e; --ok:#1a7f37;
-  --bg:#eef1f5; --card:#fff; --radius:12px;
+  --ink:#16211d; --muted:#566660; --line:#333; --soft:#d6ded9;
+  --accent:#1456d9; --warn:#7d5200; --bad:#a8261d; --ok:#17703a;
+  --bg:#eef2f0; --card:#fff; --radius:14px;
+  --font-ui:"Public Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --font-serif:"Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }
 * { box-sizing: border-box; }
-body { font-family: "Segoe UI", Arial, sans-serif; margin:0; color:var(--ink); background:var(--bg); }
+body { font-family: var(--font-ui); margin:0; color:var(--ink); background:var(--bg); }
 button { cursor:pointer; border-radius:20px; padding:9px 16px; border:1px solid #b8c0cc; font-size:14px; background:#fff; color:inherit; }
 button:disabled { opacity:.5; cursor:default; }
 button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }

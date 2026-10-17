@@ -157,10 +157,10 @@ def test_a_reopened_prescription_reports_view_only_and_the_review_line_follows_t
 def test_the_page_loads_the_steppers_and_the_old_three_step_markup_is_gone():
     html, css = _read("index.html"), _read("styles.css")
     assert re.search(r'<ol id="steps" class="stp-list" aria-label="Assistant progress"></ol>', html) and 'data-step="working"' not in html
-    assert html.index("steps.js?v=") < html.index("app.js?v=") and 'href="steps.css?v=1"' in html and int(re.search(r"app\.js\?v=(\d+)", html).group(1)) >= 29
+    assert html.index("steps.js?v=") < html.index("app.js?v=") and int(re.search(r"steps\.css\?v=(\d+)", html).group(1)) >= 1 and int(re.search(r"app\.js\?v=(\d+)", html).group(1)) >= 29
     assert html.index('id="profSteps"') < html.index('id="profClinicPart"') and html.index('id="lhSteps"') < html.index('class="lh-body"')
     assert ".steps .step" not in css and ".step[data-step" not in css and "@page { margin: 14mm; }" in css
-    assert "styles.css?v=9" in html          # the stylesheet version is deliberately not bumped (stale .steps rules are harmless)
+    assert int(re.search(r"styles\.css\?v=(\d+)", html).group(1)) >= 9          # the stylesheet version only moves up
 
 
 def test_the_taller_sticky_pane_stays_scrollable_and_steps_are_hidden_in_print():

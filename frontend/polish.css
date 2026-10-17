@@ -1,0 +1,40 @@
+/* Visual polish from the design canvas, loaded after styles.css. Screen only: the print rules in styles.css are untouched and the
+   first block below pins the few values that tokens or fonts could otherwise change on paper (browser-print fallback). */
+@media print { :root { --ink:#1a1a1a; --muted:#5f6b7a; } body { font-family:"Segoe UI", Arial, sans-serif; } }
+@media screen {
+  button { border-radius:10px; }
+  button { font-family:inherit; }
+  button:focus-visible, [role="button"]:focus-visible, a:focus-visible, select:focus-visible, .mic:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  .topbar-actions button, .panel-actions button, .save-row button, .lh-foot button, .retry, .lh-act, #lhCloseBtn { min-height:44px; }
+  .sidebar, .middle, #sheet { border-radius:var(--radius); }
+  /* the 44px buttons make the topbar taller (and it wraps), so the sticky panes follow the measured height (rxview.js sets --topbar-h) */
+  @media (min-width:1001px) { .sidebar, .middle { top:calc(var(--topbar-h, 64px) + 8px); } }
+  dialog.panel { border-radius:16px; }
+  #sheet h2, .clinic-name, .sec-title, .rx-name { font-family:var(--font-serif); }
+  .brand-mark { width:38px; height:38px; }
+  .brand-clinic { font-size:16px; }
+  .agent-chip { border-radius:999px; padding:4px 12px; }
+  .pane-title { font-weight:600; letter-spacing:.08em; }
+  .today-scope { background:#eef2f0; border-radius:10px; padding:3px; gap:3px; }
+  .today-scope button { border:0; min-height:34px; border-radius:8px; color:var(--muted); font-weight:500; background:transparent; }
+  .today-scope button[aria-pressed="true"] { background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+  .today-item { border-radius:10px; padding:10px; }
+  .today-item:hover { background:#f1f6ff; }
+  .today-item.active { background:#eaf1ff; border-color:#bcd0ff; }
+  /* the dictation orb: idle, recording (pulse + wave bars), busy (spinner ring) */
+  .mic { width:96px; height:96px; box-shadow:0 0 0 8px #e3ecff; position:relative; justify-content:center; }
+  .mic .mic-icon { display:flex; }
+  .mic .mic-label { font-size:12px; }
+  .mic.recording { background:var(--bad); box-shadow:0 0 0 8px #fbe0dd; animation:rx-pulse 1.4s ease-out infinite; }
+  .mic.busy { background:#5f6f69; box-shadow:0 0 0 8px #e6ebe8; }
+  .mic.busy::after { content:""; position:absolute; inset:0; border-radius:50%; border:4px solid rgba(255,255,255,.35); border-top-color:#fff; animation:rx-spin 1.1s linear infinite; }
+  .rec-dot.on { display:flex; align-items:center; gap:4px; height:32px; animation:none; }
+  .rec-dot i { display:block; width:4px; height:6px; border-radius:2px; background:var(--bad); animation:rx-bar 1s ease-in-out infinite; }
+  .rec-dot i:nth-child(2) { animation-delay:.12s; } .rec-dot i:nth-child(3) { animation-delay:.24s; } .rec-dot i:nth-child(4) { animation-delay:.36s; }
+  .rec-dot i:nth-child(5) { animation-delay:.48s; } .rec-dot i:nth-child(6) { animation-delay:.6s; } .rec-dot i:nth-child(7) { animation-delay:.72s; }
+  .rec-text { margin-left:6px; font-size:12px; font-weight:700; color:var(--bad); }
+  @keyframes rx-pulse { 0% { box-shadow:0 0 0 0 rgba(168,38,29,.35); } 100% { box-shadow:0 0 0 20px rgba(168,38,29,0); } }
+  @keyframes rx-spin { to { transform:rotate(360deg); } }
+  @keyframes rx-bar { 0%, 100% { height:6px; } 50% { height:28px; } }
+  @media (prefers-reduced-motion: reduce) { .mic.recording, .mic.busy::after, .rec-dot i { animation:none; } .rec-dot i { height:18px; } }
+}

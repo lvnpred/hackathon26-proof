@@ -4,16 +4,17 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=9" />
+<link rel="stylesheet" href="styles.css?v=10" />
 <link rel="stylesheet" href="rx.css?v=2" />
-<link rel="stylesheet" href="steps.css?v=1" />
+<link rel="stylesheet" href="steps.css?v=2" />
+<link rel="stylesheet" href="polish.css?v=1" />
 <link rel="stylesheet" href="letterhead.css?v=8" />
 <link rel="stylesheet" href="team.css?v=1" />
 </head>
 <body>
 <header class="topbar no-print">
   <div class="brand">
-    <div class="brand-mark" aria-hidden="true">✚</div>
+    <div class="brand-mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></div>
     <div class="brand-text">
       <span id="topClinic" class="brand-clinic">Clinic</span>
       <span id="topDoctor" class="brand-doctor">Doctor</span>
@@ -44,11 +45,11 @@
   <section id="middle" class="middle no-print" aria-label="Dictation">
     <div class="dictation">
       <button id="recBtn" class="mic" type="button" aria-label="Start dictation">
-        <span class="mic-icon" aria-hidden="true">🎤</span>
+        <span class="mic-icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span>
         <span class="mic-label">Start dictation</span>
       </button>
       <span id="timer" class="timer">00:00</span>
-      <span id="wave" class="rec-dot" aria-hidden="true">● REC</span>
+      <span id="wave" class="rec-dot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="rec-text">REC</span></span>
     </div>
     <p id="correctingCue" class="correcting-cue no-print" role="status" hidden></p>
 

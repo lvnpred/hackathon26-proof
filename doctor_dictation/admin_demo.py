@@ -173,7 +173,7 @@ def seed_demo() -> dict:
         for d in (x for x in DOCTORS if x["clinic"] == slug):
             uid, _ = accounts.create_user(slug, d["username"], display_name=d["display_name"],
                                           doctor_name=d["doctor_name"], qualifications=d["qualifications"],
-                                          reg_no=d["reg_no"], password=d["password"], actor=ACTOR)
+                                          reg_no=d["reg_no"], role="doctor", password=d["password"], actor=ACTOR)
             users[d["username"]] = uid
         with use_scope(Scope(slug, None, ACTOR, "system")), closing(dbmod.get_conn(clinic_dir(slug) / "app.db")) as conn:
             conn.execute("UPDATE users SET must_change_password = 0")      # published demo passwords: no forced change

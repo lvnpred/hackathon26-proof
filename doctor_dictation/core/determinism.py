@@ -13,7 +13,7 @@ from .repair import (  # noqa: F401  (api/format.py and tests import these from 
     FORMAT_LLM_CAP, MAX_CANDIDATE_ROWS, RX_VERIFIED, UNKNOWN_MEDICINE_TEXT, _UNKNOWN_ISSUE_RE,
     build_repair_message, loop_should_continue, open_issues,
 )
-from . import rowcheck
+from . import formulary, rowcheck
 from .lasa import lasa_row
 from .surface import _generic_of, ambiguous_names, mask_as_dictated, surface_map
 
@@ -278,8 +278,8 @@ def _ground_row(name: str, strength: str, transcript_lower: str):
                     f"'{name}': matches more than one medicine ({', '.join(amb)})")
         canon = _canonical_lookup(name)
         if not canon:
-            return (RX_UNKNOWN_MEDICINE, "",
-                    f"'{name}': {UNKNOWN_MEDICINE_TEXT} ({lexicon_size()} entries)")
+            return formulary.ground_clinic(name, transcript_lower, _name_in_transcript) or (
+                RX_UNKNOWN_MEDICINE, "", f"'{name}': {UNKNOWN_MEDICINE_TEXT} ({lexicon_size()} entries)")
         if not _name_in_transcript(name, transcript_lower) and not _name_in_transcript(
             canon, transcript_lower
         ):

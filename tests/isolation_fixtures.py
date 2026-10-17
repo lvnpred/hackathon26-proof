@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from doctor_dictation import admin_demo
+from doctor_dictation import accounts, admin_demo
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import stt
 from doctor_dictation.api.app import create_app
@@ -30,8 +30,8 @@ from template_fixtures import make_jpeg
 H = {"X-DD-Client": "1"}
 A, B = "rao", "iyer"
 A_MARKERS = ("Rao Clinic", "Asha Verma", "Ravi Kulkarni", "Lakshmi Narayan", "Dr. A. Rao", "Dr. S. Mehta",
-             "dr.rao", "dr.mehta", "RAO-", admin_demo.RAO_PAD_LINE)
-B_MARKERS = ("Iyer Clinic", "Bharat Menon", "Meena Pillai", "Dr. K. Iyer", "dr.iyer", "IYER-",
+             "dr.rao", "dr.mehta", "adm.rao", "RAO-", admin_demo.RAO_PAD_LINE)
+B_MARKERS = ("Iyer Clinic", "Bharat Menon", "Meena Pillai", "Dr. K. Iyer", "dr.iyer", "adm.iyer", "IYER-",
              admin_demo.IYER_PAD_LINE)
 UPLOAD_PAD_LINE = "Child care, Tue and Thu evenings"
 UPLOAD_PAD = {"header": [{"type": "logo", "crop": [0.05, 0.02, 0.25, 0.10], "align": "left"},
@@ -39,7 +39,7 @@ UPLOAD_PAD = {"header": [{"type": "logo", "crop": [0.05, 0.02, 0.25, 0.10], "ali
                          {"type": "text", "text": UPLOAD_PAD_LINE, "role": "small", "align": "center"}],
               "footer": [], "body": {"top": 0.22, "bottom": 0.92}, "profile": {}}
 TABLES = ("patients", "encounters", "documents", "templates", "users", "clinic_profile", "audit_log",
-          "schema_migrations")
+          "schema_migrations", "clinic_formulary", "clinic_formulary_docs")
 
 
 class _Page:
@@ -99,6 +99,8 @@ def world(multi, monkeypatch):
                 r = login(client, f"dr.{who}")
                 assert r.status_code == 200 and r.json()["must_change_password"] is False, r.text
                 clients[who] = client
+            for slug, who in ((A, "rao_admin"), (B, "iyer_admin")):       # the team actions are admin only; the seeded doctors are doctors
+                clients[who] = stack.enter_context(admin_client(app, slug, "adm." + slug))
             yield SimpleNamespace(root=multi, seeded=seeded, app=app, renders=renders, **clients)
     finally:
         fake.close()
@@ -107,6 +109,16 @@ def world(multi, monkeypatch):
 def login(client, username, password=None):
     secret = admin_demo.doctor(username)["password"] if password is None else password
     return client.post("/api/v1/auth/login", json={"username": username, "password": secret}, headers=H)
+
+
+@contextmanager
+def admin_client(app, slug, username):
+    """A clinic admin (created here, so the seeded doctors stay plain doctors) signed in on ``app``."""
+    uid, _ = accounts.create_user(slug, username, role="admin", password="a-long-password-1")
+    sql(slug, "UPDATE users SET must_change_password = 0 WHERE id = ?", uid)
+    with TestClient(app, follow_redirects=False) as client:
+        assert login(client, username, "a-long-password-1").status_code == 200
+        yield client
 
 
 def user_id(world, username):

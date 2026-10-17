@@ -17,7 +17,7 @@ H = {"X-DD-Client": "1"}
 @pytest.fixture()
 def world(multi):
     clinics.provision_clinic("rao", "Rao Clinic")
-    uid, _ = A.create_user("rao", "dr.rao", password="rao-password-1")
+    uid, _ = A.create_user("rao", "dr.rao", password="rao-password-1", role="doctor")
     return {"uid": uid}
 
 

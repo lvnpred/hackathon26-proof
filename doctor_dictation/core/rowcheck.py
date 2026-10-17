@@ -1,6 +1,6 @@
 """Grounding of ONE prescription row: the single code path behind /api/format, /api/v1/correct and
 /api/v1/rx/check-row, so the page and the Spell it popover can never disagree. Pure; no AI, no network."""
-from . import dosing
+from . import dosing, formulary
 from .candidates import suggest_candidates
 from .lasa import lasa_row
 
@@ -62,6 +62,7 @@ def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: st
         "dose": dose, "timing": timing, "duration": duration,
         "instructions": instructions, "status": status,
         "lexicon_match": match, "generic": D._generic_of(name, match), **extra, **lextra,
+        **formulary.row_extras(name, match, status),
     }, notes
 
 
@@ -76,12 +77,15 @@ def ground_one(row: dict, raw_transcript: str, normalized_transcript: str, age_s
 def suggestions(row: dict) -> list:
     """The lexicon match first (so the matched drug is always offered, even for a short or odd typed name), then
     sound-alike names for the typed name, then the look-alike twins of the match: de-duplicated
-    case-insensitively, first occurrence wins, at most SUGGESTION_LIMIT."""
+    case-insensitively, first occurrence wins, at most SUGGESTION_LIMIT. A row with no lexicon match also gets this
+    clinic's names (its own name first); usage breaks only near-ties among them (I1-r1)."""
     from . import lasa   # lazy, like determinism above: lasa may import determinism, which imports this module
     twins = lasa.twins(row["lexicon_match"]) if row.get("lexicon_match") else []
     seen, out = set(), []
     match = [row["lexicon_match"]] if row.get("lexicon_match") else []
-    for name in match + suggest_candidates(row.get("name", "")) + list(twins):
+    own = [] if match else [hit[0] for hit in [formulary.active_layer().get(row.get("name", ""))] if hit]
+    alikes = suggest_candidates(row.get("name", "")) if match else formulary.sound_alikes(row.get("name", ""))
+    for name in match + own + alikes + list(twins):
         if name.casefold() not in seen:
             seen.add(name.casefold())
             out.append(name)

@@ -51,7 +51,7 @@ def test_create_user_hashes_password_indexes_username_and_returns_temp_once(two)
     row = _user("rao", "dr.rao")
     assert row["id"] == uid and len(temp) == 16
     assert temp not in row["password_hash"] and P.verify_password(temp, row["password_hash"])
-    assert (row["role"], row["is_active"], row["must_change_password"], row["session_version"]) == ("doctor", 1, 1, 0)
+    assert (row["role"], row["is_active"], row["must_change_password"], row["session_version"]) == ("admin", 1, 1, 0)   # DEFAULT_ROLE (until RBAC)
     assert (row["display_name"], row["doctor_name"], row["qualifications"], row["reg_no"]) == ("Dr. Rao", "Dr A. Rao", "MBBS", "TS-1")
     with closing(D.open_directory()) as d:
         entry = logins.lookup_username(d, "DR.RAO")

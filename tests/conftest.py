@@ -10,6 +10,16 @@ def _clean_clinic_env(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _private_single_mode_db(tmp_path_factory, monkeypatch):
+    """Single-database mode writes the REAL dev database when DB_PATH is unset (doctor_dictation/data/app.db).
+
+    Point it at a per-test temp folder (not tmp_path: tests list that). A test that sets its own DB_PATH wins,
+    because its monkeypatch.setenv runs later; the `multi` fixture removes it again (multi-clinic mode ignores it).
+    """
+    monkeypatch.setenv("DB_PATH", str(tmp_path_factory.mktemp("single-db") / "app.db"))
+
+
+@pytest.fixture(autouse=True)
 def _offline_provider_keys(monkeypatch):
     """No test may reach a real provider through a developer's .env.
 

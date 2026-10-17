@@ -50,8 +50,8 @@ def legacy_document(patient="Old Patient"):
 @pytest.fixture()
 def team(multi, monkeypatch):
     clinics.provision_clinic("rao", "Rao Clinic")
-    rao, _ = accounts.create_user("rao", "dr.rao", display_name="Rao", password="rao-password-1", **RAO)
-    mehta, _ = accounts.create_user("rao", "dr.mehta", display_name="Mehta", password="mehta-password-1", **MEHTA)
+    rao, _ = accounts.create_user("rao", "dr.rao", display_name="Rao", password="rao-password-1", role="doctor", **RAO)
+    mehta, _ = accounts.create_user("rao", "dr.mehta", display_name="Mehta", password="mehta-password-1", role="doctor", **MEHTA)
     with clinic_conn() as conn:
         conn.execute("UPDATE users SET must_change_password = 0")
         conn.commit()

@@ -99,12 +99,12 @@ def test_only_active_doctors_are_listed_never_an_assistant(world):
 def test_a_disabled_doctor_is_left_off_the_letterhead(world):
     tid, mehta = world.seeded[A]["template_id"], user_id(world, "dr.mehta")
     assert set_doctors(world.rao, tid, "all").status_code == 200
-    assert disable_user(world.rao, mehta).status_code == 200
+    assert disable_user(world.rao_admin, mehta).status_code == 200
     block = doctors_block(reprint(world.rao, A, 3))
     assert RAO in block and MEHTA not in block
-    assert enable_user(world.rao, mehta).status_code == 200
+    assert enable_user(world.rao_admin, mehta).status_code == 200
     assert set_doctors(world.rao, tid, "selected", [mehta]).status_code == 200
-    assert disable_user(world.rao, mehta).status_code == 200         # selected first: the route refuses a disabled id
+    assert disable_user(world.rao_admin, mehta).status_code == 200         # selected first: the route refuses a disabled id
     assert MEHTA not in doctors_block(reprint(world.rao, A, 3))
 
 
@@ -139,3 +139,19 @@ def test_a_letterhead_without_a_doctors_block_prints_none(world):
         assert "no lh-doctors block" in str(exc)
     else:
         raise AssertionError("doctors_block accepted a sheet with no block")
+
+
+def test_a_default_role_user_prescribes_so_they_are_listed_with_doctors_and_an_assistant_is_not(world):
+    """New users default to admin (until RBAC) and admins write prescriptions: the doctors block lists the doctor and admin
+    roles, in 'all' and in 'selected' mode, and never an assistant."""
+    ADMIN_NAME, ASSIST = "Dr. Default Admin", "Nurse Priya Assistant"
+    new_admin, _ = accounts.create_user(A, "dr.default", display_name=ADMIN_NAME, doctor_name=ADMIN_NAME, password="Default-pass-12345")
+    accounts.create_user(A, "priya", display_name=ASSIST, doctor_name=ASSIST, role="assistant", password="Priya-pass-12345")
+    assert sql(A, "SELECT role FROM users WHERE id = ?", new_admin)[0][0] == accounts.DEFAULT_ROLE == "admin"
+    tid = world.seeded[A]["template_id"]
+    assert set_doctors(world.rao, tid, "all").status_code == 200
+    block = doctors_block(reprint(world.rao, A, 3))
+    assert RAO in block and MEHTA in block and ADMIN_NAME in block and ASSIST not in block
+    assert set_doctors(world.rao, tid, "selected", [new_admin]).status_code == 200
+    block = doctors_block(reprint(world.rao, A, 3))
+    assert ADMIN_NAME in block and RAO not in block and MEHTA not in block

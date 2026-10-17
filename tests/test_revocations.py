@@ -24,7 +24,7 @@ GOOD = {"clinic": "rao", "uid": 1, "ver": 0, "iat": 1, "exp": 10**12, "sid": "a"
 @pytest.fixture()
 def world(multi):
     clinics.provision_clinic("rao", "Rao Clinic")
-    uid, _ = A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="temp-password-1")
+    uid, _ = A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="temp-password-1", role="doctor")
     return uid
 
 

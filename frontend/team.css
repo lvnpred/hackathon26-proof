@@ -5,8 +5,8 @@ dialog.team-panel[open] { display:flex; flex-direction:column; }
 .team-panel .team-head { display:flex; justify-content:space-between; align-items:center; padding:20px 24px 12px; }
 .team-panel .team-head h2 { margin:0; font-size:20px; }
 .team-panel .team-body { padding:8px 24px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
-/* Reserved for plan I1-h: its "Clinic medicines" tab. I1-h adds <div class="team-tabs" role="tablist"> as the first child of .team-body
-   and a second panel; the rules are here so that plan only adds team.js code. This plan adds no tab. */
+/* Tab strip of plan I1-h4's "Clinic medicines" tab: team.js inserts <div class="team-tabs" role="tablist"> before the People panel,
+   for clinic admins only, and appends the medicines panel after it. */
 .team-panel .team-tabs { display:flex; gap:4px; border-bottom:1px solid var(--soft); margin:0 -24px; padding:0 14px; }
 .team-panel .team-tab { min-height:44px; padding:0 16px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; color:var(--muted); font-weight:500; }
 .team-panel .team-tab[aria-selected="true"] { border-bottom-color:var(--accent); color:var(--ink); font-weight:700; }
@@ -24,6 +24,21 @@ dialog.team-panel[open] { display:flex; flex-direction:column; }
 .team-panel .team-table tr.team-off td { color:var(--muted); }
 .team-panel button { min-height:44px; }
 .team-panel .team-row-actions button { margin:0 6px 4px 0; min-height:36px; border-radius:8px; font-weight:600; }
+.team-panel .team-meds-table td:first-child { overflow-wrap:anywhere; word-break:break-word; }   /* a long unbroken name wraps, never scrolls the table sideways */
+.team-panel .team-row-actions .team-med-remove { min-height:44px; padding:0 14px; }
+@media (max-width:520px) {   /* the medicines table only: one block per medicine, so nothing sits off-screen to the right */
+  .team-panel .team-meds-table thead { display:none; }
+  .team-panel .team-meds-table, .team-panel .team-meds-table tbody, .team-panel .team-meds-table tr, .team-panel .team-meds-table td { display:block; }
+  .team-panel .team-meds-table tr { padding:12px 0; border-bottom:1px solid var(--soft); }
+  .team-panel .team-meds-table td { padding:2px 0; border:0; font-size:13px; color:var(--muted); }
+  .team-panel .team-meds-table td:first-child { font-size:16px; font-weight:600; color:var(--ink); }
+  .team-panel .team-meds-table td[data-label]::before { content:attr(data-label) ": "; }
+  .team-panel .team-meds-table .team-row-actions { padding-top:8px; }
+}
+.team-panel .team-tab-body { display:flex; flex-direction:column; gap:14px; }
+.team-panel .team-hint { margin:0; font-size:14px; color:var(--muted); }
+.team-panel .team-live { margin:0; font-size:14px; font-weight:600; color:var(--ink); }
+.team-panel .team-live:empty { display:none; }
 .team-panel form.team-add { padding:14px 0 0; border-top:1px solid var(--soft); display:flex; flex-direction:column; gap:8px; }
 .team-panel form.team-add h3 { margin:0; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
 .team-panel form.team-add button { align-self:flex-start; min-height:44px; }

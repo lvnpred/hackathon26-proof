@@ -62,7 +62,7 @@ def test_team_js_confirms_risky_actions_and_offers_none_on_your_own_row():
 def test_team_css_rules_are_scoped_to_the_team_panel():
     css = re.sub(r"/\*.*?\*/", "", _read("team.css"), flags=re.S)
     selectors = [s.strip() for block in re.findall(r"([^{}]+)\{", css) for s in block.split(",")]
-    assert selectors and all(s.startswith((".team-panel", "dialog.team-panel")) for s in selectors), selectors
+    assert selectors and all(s.startswith((".team-panel", "dialog.team-panel", "@media (max-width:520px)")) for s in selectors), selectors   # the one phone block (I1-h4) wraps scoped rules
 
 
 def test_team_row_buttons_are_named_for_the_user_and_set_with_setattribute():
@@ -90,7 +90,8 @@ def test_team_js_builds_ids_with_number_and_checks_for_a_password_before_showing
 def test_team_js_forgets_the_password_on_pagehide_and_only_a_short_line_is_a_live_region():
     js = _read("team.js")
     assert re.search(r'window\.addEventListener\("pagehide", clearSecret\)', js)
-    assert js.count('role: "status"') == 1
+    assert js.count('role: "status"') == 2                                   # the password line, and (I1-h4) the medicines announcer
+    assert 'id: "teamMedLive", class: "team-live", role: "status"' in js
     assert 'id: "teamSecret", class: "team-secret", role' not in js          # the box holding the password is not live
     assert 'id: "teamSecretReady"' in js and "Password ready" in js
     value = re.search(r'make\("code", \{[^}]*\}', js).group(0)

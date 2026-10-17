@@ -27,10 +27,13 @@ def _norm(path):
     return re.sub(r"\{[^}]+\}", "{id}", path)
 
 
+ADMIN_ONLY = ("/api/v1/formulary/", "/api/v1/users/")      # admin-only routes: swept with admin clients in test_isolation_formulary.py, not with a doctor (a doctor gets 403 first)
+
+
 def id_routes(app):
     out = []
     for path, ops in app.openapi()["paths"].items():
-        if "{" in path:
+        if "{" in path and not path.startswith(ADMIN_ONLY):
             out.extend((m.upper(), path) for m in ops if m.upper() in WRITE | {"GET"})
     return sorted(out)
 
@@ -78,7 +81,7 @@ def test_every_id_route_answers_404_for_an_id_only_clinic_a_has(world):
         table.append(f"{method} {url} -> {r.status_code}")
         if r.status_code != 404 or leaks(r.text, A_MARKERS):
             wrong.append(f"{method} {url} -> {r.status_code} {r.text[:160]}")
-    assert len(routes) == 11, routes     # the live count of id operations; a new one must be reviewed here
+    assert len(routes) == 8, routes      # the live count of doctor-sweepable id operations (the 3 user actions and the formulary DELETE are admin only); a new one must be reviewed here
     assert not wrong, wrong
     assert fingerprint(A) == before, table
 
@@ -124,7 +127,7 @@ def test_both_clinics_have_a_document_1_and_each_sees_its_own(world):
 
 def test_no_list_or_page_shows_the_other_clinics_data(world):
     found = []
-    for who, theirs in (("iyer", A_MARKERS), ("rao", B_MARKERS), ("mehta", B_MARKERS)):
+    for who, theirs in (("iyer", A_MARKERS), ("rao", B_MARKERS), ("mehta", B_MARKERS), ("iyer_admin", A_MARKERS), ("rao_admin", B_MARKERS)):
         client = getattr(world, who)
         for url in [*plain_gets(world.app), *EXTRA_GETS]:
             r = client.get(url)
@@ -175,10 +178,15 @@ CLASSIFIED = {
     "POST /api/v1/templates/deactivate": "acts on the caller's own active letterhead; no id in the request",
     "GET /api/v1/templates/doctors": "list: test_no_list_or_page_shows_the_other_clinics_data",
     "GET /api/v1/users": "list: test_no_list_or_page_shows_the_other_clinics_data",
-    "POST /api/v1/users": "test_writes_land_in_the_callers_clinic_only[users]",
+    "GET /api/v1/formulary": "list: test_no_list_or_page_shows_the_other_clinics_data; test_formulary_routes.py",
+    "DELETE /api/v1/formulary/{entry_id}": "admin only: test_formulary_routes.py (404 for another clinic's id, 403 for a doctor)",
+    "POST /api/v1/users": "test_writes_land_in_the_callers_clinic_only[users] (an admin client)",
+    "POST /api/v1/users/{user_id}/disable": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
+    "POST /api/v1/users/{user_id}/enable": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
+    "POST /api/v1/users/{user_id}/reset-password": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
     "POST /api/transcribe": "reads the caller's own clinic hints: test_transcribe_hints_come_from_the_callers_own_scope",
     "POST /api/format": "per-clinic result cache: test_the_format_cache_is_per_clinic",
-    "POST /api/v1/rx/check-row": "stateless: grounds one row against the global lexicon, reads no clinic data (I1-h revisits)",
+    "POST /api/v1/rx/check-row": "reads the caller's own clinic layer via use_clinic_layer: test_formulary_routes.py (a clinic's names never reach another clinic)",
     "GET /api/health": "public",
     "GET /health": "public",
     "GET /login": "public page",
@@ -211,7 +219,7 @@ def test_writes_land_in_the_callers_clinic_only(world, what):
     if what == "patients":
         r = world.iyer.post("/api/v1/patients", json={"name": "Write Probe", "age_sex": "30 / F"}, headers=H)
     elif what == "users":
-        r = world.iyer.post("/api/v1/users", json={"username": "dr.probe", "display_name": "Dr. Probe"}, headers=H)
+        r = world.iyer_admin.post("/api/v1/users", json={"username": "dr.probe", "display_name": "Dr. Probe"}, headers=H)
     elif what == "upload":
         r = upload(world.iyer)
     else:

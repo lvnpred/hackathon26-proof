@@ -19,7 +19,7 @@ def test_unknown_actions_are_denied():
 
 
 def test_ordinary_actions_are_allowed_for_any_signed_in_user():
-    for action in ("document.view", "document.reprint", "user.create", "user.disable", "letterhead.manage"):
+    for action in ("document.view", "document.reprint", "user.view", "letterhead.manage"):
         assert policy.can(_me(), action, NS(author_id=2)) is True, action
 
 

@@ -1,12 +1,14 @@
 """Structuring endpoints: /api/format (extract, ground, repair) and /api/v1/correct."""
 import asyncio
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation.api import authorship
+from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.config import get_settings
+from doctor_dictation.core import formulary
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     extract_correction,
@@ -79,7 +81,7 @@ async def _ground(rows, transcript):
     return await asyncio.to_thread(ground_rx, rows, transcript)
 
 
-@router.post("/api/format")
+@router.post("/api/format", dependencies=[Depends(use_clinic_layer)])
 async def format_transcript(req: FormatRequest):
     raw = (req.transcript or "").strip()
     if not raw:
@@ -88,7 +90,7 @@ async def format_transcript(req: FormatRequest):
     normalized = await _normalize(raw)
     key = transcript_sha(normalized)
     sc = current_scope()
-    ckey = f"{sc.clinic_slug if sc else ''}:{key}:{transcript_sha(raw)[:16]}"   # per clinic and raw wording
+    ckey = f"{sc.clinic_slug if sc else ''}:{formulary.active_layer().version}:{key}:{transcript_sha(raw)[:16]}"   # per clinic, learned list, raw wording
     hit = cache_get(ckey)
     if hit is not None:
         return {"structured": hit["structured"], "engine": hit["engine"],
@@ -175,7 +177,7 @@ class CorrectRequest(BaseModel):
     document_id: int | None = None   # the saved prescription being corrected; None for an unsaved draft
 
 
-@router.post("/api/v1/correct")
+@router.post("/api/v1/correct", dependencies=[Depends(use_clinic_layer)])
 async def correct(req: CorrectRequest, request: Request):
     """Merge a spoken correction into the current form, then re-ground it.
 

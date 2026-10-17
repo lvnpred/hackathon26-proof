@@ -91,6 +91,7 @@ def set_template_doctors(conn, template_id, mode: str, ids: list) -> bool:
 
 
 def clinic_doctors(conn) -> list:
-    """Active users with the doctor role, oldest account first: the stable order a letterhead lists them in."""
+    """Active users who prescribe (the doctor and admin roles; an assistant does not), oldest account first: the stable
+    order a letterhead lists them in. New users default to admin until real roles exist, and admins write prescriptions."""
     return conn.execute("SELECT id, username, display_name, doctor_name, qualifications, reg_no FROM users"
-                        " WHERE is_active = 1 AND role = 'doctor' ORDER BY id").fetchall()
+                        " WHERE is_active = 1 AND role IN ('doctor', 'admin') ORDER BY id").fetchall()

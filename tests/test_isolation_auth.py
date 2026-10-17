@@ -50,15 +50,15 @@ def test_an_expired_cookie_is_rejected_but_a_fresh_one_for_the_same_user_works(w
 def test_disabling_a_colleague_ends_their_session_at_once(world):
     mehta = user_id(world, "dr.mehta")
     assert world.mehta.get("/api/v1/auth/me").status_code == 200
-    assert disable_user(world.rao, mehta).status_code == 200
+    assert disable_user(world.rao_admin, mehta).status_code == 200
     assert world.mehta.get("/api/v1/auth/me").status_code == 401
     assert _fresh_login(world.app, "dr.mehta").status_code == 401
-    assert enable_user(world.rao, mehta).status_code == 200
+    assert enable_user(world.rao_admin, mehta).status_code == 200
     assert _fresh_login(world.app, "dr.mehta").status_code == 200
 
 
 def test_a_password_reset_ends_the_session_and_retires_the_old_password(world):
-    assert reset_user(world.rao, user_id(world, "dr.mehta")).status_code == 200
+    assert reset_user(world.rao_admin, user_id(world, "dr.mehta")).status_code == 200
     assert world.mehta.get("/api/v1/auth/me").status_code == 401
     assert _fresh_login(world.app, "dr.mehta").status_code == 401
 

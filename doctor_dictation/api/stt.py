@@ -3,10 +3,11 @@ import asyncio
 from contextlib import closing
 from pathlib import PurePath
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
 
 from doctor_dictation import db as dbmod
+from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.audio.trim import trim_silence
 from doctor_dictation.config import get_settings
 from doctor_dictation.core.hints import build_hints
@@ -44,7 +45,7 @@ async def _prepare_audio(raw: bytes, filename: str, settings) -> tuple[bytes, st
     return raw, filename, hints
 
 
-@router.post("/api/transcribe")
+@router.post("/api/transcribe", dependencies=[Depends(use_clinic_layer)])
 async def transcribe(audio: UploadFile = File(...)):
     settings = get_settings()
     max_bytes = settings.max_audio_bytes

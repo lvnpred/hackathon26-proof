@@ -17,10 +17,10 @@ PW = "a-long-password-1"
 def team(multi):
     clinics.provision_clinic("rao", "Rao Clinic")
     clinics.provision_clinic("iyer", "Iyer Clinic")
-    rao, _ = A.create_user("rao", "dr.rao", display_name="Dr. Rao", password=PW)
-    mehta, _ = A.create_user("rao", "dr.mehta", display_name="Dr. Mehta", password=PW)
-    shah, _ = A.create_user("rao", "dr.shah", password=PW)
-    iyer, _ = A.create_user("iyer", "dr.iyer", display_name="Dr. Iyer", password=PW)
+    rao, _ = A.create_user("rao", "dr.rao", display_name="Dr. Rao", password=PW, role="doctor")
+    mehta, _ = A.create_user("rao", "dr.mehta", display_name="Dr. Mehta", password=PW, role="doctor")
+    shah, _ = A.create_user("rao", "dr.shah", password=PW, role="doctor")
+    iyer, _ = A.create_user("iyer", "dr.iyer", display_name="Dr. Iyer", password=PW, role="doctor")
     return {"rao": rao, "mehta": mehta, "shah": shah, "iyer": iyer}
 
 
@@ -147,13 +147,17 @@ def test_the_operator_reset_by_username_still_works_and_raises_no_such_user(team
 
 
 def test_policy_knows_the_team_actions(team):
-    for action in ("user.view", "user.create", "user.disable", "user.reset_password"):
-        assert policy.can(_me(team), action, {"user_id": team["mehta"]}) is True, action
+    admin = Identity("rao", team["rao"], "dr.rao", "admin")
+    assert policy.can(_me(team), "user.view", {"user_id": team["mehta"]}) is True          # any signed-in user may read the list
+    for action in ("user.create", "user.disable", "user.reset_password"):                  # the rest is admin only
+        assert policy.can(admin, action, {"user_id": team["mehta"]}) is True, action
+        assert policy.can(_me(team), action, {"user_id": team["mehta"]}) is False, action
+        assert policy.can(Identity("rao", 9, "x", "assistant"), action) is False, action
 
 
 def test_the_same_id_in_two_clinics_is_a_different_person_and_only_the_callers_clinic_changes(team):
     assert team["rao"] == team["iyer"] == 1                     # both clinics have a user 1
-    iyer_actor, _ = A.create_user("iyer", "dr.actor", password=PW)
+    iyer_actor, _ = A.create_user("iyer", "dr.actor", password=PW, role="doctor")
     actor = Identity("iyer", iyer_actor, "dr.actor", "doctor")
     before_rao = tuple(_row("rao", 1))
     A.set_active(actor, 1, False)

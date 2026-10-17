@@ -22,8 +22,8 @@ IP = "10.0.0.1"
 def world(multi):
     clinics.provision_clinic("rao", "Rao Clinic")
     clinics.provision_clinic("iyer", "Iyer Clinic")
-    rao, _ = A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="rao-password-1")
-    iyer, _ = A.create_user("iyer", "dr.iyer", password="iyer-password-1")
+    rao, _ = A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="rao-password-1", role="doctor")
+    iyer, _ = A.create_user("iyer", "dr.iyer", password="iyer-password-1", role="doctor")
     return {"rao": rao, "iyer": iyer}
 
 

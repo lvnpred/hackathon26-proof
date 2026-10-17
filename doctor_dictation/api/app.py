@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +16,7 @@ from doctor_dictation import db as dbmod
 from doctor_dictation import sessions
 from doctor_dictation.api import format as format_api
 from doctor_dictation.api import auth, health, persistence, profile, rx, stt
+from doctor_dictation.api import formulary as formulary_api
 from doctor_dictation.api.session import SessionMiddleware
 from doctor_dictation.api import templates as templates_api
 from doctor_dictation.api import users as users_api
@@ -62,7 +63,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     # .env must be loaded before the first get_settings() call (settings are cached).
     load_dotenv()
-    app = FastAPI(title="Doctor Dictation Demo", lifespan=lifespan)
+    app = FastAPI(title="Doctor Dictation Demo", lifespan=lifespan, dependencies=[Depends(formulary_api.request_scoped)])
 
     # Multi-clinic mode with no scope (before login exists, or a bypassed middleware): never a 500 and never a default database.
     @app.exception_handler(NoScope)
@@ -76,7 +77,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (auth, health, stt, format_api, profile, persistence, users_api, rx):
+    for module in (auth, health, stt, format_api, profile, persistence, users_api, rx, formulary_api):
         app.include_router(module.router)
     app.include_router(templates_api.router)
     # Serve the frontend from the same process; mounted last so it never shadows /api.

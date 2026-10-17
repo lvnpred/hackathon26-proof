@@ -27,6 +27,7 @@ from .determinism import (  # determinism never imports this module
     RX_UNVERIFIED_NAME, _alias_map, _ambiguous_for, _canonical_lookup,
 )
 from .dosing import DOSE_CHECK, check_dose
+from .formulary import active_layer, source_of
 from .surface import _generic_of
 
 SCALAR_FIELDS = ("patientName", "ageSex", "opNo", "review")
@@ -263,7 +264,7 @@ def merge_form(current: dict, patch: dict) -> dict:
 
 
 # Row fields validate_structured derives from the name and the grounding (screen only).
-DERIVED_ROW_FIELDS = ("generic", "heard", "lookalike", "dose_note")
+DERIVED_ROW_FIELDS = ("generic", "heard", "lookalike", "dose_note", "source")
 
 
 def _recomputed_generic(row: dict) -> str:
@@ -273,9 +274,21 @@ def _recomputed_generic(row: dict) -> str:
     return _generic_of(name, match) if match and _canonical_lookup(name) == match else ""
 
 
+def _backed(row: dict) -> bool:
+    """True when the lexicon (a match, or the name itself) or the active clinic layer knows the row's name."""
+    name = row.get("name", "")
+    return bool(row.get("lexicon_match") or _canonical_lookup(name) or active_layer().get(name))
+
+
 # DERIVED_ROW_FIELDS that depend on name + lexicon_match only: recomputed for an untouched row, never
 # copied from the prior row (the client's readRx does not send them back). The rest are restored.
-RECOMPUTED_ROW_FIELDS = {"generic": _recomputed_generic}
+RECOMPUTED_ROW_FIELDS = {
+    "generic": _recomputed_generic,
+    # the page never sends `source` back: "clinic" when the restored row has no lexicon match and the active layer knows it
+    # never "lexicon" without a lexicon match: a name nothing backs gets "" (and its row is regraded below)
+    "source": lambda row: source_of(row.get("name", ""), row.get("lexicon_match", ""))
+    if _backed(row) else "",
+}
 
 def _dose_note(row: dict, prev: dict, age_sex) -> str:
     """Why a restored dose-check row was flagged, recomputed from the validated row (the page does not send
@@ -372,6 +385,10 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
                 row[field] = prev[field]
             else:
                 row.pop(field, None)
+        if row.get("status") == "verified" and not _backed(row):
+            row["status"] = "unknown-medicine"   # a restored "verified" must be backed: the clinic's name left the list
+            if GROUNDING_MARKERS[0] not in str(row.get("instructions") or ""):
+                row["instructions"] = f"{row.get('instructions') or ''} {GROUNDING_MARKERS[0]}".strip()
         for field in DERIVED_ROW_FIELDS:  # follow the restored status; absent when the prior row had none
             if "status" not in prev:
                 row.pop(field, None)

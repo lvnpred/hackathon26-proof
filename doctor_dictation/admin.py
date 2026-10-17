@@ -199,7 +199,7 @@ def main(argv=None) -> int:
     u.add_argument("--clinic", required=True)
     u.add_argument("--username", required=True)
     u.add_argument("--display-name")
-    u.add_argument("--role", choices=accounts.ROLES, default="doctor")
+    u.add_argument("--role", choices=accounts.ROLES, default=accounts.DEFAULT_ROLE)
     r = sub.add_parser("reset-password", help="set a new temporary password and end the user's sessions")
     r.add_argument("--user", required=True)
     sub.add_parser("list-clinics", help="list registered clinics")

@@ -2,10 +2,11 @@
 import asyncio
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.core.correction import strip_grounding_markers
 from doctor_dictation.core.determinism import normalize_transcript
 from doctor_dictation.core.rowcheck import ground_one, suggestions
@@ -50,7 +51,7 @@ def _ground(row: dict, raw: str, normalized: str, age_sex: str) -> dict:
     return {"row": grounded, "suggestions": suggestions(grounded)}
 
 
-@router.post("/api/v1/rx/check-row")
+@router.post("/api/v1/rx/check-row", dependencies=[Depends(use_clinic_layer)])
 async def check_row(req: CheckRowRequest):
     """Ground one row exactly as /api/format does. A typed name is never trusted: it must still be in the transcript.
 

@@ -19,7 +19,7 @@ BAD = {"error": "Wrong username or password"}
 @pytest.fixture()
 def client(multi):
     clinics.provision_clinic("rao", "Rao Clinic")
-    A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="temp-password-1")
+    A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="temp-password-1", role="doctor")
     with TestClient(create_app(), follow_redirects=False) as c:     # `with` runs the lifespan (_startup)
         yield c
 
@@ -50,7 +50,7 @@ def test_cookie_is_secure_behind_an_https_proxy(client):
 
 
 def test_every_bad_login_has_the_identical_response(client):
-    A.create_user("rao", "dr.off", password="off-password-12")
+    A.create_user("rao", "dr.off", password="off-password-12", role="doctor")
     with closing(dbmod.get_conn(clinic_dir("rao") / "app.db")) as c, c:
         c.execute("UPDATE users SET is_active = 0 WHERE username = 'dr.off'")
     cases = (("dr.rao", "wrong"), ("nobody", "whatever"), ("", ""), ("dr.off", "off-password-12"))
@@ -134,7 +134,7 @@ def test_login_without_the_csrf_header_is_403(client):
 
 def test_signed_in_user_reaches_real_routes_in_their_own_clinic_only(client):
     clinics.provision_clinic("iyer", "Iyer Clinic")
-    A.create_user("iyer", "dr.iyer", password="iyer-password-1")
+    A.create_user("iyer", "dr.iyer", password="iyer-password-1", role="doctor")
     _set_permanent(client)
     assert client.put("/api/v1/profile", json={"clinic_name": "Rao Changed"}, headers=H).status_code == 200
     mine = client.get("/api/v1/profile")

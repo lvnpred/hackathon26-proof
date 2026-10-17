@@ -21,8 +21,8 @@ def _conn(slug):
     return dbmod.get_conn(clinic_dir(slug) / "app.db")
 
 
-def _make(slug, username, display):
-    uid, _ = A.create_user(slug, username, display_name=display, password=PW)
+def _make(slug, username, display, role="doctor"):
+    uid, _ = A.create_user(slug, username, display_name=display, password=PW, role=role)
     with closing(_conn(slug)) as c:                                 # skip the forced first-login change
         c.execute("UPDATE users SET must_change_password = 0 WHERE id = ?", (uid,))
         c.commit()
@@ -31,10 +31,11 @@ def _make(slug, username, display):
 
 @pytest.fixture()
 def world(multi):
+    """dr.rao and dr.iyer are clinic ADMINS (the team actions are admin-only); dr.mehta and dr.shah are plain doctors."""
     clinics.provision_clinic("rao", "Rao Clinic")
     clinics.provision_clinic("iyer", "Iyer Clinic")
-    return {"rao": _make("rao", "dr.rao", "Dr. Rao"), "mehta": _make("rao", "dr.mehta", "Dr. Mehta"),
-            "shah": _make("rao", "dr.shah", "Dr. Shah"), "iyer": _make("iyer", "dr.iyer", "Dr. Iyer")}
+    return {"rao": _make("rao", "dr.rao", "Dr. Rao", role="admin"), "mehta": _make("rao", "dr.mehta", "Dr. Mehta"),
+            "shah": _make("rao", "dr.shah", "Dr. Shah"), "iyer": _make("iyer", "dr.iyer", "Dr. Iyer", role="admin")}
 
 
 def _login(c, username, pw=PW):
@@ -93,7 +94,7 @@ def test_add_user_shows_a_temporary_password_once_and_it_signs_in_with_a_forced_
     assert temp not in listing.text
     with closing(_conn("rao")) as c:
         row = c.execute("SELECT doctor_name, qualifications, reg_no, role FROM users WHERE username = 'dr.new'").fetchone()
-    assert tuple(row) == ("Dr N. New", "MBBS", "TS-9", "doctor")
+    assert tuple(row) == ("Dr N. New", "MBBS", "TS-9", "admin")      # the Team form has no role field: DEFAULT_ROLE
     with TestClient(create_app(), follow_redirects=False) as fresh:
         r = _login(fresh, "dr.new", temp)
     assert (r.status_code, r.json()["must_change_password"]) == (200, True)
@@ -190,8 +191,8 @@ def test_every_team_action_is_audited_with_the_signed_in_actor_and_no_password(w
                          " ('user_create', 'user_disable', 'user_enable', 'password_reset') ORDER BY id").fetchall()
     mehta, new = str(world["mehta"]), str(created["user"]["id"])
     assert [(r["actor"], r["role"], r["action"], r["entity_id"]) for r in rows] == [
-        ("dr.rao", "doctor", "user_create", new), ("dr.rao", "doctor", "user_disable", mehta),
-        ("dr.rao", "doctor", "user_enable", mehta), ("dr.rao", "doctor", "password_reset", mehta)]
+        ("dr.rao", "admin", "user_create", new), ("dr.rao", "admin", "user_disable", mehta),
+        ("dr.rao", "admin", "user_enable", mehta), ("dr.rao", "admin", "password_reset", mehta)]
     secrets = (created["temporary_password"], reset["temporary_password"])
     assert not any(s in (r["detail"] or "") for r in rows for s in secrets)
     assert json.loads(rows[0]["detail"]) == {"username": "dr.new"}

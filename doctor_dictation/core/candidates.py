@@ -86,14 +86,8 @@ def _score(a: str, ka: str, b: str, kb: str) -> float:
     return min(score, 1.0)
 
 
-def suggest_candidates(name: str, k: int = 3) -> list:
-    """Up to ``k`` lexicon canonical names that sound like ``name``, best first.
-
-    Score = 0.5 * spelling ratio + 0.5 * phonetic-key ratio (difflib), +0.15
-    for equal keys, +0.10 for a key prefix (3+ letters), capped at 1.0. A
-    canonical keeps its best spelling (generic, alias or brand). Under
-    MIN_SCORE nothing is returned, so garbage gives []. Ties sort by name.
-    """
+def scored_candidates(name: str, k: int = 3) -> list:
+    """[(canonical, score)] behind suggest_candidates: the same rules, the same order."""
     low = re.sub(r"[^a-z]", "", (name or "").lower())
     key = phonetic_key(low)
     if k <= 0 or len(low) < 4 or len(low) > MAX_NAME_LETTERS or len(key) < 3:
@@ -103,5 +97,25 @@ def suggest_candidates(name: str, k: int = 3) -> list:
         sc = _score(low, key, text, tkey)
         if sc >= MIN_SCORE and sc > best.get(canon, 0.0):
             best[canon] = sc
-    ranked = sorted(best.items(), key=lambda kv: (-round(kv[1], 6), kv[0].lower(), kv[0]))
-    return [c for c, _ in ranked[:k]]
+    return sorted(best.items(), key=lambda kv: (-round(kv[1], 6), kv[0].lower(), kv[0]))[:k]
+
+
+def suggest_candidates(name: str, k: int = 3) -> list:
+    """Up to ``k`` lexicon canonical names that sound like ``name``, best first.
+
+    Score = 0.5 * spelling ratio + 0.5 * phonetic-key ratio (difflib), +0.15
+    for equal keys, +0.10 for a key prefix (3+ letters), capped at 1.0. A
+    canonical keeps its best spelling (generic, alias or brand). Under
+    MIN_SCORE nothing is returned, so garbage gives []. Ties sort by name.
+    """
+    return [c for c, _ in scored_candidates(name, k)]
+
+
+def similarity(name: str, spelling: str) -> float:
+    """The score suggest_candidates would give one more single-word ``spelling`` for ``name``; 0.0 outside its rules."""
+    low = re.sub(r"[^a-z]", "", (name or "").lower())
+    text = " ".join(str(spelling or "").split()).lower()
+    key = phonetic_key(low)
+    if len(low) < 4 or len(low) > MAX_NAME_LETTERS or len(key) < 3 or len(text) < MIN_LEN or " " in text:
+        return 0.0
+    return _score(low, key, text, phonetic_key(text))

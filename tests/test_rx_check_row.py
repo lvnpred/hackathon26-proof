@@ -114,7 +114,7 @@ def test_no_llm_is_ever_built(monkeypatch):
 @pytest.fixture()
 def clinic(multi):
     clinics.provision_clinic("rao", "Rao Clinic")
-    A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="temp-password-1")
+    A.create_user("rao", "dr.rao", display_name="Dr. Rao", password="temp-password-1", role="doctor")
     with TestClient(create_app(), follow_redirects=False) as c:
         yield c
 

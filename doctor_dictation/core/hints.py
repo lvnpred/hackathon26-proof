@@ -9,6 +9,7 @@ The list is also kept inside MAX_HINT_CHARS: Whisper reads only about 224 tokens
 from collections.abc import Sequence
 
 from .determinism import _canonical_lookup, load_lexicon
+from .formulary import active_layer
 
 MAX_HINT_CHARS = 500
 _MAX_DOCTOR_NAME = 60  # longer is never a medicine name; also keeps the fuzzy lookup cheap
@@ -28,7 +29,8 @@ def _doctor_canonical(names: Sequence[str]) -> list[str]:
     for n in names:
         clean = " ".join(str(n).split())
         if clean and len(clean) <= _MAX_DOCTOR_NAME:
-            canon = _canonical_lookup(clean)
+            hit = active_layer().get(clean)
+            canon = _canonical_lookup(clean) or (hit[0] if hit else "")      # the clinic's own names are kept too
             if canon:
                 out.append(canon)
     return out
@@ -39,7 +41,7 @@ def build_hints(doctor_top: Sequence[str] = (), limit: int = 70) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
     used = 0
-    for name in [*_doctor_canonical(doctor_top), *common_lexicon_names()]:
+    for name in [*_doctor_canonical(doctor_top), *active_layer().hint_names(), *common_lexicon_names()]:
         if len(out) >= max(limit, 0):
             break
         clean = " ".join(str(name).split())

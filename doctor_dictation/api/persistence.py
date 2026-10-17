@@ -5,12 +5,13 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import authorship
+from doctor_dictation.api.formulary import learn_from_save, use_clinic_layer
 from doctor_dictation.core.correction import preserve_untouched_rx_status
 from doctor_dictation.core.determinism import validate_structured
 from doctor_dictation.core.safety import screen_unverified
@@ -167,7 +168,7 @@ def _render_with_fallback(structured, meta, layout, out_path):
         return render_prescription(structured, meta, out_path, layout=None)
 
 
-@router.post("/api/v1/documents")
+@router.post("/api/v1/documents", dependencies=[Depends(use_clinic_layer)])
 def create_document(req: DocumentCreate, request: Request):
     """Save & Print: enforce the verify gate, then persist encounter/document/audit.
 
@@ -297,6 +298,7 @@ def create_document(req: DocumentCreate, request: Request):
                 "confirmed_rows": list(req.confirmed_rows),
             },
         )
+        learn_from_save(conn, structured, req.confirmed_rows, document_id, ident.user_id if ident else None)
         return {
             "patient_id": patient_id,
             "encounter_id": encounter_id,

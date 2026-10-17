@@ -17,6 +17,8 @@ from doctor_dictation.scope import clinic_dir
 
 USERNAME_RE = re.compile(r"[A-Za-z0-9._-]{3,40}")
 ROLES = ("doctor", "assistant", "admin")
+# Until real role-based access exists (see the backlog card), every NEW user is an admin unless a role is named. Existing users keep theirs.
+DEFAULT_ROLE = "admin"
 
 
 class AccountError(ValueError):
@@ -50,7 +52,7 @@ def clinic_conn(slug):
 
 
 def create_user(clinic_slug, username, display_name="", doctor_name="", qualifications="", reg_no="",
-                role="doctor", password=None, actor=None) -> tuple[int, str]:
+                role=DEFAULT_ROLE, password=None, actor=None) -> tuple[int, str]:
     """Create a user and index the username system-wide. Returns ``(user_id, password)``; the password is
     generated when ``password`` is None and must be shown to the operator once, never stored in clear."""
     check_username(username)

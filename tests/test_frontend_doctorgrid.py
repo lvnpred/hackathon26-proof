@@ -40,5 +40,5 @@ def test_the_grid_is_two_columns_and_one_on_narrow_containers():
     css = _read("styles.css")
     assert "grid-template-columns:1fr 1fr" in css and "@container (max-width:420px)" in css and "@media (max-width:420px)" in css
     html = _read("index.html")
-    assert all(v in html for v in ("letterhead.css?v=8", "letterhead.js?v=10", "doctorgrid.js?v=1"))
+    assert all(v in html for v in ("letterhead.css?v=8", "letterhead.js?v=11", "doctorgrid.js?v=1"))
     assert int(re.search(r"styles\.css\?v=(\d+)", html).group(1)) >= 9

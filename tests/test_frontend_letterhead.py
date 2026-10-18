@@ -37,7 +37,7 @@ def test_letterhead_js_never_builds_markup_from_server_text():
 
 def test_letterhead_assets_are_cache_busted():
     html = _read("index.html")
-    assert "letterhead.js?v=10" in html and "letterhead.css?v=8" in html
+    assert "letterhead.js?v=11" in html and "letterhead.css?v=8" in html
 
 
 def test_clinic_details_have_the_op_prefix_field_wired_both_ways():

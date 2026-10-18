@@ -9,7 +9,7 @@
   const PROFILE_LABEL = { doctor_name: "Doctor name", qualifications: "Qualifications",
     reg_no: "Registration no.", clinic_name: "Clinic name", address: "Address", phone: "Phone" };
   const MSG = {
-    400: "That file could not be read as a picture. Use a JPEG, PNG or iPhone (HEIC) photo of the blank pad.",
+    400: "That file could not be read. Use a JPEG, PNG, iPhone (HEIC) or PDF of the blank pad. A PDF must not be password protected.",
     413: "That picture is too large. Use a photo under 8 MB, for example by scanning at a lower resolution.",
     429: "You have reached today's limit of letterhead uploads. Try again tomorrow, or keep the current layout.",
     502: "The AI could not read this letterhead, and nothing was saved. Try a clearer, straight-on photo, or use the built-in layout.",

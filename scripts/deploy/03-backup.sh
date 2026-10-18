@@ -11,8 +11,11 @@ KEEP_DAYS=${KEEP_DAYS:-14}
 RECIPIENT=${AGE_RECIPIENT_FILE:-$HOME/.config/backup/age-recipient.txt}
 
 if [ "${1:-}" = "--install-cron" ]; then
-  line="17 2 * * * $(readlink -f "$0") >> $HOME/backup.log 2>&1"
-  ( crontab -l 2>/dev/null | grep -vF "$(readlink -f "$0")" ; echo "$line" ) | crontab -
+  self=$(readlink -f "$0")
+  line="17 2 * * * $self >> $HOME/backup.log 2>&1"
+  # "|| true": with no crontab yet, crontab -l prints nothing and grep -v exits 1, which set -e would turn into a silent stop.
+  { crontab -l 2>/dev/null | grep -vF "$self" || true; echo "$line"; } | crontab -
+  crontab -l | grep -qF "$self" || { echo "Cron install failed: the job is not in crontab -l." >&2; exit 1; }
   echo "Installed: $line"; exit 0
 fi
 
@@ -20,6 +23,9 @@ fi
 mkdir -p "$OUT"; chmod 700 "$OUT"
 cd "$APP_DIR"
 file="$OUT/data-$(date +%F-%H%M).tar.gz.age"
+tmp="$file.part"   # written under this name and renamed only after it succeeds, so a final name always means a complete backup
+trap 'rc=$?; rm -f "$tmp"; [ "$rc" -eq 0 ] || echo "$(date -Is) BACKUP FAILED (exit $rc); no file kept" >&2' EXIT
+find "$OUT" -name '*.part' -mmin +60 -delete   # leftovers from a run that was killed outright
 
 # SQLite's online backup API gives a consistent copy of each .db even while the app writes to it.
 docker compose --env-file .env.production exec -T app python -c '
@@ -39,10 +45,11 @@ with tempfile.TemporaryDirectory() as tmp, tarfile.open(fileobj=sys.stdout.buffe
                 tar.add(copy, arcname=rel)
             else:
                 tar.add(path, arcname=rel)
-' | age -R "$RECIPIENT" > "$file"
+' | age -R "$RECIPIENT" > "$tmp"
 
-size=$(stat -c %s "$file")
-[ "$size" -gt 1024 ] || { echo "Backup looks empty ($size bytes): $file" >&2; rm -f "$file"; exit 1; }
+size=$(stat -c %s "$tmp")
+[ "$size" -gt 1024 ] || { echo "Backup looks empty ($size bytes); not keeping it." >&2; exit 1; }
+mv "$tmp" "$file"
 echo "$(date -Is) wrote $file ($size bytes)"
 
 find "$OUT" -name 'data-*.tar.gz.age' -mtime +"$KEEP_DAYS" -delete

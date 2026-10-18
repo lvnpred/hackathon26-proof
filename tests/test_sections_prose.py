@@ -1,4 +1,5 @@
 """Plan I2-b: Brief history first, both sections as dictated prose; the prompt, the rules path and the unheard check."""
+import re
 import subprocess
 from pathlib import Path
 
@@ -37,7 +38,7 @@ def test_the_screen_shows_brief_history_first_and_both_as_prose():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
     assert html.index('id="pCc"') < html.index('id="pDx"') < html.index('id="pIx"')
     assert 'id="pCc" class="editable-list prose-list"' in html and 'id="pDx" class="editable-list prose-list"' in html
-    assert all(f'id="{i}"' in html for i in ("pRevDate", "pCcNote", "pDxNote")) and "sections.js?v=2" in html
+    assert all(f'id="{i}"' in html for i in ("pRevDate", "pCcNote", "pDxNote")) and int(re.search(r"sections\.js\?v=(\d+)", html).group(1)) >= 2
     assert "ul.editable-list.prose-list { list-style:none; padding-left:3px; }" in (FRONT / "styles.css").read_text(encoding="utf-8")
     app = (FRONT / "app.js").read_text(encoding="utf-8")
     assert 'base.complaints = readList("pCc")' in app and 'base.diagnosis = readList("pDx")' in app    # the stored shape is unchanged

@@ -185,7 +185,7 @@
   function when(iso) {
     if (!iso) return "Never";
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? iso : d.toLocaleString();
+    return isNaN(d.getTime()) ? iso : (window.Dates && window.Dates.dateTime(iso)) || iso;   // clinic zone, "17 Oct 2026, 3:05 pm"
   }
   function showSecret(username, password) {
     el("teamSecretFor").textContent = "Temporary password for " + username + ":";

@@ -30,6 +30,7 @@ const resaveNote = $("resaveNote");
 const profilePanel = $("profilePanel");
 
 const state = {
+  visitDate: "", // ISO visit day of the open document ("" = a new sheet: today); the sheet date is read-only
   structured: null, // last server-validated form (source for edits)
   transcript: "",
   transcriptSha: "",
@@ -59,7 +60,7 @@ const text = (el) => (el ? el.textContent : "").replace(/\s+/g, " ").trim();
 const setText = (el, v) => { if (el) el.textContent = v == null ? "" : String(v); };
 const inputVal = (id) => { const el = $(id); return el ? String(el.value || "").trim() : ""; };
 const setInput = (id, v) => { const el = $(id); if (el) el.value = v == null ? "" : String(v); };
-const today = () => new Date().toLocaleDateString("en-IN");
+const today = () => (window.Dates ? window.Dates.today() : "");        // "17 Oct 2026" in the clinic zone (dates.js)
 const fmtTime = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 const cellText = (tr, col) => text(tr.querySelector('[data-col="' + col + '"]'));
 
@@ -88,6 +89,7 @@ function setStep(stage, info) { if (window.Steps) Steps.main(stage, info); }    
 // ---- health badge: hidden from end users; ?debug=1 shows the engine, an offline backend always says so --------
 const DEBUG_BADGE = new URLSearchParams(window.location.search).get("debug") === "1";
 fetch("/api/health").then(r => r.json()).then(h => {
+  if (window.Dates) window.Dates.initFrom(h, $("pDate"));    // locale and clinic zone from the server; a typed sheet date is kept
   if (!DEBUG_BADGE) return;
   const llm = h.llm_configured ? `${h.llm_provider}:${h.llm_model}`
     : (h.deepseek_configured ? "DeepSeek" : "rules-fallback");
@@ -208,7 +210,7 @@ function fmtClock(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return window.Dates ? window.Dates.time(iso) : "";
 }
 
 function renderToday(rows) {
@@ -303,6 +305,7 @@ async function openDocument(row) {
     state.transcript = "";
     state.dirty = false; // a saved document: edits/corrections allowed, re-save updates in place
     state.documentId = j.document_id != null ? j.document_id : row.document_id;
+    state.visitDate = j.visit_date || "";
     state.savedPatientName = String((state.structured || {}).patientName || "");
     state.retry = null;
     state.confirmed.clear();
@@ -522,6 +525,7 @@ async function formatTranscript(transcript) {
   state.transcript = transcript;
   renderTranscript();
   state.documentId = null; // a fresh dictation is a new encounter, not a re-save
+  state.visitDate = "";
   refreshPrintButton();
   updateResaveNote();
   setWorking(true, "Structuring the prescription…");
@@ -906,7 +910,7 @@ function renderSheet(s) {
   setText($("pName"), s.patientName || "");
   setText($("pAge"), s.ageSex || "");
   setText($("pOp"), s.opNo || "");
-  if (!text($("pDate"))) setText($("pDate"), today());
+  setText($("pDate"), state.visitDate ? window.Dates.date(state.visitDate) : today());   // read-only: the document's own visit day, else today
   renderList($("pDx"), s.diagnosis);
   renderList($("pCc"), s.complaints);
   renderList($("pIx"), s.investigations);
@@ -1037,6 +1041,7 @@ async function saveDocument() {
     // updates this document in place instead of inserting a duplicate. "New
     // patient" (and a fresh dictation) clears it again.
     if (state.documentId == null) state.documentId = j.document_id;
+    if (j.visit_date) state.visitDate = j.visit_date;
     const changedWhileSaving = state.editGen !== gen;
     if (!changedWhileSaving) state.dirty = false; // otherwise keep dirty: the PDF would lack the edit
     state.savedPatientName = String(structured.patientName || "");
@@ -1193,6 +1198,7 @@ function newPatient() {
   state.engine = "";
   state.dirty = false;
   state.documentId = null;
+  state.visitDate = "";
   state.retry = null;
   state.confirmed.clear();
   state.lastBlock = [];

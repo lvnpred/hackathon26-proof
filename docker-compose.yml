@@ -7,6 +7,8 @@ services:
     build: .
     image: doctor-dictation:${APP_TAG:-local}
     env_file: ${APP_ENV_FILE:-.env.production}
+    environment:
+      TZ: Asia/Kolkata               # the clinic zone: the visit day and the printed date follow it, not the host clock
     volumes:
       - data:/data                   # the only state (directory.db and clinics/<slug>/); back it up
     ports:

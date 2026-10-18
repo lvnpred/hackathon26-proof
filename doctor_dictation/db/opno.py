@@ -45,6 +45,8 @@ def set_op_prefix(conn, prefix) -> str:
 
 
 def _day_prefix(now=None, prefix=DEFAULT_PREFIX) -> str:
+    # HOST zone, not the clinic zone (api/visit.py): they agree when TZ=Asia/Kolkata is set (Docker, compose). On a host with
+    # another TZ the OP day and the visit day roll over at different times for about 5.5 hours around midnight IST.
     now = now or datetime.now().astimezone()
     return f"{prefix}-{now:%Y%m%d}-"
 

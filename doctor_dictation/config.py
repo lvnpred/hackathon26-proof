@@ -66,6 +66,9 @@ class Settings:
     template_max_image_bytes: int = 8 * 1024 * 1024
     template_max_pixels: int = 40_000_000
 
+    # --- display (I3): one date locale for the page and the printed sheet; unknown values fall back in core/datefmt.py ---
+    date_locale: str = "en-IN"
+
 
 def _int_env(name: str, default: int) -> int:
     """Parse an int env var; absent/blank/invalid -> ``default``."""
@@ -117,6 +120,7 @@ def build_settings() -> Settings:
         template_draft_ttl_hours=_int_env("TEMPLATE_DRAFT_TTL_HOURS", 24),
         template_max_image_bytes=_int_env("TEMPLATE_MAX_IMAGE_BYTES", 8 * 1024 * 1024),
         template_max_pixels=_int_env("TEMPLATE_MAX_PIXELS", 40_000_000),
+        date_locale=os.getenv("DATE_LOCALE", "").strip() or "en-IN",
     )
 
 

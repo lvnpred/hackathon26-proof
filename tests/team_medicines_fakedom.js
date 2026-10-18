@@ -66,6 +66,7 @@ async function open(opts = {}) {
     }
     throw new Error("unexpected " + method + " " + url);
   };
+  if (opts.dates) { require(require("path").join(__dirname, "..", "frontend", "dates.js")); global.window.Dates.init(opts.dates); }   // the page's date formatter, as index.html loads it before team.js
   (0, eval)(fs.readFileSync(process.argv[2], "utf8"));
   await boot();
   await tick();

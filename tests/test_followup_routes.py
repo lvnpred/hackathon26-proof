@@ -63,10 +63,14 @@ def test_a_document_saved_before_this_change_opens_and_prints_as_before(tmp_path
     assert "<div>after 1 week</div>" in html and 'class="rev-date"' not in html    # no date until it is re-saved (Q8)
 
 
-def test_the_visit_day_is_the_server_local_day_and_save_prints_that_same_day(tmp_path, monkeypatch):
+def test_the_visit_day_is_the_clinic_zone_day_and_save_prints_that_same_day(tmp_path, monkeypatch):
     from datetime import datetime
+    from zoneinfo import ZoneInfo
     from doctor_dictation.api import persistence
-    assert visit.today() == datetime.now().astimezone().date()
+    monkeypatch.setenv("TZ", "Asia/Kolkata")
+    ist = ZoneInfo("Asia/Kolkata")
+    before = datetime.now(ist).date()
+    assert before <= visit.today() <= datetime.now(ist).date()          # the clinic zone, whatever the host clock zone is
     override_settings(monkeypatch, openai_api_key="", deepseek_api_key="")
     monkeypatch.setenv("DB_PATH", str(tmp_path / "v.db"))
     conn = dbmod.get_conn()

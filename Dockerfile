@@ -3,10 +3,12 @@
 FROM python:3.12-slim-bookworm
 ENV XDG_CACHE_HOME=/tmp/.cache PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright MULTI_CLINIC=1 DATA_DIR=/data WEB_CONCURRENCY=2 PORT=8000
+# The clinic zone: the visit day and the printed date follow it, not the host clock (code reads TZ; see api/visit.py).
+ENV TZ=Asia/Kolkata
 
-# Noto core covers the Indian scripts; ffmpeg is for optional audio trimming; tini reaps Chromium's zombie children.
+# tzdata: zone data for TZ (the slim base may not ship it). Noto core covers the Indian scripts; ffmpeg is for optional audio trimming; tini reaps Chromium's zombie children.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-ui-core fontconfig ffmpeg tini \
+ && apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-ui-core fontconfig ffmpeg tini tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

@@ -1,0 +1,220 @@
+{
+  "note": "One table for the Python formatter (core/datefmt.py) and the page formatter (frontend/dates.js). Screen and print cannot drift while both tests read it.",
+  "date": [
+    {
+      "in": "2026-10-17",
+      "locale": "en-IN",
+      "out": "17 Oct 2026"
+    },
+    {
+      "in": "2026-01-01",
+      "locale": "en-IN",
+      "out": "1 Jan 2026"
+    },
+    {
+      "in": "2026-02-09",
+      "locale": "en-IN",
+      "out": "9 Feb 2026"
+    },
+    {
+      "in": "2026-03-31",
+      "locale": "en-IN",
+      "out": "31 Mar 2026"
+    },
+    {
+      "in": "2026-04-05",
+      "locale": "en-IN",
+      "out": "5 Apr 2026"
+    },
+    {
+      "in": "2026-05-06",
+      "locale": "en-IN",
+      "out": "6 May 2026"
+    },
+    {
+      "in": "2026-06-07",
+      "locale": "en-IN",
+      "out": "7 Jun 2026"
+    },
+    {
+      "in": "2026-07-08",
+      "locale": "en-IN",
+      "out": "8 Jul 2026"
+    },
+    {
+      "in": "2026-08-09",
+      "locale": "en-IN",
+      "out": "9 Aug 2026"
+    },
+    {
+      "in": "2026-09-10",
+      "locale": "en-IN",
+      "out": "10 Sep 2026"
+    },
+    {
+      "in": "2026-11-11",
+      "locale": "en-IN",
+      "out": "11 Nov 2026"
+    },
+    {
+      "in": "2028-02-29",
+      "locale": "en-IN",
+      "out": "29 Feb 2028"
+    },
+    {
+      "in": "2026-12-31",
+      "locale": "en-IN",
+      "out": "31 Dec 2026"
+    },
+    {
+      "in": "1000-01-01",
+      "locale": "en-IN",
+      "out": "1 Jan 1000"
+    }
+  ],
+  "label": [
+    {
+      "in": "2026-10-19",
+      "locale": "en-IN",
+      "out": "Mon 19 Oct 2026"
+    },
+    {
+      "in": "2026-10-20",
+      "locale": "en-IN",
+      "out": "Tue 20 Oct 2026"
+    },
+    {
+      "in": "2026-10-21",
+      "locale": "en-IN",
+      "out": "Wed 21 Oct 2026"
+    },
+    {
+      "in": "2026-10-22",
+      "locale": "en-IN",
+      "out": "Thu 22 Oct 2026"
+    },
+    {
+      "in": "2026-10-23",
+      "locale": "en-IN",
+      "out": "Fri 23 Oct 2026"
+    },
+    {
+      "in": "2026-10-24",
+      "locale": "en-IN",
+      "out": "Sat 24 Oct 2026"
+    },
+    {
+      "in": "2026-10-25",
+      "locale": "en-IN",
+      "out": "Sun 25 Oct 2026"
+    },
+    {
+      "in": "2028-02-29",
+      "locale": "en-IN",
+      "out": "Tue 29 Feb 2028"
+    }
+  ],
+  "time": [
+    {
+      "in": "2026-10-17T09:35:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "3:05 pm"
+    },
+    {
+      "in": "2026-10-17T18:30:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "12:00 am"
+    },
+    {
+      "in": "2026-10-17T06:30:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "12:00 pm"
+    },
+    {
+      "in": "2026-10-17T00:05:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "5:35 am"
+    },
+    {
+      "in": "2026-10-17T20:00:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "1:30 am"
+    },
+    {
+      "in": "2026-10-17T06:29:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "11:59 am"
+    },
+    {
+      "in": "2026-10-17T12:00:00Z",
+      "tz": "America/New_York",
+      "locale": "en-IN",
+      "out": "8:00 am"
+    }
+  ],
+  "datetime": [
+    {
+      "in": "2026-10-17T09:35:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "17 Oct 2026, 3:05 pm"
+    },
+    {
+      "in": "2026-10-17T18:45:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "18 Oct 2026, 12:15 am"
+    },
+    {
+      "in": "2026-12-31T20:00:00Z",
+      "tz": "Asia/Kolkata",
+      "locale": "en-IN",
+      "out": "1 Jan 2027, 1:30 am"
+    },
+    {
+      "in": "2026-10-17T12:00:00Z",
+      "tz": "America/New_York",
+      "locale": "en-IN",
+      "out": "17 Oct 2026, 8:00 am"
+    }
+  ],
+  "invalid": {
+    "date": [
+      "",
+      "bad",
+      "2026-02-30",
+      "2026-13-01",
+      "2026-1-1",
+      null,
+      5,
+      "0099-01-01",
+      "0999-12-31",
+      "0000-01-01",
+      "2026-10-17\n",
+      "٢٠٢٦-١٠-١٧",
+      " 2026-10-17"
+    ],
+    "label": [
+      "",
+      "bad",
+      "2026-02-30",
+      "2026-13-01",
+      null,
+      "0099-01-01",
+      "2026-10-17\n",
+      "٢٠٢٦-١٠-١٧"
+    ],
+    "instant": [
+      "",
+      "not a time",
+      "2026-13-40T00:00:00Z",
+      null
+    ]
+  }
+}

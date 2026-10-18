@@ -2,8 +2,6 @@
    Browser global window.Sections; also loads under node with a fake DOM (tests/test_frontend_sections.py). */
 (function () {
   "use strict";
-  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];          // Monday first, as core/followup.py
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const URL = "/api/v1/review-date";
   const NOTE = { complaints: "pCcNote", diagnosis: "pDxNote" };
   let H = { post: null, waitMs: 400 };
@@ -16,13 +14,7 @@
     H = { post: (hooks && hooks.post) || null, waitMs: hooks && hooks.waitMs != null ? hooks.waitMs : 400 };
   }
 
-  function dateLabel(iso) {                       // the same text as core/followup.date_label
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
-    if (!m) return "";
-    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
-    if (d.getUTCMonth() !== +m[2] - 1) return "";
-    return DAYS[(d.getUTCDay() + 6) % 7] + " " + d.getUTCDate() + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear();
-  }
+  const dateLabel = (iso) => (window.Dates ? window.Dates.label(iso) : "");   // the same text as core/followup.date_label: one formatter (dates.js)
 
   function showDate(iso) {
     const n = $("pRevDate");

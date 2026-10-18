@@ -1,6 +1,7 @@
 """Health endpoints. Settings are read per request, never at import."""
 from fastapi import APIRouter
 
+from doctor_dictation.api import visit
 from doctor_dictation.config import get_settings, secret_presence
 from doctor_dictation.core.determinism import lexicon_size, lexicon_version
 from doctor_dictation.core.dosing import dosing_version
@@ -49,5 +50,7 @@ def health():
         "lexicon_version": lexicon_version(),
         "lexicon_entries": lexicon_size(),
         "dosing_version": dosing_version(),
+        "date_locale": visit.locale(),           # the page formats dates and times with these two (frontend/dates.js)
+        "timezone": visit.effective_zone_name(),   # the zone the server uses, so page and print agree
         "stt_decode": {k: v for k, v in STT_DECODE.items() if k != "initial_prompt"},
     }

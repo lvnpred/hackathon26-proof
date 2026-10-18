@@ -140,7 +140,7 @@ def test_finalize_records_document_and_audit(client_db):
     })
     assert r.status_code == 200, r.text
     body = r.json()
-    assert set(body) == {"patient_id", "encounter_id", "document_id", "op_no"}
+    assert set(body) == {"patient_id", "encounter_id", "document_id", "op_no", "visit_date"}   # I3: the day the PDF and review date used
     doc = dbmod.get_document_by_sha(client_db, "deadbeef")
     assert doc["id"] == body["document_id"]
     assert doc["encounter_id"] == body["encounter_id"]

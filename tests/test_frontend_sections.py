@@ -18,9 +18,9 @@ def _run(body):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    js = FAKE + "require(process.argv[1]); Sections.init({ post: (u, b) => new Promise((res) => posts.push({ u, b, res })), waitMs: 0 });" \
+    js = FAKE + "require(process.argv[2]); require(process.argv[1]); Sections.init({ post: (u, b) => new Promise((res) => posts.push({ u, b, res })), waitMs: 0 });" \
         + "(async () => {" + body + "})().catch((e) => { console.error(e.stack); process.exit(1); });"
-    out = subprocess.run([node, "-e", js, str(FRONT / "sections.js")], capture_output=True, text=True, timeout=30)
+    out = subprocess.run([node, "-e", js, str(FRONT / "sections.js"), str(FRONT / "dates.js")], capture_output=True, text=True, timeout=30)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 

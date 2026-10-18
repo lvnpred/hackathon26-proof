@@ -413,7 +413,7 @@ def local_day_bounds_utc(now=None) -> tuple[str, str]:
     ``created_at >= start AND created_at < end``.
     """
     if now is None:
-        now = datetime.now().astimezone()
+        now = datetime.now().astimezone()   # HOST zone (same caveat as db/opno.py: agrees with the visit day when TZ=Asia/Kolkata is set)
     tz = now.tzinfo
     start_local = datetime(now.year, now.month, now.day, tzinfo=tz)
     end_local = start_local + timedelta(days=1)

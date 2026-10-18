@@ -4,6 +4,8 @@ import calendar
 import re
 from datetime import date, timedelta
 
+from doctor_dictation.core import datefmt
+
 MAX_REVIEW_CHARS = 200
 LIMITS = {"day": 366, "week": 52, "month": 24, "year": 5}
 _NUM = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
@@ -67,13 +69,9 @@ def review_date(text, visit) -> str:
         return ""
 
 
-def date_label(iso) -> str:
-    """Fixed-English label for an ISO date ("Sat 24 Oct 2026"); not the server locale. "" for anything else."""
-    try:
-        d = date.fromisoformat(str(iso or ""))
-    except ValueError:
-        return ""
-    return f"{DAYS[d.weekday()]} {d.day} {MONTHS[d.month - 1]} {d.year}"
+def date_label(iso, locale=datefmt.DEFAULT_LOCALE) -> str:
+    """The weekday label for an ISO date ("Sat 24 Oct 2026"), from the shared formatter (core/datefmt.py). "" for anything else."""
+    return datefmt.format_label(iso, locale)
 
 
 def stamp(structured: dict, visit) -> dict:

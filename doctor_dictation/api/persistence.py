@@ -121,6 +121,19 @@ class DocumentCreate(BaseModel):
     document_id: int | None = None
 
 
+def visit_day(row):
+    """The document's visit day: the clinic-zone day of its created_at (fixed at first save). None when absent or unreadable."""
+    try:
+        return visit.to_clinic(datetime.fromisoformat(str(row["created_at"]).replace("Z", "+00:00"))).date()
+    except (ValueError, TypeError, KeyError, IndexError):
+        return None
+
+
+def visit_day_iso(row) -> str:
+    day = visit_day(row)
+    return day.isoformat() if day else ""
+
+
 def _pdf_inputs(conn, structured, day, encounter_id):
     """Render meta + layout for a document: the ONE place save and re-print share.
 
@@ -130,7 +143,7 @@ def _pdf_inputs(conn, structured, day, encounter_id):
     profile header (``layout`` None, no logo).
     """
     meta = {
-        "date": day.isoformat(),
+        "date": visit.date_text(day),         # "17 Oct 2026", the same locale as the page
         "opNo": structured.get("opNo") or "",
         "patientName": structured.get("patientName") or "",
         "profile": adb.print_profile(conn, encounter_id),
@@ -206,8 +219,7 @@ def create_document(req: DocumentCreate, request: Request):
     # no prior match are left as `validate_structured` produced them).
     preserve_untouched_rx_status(structured, {}, validated)
     strip_grounding_markers(validated)  # the gate passed: each row is verified or confirmed, so no "confirm with doctor" text prints
-    day = visit.today()  # one visit day for the review date and the PDF
-    followup.stamp(validated, day)
+    day = visit.today()  # a NEW document's visit day; a re-save keeps the day fixed at first save (below)
     conn = dbmod.get_conn()
     try:
         resave = req.document_id is not None
@@ -222,6 +234,7 @@ def create_document(req: DocumentCreate, request: Request):
             # encounter's patient. Never upsert a patient from the payload, so a
             # payload naming another patient cannot rebind/rename a row, and a
             # blank OP cannot leak a fresh patient on every re-save.
+            day = visit_day(existing) or day  # fixed at first save: the screen, the PDF and the review date share it
             encounter_id = existing["encounter_id"]
             enc = dbmod.get_encounter(conn, encounter_id)
             patient_id = enc["patient_id"]
@@ -253,9 +266,10 @@ def create_document(req: DocumentCreate, request: Request):
         # problem must never block Save. On any failure (no Playwright/Chromium,
         # unwritable path, ...) pdf_path stays None and the doctor falls back to
         # browser print-to-PDF.
+        followup.stamp(validated, day)  # one visit day for the review date and the PDF
         pdf_path = None
         out_path = dbmod.pdf_dir() / f"encounter_{encounter_id}.pdf"
-        meta, layout = _pdf_inputs(conn, validated, day, encounter_id)  # server-local day, same as the OP number
+        meta, layout = _pdf_inputs(conn, validated, day, encounter_id)  # the visit day: today for a first save, the stored day for a re-save
         try:
             pdf_path = str(_render_with_fallback(validated, meta, layout, out_path))
         except Exception:
@@ -308,6 +322,7 @@ def create_document(req: DocumentCreate, request: Request):
             "encounter_id": encounter_id,
             "document_id": document_id,
             "op_no": _record_op_no(conn, encounter_id),
+            "visit_date": day.isoformat(),             # the day the PDF and the review date used (fixed at first save)
         }
     finally:
         conn.close()
@@ -344,6 +359,7 @@ def get_document(document_id: int, request: Request):
             "engine": row["engine"] or "",
             "transcript_sha256": row["transcript_sha"],
             "created_at": row["created_at"],
+            "visit_date": visit_day_iso(row),          # the clinic-zone day the sheet shows (I3)
             **authorship.author_view(conn, request, document_id),
         }
     finally:
@@ -396,9 +412,8 @@ def get_document_pdf(document_id: int, request: Request):
             return _pdf_response(stored, document_id)
         try:
             structured = json.loads(row["structured_json"]) if row["structured_json"] else {}
-            created = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
             encounter_id = row["encounter_id"]
-            meta, layout = _pdf_inputs(conn, structured, created.astimezone().date(), encounter_id)
+            meta, layout = _pdf_inputs(conn, structured, visit_day(row) or visit.today(), encounter_id)
         except Exception:
             log.warning("cannot prepare on-demand PDF", exc_info=True)
             return _pdf_unavailable()

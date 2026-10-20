@@ -1,7 +1,8 @@
 # VPS setup guide (Ubuntu 24.04, Docker, Caddy)
 
 Plan: `docs/superpowers/plans/2026-10-18-hostinger-vps-deployment.md`. Existing runbook: `docs/deploy/runbook.md`.
-The scripts have not been run on a real server yet: run each step yourself and read the output.
+This guide is first-time setup; it was run on the live server on 2026-10-18 to 2026-10-20. For day-to-day work (updates, backup checks,
+restores, troubleshooting) use `docs/deploy/vps-operations.md`. Run each step yourself and read the output.
 
 This guide uses the real values for this pilot: server `200.234.34.10`, address `gsr.lightday.online`, SSH key `~/.ssh/id_ed25519_dictdoc_vps`.
 **Mac** = run on your laptop. **Server** = run inside an SSH session on the VPS.
@@ -164,7 +165,7 @@ Two limits to know:
 10. Install rclone: `sudo apt-get update && sudo apt-get install -y rclone`
 11. Check that rclone knows R2: `rclone version` (1.59 or newer), then `rclone help backend s3 | grep -i cloudflare` (prints a line).
 12. Make the config file, private from the start: `mkdir -p ~/.config/rclone && [ -f ~/.config/rclone/rclone.conf ] || install -m 600 /dev/null ~/.config/rclone/rclone.conf`
-13. Open it: `nano ~/.config/rclone/rclone.conf`. Paste the block below with your three values. Save with Ctrl-O, Enter, Ctrl-X. (Typing keys in an editor keeps them out of shell history.)
+13. Open it: `nano ~/.config/rclone/rclone.conf`. Paste the block below with your three values. The first line must be `[r2]` and no line may start with spaces; without the header `rclone listremotes` prints `DEFAULT:` and every command fails with "didn't find section in config file". Save with Ctrl-O, Enter, Ctrl-X. (Typing keys in an editor keeps them out of shell history.)
 
 ```ini
 [r2]
@@ -178,7 +179,7 @@ acl = private
 no_check_bucket = true
 ```
 
-14. Test the login: `rclone lsf r2:dictdoc-backups`. It prints nothing and no error.
+14. Test the login: `rclone listremotes` prints `r2:`, and `rclone lsf r2:dictdoc-backups` prints nothing and no error.
 15. Make the backup settings file: `install -m 600 /dev/null ~/.config/backup/backup.env && nano ~/.config/backup/backup.env`
 16. Put these two lines in it (leave out the `HC_PING_URL` line if you skipped step 8):
 
@@ -227,6 +228,6 @@ The drill defaults: `RESTORE_REMOTE=r2-read:dictdoc-backups`, `AGE_KEY=~/dictdoc
 - **Never paste** the OpenAI key, a private key or `.env.production` into chat or tickets.
 
 ## Later
-- **Update:** back up first, then `cd ~/app && git pull && docker compose --env-file .env.production up -d --build`.
+- **Update, backups, restore, troubleshooting:** `docs/deploy/vps-operations.md`.
 - `01-harden.sh --lock-ssh` writes `/etc/ssh/sshd_config.d/00-hardening.conf`; the `00-` name matters because sshd keeps the first value it reads.
 - The `deploy` user has passwordless sudo and Docker access (both root-equivalent), protected only by your SSH key and passphrase.

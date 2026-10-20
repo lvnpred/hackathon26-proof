@@ -316,6 +316,7 @@ async function openDocument(row) {
     renderSheet(state.structured);
     updateResaveNote();
     if (window.Authorship) Authorship.onOpen(j);   // a colleague's prescription opens view-only
+    RxView.focusFirst();                           // view-only: no focus move
     highlightToday();
     refreshPrintButton();
     const viewOnlyNow = !!(window.Authorship && Authorship.isViewOnly());
@@ -519,6 +520,9 @@ async function transcribeName(blob) {
   finally { clearTimeout(to); }
 }
 
+// The server's notes on a draft or a correction, appended to the status line.
+function warningNote(j) { return j.warnings && j.warnings.length ? " ⚠ " + j.warnings.join(" ") : ""; }
+
 async function formatTranscript(transcript) {
   // Retain the transcript immediately, before the LLM call: a slow format must
   // never lose the visit (Finding 2).
@@ -546,7 +550,8 @@ async function formatTranscript(transcript) {
     const open = openRows().length;
     setStatus("Draft ready via " + (j.engine || "engine") + (j.cached ? " (cached)" : "") + ". " +
       (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
-      " Edit, dictate a correction, or Save.");
+      " Edit, dictate a correction, or Save." + warningNote(j));
+    RxView.focusFirst();
   } catch (e) {
     state.retry = { mode: "dictate", transcript };
     showError(errorMessage(e, "Could not structure the dictation") +
@@ -558,7 +563,7 @@ async function formatTranscript(transcript) {
 }
 
 async function applyCorrection(transcript) {
-  const current = readForm();
+  const before = serializeForm(), current = before.structured;
   state.transcript = transcript; // retained before the call (Finding 2)
   renderTranscript();
   setWorking(true, "Applying your correction…");
@@ -566,20 +571,23 @@ async function applyCorrection(transcript) {
   try {
     const j = await postJson("/api/v1/correct", { transcript, current_form: current, document_id: state.documentId }, CORRECT_TIMEOUT_MS);
     state.structured = j.structured || current;
+    const carry = RxState.carryRowids(before.indexToRowid, current.rx, (state.structured || {}).rx, j.changed_rows);
     markDirty();
-    // A correction re-grounds rows, so prior confirmations are no longer trusted.
+    // A correction re-grounds the rows it changed; confirmations stay on the rest (changed_rows).
     state.retry = null;
-    state.confirmed.clear();
+    [...state.confirmed].forEach(id => { if (!carry.includes(id)) state.confirmed.delete(id); });
     state.lastBlock = [];
     hideBlockPanel();
-    renderSheet(state.structured);
+    const how = {}; rxBody.querySelectorAll("tr[data-rowid]").forEach(tr => { if (tr._rx && tr._rx.how && carry.includes(tr.dataset.rowid)) how[tr.dataset.rowid] = tr._rx.how; });
+    renderSheet(state.structured, carry);
+    rxBody.querySelectorAll("tr[data-rowid]").forEach(tr => { if (how[tr.dataset.rowid]) { tr._rx.how = how[tr.dataset.rowid]; renderCheck(tr); } });   // a kept row keeps "You chose..."; a changed row got a fresh id and has none
     Sections.showProseCheck(j.prose_check);
     setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
       (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
-      " Review, then Save." +
-      (j.warnings && j.warnings.length ? " ⚠ " + j.warnings.join(" ") : ""));
+      " Review, then Save." + warningNote(j));
+    RxView.focusFirst();                           // owner: after a spoken correction, start on the first flagged row
   } catch (e) {
     state.retry = { mode: "correct", transcript };
     showError(errorMessage(e, "Could not apply the correction") +
@@ -646,9 +654,10 @@ function serializeForm() {
   base.patientName = text($("pName"));
   base.ageSex = text($("pAge"));
   base.opNo = text($("pOp"));
+  base.vitals = Vitals.read();
   base.diagnosis = readList("pDx");
   base.complaints = readList("pCc");
-  base.investigations = readList("pIx");
+  base.investigations = IxList.read($("pIx"));      // items {text, canonical, status, source}; blanks dropped as the server does
   base.advice = readList("pAdv");
   base.review = text($("pRev"));
   const kept = readRx();
@@ -659,7 +668,7 @@ function serializeForm() {
     indexToRowid.push(k.rowid);
     if (state.confirmed.has(k.rowid)) confirmed_rows.push(i);
   });
-  return { structured: base, confirmed_rows, indexToRowid };
+  return { structured: base, confirmed_rows, indexToRowid, remember_generics: GenericEdit.rememberIndexes(kept.map(k => k.tr)), remember_investigations: IxList.rememberIndexes($("pIx")) };   // same order as confirmed_rows
 }
 
 function readForm() { return serializeForm().structured; }
@@ -797,6 +806,8 @@ function undoDelete() {
     updateGrounding();
     if (!blockPanel.hidden) refreshBlockPanel();
     focusEl = tr.querySelector(".x-btn");
+  } else if (r.type === "ix") {                       // a deleted test comes back where it was, with its status
+    focusEl = IxList.insert($("pIx"), r.item, r.pos).querySelector(".x-btn");
   } else if (r.type === "respell") {                  // undo of Spell it "Use this": the row goes back as it was
     focusEl = RxView.restore(r);
     updateGrounding();
@@ -819,6 +830,7 @@ sheetEl.addEventListener("click", (e) => {
   if (!b || state.working || Date.now() - lastDeleteAt < 500) return;
   if (b.dataset.action === "delete") deleteRow(b.closest("tr[data-index]"));
   else if (b.dataset.action === "delete-item") deleteItem(b.closest("li"));
+  else if (b.dataset.action === "delete-ix") IxList.remove(b.closest("li"));   // pushes its Undo through IxList's onRemove hook
   else return;
   $("undoBtn").focus();
 });
@@ -891,33 +903,34 @@ function rxRow(r, index, rowid) {                      // rowid: Undo restores a
   return tr;
 }
 
-function renderRx(rows) {
+function renderRx(rows, rowids) {
   rxBody.innerHTML = "";
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) {
     rxBody.appendChild(emptyRxRow());
     return;
   }
-  list.forEach((r, i) => rxBody.appendChild(rxRow(r, i)));
+  list.forEach((r, i) => rxBody.appendChild(rxRow(r, i, rowids && rowids[i])));
 }
 
 // The row's state cell is built by rxview.js from the rules in rxstate.js.
 function renderCheck(tr) { RxView.renderRow(tr); }
 
-function renderSheet(s) {
+function renderSheet(s, rowids) {
   s = s || {};
   state.sheetSeq++;
   setText($("pName"), s.patientName || "");
   setText($("pAge"), s.ageSex || "");
   setText($("pOp"), s.opNo || "");
+  Vitals.render(s.vitals);
   setText($("pDate"), state.visitDate ? window.Dates.date(state.visitDate) : today());   // read-only: the document's own visit day, else today
   renderList($("pDx"), s.diagnosis);
   renderList($("pCc"), s.complaints);
-  renderList($("pIx"), s.investigations);
+  IxList.render($("pIx"), s.investigations);
   renderList($("pAdv"), s.advice);
   setText($("pRev"), s.review || "");
   Sections.showDate(s.review_date || "");
-  renderRx(s.rx);
+  renderRx(s.rx, rowids);
   clearUndo(); // any new/reloaded sheet invalidates the one-level undo
   sheetEl.classList.remove("empty");
   saveBtn.hidden = false;
@@ -930,7 +943,7 @@ function renderSheet(s) {
 const stepCounts = () => ({ rows: [...rxBody.querySelectorAll("tr[data-index]")].filter(tr => !RxView.isBlank(tr)).length, needs: openRows().length });
 function openRows() {
   return [...rxBody.querySelectorAll("tr[data-index]")].filter(tr =>
-    tr.dataset.status !== "verified" && !state.confirmed.has(tr.dataset.rowid) && !RxView.isBlank(tr));
+    RxView.needsYou(tr));
 }
 
 function updateGrounding() {                            // :954 now a sentence plus the summary bar
@@ -968,24 +981,25 @@ rxBody.addEventListener("click", (e) => {
   if (state.working || (window.Authorship && Authorship.isViewOnly())) return;   // no confirming mid-flight or on a colleague's prescription
   const tr = btn.closest("tr[data-index]");
   if (!tr) return;
-  const rowid = tr.dataset.rowid;
-  if (state.confirmed.has(rowid)) state.confirmed.delete(rowid);
+  const rowid = tr.dataset.rowid, reopening = state.confirmed.has(rowid);
+  if (reopening) state.confirmed.delete(rowid);
   else { state.confirmed.add(rowid); if (RxView.stripMarker(tr)) markDirty(); }   // the doctor accepted the name: the check-row marker leaves the Instructions
   renderCheck(tr);
   updateGrounding();
   if (!blockPanel.hidden) refreshBlockPanel();
+  if (!reopening) RxView.afterConfirm(tr);            // the cursor moves on to the next row that needs the doctor (after the re-render)
 });
 
 function refreshBlockPanel() {
   const list = $("blockList");
-  const remaining = state.lastBlock.filter(b => b.rowid != null && !state.confirmed.has(b.rowid) &&
-    rxBody.querySelector('tr[data-rowid="' + b.rowid + '"]'));
+  const remaining = state.lastBlock.filter(b => { const tr = b.rowid != null && rxBody.querySelector('tr[data-rowid="' + b.rowid + '"]');
+    return !!tr && RxView.blockStands(tr, b); });       // open rows, and a confirmed row while the generic the server refused still stands
   if (!remaining.length) { blockPanel.hidden = true; return; }
   list.innerHTML = "";
   for (const b of remaining) {
     const li = document.createElement("li");
     const rowTr = rxBody.querySelector('tr[data-rowid="' + b.rowid + '"]');
-    const why = rowTr ? RxView.reasonFor(rowTr) : RxState.rowState({ status: b.status }, {}).reason;
+    const why = rowTr ? RxView.blockReason(rowTr, b) : RxState.rowState({ status: b.status }, {}).reason;
     li.append((b.name ? b.name + " — " : "row " + (b.index + 1) + " — ") + why + " ");
     const btn = document.createElement("button");        // :1010-1020 refreshBlockPanel: jump to the row, no confirming here
     btn.type = "button";
@@ -1006,7 +1020,7 @@ function hideBlockPanel() { blockPanel.hidden = true; state.lastBlock = []; }
 async function saveDocument() {
   if (state.working || (window.Authorship && Authorship.isViewOnly())) return;
   clearError();
-  const { structured, confirmed_rows, indexToRowid } = serializeForm();
+  const { structured, confirmed_rows, indexToRowid, remember_generics, remember_investigations } = serializeForm();
   state.structured = structured;
   updateGrounding();
   if (!hasContent(structured)) { showError("Nothing to save yet — dictate the visit first."); return; }
@@ -1028,6 +1042,8 @@ async function saveDocument() {
     const payload = {
       structured,
       confirmed_rows,
+      remember_generics,
+      remember_investigations,
       engine: state.engine || "",
       transcript_sha256: state.transcriptSha || "",
     };
@@ -1068,10 +1084,10 @@ async function saveDocument() {
       // medicine the doctor actually saw (Finding 1).
       state.lastBlock = e.data.block.map(b => ({ ...b, rowid: indexToRowid[b.index] }));
       refreshBlockPanel();
-      const n = state.lastBlock.length;
-      setStatus("Some medicines still need confirmation before saving.");
-      showError("Save blocked: " + n + " medicine" + (n > 1 ? "s" : "") + " need" + (n > 1 ? "" : "s") +
-        " a check. Resolve them in the sheet (the list below jumps to each one), then Save again.");
+      const n = state.lastBlock.length, ix = Array.isArray(e.data.investigations_block) ? e.data.investigations_block : [];
+      IxList.showBlocked($("pIx"), ix);                // red tests on the sheet: Keep or remove each
+      setStatus(n ? "Some medicines still need confirmation before saving." : "Some tests were not heard in the dictation.");
+      showError(IxList.blockedMessage(n, ix.length));
     } else {
       showError(errorMessage(e, "Save failed"));
     }
@@ -1214,6 +1230,7 @@ function newPatient() {
   setText($("pName"), "");
   setText($("pAge"), "");
   setText($("pOp"), "");
+  Vitals.render({});
   setText($("pDate"), today());
   ["pDx", "pCc", "pIx", "pAdv"].forEach(id => { $(id).innerHTML = ""; });
   rxBody.innerHTML = "";
@@ -1236,6 +1253,8 @@ $("profileForm").addEventListener("submit", saveProfile);
 
 // ---- init ------------------------------------------------------------------
 Sections.init({ post: postJson });
+IxList.init({ post: postJson, working: () => state.working, onChange: () => { markDirty(); updateCue(); },
+  onRemove: (item, pos) => setUndo({ type: "ix", item, pos }, "Deleted test.") });
 RxView.init({
   body: rxBody, saveBtn, confirmed: () => state.confirmed, working: () => state.working,
   transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo, notify: setStatus,

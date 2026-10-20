@@ -48,11 +48,13 @@ window.RxView = (function () {
     if (blank) delete tr.dataset.rxstate; else tr.dataset.rxstate = st.state;
     med.querySelectorAll(".rx-extra").forEach((n) => n.remove());                       // generic line and chips: screen only
     const gen = r.meta.generic, nm = val(tr, "name");
-    if (!blank && gen && !RxState.sameName(gen, nm)) med.appendChild(el("div", "rx-extra rx-sub rx-gen", "generic: " + gen));   // prints (I2-a)
-    else if (!blank && gen) {                                                                                                     // screen only (Q1)
+    const drew = window.GenericEdit ? GenericEdit.render(tr, r, st, H) : "";                     // the generic line, Add generic, AI suggests: genericedit.js
+    if (!blank && gen && !drew && RxState.sameName(gen, nm)) {                                   // a generic-named row: screen only (Q1)
       const tag = el("span", "rx-extra rx-gen-tag no-print", "generic"), nameEl = med.querySelector('[data-col="name"]');
       if (nameEl) nameEl.after(tag); else med.appendChild(tag);                        // directly after the name, not after the strength
     }
+    const genProblem = blank || !window.GenericEdit ? "" : GenericEdit.problemOf(r.meta);       // a doctor generic the server would refuse
+    if (genProblem) st.canConfirm = false;                                                       // stays in confirm until fixed or cleared
     const sch = blank ? "" : RxState.scheduleOf(r.meta);                                                                         // information only (Q10): never printed, never a state
     if (sch) {
       const s = el("span", "rx-extra rx-sched no-print", "Schedule " + sch), tag = med.querySelector(".rx-gen-tag");
@@ -81,7 +83,7 @@ window.RxView = (function () {
     }
     box.children[0].hidden = blank; box.children[0].dataset.state = st.state; box.children[0].title = st.reason; box.children[0].textContent = "";
     if (!blank) box.children[0].append(icon(st.icon), el("span", null, st.label));
-    box.children[1].textContent = st.reason; box.children[2].textContent = r.note;
+    box.children[1].textContent = st.reason; box.children[2].textContent = r.note || genProblem;
     const acts = box.children[3], hadFocus = !!document.activeElement && [...acts.children].includes(document.activeElement);
     acts.textContent = "";
     if (r.checking) {                                 // only this row waits; the other rows keep working
@@ -105,7 +107,7 @@ window.RxView = (function () {
     SpellModal.sweep();                            // row deleted: its dialog goes
     let needs = 0, checking = 0;
     const live = rows().filter((tr) => !isBlank(tr));
-    live.forEach((tr) => { if (rx(tr).checking) checking++; if (RxState.rowState(rowOf(tr), ctxOf(tr)).needsYou) needs++; });
+    live.forEach((tr) => { if (rx(tr).checking) checking++; if (needsYou(tr)) needs++; });
     const s = RxState.summary({ total: live.length, needs, checking });
     $("rxBar").hidden = !H.hasSheet();
     $("rxTitle").textContent = s.title;
@@ -226,6 +228,52 @@ window.RxView = (function () {
     return tr.querySelector(".rx-state");
   }
   const meta = (tr) => Object.assign({}, rx(tr).meta, { how: rx(tr).how });
-  const wire = (tr) => { const m = rx(tr).meta || {}; return { heard: typeof m.heard === "string" ? m.heard : "", lookalike: typeof m.lookalike === "string" ? m.lookalike : "" }; };   // the only meta fields the server reads back
-  return { init, attach, renderRow, sync, onEdit, meta, wire, reasonFor, restore, isBlank, stripMarker };
+  // The fields the server reads back: heard + lookalike always; a doctor-entered generic (and its pending flag) and a non-empty suggestion.
+  const wire = (tr) => {
+    const m = rx(tr).meta || {}, s = (v) => (typeof v === "string" ? v : "");
+    const w = { heard: s(m.heard), lookalike: s(m.lookalike) };
+    if (m.generic_source === "doctor") { w.generic = s(m.generic); w.generic_source = "doctor"; w.generic_pending = m.generic_pending === true; }
+    if (s(m.generic_suggestion)) w.generic_suggestion = m.generic_suggestion;
+    return w;
+  };
+  const needsYou = (tr) => !isBlank(tr) && RxState.rowState(rowOf(tr), ctxOf(tr)).needsYou;       // the bar, the open rows and the block panel share this
+  // Keyboard flow: after a confirm the cursor goes to the next row that still needs the doctor (same order as the sheet), wrapping to the
+  // top, then to the first red test's Keep (#pIx), then to Save. A row with no Confirm button gets its first action. Called only right after a
+  // confirm and when a sheet first appears.
+  const openList = () => rows().filter(needsYou);
+  const redKeep = () => {                          // a test the doctor never said (dictated, not-dictated) blocks Save: it comes first
+    const ul = $("pIx"), li = ul && ul.querySelector('li.ix-item[data-status="not-dictated"][data-source="dictated"]'), k = li && li.querySelector(".ix-keep");
+    return k && !k.hidden ? k : null;
+  };
+  function focusRow(tr) {
+    const box = tr.querySelector(".rx-acts"), acts = box ? [...box.children].filter((b) => b.dataset && b.dataset.action && !b.disabled) : [];
+    const pick = acts.find((b) => b.dataset.action === "confirm" && b.className.split(/\s+/).includes("solid")) || acts[0] || tr.querySelector(".rx-state");
+    if (pick) pick.focus({ preventScroll: false });
+  }
+  function afterConfirm(tr) {
+    if (!H || viewOnly()) return;
+    const open = openList(), all = rows(), at = all.indexOf(tr);
+    if (!open.length) { const k = redKeep(); if (k) k.focus({ preventScroll: false }); else if (!H.saveBtn.disabled) H.saveBtn.focus({ preventScroll: false }); return; }
+    focusRow(open.find((t) => all.indexOf(t) > at) || open[0]);
+  }
+  function typingElsewhere() {                     // the answer arrives late: never pull focus out of a field the doctor is in
+    const a = document.activeElement;
+    if (!a || a === document.body) return false;
+    const tag = String(a.tagName || "").toUpperCase(), ce = a.isContentEditable || (a.getAttribute && ["", "true", "plaintext-only"].includes(a.getAttribute("contenteditable")));
+    if (tag === "INPUT" || tag === "TEXTAREA" || ce) return true;
+    const sheet = $("sheet"); let inSheet = false, inActs = false;
+    for (let n = a; n; n = n.parentNode) { if (n === sheet) inSheet = true; if (n.className && String(n.className).split(/\s+/).includes("rx-acts")) inActs = true; }
+    return inSheet && !inActs;
+  }
+  function focusFirst() {                          // a sheet just appeared: start on the first flagged row, or leave focus alone
+    if (!H || viewOnly() || typingElsewhere()) return;
+    const open = openList();
+    if (open.length) focusRow(open[0]);
+  }
+  // The sentence for a block-panel entry; a confirmed row the server still refuses on its generic says so.
+  const blockReason = (tr, b) => (b && b.generic === "invalid" && !needsYou(tr) ? "The generic you entered was not accepted. Edit it or clear it." : reasonFor(tr));
+  // A block-panel entry still stands while the row needs you, or while the doctor generic the server refused is still there
+  // (cleared or fixed: the entry goes, it never lingers until the next save).
+  const blockStands = (tr, b) => needsYou(tr) || (!!b && b.generic === "invalid" && !!window.GenericEdit && GenericEdit.problemOf(rx(tr).meta) !== "");
+  return { init, attach, renderRow, sync, onEdit, meta, wire, needsYou, blockReason, blockStands, reasonFor, restore, isBlank, stripMarker, afterConfirm, focusFirst };
 })();

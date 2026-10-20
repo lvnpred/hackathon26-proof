@@ -3,6 +3,8 @@ enable, reset a password). Everything else: every signed-in user of a clinic, ex
 Later role rules go inside ``can`` with no route changes."""
 from __future__ import annotations
 
+import os
+
 ACTIONS = frozenset({"document.view", "document.reprint", "document.edit", "user.view", "user.create", "user.disable",
                      "user.reset_password", "letterhead.manage", "formulary.manage"})
 
@@ -29,3 +31,11 @@ def can(user, action: str, resource=None) -> bool:
         owner = resource.get("owner_user_id") if isinstance(resource, dict) else getattr(resource, "owner_user_id", None)
         return owner is None or owner == user.user_id      # a doctor's own letterhead is theirs alone
     return True
+
+
+def is_owner(user) -> bool:
+    """The app owner reviews the shipped lists. ``OWNER_USERNAMES`` (comma-separated, case-insensitive) is read at call time."""
+    if user is None:
+        return False
+    names = {n.strip().casefold() for n in os.environ.get("OWNER_USERNAMES", "").split(",") if n.strip()}
+    return str(getattr(user, "username", "") or "").casefold() in names

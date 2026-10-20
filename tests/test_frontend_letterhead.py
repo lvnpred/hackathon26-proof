@@ -37,7 +37,17 @@ def test_letterhead_js_never_builds_markup_from_server_text():
 
 def test_letterhead_assets_are_cache_busted():
     html = _read("index.html")
-    assert "letterhead.js?v=11" in html and "letterhead.css?v=8" in html
+    assert "letterhead.js?v=12" in html and "letterhead.css?v=9" in html
+    assert html.index("lhlines.js?v=1") < html.index("letterhead.js?v=")
+
+
+def test_review_screen_has_the_remove_and_duplicate_controls():
+    html, js = _read("index.html"), _read("lhlines.js")
+    assert 'id="lhDupes"' in html and 'id="lhSkipped"' in html
+    assert "Remove this line" in js and "At the top only" in js and "In both places" in js
+    assert "Choose where the" not in js + _read("letterhead.js")        # owner Q5: the question never blocks
+    assert "innerHTML" not in js and "insertAdjacentHTML" not in js       # server text is never markup
+    assert len(_read("letterhead.js").splitlines()) < 500
 
 
 def test_clinic_details_have_the_op_prefix_field_wired_both_ways():
@@ -78,8 +88,9 @@ def test_letterhead_js_parses():
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    out = subprocess.run([node, "--check", str(FRONT / "letterhead.js")], capture_output=True, text=True)
-    assert out.returncode == 0, out.stderr
+    for name in ("letterhead.js", "lhlines.js"):
+        out = subprocess.run([node, "--check", str(FRONT / name)], capture_output=True, text=True)
+        assert out.returncode == 0, out.stderr
 
 
 def _open_panel_body():
@@ -100,3 +111,49 @@ def test_the_review_screen_says_the_accepters_details_are_filled_in_author_mode(
     assert 'id="lhFillHint"' in html and "Your own doctor details will be filled from this letterhead." in html
     assert 'el("lhFillHint").hidden = !(lh.personal && mode === "author");' in js
     assert 'lhFillHint").innerHTML' not in js
+
+
+def test_active_letterhead_can_be_fixed_without_a_new_upload():
+    html, js = _read("index.html"), _read("letterhead.js")
+    for elem_id in ("lhTidyBtn", "lhTidyMineBtn", "lhTidySaveBtn", "lhDetailsPart"):
+        assert f'id="{elem_id}"' in html, elem_id
+    assert '"/lines"' in js and "Fix lines on the clinic letterhead" in html and "Fix lines on my letterhead" in html
+    assert "New prescriptions and re-prints use the fixed letterhead." in js
+    assert "Press Fix lines to check them." in js and "print twice" not in js
+    assert "(j.clinic.duplicates" not in js and "j.mine.fill_in" in js
+    assert "The letterhead changed since you opened it. Close and reopen Fix lines." in js
+    assert "if (r.status === 400) refreshStatus();" in js
+    assert "innerHTML" not in js
+
+
+def test_tidy_mode_hides_accept_and_the_details_part():
+    js = _read("letterhead.js")
+    show = js[js.index("function show("):js.index("async function openPanel")]
+    assert '"tidy"' in show and "lhAcceptBtn" in show and "lhDetailsPart" in show and "lhTidySaveBtn" in show
+
+
+def test_tidy_saves_the_lines_and_redraws_from_the_returned_view():
+    js = _read("letterhead.js")
+    save = js[js.index("async function saveTidy"):]
+    save = save[:save.index("\n  }\n")]
+    assert 'method: "PUT"' in save and "LhLines.collect" in save and "renderLines(" in save and "loadPreview(" in save
+    assert "lh.tidy = null" in js
+    assert "loadPreview(lh.draft.id)" in js
+
+
+def test_tidy_errors_do_not_talk_about_drafts():
+    js = _read("letterhead.js")
+    msg = js[js.index("function httpMessage"):js.index("function netMessage")]
+    assert 'what === "lines"' in msg
+    assert "This letterhead is no longer in use. Close this panel and check the current letterhead." in msg
+    assert "A line could not be saved. Check the lines and try again." in msg
+    assert msg.index('what === "lines"') < msg.index("This draft no longer exists")
+    assert "404" in msg and "409" in msg and "400" in msg
+    save = js[js.index("async function saveTidy"):]
+    assert 'httpMessage(r.status, "lines", j)' in save[:save.index("\n  }\n")]
+
+
+def test_tidy_mode_skips_the_doctor_name_warning_that_points_below():
+    js = _read("letterhead.js")
+    tidy = js[js.index("function openTidy"):js.index("async function discard")]
+    assert "renderWarnings" not in tidy

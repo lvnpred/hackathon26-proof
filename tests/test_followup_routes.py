@@ -60,7 +60,7 @@ def test_a_document_saved_before_this_change_opens_and_prints_as_before(tmp_path
     got = TestClient(M.app).get(f"/api/v1/documents/{doc}").json()["structured"]
     assert got == old                                                              # no migration, no new key
     html = build_sheet_html(got, {"date": "2026-10-01"})
-    assert "<div>after 1 week</div>" in html and 'class="rev-date"' not in html    # no date until it is re-saved (Q8)
+    assert '<span class="inl-label">Review:</span> after 1 week</div>' in html and 'class="rev-date"' not in html    # no date until it is re-saved (Q8)
 
 
 def test_the_visit_day_is_the_clinic_zone_day_and_save_prints_that_same_day(tmp_path, monkeypatch):

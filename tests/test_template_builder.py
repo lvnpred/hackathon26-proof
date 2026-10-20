@@ -104,3 +104,17 @@ def test_empty_logo_region_is_502(monkeypatch):
     with pytest.raises(TemplateError) as e:
         _run(monkeypatch, bad)[1]()
     assert e.value.status == 502
+
+
+def test_a_layout_of_only_fill_in_lines_still_builds(monkeypatch):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["header"] = [{"type": "text", "text": "Name: Age:"}]
+    lay["footer"] = []
+    d = _run(monkeypatch, lay)[1]()
+    assert d.layout["header"] == [] and d.layout["footer"] == [] and d.layout["skipped_labels"] == ["Name: Age:"]
+    assert d.logo_jpeg is None
+
+
+def test_no_skipped_labels_key_when_nothing_is_dropped(monkeypatch):
+    d = _run(monkeypatch, json.loads(json.dumps(GOOD_LAYOUT)))[1]()
+    assert "skipped_labels" not in d.layout

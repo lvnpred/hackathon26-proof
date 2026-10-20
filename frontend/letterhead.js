@@ -15,12 +15,20 @@
     502: "The AI could not read this letterhead, and nothing was saved. Try a clearer, straight-on photo, or use the built-in layout.",
     503: "Reading letterheads is not set up on this server (no AI model that can read pictures is configured). Ask your administrator. The built-in layout still works.",
   };
-  const lh = { draft: null, abort: null, blobUrl: null, active: false, mine: false, personal: false, choices: null };
+  const lh = { draft: null, abort: null, blobUrl: null, active: false, mine: false, personal: false, choices: null,
+    clinicView: null, mineView: null, tidy: null };
+  const NUDGE = " Some lines on it look like blank labels from the paper pad. Press Fix lines to check them.";
+  const NUDGE_MINE = " Some lines on your letterhead look like blank labels from the paper pad. Press Fix lines on my letterhead to check them.";
+  const STALE = "The letterhead changed since you opened it. Close and reopen Fix lines.";
   const WARN_TEXT = "This line may be a doctor's name or degree. Doctor names should come from the doctors choice below, so they stay correct for each prescription.";
   const el = (id) => document.getElementById(id);
   const status = (m) => { el("lhStatus").textContent = m; };
   function showErr(m) { const e = el("lhError"); e.textContent = m || ""; e.hidden = !m; }
-  function httpMessage(code, what) {
+  function httpMessage(code, what, body) {
+    if (what === "lines") {                // an active letterhead, not a draft
+      if (code === 404 || code === 409) return "This letterhead is no longer in use. Close this panel and check the current letterhead.";
+      if (code === 400) return (body && body.error) || "A line could not be saved. Check the lines and try again.";
+    }
     if (MSG[code] && what === "upload") return MSG[code];
     if (code === 404) return "This draft no longer exists (drafts expire after a day). Upload the picture again.";
     return "Something went wrong (code " + code + "). Try again; if it keeps happening, tell your administrator.";
@@ -44,19 +52,27 @@
   }
   async function json(r) { try { return await r.json(); } catch (e) { return {}; } }
   // The stop button shows only with an active letterhead AND the upload view (never beside the review footer).
-  function syncStop() { el("lhStopBtn").hidden = !(lh.active && !el("lhUpload").hidden); }
+  function syncStop() {
+    const up = !el("lhUpload").hidden;
+    el("lhStopBtn").hidden = !(lh.active && up);
+    el("lhTidyBtn").hidden = !(lh.clinicView && up);
+    el("lhTidyMineBtn").hidden = !(lh.mineView && up);
+  }
   async function refreshStatus() {
     try {
       const r = await call(API + "/current");
       const j = r.ok ? await json(r) : null;
-      lh.active = !!(j && j.clinic); lh.mine = !!(j && j.mine); lh.personal = !!(j && j.personal); syncStop();
+      lh.active = !!(j && j.clinic); lh.mine = !!(j && j.mine); lh.personal = !!(j && j.personal);
+      lh.clinicView = (j && j.clinic) || null; lh.mineView = (j && j.mine) || null; syncStop();
       profileStatusLine(!j ? "unknown" : j.clinic ? "active" : "builtin");
       profileMineLine(j);
       status(!j ? "Could not check the current letterhead (code " + r.status + ")."
         : (j.clinic ? "The clinic letterhead is active: prescriptions print on it." : "Using the built-in layout (no clinic letterhead is active).")
-          + (j.mine ? " Your own letterhead is active for your prescriptions." : ""));
+          + (j.mine ? " Your own letterhead is active for your prescriptions." : "")
+          + (j.clinic && (j.clinic.fill_in || []).length ? NUDGE : "")
+          + (j.mine && (j.mine.fill_in || []).length ? NUDGE_MINE : ""));
     } catch (e) {
-      lh.active = false; syncStop(); profileStatusLine("unknown"); profileMineLine(null);
+      lh.active = false; lh.clinicView = null; lh.mineView = null; syncStop(); profileStatusLine("unknown"); profileMineLine(null);
       status("Could not check the current letterhead. " + netMessage(e));
     }
   }
@@ -99,8 +115,12 @@
   }
   function show(view) {
     el("lhUpload").hidden = view !== "upload";
-    el("lhReview").hidden = view !== "review";
-    el("lhFoot").hidden = view !== "review";
+    const tidy = view === "tidy";
+    el("lhReview").hidden = view !== "review" && !tidy;
+    el("lhFoot").hidden = view !== "review" && !tidy;
+    el("lhDetailsPart").hidden = tidy;                      // fixing the lines of an active letterhead: no details, no accept
+    ["lhAcceptBtn", "lhReuploadBtn", "lhBuiltinBtn", "lhUpdateBtn"].forEach((id) => { el(id).hidden = tidy; });
+    el("lhTidySaveBtn").hidden = !tidy;
     syncStop();
   }
   async function openPanel() {
@@ -133,14 +153,6 @@
     } catch (e) { showErr(netMessage(e)); }
     finally { setBusy(false); }
   }
-  // Literal text lines are {type:"text", text} blocks in layout.header / layout.footer.
-  function literalLines(layout) {
-    const out = [];
-    ["header", "footer"].forEach((part) => ((layout || {})[part] || []).forEach((b, i) => {
-      if (b && b.type === "text" && typeof b.text === "string") out.push({ part: part, index: i, text: b.text });
-    }));
-    return out;
-  }
   function field(id, label, value, tag) {
     const w = document.createElement("label");
     w.className = "field"; w.textContent = label;
@@ -153,7 +165,7 @@
     return r ? r.value : fallback;
   }
   function renderWarnings(d) {
-    el("lhLines").querySelectorAll("input").forEach((inp) => {
+    el("lhLines").querySelectorAll("input.lh-line-text").forEach((inp) => {
       const id = inp.id + "Warn", old = el(id);
       if (old) old.remove();
       inp.removeAttribute("aria-describedby");
@@ -218,16 +230,13 @@
     if (j && j.doctors) lh.draft = Object.assign({}, lh.draft, j);
     return true;
   }
+  // The lines and the where-to-print questions; a re-render after a save keeps the labels the doctor unticked.
+  function renderLines(d, keepTicks) {
+    LhLines.render(el("lhLinesBox"), d, { labels: PROFILE_LABEL, unticked: keepTicks || [] });
+  }
   function renderReview(d) {
     show("review");
-    const lines = el("lhLines"); lines.textContent = "";
-    const seen = { header: 0, footer: 0 };
-    literalLines(d.layout).forEach((l, n) => {
-      const w = field("lhLine" + n, (l.part === "header" ? "Top line " : "Bottom line ") + (++seen[l.part]), l.text);
-      const inp = w.querySelector("input"); inp.dataset.section = l.part; inp.dataset.index = String(l.index);
-      lines.appendChild(w);
-    });
-    el("lhLinesBox").hidden = !lines.children.length;
+    renderLines(d, null);
     const pf = el("lhProfileFields"); pf.textContent = "";
     const grid = el("lhDoctorGrid"), hidden = [];     // the doctors are edited side by side; the joined strings live in hidden inputs
     grid.textContent = "";
@@ -244,21 +253,19 @@
     });
     DoctorGrid.mount(grid, hidden);
     renderWarnings(d); renderDoctors(d);
-    loadPreview();
-    const first = lines.querySelector("input") || el("lhProf_clinic_name"); first.focus();
+    loadPreview(lh.draft.id);
+    const first = el("lhLines").querySelector("input.lh-line-text") || el("lhProf_clinic_name"); first.focus();
   }
   function collect() {
     const profile = {};
     PROFILE_KEYS.forEach((k) => { profile[k] = el("lhProf_" + k).value.trim(); });
-    const lines = [];
-    el("lhLines").querySelectorAll("input").forEach((i) => lines.push({ section: i.dataset.section, index: Number(i.dataset.index), text: i.value.trim() }));
-    return { profile: profile, lines: lines };
+    return Object.assign({ profile: profile }, LhLines.collect(el("lhLinesBox")));
   }
-  async function loadPreview() {
+  async function loadPreview(id) {
     const box = el("lhPreview"); box.textContent = "Drawing preview…";
     if (lh.blobUrl) { URL.revokeObjectURL(lh.blobUrl); lh.blobUrl = null; }
     try {
-      const r = await call(API + "/" + lh.draft.id + "/preview.pdf?t=" + Date.now(), {}, 60000);
+      const r = await call(API + "/" + id + "/preview.pdf?t=" + Date.now(), {}, 60000);
       if (!r.ok) { box.textContent = r.status === 404 ? httpMessage(404) :
         "The preview could not be drawn (code " + r.status + "). Press Update preview to try again."; return; }
       lh.blobUrl = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: "application/pdf" }));
@@ -281,12 +288,15 @@
       headers: { "Content-Type": "application/json" }, body: JSON.stringify(collect()) });
     if (!r.ok) { showErr(httpMessage(r.status, "edit")); return false; }
     const j = await json(r);
-    if (j && j.layout) lh.draft = Object.assign({}, lh.draft, j);
+    if (j && j.layout) {
+      lh.draft = Object.assign({}, lh.draft, j);
+      renderLines(lh.draft, LhLines.unticked(el("lhLinesBox")));   // removed lines are gone: the line numbers moved
+    }
     return true;
   }
   async function updatePreview() {
     showErr(""); setBusy(true, "Saving your edits…");
-    try { if (await saveEdits() && await saveDoctors()) { renderWarnings(lh.draft); await loadPreview(); } } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
+    try { if (await saveEdits() && await saveDoctors()) { renderWarnings(lh.draft); await loadPreview(lh.draft.id); } } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
   async function accept() {
     showErr(""); setBusy(true, "Saving your letterhead…");
@@ -304,6 +314,37 @@
       el("lhDone").textContent = mine
         ? "Done. Your own letterhead is saved. Only your prescriptions print on it; colleagues keep the clinic letterhead."
         : "Done. The clinic letterhead is saved, and its clinic details were saved to the Profile. New prescriptions print on it.";
+      refreshStatus();
+    } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
+  }
+  // Fix the lines of an ACTIVE letterhead from the screen: no draft, no accept, the change is live on save.
+  function openTidy(view) {
+    showErr(""); el("lhDone").hidden = true;
+    lh.tidy = view;
+    show("tidy");
+    renderLines(view, null);   // no doctor-name warnings here: their text points at the hidden doctors choice
+    loadPreview(view.id);
+    const first = el("lhLines").querySelector("input.lh-line-text"); if (first) first.focus();
+  }
+  async function saveTidy() {
+    showErr(""); el("lhDone").hidden = true; setBusy(true, "Saving the lines…");
+    try {
+      const r = await call(API + "/" + lh.tidy.id + "/lines", { method: "PUT",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(LhLines.collect(el("lhLinesBox"))) });
+      const j = await json(r);
+      if (!r.ok) {
+        const stale = r.status === 400 && /letterhead changed|no such line/.test((j && j.error) || "");
+        showErr(stale ? STALE : httpMessage(r.status, "lines", j));
+        if (r.status === 400) refreshStatus();
+        return;
+      }
+      if (j && j.layout) {
+        lh.tidy = Object.assign({}, lh.tidy, j);
+        renderLines(lh.tidy, LhLines.unticked(el("lhLinesBox")));   // removed lines are gone: the numbers moved
+        loadPreview(lh.tidy.id);
+      }
+      el("lhDone").hidden = false;
+      el("lhDone").textContent = "Saved. New prescriptions and re-prints use the fixed letterhead.";
       refreshStatus();
     } catch (e) { showErr(netMessage(e)); } finally { setBusy(false); }
   }
@@ -356,7 +397,11 @@
   });
   el("lhCloseBtn").addEventListener("click", closePanel);
   el("lhPanel").addEventListener("close", () => { if (lh.abort && !lh.draft) lh.abort.abort(); });
+  el("lhPanel").addEventListener("close", () => { lh.tidy = null; });
   el("lhStopBtn").addEventListener("click", stopUsing);
+  el("lhTidyBtn").addEventListener("click", () => lh.clinicView && openTidy(lh.clinicView));
+  el("lhTidyMineBtn").addEventListener("click", () => lh.mineView && openTidy(lh.mineView));
+  el("lhTidySaveBtn").addEventListener("click", saveTidy);
   el("lhUploadForm").addEventListener("submit", upload);
   el("lhUpdateBtn").addEventListener("click", updatePreview);
   el("lhAcceptBtn").addEventListener("click", accept);

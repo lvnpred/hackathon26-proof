@@ -73,3 +73,10 @@ def test_added_by_is_the_user_whose_confirmation_activated_the_name(conn, docs):
     d5 = dbmod.save_document(conn, eid, "sha5", {"rx": []})
     count(conn, d5, user=c)
     assert added_by(conn) == c and len(fdb.list_active(conn)) == 1
+
+
+def test_a_combination_or_misspelt_name_goes_live_only_after_the_threshold(conn, docs):
+    from doctor_dictation.core.formulary import THRESHOLD
+    for name in ("Zerodol-P", "Crocinn"):
+        assert count(conn, docs[0], name) == 1 and name not in [r["name"] for r in fdb.list_active(conn)]
+        assert count(conn, docs[1], name) == THRESHOLD and name in [r["name"] for r in fdb.list_active(conn)]

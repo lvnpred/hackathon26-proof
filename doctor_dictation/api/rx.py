@@ -45,8 +45,8 @@ def _problem(req: CheckRowRequest):
 
 
 def _ground(row: dict, raw: str, normalized: str, age_sex: str) -> dict:
-    # Known limitation: the row's form is used as given. The page echoes a defaulted 'Tab.' back, so a defaulted
-    # form is indistinguishable from a spoken one here (recorded for the frontend plan).
+    # Known limitation: the row's form is used as given. An undictated form is "" and the page echoes "" back,
+    # so only a form the doctor dictated is checked against the medicine here.
     grounded = ground_one(row, raw, normalized, age_sex)
     listed, total = options(grounded)
     return {"row": grounded, "suggestions": suggestions(grounded), "options": listed, "total": total}

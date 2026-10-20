@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from doctor_dictation import accounts, authn
+from doctor_dictation import accounts, authn, policy
 from doctor_dictation import db as dbmod
 from doctor_dictation.directory import open_directory
 from doctor_dictation.directory.revocations import revoke_session
@@ -103,7 +103,8 @@ async def me(request: Request):
     i = request.state.identity
     name = await asyncio.to_thread(authn.clinic_name, i.clinic_slug)
     return {"clinic_slug": i.clinic_slug, "clinic_name": name, "username": i.username,
-            "display_name": i.display_name, "role": i.role, "must_change_password": i.must_change_password}
+            "display_name": i.display_name, "role": i.role, "must_change_password": i.must_change_password,
+            "is_owner": policy.is_owner(i)}
 
 
 @router.post("/api/v1/auth/change-password")

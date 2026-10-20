@@ -1,0 +1,7 @@
+#!/bin/sh
+# Stand-in for df: -Pk prints $FAKE_DF_KB (default 100000000) as Available; -h prints a fixed human row.
+case "$*" in
+  *-h*) echo "Filesystem Size Used Avail Use% Mounted on"; echo "fakefs 100G 40G 60G 40% /fake";;
+  *) echo "Filesystem 1024-blocks Used Available Capacity Mounted on"
+     echo "fakefs 200000000 100000000 ${FAKE_DF_KB:-100000000} 50% /fake";;
+esac

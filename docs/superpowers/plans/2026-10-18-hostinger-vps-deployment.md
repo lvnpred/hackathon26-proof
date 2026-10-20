@@ -1,6 +1,6 @@
 # Hostinger VPS deployment plan
 
-**Status:** proposal, nothing built or bought. Extends `docs/deploy/runbook.md` (the app + Caddy compose stack already exists: `docker-compose.yml`, `Caddyfile`, `.env.production.example`).
+**Status (2026-10-18):** executed. Deployed on a Hostinger KVM 2 at `gsr.lightday.online`; Phases 1, 2 and the backup part of Phase 4 are done, Phase 3 (smoke test) and the rest of Phase 4/5 are open. See `docs/working/2026-10-18-deployment/README.md`. Extends `docs/deploy/runbook.md` (the app + Caddy compose stack already exists: `docker-compose.yml`, `Caddyfile`, `.env.production.example`).
 
 ## Summary (read this first)
 

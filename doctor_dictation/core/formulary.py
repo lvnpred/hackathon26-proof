@@ -53,20 +53,22 @@ def person_like(name) -> bool:
 
 
 def learnable(structured, confirmed_rows, known_patient_words=None) -> list[tuple[str, str]]:
-    """[(name, generic)] a saved form teaches: confirmed rows whose name the lexicon does not know, once per name.
+    """[(name, generic)] a saved form teaches: confirmed rows whose name the lexicon does not know exactly, once per name.
 
     The doctor's confirmation, not the row's status text, is the trigger (the client could send any status), and a
     name made only of the patient's own name words is never learned (a patient typed into a medicine cell). Person-like
     names, and names with a word (3+ letters) in ``known_patient_words`` (casefolded words of the clinic's patients), are skipped."""
-    from .determinism import _canonical_lookup
+    from .determinism import _exact_lookup
     rows = structured.get("rx") if isinstance(structured, dict) else None
     confirmed = {i for i in (confirmed_rows or []) if isinstance(i, int)}
     patient = {w.casefold() for w in str(structured.get("patientName") or "").split()} if isinstance(structured, dict) else set()
     known = known_patient_words or frozenset()
     out, seen = [], set()
     for i, row in enumerate(rows if isinstance(rows, list) else []):
+        if isinstance(row, dict) and row.get("generic_source") == "doctor":
+            continue      # a doctor's generic goes to the clinic overlay, not the clinic list
         name = clean_name(row.get("name")) if i in confirmed and isinstance(row, dict) else ""
-        if not name or key(name) in seen or _canonical_lookup(name) or {w.casefold() for w in name.split()} <= patient:
+        if not name or key(name) in seen or _exact_lookup(name) or {w.casefold() for w in name.split()} <= patient:
             continue
         if person_like(name) or any(len(w) >= 3 and w.casefold() in known for w in name.split()):
             continue
@@ -194,15 +196,17 @@ def activate(layer: ClinicLayer) -> None:
 
 
 @lru_cache(maxsize=512)
-def _twin(name_key: str, lexicon_version: str) -> str:
-    found = suggest_candidates(name_key, 1)
+def _twin(name_key: str, lexicon_identity: str) -> str:
+    found = suggest_candidates(name_key, 1, guard=False)     # a clinic's own name still gets its look-alike flag
     return found[0] if found else ""
 
 
 def _lexicon_twin(name) -> str:
-    """The lexicon drug a clinic name sounds like ("" if none). Looks at the lexicon only, never at the clinic list."""
-    from .determinism import lexicon_version
-    return _twin(key(name), lexicon_version())
+    """The lexicon drug a clinic name sounds like ("" if none). Looks at the lexicon only, never at the clinic list.
+    Cached per ``lexicon_identity`` (shipped version + clinic overlay version), so one clinic's list never answers
+    for another's."""
+    from .determinism import lexicon_identity
+    return _twin(key(name), lexicon_identity())
 
 
 def ground_clinic(name, transcript_lower, in_transcript):

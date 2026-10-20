@@ -1,0 +1,119 @@
+"""Printed sections of the prescription sheet. Pure; every value is escaped; a section with nothing to print is ``""``
+(no heading, no placeholder). ``title`` arguments are trusted markup, values never are."""
+from html import escape
+
+from doctor_dictation.core.followup import date_label
+
+
+def esc(value) -> str:
+    """HTML-escape any value (``None`` -> ``""``); never emits markup."""
+    return escape(str(value if value is not None else ""))
+
+
+SEP = " \u00b7 "
+INLINE_ITEM_MAX = 60
+
+
+def _print_text():
+    """The investigations printer, resolved per call; ``None`` only when that module itself is absent."""
+    try:
+        from doctor_dictation.core.investigations import print_text
+    except ModuleNotFoundError as exc:
+        if exc.name != "doctor_dictation.core.investigations":
+            raise                                   # the module exists but is broken: fail loudly
+        return None
+    return print_text
+
+
+def item_text(value) -> str:
+    """Printable text of one list item (unescaped): a dict item goes through ``print_text`` when that module exists."""
+    if isinstance(value, dict):
+        printer = _print_text()
+        text = printer(value) if printer else value.get("text")
+        return "" if text is None else str(text).strip()
+    return str(value if value is not None else "").strip()
+
+
+def _items(values) -> list:
+    """The printable values: only a list counts; ``None`` and blank items are skipped."""
+    return [v for v in (values if isinstance(values, list) else []) if v is not None and str(v).strip()]
+
+
+def prose_section(title: str, values) -> str:
+    items = _items(values)
+    if not items:
+        return ""
+    return (f'<div class="sec-title">{title}</div><div class="prose">'
+            + "".join(f"<p>{esc(v)}</p>" for v in items) + "</div>")
+
+
+def bullet_section(title: str, values) -> str:
+    items = _items(values)
+    if not items:
+        return ""
+    return f'<div class="sec-title">{title}</div><ul>' + "".join(f"<li>{esc(v)}</li>" for v in items) + "</ul>"
+
+
+def list_section(label: str, title: str, values) -> str:
+    """A short list prints on one labelled line; any item over ``INLINE_ITEM_MAX`` characters keeps titled bullets."""
+    texts = [x for x in (item_text(v) for v in (values if isinstance(values, list) else [])) if x]
+    if not texts:
+        return ""
+    if all(len(x) <= INLINE_ITEM_MAX for x in texts):
+        return f'<div class="inl"><span class="inl-label">{label}:</span> {SEP.join(esc(x) for x in texts)}</div>'
+    return bullet_section(title, texts)
+
+
+def _rx_row(index: int, row: dict, with_instructions: bool) -> str:
+    medicine = " ".join(        # the name prints in capitals (owner rule); form and strength keep their case ("500 mg")
+        str(part) for part in (row.get("form") or "", str(row.get("name") or "").upper(), row.get("strength") or "")
+        if str(part).strip()
+    )
+    name, generic = str(row.get("name") or "").strip(), str(row.get("generic") or "").strip()
+    gen = f'<div class="gen">generic: {esc(generic)}</div>' if generic and generic.casefold() != name.casefold() else ""
+    directions = SEP.join(f'<span class="dir">{esc(str(row.get(k)).strip())}</span>' for k in ("dose", "timing", "duration")
+                          if row.get(k) is not None and str(row.get(k)).strip())
+    last = f"<td>{esc(row.get('instructions'))}</td>" if with_instructions else ""
+    return f"<tr><td>{index}</td><td>{esc(medicine)}{gen}</td><td>{directions}</td>{last}</tr>"
+
+
+def rx_section(rx) -> str:
+    """The medicines table; a row prints only when it is a dict with a name or strength. The Instructions column
+    prints only when some printed row has instructions."""
+    rows = [r for r in (rx if isinstance(rx, list) else [])
+            if isinstance(r, dict) and (str(r.get("name") or "").strip() or str(r.get("strength") or "").strip())]
+    if not rows:
+        return ""
+    with_instructions = any(str(r.get("instructions") or "").strip() for r in rows)
+    extra = "<th>Instructions</th>" if with_instructions else ""
+    return ('<div class="sec-title">Rx (MEDICATIONS)</div><table class="rx">\n'
+            f"<thead><tr><th>#</th><th>Medicine</th><th>Directions</th>{extra}</tr></thead>\n"
+            "<tbody>" + "".join(_rx_row(i, r, with_instructions) for i, r in enumerate(rows, 1)) + "</tbody>\n</table>")
+
+
+VITALS = (("bp", "BP"), ("pulse", "Pulse"), ("weight", "Wt"), ("spo2", "SpO2"), ("temp", "Temp"))
+
+
+def _vital_text(value) -> str:
+    """A vital as text; only str, int and float count (not bool), anything else is empty."""
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        return ""
+    return str(value).strip()
+
+
+def vitals_strip(vitals) -> str:
+    """One centred line of the recorded vitals as stored (no unit added); ``""`` when none is filled in."""
+    if not isinstance(vitals, dict):
+        return ""
+    parts = [f"{label} {esc(text)}" for key, label in VITALS
+             if (text := _vital_text(vitals.get(key)))]
+    return f'<div class="vitals">{SEP.join(parts)}</div>' if parts else ""
+
+
+def review_line(review, review_date) -> str:
+    text = str(review or "").strip()
+    if not text:
+        return ""
+    label = date_label(review_date)
+    when = f' <span class="rev-date">({esc(label)})</span>' if label else ""
+    return f'<div class="inl"><span class="inl-label">Review:</span> {esc(review)}{when}</div>'

@@ -6,6 +6,7 @@ import re
 
 from . import rulesplit
 from .determinism import _maps, load_lexicon
+from .vitals import VITAL_KEYS, extract_vitals, vitals_all_stored
 
 # The no-strength branch also knows the brands of these generics: a dictated brand is no longer
 # rewritten to its generic before this runs.
@@ -56,7 +57,11 @@ def unparsed_notes(text: str, rx_rows) -> list:
             if not any(n in line.lower() for n in names)]
 
 
-def _is_demo(t: str) -> bool:
+DEMO_WARNING = "Offline demo example: a fixed sample note. Check every line before saving."
+
+
+def is_demo(t: str) -> bool:
+    """Whether the (lower-cased) dictation is the seeded demo, which gets the fixed sample note."""
     return all(p in t for p in _DEMO_PHRASES)
 
 
@@ -79,15 +84,16 @@ def fallback_format(transcript: str) -> dict:
         "rx": [],
         "advice": [],
         "review": "",
+        "vitals": dict.fromkeys(VITAL_KEYS, ""),
     }
-    if _is_demo(t):
+    if is_demo(t):
         out = {
             "patientName": "",
             "ageSex": "",
             "opNo": op_no,
             "diagnosis": ["Right lower ureteric calculus (5 mm), burning micturition"],
             "complaints": ["Right flank pain and burning micturition since 2 days"],
-            "investigations": ["Urine Culture & Sensitivity", "Serum Creatinine", "Follow-up USG KUB"],
+            "investigations": ["Urine culture", "Serum creatinine"],   # exactly the tests the demo dictates
             "rx": [
                 {"form": "Tab.", "name": "Tamsulosin", "strength": "0.4 mg", "dose": "0-0-1", "timing": "After food, bedtime", "duration": "14 days", "instructions": "Take at bedtime"},
                 {"form": "Tab.", "name": "Deflazacort", "strength": "6 mg", "dose": "1-0-1", "timing": "After food", "duration": "5 days", "instructions": ""},
@@ -203,7 +209,7 @@ def fallback_format(transcript: str) -> dict:
                 numwords = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6}
                 n, u = numwords[wm.group(1)], wm.group(2)
                 dur = f"{n} {u}{'s' if n > 1 else ''}"
-        form = {"tab": "Tab.", "tablet": "Tab.", "cap": "Cap.", "capsule": "Cap.", "syr": "Syr.", "syrup": "Syr.", "inj": "Inj.", "injection": "Inj."}.get((raw_form or "").lower()[:3], "")   # "" = no form word spoken (validated later to Tab.)
+        form = {"tab": "Tab.", "tablet": "Tab.", "cap": "Cap.", "capsule": "Cap.", "syr": "Syr.", "syrup": "Syr.", "inj": "Inj.", "injection": "Inj."}.get((raw_form or "").lower()[:3], "")   # "" = no form word spoken
         out["rx"].append({"form": form, "name": name, "strength": strength, "dose": dose or "1-0-0", "timing": timing, "duration": dur, "instructions": ""})
         if len(out["rx"]) >= 8:
             break
@@ -222,4 +228,6 @@ def fallback_format(transcript: str) -> dict:
             out["rx"].append({"form": form, "name": name, "strength": sm.group(1) if sm else "", "dose": dose, "timing": "",
                               "duration": _duration(window.lower()), "instructions": ""})
 
+    out["vitals"] = extract_vitals(text)
+    out["complaints"] = [c for c in out["complaints"] if not vitals_all_stored(c)]   # a mixed or rejected one stays
     return out

@@ -11,10 +11,12 @@ from pydantic import BaseModel
 
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import authorship, visit
-from doctor_dictation.api.formulary import learn_from_save, use_clinic_layer
-from doctor_dictation.core import followup
+from doctor_dictation.api.formulary import learn_doctor_generics, learn_from_save, use_clinic_layer
+from doctor_dictation.api.investigations import remember_from_save, use_investigations
+from doctor_dictation.core import followup, investigations
 from doctor_dictation.core.correction import preserve_untouched_rx_status
 from doctor_dictation.core.determinism import validate_structured
+from doctor_dictation.core.doctor_generic import settle
 from doctor_dictation.core.safety import screen_unverified, strip_grounding_markers
 from doctor_dictation.db import authorship as adb
 from doctor_dictation.db.opno import create_patient_with_new_op
@@ -116,6 +118,8 @@ def list_today_encounters(request: Request, scope: str = "mine"):
 class DocumentCreate(BaseModel):
     structured: dict = {}
     confirmed_rows: list[int] = []
+    remember_generics: list[int] = []     # rows whose doctor generic may replace a listed one for the clinic (Q20)
+    remember_investigations: list = []    # indexes into the SAVED investigations; a bad one is ignored, never a 422
     engine: str = ""
     transcript_sha256: str = ""
     document_id: int | None = None
@@ -183,7 +187,7 @@ def _render_with_fallback(structured, meta, layout, out_path):
 
 
 @router.post("/api/v1/documents", dependencies=[Depends(use_clinic_layer)])
-def create_document(req: DocumentCreate, request: Request):
+def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(use_investigations)):
     """Save & Print: enforce the verify gate, then persist encounter/document/audit.
 
     The gate blocks while any Rx row is not ``verified`` and the doctor did not
@@ -207,18 +211,25 @@ def create_document(req: DocumentCreate, request: Request):
             return denied
     structured = req.structured if isinstance(req.structured, dict) else {}
     block = screen_unverified(structured, req.confirmed_rows)
-    if block:
+    ix_block = investigations.screen(structured)
+    if block and not ix_block:
         return JSONResponse(
             status_code=409,
             content={"error": "unverified medicines", "block": block},
         )
-    validated, _warnings = validate_structured(structured, "")
+    if ix_block:
+        return JSONResponse(status_code=409, content={
+            "error": "unverified medicines" if block else "investigations not dictated",
+            "block": block, "investigations_block": ix_block})
+    validated, _warnings = validate_structured(structured, "", vitals_typed=True)
+    validated["investigations"] = investigations.regrade(validated.get("investigations"))
     # The incoming form is already doctor-verified. Re-grounding against a form
     # with no transcript would flip every row to `unverified-name`, so restore
     # the verification state the doctor finalized (rows dropped/recomputed with
     # no prior match are left as `validate_structured` produced them).
     preserve_untouched_rx_status(structured, {}, validated)
     strip_grounding_markers(validated)  # the gate passed: each row is verified or confirmed, so no "confirm with doctor" text prints
+    settle(validated)  # the gate passed: no doctor generic is pending any more
     day = visit.today()  # a NEW document's visit day; a re-save keeps the day fixed at first save (below)
     conn = dbmod.get_conn()
     try:
@@ -317,6 +328,10 @@ def create_document(req: DocumentCreate, request: Request):
             },
         )
         learn_from_save(conn, structured, req.confirmed_rows, document_id, ident.user_id if ident else None)
+        learn_doctor_generics(conn, structured, req.confirmed_rows, req.remember_generics, document_id,
+                              ident.user_id if ident else None)  # commits: after the document's own commit
+        remember_from_save(conn, validated["investigations"], req.remember_investigations, document_id,
+                           ident.user_id if ident else None)       # commits too; never raises
         return {
             "patient_id": patient_id,
             "encounter_id": encounter_id,

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stand-in for flock -n FD: exits 1 (lock busy) when FAKE_FLOCK_HELD=1, otherwise 0.
+[ "${FAKE_FLOCK_HELD:-}" = 1 ] && exit 1
+exit 0

@@ -8,6 +8,8 @@ import difflib
 import re
 from collections import Counter
 
+from .lexmemo import per_lexicon
+
 MIN_SCORE = 0.78
 MIN_LEN = 4  # shorter lexicon keys ("pan", "pcm") are too noisy to rank
 MAX_NAME_LETTERS = 40  # a longer "name" is not a medicine name; keep difflib work bounded
@@ -57,23 +59,17 @@ def phonetic_key(word: str) -> str:
     return "".join(out)
 
 
-_index = (None, ())  # (lexicon list the index was built from, rows)
+_slot: dict = {}  # per_lexicon: lexicon list -> rows
+_blocked_slot: dict = {}  # per_lexicon: lexicon list -> stand-in rows of the names the clinic's overlay removed
 
 
 def _rows():
     """[(spelling, phonetic key, canonical)], sorted, cached per lexicon."""
-    global _index
     from .determinism import _alias_map, load_lexicon
-
     lex = load_lexicon()
-    if _index[0] is lex:
-        return _index[1]
-    rows = []
-    for text, canon in sorted(_alias_map().items()):
-        if len(text) >= MIN_LEN and " " not in text:
-            rows.append((text, phonetic_key(text), canon))
-    _index = (lex, tuple(rows))
-    return _index[1]
+    return per_lexicon(_slot, lex, lambda: tuple((text, phonetic_key(text), canon)
+                                                 for text, canon in sorted(_alias_map(lex).items())
+                                                 if len(text) >= MIN_LEN and " " not in text))
 
 
 def _score(a: str, ka: str, b: str, kb: str) -> float:
@@ -87,8 +83,33 @@ def _score(a: str, ka: str, b: str, kb: str) -> float:
     return min(score, 1.0)
 
 
-def scored_candidates(name: str, k: int = 3) -> list:
-    """[(canonical, score)] behind suggest_candidates: the same rules, the same order."""
+def _blocked_rows() -> tuple:
+    """((letters, phonetic key)) of every name the clinic's overlay removed (``drugnames.blocked_names``): stand-ins
+    that compete with the list's spellings but are never offered. () without an overlay."""
+    from .determinism import load_lexicon
+    from .drugnames import blocked_names
+    lex = load_lexicon()
+    if not blocked_names(lex):
+        return ()
+    return per_lexicon(_blocked_slot, lex, lambda: tuple(sorted(
+        {(t, phonetic_key(t)) for t in (re.sub(r"[^a-z]", "", b) for b in blocked_names(lex)) if len(t) >= MIN_LEN})))
+
+
+def _steered_off(name: str, low: str, key: str, top: float) -> bool:
+    """True when ``name`` is a blocked name, or a blocked name scores at least as well as the best listed spelling
+    (``top``): its nearest spelling is a drug the clinic removed, so no look-alike of it is offered (plan PQ-f C1)."""
+    from .drugnames import is_blocked
+    if is_blocked(name):
+        return True
+    cl, ck = Counter(low), Counter(key)
+    floor = max(MIN_SCORE, top)
+    return any(_bound(low, cl, key, ck, t, tk) >= floor and _score(low, key, t, tk) >= floor for t, tk in _blocked_rows())
+
+
+def scored_candidates(name: str, k: int = 3, guard: bool = True) -> list:
+    """[(canonical, score)] behind suggest_candidates: the same rules, the same order. [] when ``guard`` and the name,
+    or its nearest spelling, is a name the clinic's overlay removed (``_steered_off``); ``guard=False`` is for the
+    look-alike flag of a clinic's own name, which must still see the look-alike."""
     low = re.sub(r"[^a-z]", "", (name or "").lower())
     key = phonetic_key(low)
     if k <= 0 or len(low) < 4 or len(low) > MAX_NAME_LETTERS or len(key) < 3:
@@ -98,6 +119,8 @@ def scored_candidates(name: str, k: int = 3) -> list:
         sc = _score(low, key, text, tkey)
         if sc >= MIN_SCORE and sc > best.get(canon, 0.0):
             best[canon] = sc
+    if guard and _steered_off(name, low, key, max(best.values(), default=0.0)):
+        return []
     return sorted(best.items(), key=lambda kv: (-round(kv[1], 6), kv[0].lower(), kv[0]))[:k]
 
 
@@ -126,11 +149,13 @@ def scored_spellings(name: str, k: int = 3) -> list:
         spelling = shown.get(text, canon)                       # a name two generics claim is not in the surface map
         if sc >= MIN_SCORE and sc > best.get(spelling, (0.0, ""))[0]:
             best[spelling] = (sc, canon)
+    if _steered_off(name, low, key, max((v[0] for v in best.values()), default=0.0)):
+        return []                                               # never steer a removed name to a look-alike
     ranked = sorted(best.items(), key=lambda kv: (-round(kv[1][0], 6), kv[0].lower(), kv[0]))
     return [(s, c, sc) for s, (sc, c) in ranked[:k]]
 
 
-def suggest_candidates(name: str, k: int = 3) -> list:
+def suggest_candidates(name: str, k: int = 3, guard: bool = True) -> list:
     """Up to ``k`` lexicon canonical names that sound like ``name``, best first.
 
     Score = 0.5 * spelling ratio + 0.5 * phonetic-key ratio (difflib), +0.15
@@ -138,7 +163,7 @@ def suggest_candidates(name: str, k: int = 3) -> list:
     canonical keeps its best spelling (generic, alias or brand). Under
     MIN_SCORE nothing is returned, so garbage gives []. Ties sort by name.
     """
-    return [c for c, _ in scored_candidates(name, k)]
+    return [c for c, _ in scored_candidates(name, k, guard)]
 
 
 def similarity(name: str, spelling: str) -> float:

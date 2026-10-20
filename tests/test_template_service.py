@@ -255,3 +255,161 @@ def test_use_details_404_and_409(tconn):
     with pytest.raises(TemplateError) as e2:
         service.use_details(tconn, v["id"])
     assert e2.value.status == 409
+
+
+# ---- remove a line, keep one copy of a duplicated field, fix an active letterhead ----
+def fresh_draft(tconn):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["header"] = [
+        {"type": "logo", "crop": [0.05, 0.02, 0.25, 0.10], "align": "left"},
+        {"type": "text", "field": "doctor_name", "role": "title", "align": "center"},
+        {"type": "text", "text": "Open Mon to Sat", "role": "small", "align": "center"},
+        {"type": "rule", "color": "#1a3c6e", "thickness": "thin"},
+        {"type": "text", "field": "phone", "role": "small", "align": "center"},
+        {"type": "text", "text": "Name: Age:", "role": "small", "align": "left"},
+    ]
+    lay["footer"] = [{"type": "text", "field": "address", "role": "small", "align": "center"},
+                     {"type": "text", "text": "Visit After", "role": "small", "align": "center"},
+                     {"type": "text", "field": "phone", "role": "small", "align": "center"}]
+    return tdb.create_template_draft(tconn, lay)
+
+
+def test_remove_deletes_literal_lines_and_refuses_other_blocks(tconn):
+    out = service.edit(tconn, fresh_draft(tconn), {}, [{"section": "header", "index": 5, "remove": True},
+                                                        {"section": "footer", "index": 1, "remove": True}])
+    assert [b.get("text") for b in out["layout"]["header"]][-1] is None and len(out["layout"]["footer"]) == 2
+    assert out["fill_in"] == []
+    for bad in ([{"section": "header", "index": 1, "remove": True}], [{"section": "header", "index": 2, "remove": "yes"}]):
+        with pytest.raises(TemplateError) as e:
+            service.edit(tconn, fresh_draft(tconn), {}, bad)
+        assert e.value.status == 400
+
+
+def test_removals_use_the_stored_indexes_and_apply_after_text_edits(tconn):
+    out = service.edit(tconn, fresh_draft(tconn), {}, [
+        {"section": "footer", "index": 1, "remove": True},
+        {"section": "header", "index": 2, "text": "Open daily"},
+        {"section": "header", "index": 5, "remove": True}])
+    assert [b.get("text") for b in out["layout"]["header"]] == [None, None, "Open daily", None, None]
+    assert [b.get("field") for b in out["layout"]["footer"]] == ["address", "phone"]
+
+
+def test_removing_every_literal_line_leaves_a_valid_layout(tconn):
+    tid = fresh_draft(tconn)
+    service.edit(tconn, tid, {}, [{"section": "header", "index": 2, "remove": True},
+                                  {"section": "header", "index": 5, "remove": True},
+                                  {"section": "footer", "index": 1, "remove": True}])
+    service.accept(tconn, tid)
+    assert service.active_layout_for_save(tconn) != (None, None)
+
+
+def test_keep_header_removes_the_footer_copy_and_both_keeps_both(tconn):
+    out = service.edit(tconn, fresh_draft(tconn), {}, [], keep=[{"field": "phone", "where": "header"}])
+    assert [b.get("field") for b in out["layout"]["footer"]] == ["address", None] and out["duplicates"] == []
+    out = service.edit(tconn, fresh_draft(tconn), {}, [], keep=[{"field": "phone", "where": "footer"}])
+    assert [b.get("field") for b in out["layout"]["header"]].count("phone") == 0 and out["duplicates"] == []
+    out = service.edit(tconn, fresh_draft(tconn), {}, [], keep=[{"field": "phone", "where": "both"}])
+    assert len(out["layout"]["header"]) == 6 and len(out["layout"]["footer"]) == 3
+    for bad in ([{"field": "phone", "where": "middle"}], [{"field": "ssn", "where": "header"}], "x", ["x"]):
+        with pytest.raises(TemplateError) as e:
+            service.edit(tconn, fresh_draft(tconn), {}, [], keep=bad)
+        assert e.value.status == 400
+
+
+def test_keep_for_a_field_no_longer_duplicated_is_ignored(tconn):
+    out = service.edit(tconn, fresh_draft(tconn), {}, [], keep=[{"field": "address", "where": "header"}])
+    assert len(out["layout"]["header"]) == 6 and len(out["layout"]["footer"]) == 3
+
+
+def test_a_cleared_line_without_remove_is_still_rejected(tconn):
+    with pytest.raises(TemplateError) as e:
+        service.edit(tconn, fresh_draft(tconn), {}, [{"section": "header", "index": 2, "text": "  "}])
+    assert e.value.status == 400 and "edit rejected" in str(e.value)
+
+
+def test_tidy_fixes_an_active_letterhead_and_audits_it(tconn):
+    tid = fresh_draft(tconn)
+    service.accept(tconn, tid)
+    v = service.tidy(tconn, tid, [{"section": "footer", "index": 1, "remove": True},
+                                     {"section": "header", "index": 5, "remove": True}],
+                     [{"field": "phone", "where": "header"}], actor="demo")
+    assert v["status"] == "active" and v["fill_in"] == [] and v["duplicates"] == []
+    assert ("template_tidy", "demo") in _audit(tconn)
+    detail = json.loads(tconn.execute("SELECT detail FROM audit_log WHERE action='template_tidy'").fetchone()[0])
+    assert detail == {"clinic": "default", "removed": 2, "edited": 0, "keep": [{"field": "phone", "where": "header"}]}
+    assert "Visit After" not in json.dumps(detail)
+    lay, _ = service.active_layout_for_save(tconn)
+    assert "Visit After" not in json.dumps(lay.footer if hasattr(lay, "footer") else lay["footer"])
+    service.deactivate(tconn)
+    with pytest.raises(TemplateError) as e:
+        service.tidy(tconn, tid, [], [])
+    assert e.value.status == 409
+    with pytest.raises(TemplateError) as e:
+        service.tidy(tconn, 999, [], [])
+    assert e.value.status == 404
+
+
+def test_keep_twice_for_one_field_is_refused(tconn):
+    with pytest.raises(TemplateError) as e:
+        service.edit(tconn, fresh_draft(tconn), {}, [], keep=[{"field": "phone", "where": "header"},
+                                                              {"field": "phone", "where": "footer"}])
+    assert e.value.status == 400 and "one place per field" in str(e.value)
+
+
+def test_keep_removes_a_literal_line_only_when_it_holds_just_the_value(tconn):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["header"] = [{"type": "text", "field": "phone", "role": "small", "align": "center"}]
+    lay["footer"] = [{"type": "text", "text": "Timings 10-1 | Ph 040 1234 5678 | Sunday closed", "role": "small"},
+                     {"type": "text", "text": "Ph: 040 1234 5678", "role": "small"}]
+    tid = tdb.create_template_draft(tconn, lay)
+    out = service.edit(tconn, tid, {}, [], keep=[{"field": "phone", "where": "header"}])
+    assert [b["text"] for b in out["layout"]["footer"]] == ["Timings 10-1 | Ph 040 1234 5678 | Sunday closed"]
+    assert [d["field"] for d in out["duplicates"]] == ["phone"]
+
+
+def test_tidy_with_no_changes_writes_and_audits_nothing(tconn):
+    tid = fresh_draft(tconn)
+    service.accept(tconn, tid)
+    before = _audit(tconn)
+    assert service.tidy(tconn, tid, [], [])["status"] == "active"
+    assert _audit(tconn) == before
+
+
+def _phone_twice(tconn, header_text=None):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["header"] = [{"type": "text", "text": header_text, "role": "small"} if header_text
+                     else {"type": "text", "field": "phone", "role": "small", "align": "center"}]
+    lay["footer"] = [{"type": "text", "text": "Ph: 040 1234 5678", "role": "small"}]
+    return tdb.create_template_draft(tconn, lay)
+
+
+def test_removing_the_kept_side_does_not_erase_the_field_everywhere(tconn):
+    tid = _phone_twice(tconn, "Ph: 040 1234 5678")
+    out = service.edit(tconn, tid, {}, [{"section": "header", "index": 0, "remove": True}],
+                       keep=[{"field": "phone", "where": "header"}])
+    assert out["layout"]["header"] == [] and [b["text"] for b in out["layout"]["footer"]] == ["Ph: 040 1234 5678"]
+
+
+def test_keep_does_not_drop_a_line_edited_in_the_same_request(tconn):
+    tid = _phone_twice(tconn)
+    out = service.edit(tconn, tid, {}, [{"section": "footer", "index": 0, "text": "Ph: 040 1234 5678 Mon-Sat"}],
+                       keep=[{"field": "phone", "where": "header"}])
+    assert [b["text"] for b in out["layout"]["footer"]] == ["Ph: 040 1234 5678 Mon-Sat"]
+
+
+def test_a_remove_with_stale_text_is_refused(tconn):
+    tid = fresh_draft(tconn)
+    with pytest.raises(TemplateError) as e:
+        service.edit(tconn, tid, {}, [{"section": "header", "index": 5, "remove": True, "text": "Something else"}])
+    assert e.value.status == 400 and "letterhead changed" in str(e.value)
+    out = service.edit(tconn, tid, {}, [{"section": "header", "index": 5, "remove": True, "text": " Name:   Age: "}])
+    assert len(out["layout"]["header"]) == 5
+
+
+def test_tidy_audit_counts_only_lines_whose_text_changed(tconn):
+    tid = fresh_draft(tconn)
+    service.accept(tconn, tid)
+    service.tidy(tconn, tid, [{"section": "header", "index": 2, "text": "Open  Mon to Sat"},
+                              {"section": "footer", "index": 1, "text": "Visit Soon"}], [])
+    detail = json.loads(tconn.execute("SELECT detail FROM audit_log WHERE action='template_tidy'").fetchone()[0])
+    assert detail["edited"] == 1 and detail["removed"] == 0

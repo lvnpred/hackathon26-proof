@@ -41,14 +41,20 @@ def test_ground_one_refuses_a_row_with_nothing_in_it():
 
 def test_only_an_explicit_wrong_form_is_a_form_mismatch(monkeypatch, tmp_path):
     use_fixture(monkeypatch, tmp_path, {**FIXTURE, "entries": [_e("Amikacin", ["250 mg", "500 mg"], ["Inj."], "500 mg", 1500)]})
-    text = "amikacin 500 mg once daily"                  # Amikacin is Inj.-only; a missing or unknown form defaults to Tab.
+    text = "amikacin 500 mg once daily"                  # Amikacin is Inj.-only; a missing or unknown form stays empty
     base = {"name": "Amikacin", "strength": "500 mg", "dose": "1-0-0", "duration": "5 days"}
     wrong = rowcheck.ground_one({**base, "form": "Tab."}, text, text, "45 / M")
     assert (wrong["status"], wrong["dose_note"]) == ("dose-check", "Tab. is not a usual form of Amikacin (usual: Inj.)")
     assert rowcheck.ground_one({**base, "form": "Inj."}, text, text, "45 / M")["status"] == "verified"
-    for form in ({}, {"form": "Tablet"}):               # defaulted or coerced: not a form mismatch
+    for form, shown in (({}, ""), ({"form": ""}, ""), ({"form": "empty"}, ""), ({"form": "Tablet"}, "Tab.")):
         got = rowcheck.ground_one({**base, **form}, text, text, "45 / M")
-        assert (got["status"], got["form"], got["dose_note"]) == ("verified", "Tab.", "")
+        assert (got["status"], got["form"], got["dose_note"]) == ("verified", shown, "")   # never a form mismatch
+
+
+def test_a_form_given_as_dictated_is_still_checked(monkeypatch, tmp_path):
+    use_fixture(monkeypatch, tmp_path, {**FIXTURE, "entries": [_e("Amikacin", ["250 mg", "500 mg"], ["Inj."], "500 mg", 1500)]})
+    got = rowcheck.ground_one({"name": "Amikacin", "strength": "500 mg", "dose": "1-0-0", "form": "Tab."}, "amikacin 500 mg", "amikacin 500 mg", "45 / M")
+    assert got["status"] == "dose-check"
 
 
 PARITY_ROWS = [
@@ -104,3 +110,13 @@ def test_ground_one_and_validate_structured_give_identical_rows(monkeypatch, tmp
         assert rowcheck.ground_one(row, RAW, NORM, "45 / M") == validated["rx"][0], row
         assert rowcheck.ground_with_notes(row, RAW, NORM, "45 / M")[1] == warnings, row
     assert rowcheck.ground_one(rows[2], RAW, NORM, "45 / M")["status"] == "dose-check"
+
+
+def test_form_words_map_whole_words_only():
+    ok = {"tab": "Tab.", "Tabs": "Tab.", "Tablet": "Tab.", "TABLETS": "Tab.", " tab. ": "Tab.", "Tab.": "Tab.",
+          "cap": "Cap.", "caps": "Cap.", "Capsule": "Cap.", "capsules": "Cap.", "Cap.": "Cap.",
+          "syr": "Syr.", "Syrup": "Syr.", "syrups": "Syr.", "inj": "Inj.", "Injection": "Inj.", "injections": "Inj."}
+    for word, shown in ok.items():
+        assert rowcheck._coerce_form(word) == shown, word
+    for word in ("Syringe", "capsicum", "capsule-shaped", "tablet-like", "inject", "", None, "empty"):
+        assert rowcheck._coerce_form(word) == "", word

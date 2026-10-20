@@ -78,7 +78,7 @@ def test_me_returns_the_top_bar_fields(client):
     _login(client)
     r = client.get("/api/v1/auth/me")
     assert r.json() == {"clinic_slug": "rao", "clinic_name": "Rao Clinic", "username": "dr.rao",
-                        "display_name": "Dr. Rao", "role": "doctor", "must_change_password": True}
+                        "display_name": "Dr. Rao", "role": "doctor", "must_change_password": True, "is_owner": False}
 
 
 def test_me_without_a_session_is_401(client):

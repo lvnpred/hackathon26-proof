@@ -1,4 +1,4 @@
-"""The Team screen's "Clinic medicines" tab (plan I1-h4): static pins on comment-stripped source, and team.js run in node
+"""The Team screen's Medicines tab (plan I1-h4): static pins on comment-stripped source, and team.js run in node
 against tests/team_medicines_fakedom.js for the behaviour. Offline; no browser."""
 import json
 import re
@@ -39,32 +39,34 @@ def _page(body, **opts):
 
 def test_the_tab_is_added_only_after_auth_me_says_admin_and_uses_the_formulary_routes():
     js = _code("team.js")
-    assert '"/api/v1/formulary"' in js and 'method: "DELETE"' in js and '"/api/v1/auth/me"' in js
-    assert 'return me.role === "admin"' in js.split("async function isAdmin()")[1].split("\n  }")[0]
-    gate = js.split("function showMedsTab()")[1].split("\n  }")[0]
-    assert "if (!t.admin) return;" in gate
-    assert gate.index("if (!t.admin) return;") < gate.index("buildTabs()") < gate.index("buildMeds()")     # built only for an admin
-    assert 'role: "tablist"' in js and "Clinic medicines" in js
-    assert "buildTabs()" not in js.split("async function showMedsTab()")[0].split("function build()")[1].split("function buildTabs")[0]
+    lists = _code("clinlists.js")
+    assert '"/api/v1/formulary"' in lists and 'method: "DELETE"' in lists and '"/api/v1/auth/me"' in js
+    assert 't.admin = me.role === "admin";' in js.split('document.addEventListener("DOMContentLoaded"')[1] and "/api/v1/auth/me" in js.split("async function whoami()")[1].split("\n  }")[0]
+    gate = js.split("function showListTabs()")[1].split("\n  }")[0]
+    assert "const tabs = shownTabs();" in gate and "if (!tabs.length) return;" in gate
+    assert "(t.admin && window.ClinicLists ? TABS : [])" in js
+    assert gate.index("if (!tabs.length)") < gate.index("buildTabs()") < gate.index("if (t.admin && window.ClinicLists)") < gate.index("buildPanel(")     # built only for an admin
+    assert 'role: "tablist"' in js and '"Medicines"' in js and '"Investigations"' in js
+    assert "buildTabs()" not in js.split("function build()")[1].split("function buildTabs")[0]
 
 
 def test_the_tab_never_turns_server_text_into_html_or_adds_an_external_host():
-    for name in ("team.js", "team.css"):
+    for name in ("team.js", "clinlists.js", "team.css"):
         code = _code(name)
         assert not re.search(r"innerHTML|outerHTML|insertAdjacentHTML|document\.write", code), name
         assert "http://" not in code and "https://" not in code and "@import" not in code and "url(" not in code, name
-    js = _code("team.js")
-    assert "Number(m.id)" in js and "m.id + " not in js
+    js = _code("clinlists.js")
+    assert "Number(item.formulary_id)" in js and "formulary_id + " not in js
 
 
 def test_removal_asks_first_says_the_removal_is_soft_and_announces_the_result_politely():
-    js = _code("team.js")
-    remove = js.split("async function removeMed(")[1].split("\n  }")[0]
-    assert "window.confirm(" in remove and remove.index("window.confirm(") < remove.index("send(MEDS")
-    assert "two new documents" in remove and "two new documents" in js.split("function buildMeds()")[1].split("\n  }")[0]
-    assert 'role: "status"' in js.split("function buildMeds()")[1].split("\n  }")[0] and "setLive(" in remove
-    assert 'el("teamMedLive").textContent' in js.split("function setLive(")[1].split("\n")[0]
-    assert 'el("teamTabMeds").focus()' in remove
+    js = _code("clinlists.js")
+    remove = js.split("async function removeLearned(")[1].split("\n  }")[0]
+    assert "window.confirm(" in remove and remove.index("window.confirm(") < remove.index("host.send(MEDS")
+    assert "two new documents" in remove and "two new documents" in js.split("const KINDS")[1].split("const host")[0]
+    assert 'role: "status"' in js.split("function buildPanel(")[1].split("\n  }")[0] and "setLive(" in remove
+    assert "el(KINDS[kind].live).textContent" in js.split("function setLive(")[1].split("\n")[0]
+    assert "el(KINDS.medicine.tab).focus()" in remove
     assert "aria-live" not in js and 'make("button", { type: "button", class: "team-med-remove" }, "Remove")' in js
 
 
@@ -98,18 +100,19 @@ def test_the_phone_layout_has_what_it_needs_from_the_markup():
       console.log(JSON.stringify({cls: tb.parentNode.attrs.class, labels: tb.children[0].children.map((td) => td.attrs['data-label'] || null),
         last: tb.children[0].children[4].attrs.class}))""")
     assert "team-meds-table" in r["cls"].split() and "team-table" in r["cls"].split()
-    assert r["labels"] == [None, "Confirmed on", "Last seen", "Added by", None] and r["last"] == "team-row-actions"
+    assert r["labels"] == [None, "Generic", "Brands", "Source", None] and r["last"] == "team-row-actions"
 
 
 def test_the_team_assets_are_cache_busted_to_at_least_2_and_the_script_parses():
     html = _read("index.html")
-    for asset in ("team.css", "team.js"):
+    for asset in ("team.css", "team.js", "clinlists.js"):
         version = re.search(re.escape(asset) + r"\?v=(\d+)", html)
-        assert version and int(version.group(1)) >= 2, asset
+        assert version and int(version.group(1)) >= (1 if asset == "clinlists.js" else 2), asset
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    assert subprocess.run([node, "--check", str(FRONT / "team.js")], capture_output=True).returncode == 0
+    for name in ("team.js", "clinlists.js"):
+        assert subprocess.run([node, "--check", str(FRONT / name)], capture_output=True).returncode == 0
 
 
 # --- behaviour in the fake DOM -----------------------------------------------------------------------------------
@@ -120,7 +123,7 @@ def test_a_doctor_and_single_mode_never_get_the_tab_or_call_the_formulary():
                   " rows: !!p.ids.teamMedRows, people: !!p.ids.teamPeople, calls: p.calls}))", **opts)
         assert (r["tab"], r["tabs"], r["panel"], r["rows"]) == (False, False, False, False), opts
         assert r["people"] is True                                    # the members screen is as before
-        assert not [c for c in r["calls"] if "formulary" in c], r["calls"]
+        assert not [c for c in r["calls"] if "formulary" in c or "lists" in c], r["calls"]
 
 
 def test_the_add_user_form_and_the_row_actions_are_built_for_admins_only_static():
@@ -128,7 +131,7 @@ def test_the_add_user_form_and_the_row_actions_are_built_for_admins_only_static(
     assert "if (!t.admin) return [];" in js.split("function rowActions(")[1].split("\n  }")[0]
     assert "if (t.admin) people.append(form);" in js and "if (t.admin) el(\"teamAddForm\").addEventListener" in js
     handler = js.split('document.addEventListener("DOMContentLoaded"')[1]
-    assert handler.index("t.admin = await isAdmin();") < handler.index("t.dialog = build();")      # decided before the dialog exists
+    assert handler.index('t.admin = me.role === "admin";') < handler.index("t.dialog = build();")      # decided before the dialog exists
     assert "cell.append(...rowActions(u))" in js and js.count('"Reset password"') == 1       # the buttons are made in rowActions only
 
 
@@ -146,7 +149,7 @@ def test_a_doctor_sees_the_people_list_read_only_and_an_admin_sees_the_controls(
     assert admin["actions"] == [[], ["Disable", "Reset password"], ["Enable", "Reset password"]]       # none on your own row
 
 
-def test_an_admin_sees_the_tab_and_the_list_joins_added_by_against_the_team():
+def test_an_admin_sees_the_tab_and_the_list_comes_from_the_lists_route():
     r = _page("""
       const tabs = p.ids.teamTabMeds.parentNode;
       const before = {hidden: tabs.hidden, role: tabs.attrs.role, selected: p.ids.teamTabPeople.attrs['aria-selected'], medsHidden: p.ids.teamMeds.hidden};
@@ -156,21 +159,14 @@ def test_an_admin_sees_the_tab_and_the_list_joins_added_by_against_the_team():
     assert r["before"] == {"hidden": False, "role": "tablist", "selected": "true", "medsHidden": True}
     assert r["type"] == "button" and r["sel"] == "true" and (r["meds"], r["people"], r["empty"]) == (False, True, True)
     assert [row[0] for row in r["rows"]] == ["Zorbexin", "Quelvarin", "Mystara"]
-    assert [row[3] for row in r["rows"]] == ["Dr. Rao", "Unknown", "Unknown"]     # joined; null and an id not on the team
-    assert r["rows"][0][1] == "2 documents" and r["rows"][1][1] == "3 documents"
-    assert "GET /api/v1/formulary" in r["calls"] and "GET /api/v1/users" in r["calls"]
-
-
-def test_added_by_falls_back_to_the_username_and_to_unknown_when_the_team_cannot_be_read():
-    users = [{"id": 5, "username": "dr.rao", "display_name": ""}]
-    r = _page("await p.openMeds(); console.log(JSON.stringify(p.rows().map((x) => x[3])))", users=users)
-    assert r == ["dr.rao", "Unknown", "Unknown"]
+    assert all(row[3] == "Learned" for row in r["rows"])
+    assert "GET /api/v1/lists/medicine" in r["calls"] and not [c for c in r["calls"] if c == "GET /api/v1/formulary"]
 
 
 def test_the_server_text_is_set_as_text_and_an_empty_list_says_so():
     evil = [{"id": 1, "name": "<img src=x onerror=alert(1)>", "confirm_count": 2, "last_seen_at": None, "added_by": None}]
     r = _page("await p.openMeds(); console.log(JSON.stringify({rows: p.rows(), kids: p.ids.teamMedRows.children[0].children[0].children.length}))", items=evil)
-    assert r["rows"][0][0] == "<img src=x onerror=alert(1)>" and r["kids"] == 0 and r["rows"][0][2] == "Never"
+    assert r["rows"][0][0] == "<img src=x onerror=alert(1)>" and r["kids"] == 0
     e = _page("await p.openMeds(); console.log(JSON.stringify({empty: p.ids.teamMedEmpty.hidden, rows: p.rows()}))", items=[])
     assert e == {"empty": False, "rows": []}
 
@@ -184,7 +180,7 @@ def test_remove_asks_first_then_deletes_reloads_announces_and_returns_focus():
       console.log(JSON.stringify({calls: p.calls, confirms: p.confirms, label: btn.attrs['aria-label'], text: btn.textContent,
         live: p.ids.teamMedLive.textContent, liveRole: p.ids.teamMedLive.attrs.role, err: p.ids.teamError.hidden,
         focus: document.activeElement === p.removeButton(0) && p.removeButton(0) !== btn, rows: p.rows().length, cls: btn.attrs.class}));""")
-    assert r["calls"] == ["DELETE /api/v1/formulary/7", "GET /api/v1/formulary"], r["calls"]
+    assert r["calls"] == ["DELETE /api/v1/formulary/7", "GET /api/v1/lists/medicine"], r["calls"]
     assert len(r["confirms"]) == 1 and "Zorbexin" in r["confirms"][0] and "two new documents" in r["confirms"][0]
     assert (r["label"], r["text"], r["cls"]) == ("Remove Zorbexin from your clinic's medicines", "Remove", "team-med-remove")
     assert r["liveRole"] == "status" and "Removed Zorbexin" in r["live"] and "two new documents" in r["live"]
@@ -224,12 +220,12 @@ def test_remove_buttons_and_the_dialog_are_busy_while_a_removal_is_pending_and_f
 def test_an_older_list_answer_never_draws_over_a_newer_one_and_a_reload_shows_loading():
     r = _page("""
       const q = [];
-      p.gate.hold = (m, u) => m === "GET" && u === "/api/v1/formulary" ? new Promise((res) => q.push(res)) : undefined;
+      p.gate.hold = (m, u) => m === "GET" && u === "/api/v1/lists/medicine" ? new Promise((res) => q.push(res)) : undefined;
       p.ids.teamTabMeds.click(); await p.tick();                         // load 1 is parked
       const loading = {live: p.ids.teamMedLive.textContent, rows: p.rows().length, empty: p.ids.teamMedEmpty.hidden};
       await p.ids.teamTabPeople.click(); p.ids.teamTabMeds.click(); await p.tick();   // load 2 is parked
-      q[1]([200, {items: [{id: 2, name: "Newer", confirm_count: 2, last_seen_at: null, added_by: null}]}]); await p.tick();
-      q[0]([200, {items: [{id: 1, name: "Older", confirm_count: 2, last_seen_at: null, added_by: null}]}]); await p.tick();
+      q[1]([200, {items: [D.learned({id: 2, name: "Newer"})]}]); await p.tick();
+      q[0]([200, {items: [D.learned({id: 1, name: "Older"})]}]); await p.tick();
       console.log(JSON.stringify({loading, queued: q.length, rows: p.rows().map((x) => x[0]), live: p.ids.teamMedLive.textContent}));""")
     assert r["loading"] == {"live": "Loading…", "rows": 0, "empty": True}
     assert (r["queued"], r["rows"], r["live"]) == (2, ["Newer"], "")
@@ -239,7 +235,7 @@ def test_a_failed_reload_empties_the_table_instead_of_showing_old_rows_as_curren
     r = _page("""
       await p.openMeds();
       const first = p.rows().length;
-      p.gate.hold = (m, u) => m === "GET" && u === "/api/v1/formulary" ? [500, {}] : undefined;
+      p.gate.hold = (m, u) => m === "GET" && u === "/api/v1/lists/medicine" ? [500, {}] : undefined;
       await p.ids.teamTabPeople.click(); await p.openMeds();
       console.log(JSON.stringify({first, rows: p.rows().length, err: p.ids.teamError.textContent, empty: p.ids.teamMedEmpty.hidden, live: p.ids.teamMedLive.textContent}));""")
     assert r == {"first": 3, "rows": 0, "err": "Something went wrong (code 500). Try again.", "empty": True, "live": ""}
@@ -279,7 +275,7 @@ def test_a_failed_removal_shows_a_readable_message_reloads_the_list_and_keeps_th
       await p.removeButton(0).click(); await p.tick();
       console.log(JSON.stringify({calls: p.calls, err: p.ids.teamError.textContent, shown: !p.ids.teamError.hidden, live: p.ids.teamMedLive.textContent,
         rows: p.rows().length, focus: document.activeElement && document.activeElement.attrs.id}));""", delete=[status, payload])
-    assert r["calls"] == ["DELETE /api/v1/formulary/7", "GET /api/v1/formulary"], r["calls"]
+    assert r["calls"] == ["DELETE /api/v1/formulary/7", "GET /api/v1/lists/medicine"], r["calls"]
     assert r["err"] == expect and r["shown"] is True and r["live"] == "" and r["rows"] == 3
     assert "[object" not in r["err"] and "{" not in r["err"] and r["focus"] == "teamTabMeds"
 

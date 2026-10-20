@@ -1,35 +1,15 @@
 """Print HTML for the prescription sheet. Pure and deterministic; every value is escaped."""
 import re
-from html import escape
-
-from doctor_dictation.core.followup import date_label
 
 from .doctors_text import block, doctor_groups, group_lines
 from .layout import ALIGNS, MAX_DOCTORS, PROFILE_KEYS, Layout
+from .sections import list_section, prose_section, review_line, rx_section, vitals_strip
+from .sections import esc as _esc
 
 DISCLAIMER = (
     "AI draft — doctor must verify before signing. "
     "STT + LLM may mishear drug names."
 )
-
-
-def _esc(value) -> str:
-    """HTML-escape any value (``None`` -> ``""``); never emits markup."""
-    return escape(str(value if value is not None else ""))
-
-
-def _list_items(values) -> str:
-    """One ``<li>`` per non-empty value, or a single ``—`` placeholder."""
-    items = values if isinstance(values, list) else []
-    rendered = [f"<li>{_esc(v)}</li>" for v in items if str(v).strip()]
-    return "".join(rendered) or "<li>—</li>"
-
-
-def _prose_items(values) -> str:
-    """One ``<p>`` per non-empty value (a sentence or two), or a single ``—`` placeholder."""
-    items = values if isinstance(values, list) else []
-    rendered = [f"<p>{_esc(v)}</p>" for v in items if str(v).strip()]
-    return "".join(rendered) or "<p>—</p>"
 
 
 def _doctor_table(groups, table_attrs: str, name_cls: str, qual_cls: str, reg_cls: str, styles=None) -> str:
@@ -76,36 +56,6 @@ def _profile_header(profile) -> str:
         lines.append('<hr class="clinic-rule">' if lines else "")
         lines.append(_doctor_table(groups, 'class="clinic-doctors"', "clinic-doctor", "clinic-qual", "clinic-reg"))
     return '<div class="clinic-head">' + "".join(lines) + "</div>"
-
-
-def _rx_rows(rx) -> str:
-    """The Rx table body: one row per medicine, or a ``—`` placeholder."""
-    rows = [
-        r for r in (rx if isinstance(rx, list) else [])
-        if isinstance(r, dict) and (r.get("name") or r.get("strength"))
-    ]
-    if not rows:
-        return '<tr><td colspan="6">—</td></tr>'
-    out = []
-    for index, row in enumerate(rows, 1):
-        medicine = " ".join(
-            str(part) for part in (
-                row.get("form") or "", row.get("name") or "", row.get("strength") or ""
-            ) if str(part).strip()
-        )
-        name, generic = str(row.get("name") or "").strip(), str(row.get("generic") or "").strip()
-        gen = f'<div class="gen">generic: {_esc(generic)}</div>' if generic and generic.casefold() != name.casefold() else ""
-        out.append(
-            "<tr>"
-            f"<td>{index}</td>"
-            f"<td>{_esc(medicine)}{gen}</td>"
-            f"<td>{_esc(row.get('dose'))}</td>"
-            f"<td>{_esc(row.get('timing'))}</td>"
-            f"<td>{_esc(row.get('duration'))}</td>"
-            f"<td>{_esc(row.get('instructions'))}</td>"
-            "</tr>"
-        )
-    return "".join(out)
 
 
 MAX_LINE = 2000                       # anti-abuse bound on one printed line; nothing real is ever cut by it
@@ -266,8 +216,6 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
     op_no = _esc(m.get("opNo") or s.get("opNo"))
     name = _esc(s.get("patientName"))
     age_sex = _esc(s.get("ageSex"))
-    label = date_label(s.get("review_date")) if str(s.get("review") or "").strip() else ""
-    review = (_esc(s.get("review")) + (f' <span class="rev-date">({_esc(label)})</span>' if label else "")) or "—"
     values = _resolved(layout, m.get("profile"), m.get("authored") is True) if layout is not None else {}
     entries = _doctor_entries(m.get("doctors"), values) if layout is not None else []
     header = _profile_header(m.get("profile")) if layout is None else _layout_header(layout, m.get("logo"), values, entries)
@@ -286,16 +234,20 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
   .lh {{ min-height: {lh_mm}mm; margin-bottom: 4mm; }}
   tr {{ break-inside: avoid; }}
   h1 {{ font-size: 18px; text-align: center; text-transform: uppercase; margin: 0 0 6px; }}
-  .sub {{ text-align: center; font-size: 12px; margin-bottom: 16px; }}
+  .sub {{ text-align: center; font-size: 12px; margin-bottom: 8px; }}
   .sec-title {{ font-size: 12px; font-weight: bold; text-transform: uppercase;
-                border-bottom: 1px solid #999; margin: 14px 0 6px; padding-bottom: 2px; }}
+                border-bottom: 1px solid #999; margin: 10px 0 4px; padding-bottom: 2px; break-after: avoid; }}
   ul {{ margin: 0 0 6px; padding-left: 20px; }}
   .prose p {{ margin: 0 0 4px; }}
+  .vitals {{ text-align: center; font-size: 12px; margin: -4px 0 8px; }}
+  .inl {{ font-size: 12px; margin: 8px 0 0; }}
+  .inl-label {{ font-weight: bold; }}
   .rev-date {{ color: #333; }}
   table.rx {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
-  table.rx th, table.rx td {{ border: 1px solid #999; padding: 4px 6px; text-align: left; }}
+  table.rx th, table.rx td {{ border: 1px solid #999; padding: 3px 6px; text-align: left; }}
+  .dir {{ white-space: nowrap; }}
   .gen {{ font-size: 10px; color: #444; margin-top: 1px; }}
-  .disclaimer {{ margin-top: 18px; font-size: 11px; color: #555; font-style: italic; }}
+  .disclaimer {{ margin-top: 12px; font-size: 11px; color: #555; font-style: italic; break-before: avoid; }}
   .clinic-head {{ text-align: center; margin-bottom: 12px; }}
   .clinic-rule {{ border: 0; border-top: 1px solid #999; margin: 6px 0; }}
   table.clinic-doctors, table.lh-doctors {{ width: 100%; border-collapse: collapse; margin-top: 4px; }}
@@ -311,21 +263,13 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 {header}
 <h1>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h1>
 <div class="sub">{date} &nbsp;|&nbsp; OP/IP No: {op_no} &nbsp;|&nbsp; {name} &nbsp; {age_sex}</div>
-<div class="sec-title">Chief Complaints &amp; Brief History</div>
-<div class="prose">{_prose_items(s.get("complaints"))}</div>
-<div class="sec-title">Diagnosis / Clinical Impression</div>
-<div class="prose">{_prose_items(s.get("diagnosis"))}</div>
-<div class="sec-title">Investigations Advised</div>
-<ul>{_list_items(s.get("investigations"))}</ul>
-<div class="sec-title">Rx (MEDICATIONS)</div>
-<table class="rx">
-<thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th></tr></thead>
-<tbody>{_rx_rows(s.get("rx"))}</tbody>
-</table>
-<div class="sec-title">Dietary &amp; General Advice</div>
-<ul>{_list_items(s.get("advice"))}</ul>
-<div class="sec-title">Review / Follow-up</div>
-<div>{review}</div>
+{vitals_strip(s.get("vitals"))}
+{prose_section("Chief Complaints &amp; Brief History", s.get("complaints"))}
+{prose_section("Diagnosis / Clinical Impression", s.get("diagnosis"))}
+{list_section("Investigations", "Investigations Advised", s.get("investigations"))}
+{rx_section(s.get("rx"))}
+{list_section("Advice", "Dietary &amp; General Advice", s.get("advice"))}
+{review_line(s.get("review"), s.get("review_date"))}
 <div class="disclaimer">{DISCLAIMER}</div>
 </body>
 </html>

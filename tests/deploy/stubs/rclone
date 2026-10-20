@@ -1,0 +1,41 @@
+#!/bin/bash
+# Stand-in for rclone: folder $FAKE_BUCKET is the bucket. "name:path" maps to $FAKE_BUCKET/path; plain paths are local.
+# Supports: copy SRC DST [--include P] [--ignore-existing] | copyto SRC DST | lsl PATH | lsf PATH
+echo "$*" >> "${FAKE_RCLONE_LOG:-/dev/null}"
+cmd=${1:-}; shift || true
+map() { case "$1" in *:*) echo "$FAKE_BUCKET/${1#*:}";; *) echo "$1";; esac; }
+args=(); inc=""; ign=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --include) inc=$2; shift 2;;
+    --ignore-existing) ign=1; shift;;
+    --*) shift;;
+    *) args+=("$1"); shift;;
+  esac
+done
+case "$cmd" in
+  copy)
+    [ "${FAKE_RCLONE_FAIL:-}" = 1 ] && exit 1
+    src=$(map "${args[0]}"); dst=$(map "${args[1]}"); mkdir -p "$dst"
+    if [ -d "$src" ]; then files=$(cd "$src" && ls -p | grep -v /); base=$src; else files=$(basename "$src"); base=$(dirname "$src"); fi
+    for f in $files; do
+      [ -n "$inc" ] && case "$f" in $inc) ;; *) continue;; esac
+      [ "$ign" = 1 ] && [ -e "$dst/$f" ] && continue
+      cp "$base/$f" "$dst/$f"
+    done;;
+  copyto)
+    [ "${FAKE_RCLONE_FAIL:-}" = 1 ] && exit 1
+    src=$(map "${args[0]}"); dst=$(map "${args[1]}"); mkdir -p "$(dirname "$dst")"; cp "$src" "$dst";;
+  lsl)
+    p=$(map "${args[0]}")
+    if [ -d "$p" ]; then list=$(cd "$p" && ls -p | grep -v /); base=$p; else list=$(basename "$p"); base=$(dirname "$p"); fi
+    for f in $list; do
+      [ -f "$base/$f" ] || continue
+      sz=$(wc -c < "$base/$f" | tr -d ' ')
+      [ "${FAKE_RCLONE_SHORT:-}" = 1 ] && sz=$((sz - 1))
+      printf '%10d 2026-01-01 00:00:00.000000000 %s\n' "$sz" "$f"
+    done;;
+  lsf)
+    p=$(map "${args[0]}"); [ -d "$p" ] && (cd "$p" && ls -p | grep -v /) || true;;
+  *) echo "rclone stub: unsupported command $cmd" >&2; exit 2;;
+esac

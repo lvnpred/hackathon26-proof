@@ -4,6 +4,10 @@ One host, two containers: `app` (the service) and `caddy` (HTTPS, request-size l
 volume (`directory.db` and `clinics/<slug>/`). Commands work with Podman (`podman compose`) or Docker
 (`docker compose`); examples use `podman`. Run from the repo root. Always pass `--env-file`.
 
+For the Hostinger VPS pilot, follow `scripts/deploy/README.md` (hardening, deploy and encrypted-backup scripts) and see
+`docs/working/2026-10-18-deployment/README.md` for what is live and what is still open. This runbook stays the generic
+reference (it uses Podman examples and a stop-the-app backup; the scripts use Docker and an online backup).
+
 Not covered here (see the pending list): CORS allow-list and security headers, log monitoring, an audit viewer.
 
 ## 1. Decide first

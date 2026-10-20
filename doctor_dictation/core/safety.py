@@ -8,6 +8,8 @@ row. Keeping this as a pure function makes the rule easy to test without a DB.
 
 import re
 
+from .doctor_generic import DOCTOR, clean_generic
+
 # The two texts check-row adds to Instructions (core/correction.GROUNDING_MARKERS): exactly these, in brackets, case as written.
 _GROUNDING_MARKER = re.compile(r" ?\[unverified(?: strength)?: confirm with doctor\]")
 
@@ -33,7 +35,11 @@ def screen_unverified(structured: dict, confirmed_rows=None) -> list[dict]:
     blocks). ``confirmed_rows`` is the list of rx indices the
     doctor explicitly confirmed, so a confirmed row does not block the save.
 
-    Returns one ``{"index", "name", "status"}`` per blocking row, in rx order.
+    A doctor generic (``generic_source == "doctor"``) also blocks: ``"generic": "pending"`` while it is pending and the
+    row is not confirmed, ``"generic": "invalid"`` when it fails ``clean_generic`` (confirmed or not).
+
+    Returns one ``{"index", "name", "status"}`` per blocking row, in rx order, plus ``"generic"`` when the doctor
+    generic blocks (on the same entry when the status blocks too).
     """
     confirmed = set(confirmed_rows or [])
     rows = structured.get("rx") if isinstance(structured, dict) else None
@@ -42,7 +48,21 @@ def screen_unverified(structured: dict, confirmed_rows=None) -> list[dict]:
         if not isinstance(row, dict):
             continue
         status = row.get("status")
-        if status == "verified" or index in confirmed:
-            continue
-        block.append({"index": index, "name": row.get("name") or "", "status": status})
+        entry = {"index": index, "name": row.get("name") or "", "status": status}
+        if status != "verified" and index not in confirmed:
+            block.append(entry)
+        problem = _generic_block(row, index in confirmed)
+        if problem:
+            if not block or block[-1] is not entry:
+                block.append(entry)
+            entry["generic"] = problem
     return block
+
+
+def _generic_block(row: dict, confirmed: bool) -> str:
+    """"invalid" / "pending" / "" for a row's doctor generic (a row without one never blocks here)."""
+    if row.get("generic_source") != DOCTOR:
+        return ""
+    if not clean_generic(row.get("generic")):
+        return "invalid"
+    return "pending" if row.get("generic_pending") is True and not confirmed else ""

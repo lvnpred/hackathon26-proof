@@ -117,3 +117,18 @@ def test_save_keeps_each_same_name_row_state_and_blocks_by_index(tmp_path, monke
     saved = json.loads(dbmod.get_document(conn, r2.json()["document_id"])["structured_json"])["rx"]
     assert [(s["strength"], s["status"]) for s in saved] == [("250 mg", "unverified-strength"), ("5 mg", "verified")]
     conn.close()
+
+
+def test_a_restored_verified_combination_row_needs_the_clinic_layer_to_stay_verified():
+    from doctor_dictation.core import formulary as F
+    prior = _prior("Zerodol-P", "verified", "", "", lex="")
+    fresh = {"rx": [_fresh("Zerodol-P")]}
+    try:
+        F.activate(F.ClinicLayer())
+        out = preserve_untouched_rx_status({"rx": [prior]}, {}, {"rx": [_fresh("Zerodol-P")]})["rx"][0]
+        assert out["status"] == "unknown-medicine" and NAME in out["instructions"]
+        F.activate(F.ClinicLayer(items=(("Zerodol-P", ""),)))
+        out = preserve_untouched_rx_status({"rx": [dict(prior)]}, {}, fresh)["rx"][0]
+        assert out["status"] == "verified"
+    finally:
+        F.activate(F.ClinicLayer())

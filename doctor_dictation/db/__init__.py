@@ -267,6 +267,7 @@ def log_audit(
     detail=None,
     ip=None,
     at=None,
+    commit=True,
 ) -> int:
     if actor is None and (sc := current_scope()) is not None:
         actor, role = sc.username, role or sc.role
@@ -275,7 +276,8 @@ def log_audit(
         " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (actor, role, action, entity, entity_id, _as_json(detail), ip, at or _utcnow()),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
     return cur.lastrowid
 
 

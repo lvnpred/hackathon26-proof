@@ -43,13 +43,13 @@ def test_the_printout_has_no_check_column_and_prints_the_same_for_every_status()
              "duration": "5 days", "instructions": "with milk", "status": s} for s in STATUSES]
     html = build_sheet_html({"patientName": "Anita Rao", "rx": rows}, META)
     table = html[html.index('<table class="rx">'):html.index("</table>")]
-    assert "<th>Check</th>" not in table and table.count("<th>") == 6 and "title=" not in table
+    assert "<th>Check</th>" not in table and table.count("<th>") == 4 and "title=" not in table
     assert not any(mark in table for mark in ("✓", "≈", "±", "Needs check", "Verified:"))
     cells = [tr.count("<td>") for tr in table.split("<tr>")[2:]]
-    assert cells == [6] * len(STATUSES)                                    # six cells per medicine, whatever its status
+    assert cells == [4] * len(STATUSES)                                    # four cells per medicine, whatever its status
     printed = {tr.split("</td>", 1)[1].split("</tr>")[0] for tr in table.split("<tr>")[2:]}      # without the row number
     assert len(printed) == 1                                               # identical rows: the status does not print
-    assert '<td colspan="6">—</td>' in build_sheet_html({"rx": []}, META)
+    assert '<table class="rx">' not in build_sheet_html({"rx": []}, META)
 
 
 def test_the_medicine_cell_prints_the_generic_on_a_second_line_under_a_brand():
@@ -63,14 +63,14 @@ def test_the_medicine_cell_prints_the_generic_on_a_second_line_under_a_brand():
     html = build_sheet_html({"rx": rows}, META)
     table = html[html.index('<table class="rx">'):html.index("</table>")]
     cells = [tr.split("<td>")[2].split("</td>")[0] for tr in table.split("<tr>")[2:]]
-    assert cells == ['Tab. Crocin 500 mg<div class="gen">generic: Paracetamol</div>', "Tab. Cetirizine 10 mg",
-                     "Tab. Citrizene 10 mg", "Cap. Zyloric 100 mg", 'Tab. Evil<div class="gen">generic: &lt;b&gt;x&lt;/b&gt;</div>',
-                     'Tab. Amlo 5 mg<div class="gen">generic: Amlodipine</div>', "Tab. cetirizine 10 mg"]
-    assert table.count("<th>") == 6 and ".gen { font-size: 10px; color: #444;" in html
+    assert cells == ['Tab. CROCIN 500 mg<div class="gen">generic: Paracetamol</div>', "Tab. CETIRIZINE 10 mg",
+                     "Tab. CITRIZENE 10 mg", "Cap. ZYLORIC 100 mg", 'Tab. EVIL<div class="gen">generic: &lt;b&gt;x&lt;/b&gt;</div>',
+                     'Tab. AMLO 5 mg<div class="gen">generic: Amlodipine</div>', "Tab. CETIRIZINE 10 mg"]
+    assert table.count("<th>") == 3 and ".gen { font-size: 10px; color: #444;" in html
     brand = [{"form": "Tab.", "name": "Crocin", "strength": "500 mg", "generic": "Paracetamol", "status": s} for s in STATUSES]
     again = build_sheet_html({"rx": brand}, META)
     cells = {tr.split("<td>")[2].split("</td>")[0] for tr in again[again.index('<table class="rx">'):again.index("</table>")].split("<tr>")[2:]}
-    assert cells == {'Tab. Crocin 500 mg<div class="gen">generic: Paracetamol</div>'}      # the status never changes what prints
+    assert cells == {'Tab. CROCIN 500 mg<div class="gen">generic: Paracetamol</div>'}      # the status never changes what prints
 
 
 def test_the_pdf_never_loads_frontend_css_and_the_browser_print_shows_the_same_line():
@@ -79,5 +79,18 @@ def test_the_pdf_never_loads_frontend_css_and_the_browser_print_shows_the_same_l
     assert "<link" not in html and "rx.css" not in html and "<script" not in html        # server HTML, its own <style> only
     css = (Path(__file__).resolve().parents[1] / "frontend" / "rx.css").read_text(encoding="utf-8")
     assert "@media print { .rx-gen { font-size:10px; color:#444; } }" in css
-    js = (Path(__file__).resolve().parents[1] / "frontend" / "rxview.js").read_text(encoding="utf-8")
-    assert '"rx-extra rx-sub rx-gen"' in js and '"rx-extra rx-sub rx-gen no-print"' not in js   # the line is not a screen-only element
+    js = (Path(__file__).resolve().parents[1] / "frontend" / "genericedit.js").read_text(encoding="utf-8")
+    assert '"rx-sub rx-gen" + (m.generic ? "" : " no-print")' in js       # the line is not a screen-only element (only an empty, open box is)
+
+
+def test_investigations_print_as_dictated_with_the_full_name():
+    html = build_sheet_html({"investigations": [{"text": "RFT", "canonical": "Renal Function Test", "status": "verified", "source": "dictated"},
+                                                {"text": "Uroflow at home", "canonical": "", "status": "new", "source": "dictated"},
+                                                "CBC"]}, META)
+    assert "RFT (Renal Function Test)" in html and "Uroflow at home" in html and "CBC" in html
+    assert "verified" not in html and "dictated" not in html          # status and source never print
+
+
+def test_an_investigation_canonical_is_escaped():
+    html = build_sheet_html({"investigations": [{"text": "X", "canonical": "<b>y</b>", "status": "new", "source": "doctor"}]}, META)
+    assert "&lt;b&gt;y&lt;/b&gt;" in html and "<b>y</b>" not in html

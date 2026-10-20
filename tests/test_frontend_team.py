@@ -90,8 +90,8 @@ def test_team_js_builds_ids_with_number_and_checks_for_a_password_before_showing
 def test_team_js_forgets_the_password_on_pagehide_and_only_a_short_line_is_a_live_region():
     js = _read("team.js")
     assert re.search(r'window\.addEventListener\("pagehide", clearSecret\)', js)
-    assert js.count('role: "status"') == 2                                   # the password line, and (I1-h4) the medicines announcer
-    assert 'id: "teamMedLive", class: "team-live", role: "status"' in js
+    assert js.count('role: "status"') == 1                                   # the password line; the lists' announcer is in clinlists.js
+    assert 'id: k.live, class: "team-live", role: "status"' in _read("clinlists.js")
     assert 'id: "teamSecret", class: "team-secret", role' not in js          # the box holding the password is not live
     assert 'id: "teamSecretReady"' in js and "Password ready" in js
     value = re.search(r'make\("code", \{[^}]*\}', js).group(0)

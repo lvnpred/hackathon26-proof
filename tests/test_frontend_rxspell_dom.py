@@ -27,6 +27,12 @@ class El {
   removeAttribute(k) { delete this.attrs[k]; }
   addEventListener(t, f) { (this.handlers[t] = this.handlers[t] || []).push(f); }
   focus() { document.activeElement = this; }
+  blur() { if (document.activeElement === this) { document.activeElement = null; this.dispatch("blur"); } }
+  dispatch(type, init) {                          // the event reaches this element, then bubbles up until stopPropagation
+    let stop = false; const e = Object.assign({ type, target: this, defaultPrevented: false, preventDefault() { e.defaultPrevented = true; }, stopPropagation() { stop = true; } }, init || {});
+    for (let n = this; n && !stop; n = n.parentNode) (n.handlers[type] || []).forEach((f) => f(e));
+    return e;
+  }
   matches(sel) {
     return sel.split(",").some((part) => {
       const m = /^([a-z]*)((?:\.[\w-]+|\[[\w-]+(?:="[^"]*")?\])*)$/.exec(part.trim());
@@ -98,9 +104,9 @@ def _run(body):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node is not installed")
-    full = ("globalThis.window = globalThis; require(process.argv[1]); require(process.argv[2]); require(process.argv[3]); require(process.argv[4]);" + _DOM
+    full = ("globalThis.window = globalThis; require(process.argv[1]); require(process.argv[2]); require(process.argv[3]); require(process.argv[4]); require(process.argv[5]);" + _DOM
             + "(async () => {" + body + "})().catch((e) => { console.error(e.stack); process.exit(1); });")
-    out = subprocess.run([node, "-e", full, str(FRONT / "rxstate.js"), str(FRONT / "suglist.js"), str(FRONT / "rxview.js"), str(FRONT / "spellmodal.js")], capture_output=True, text=True, timeout=30)
+    out = subprocess.run([node, "-e", full, str(FRONT / "rxstate.js"), str(FRONT / "suglist.js"), str(FRONT / "rxview.js"), str(FRONT / "genericedit.js"), str(FRONT / "spellmodal.js")], capture_output=True, text=True, timeout=30)
     assert out.returncode == 0, out.stderr
     return json.loads(out.stdout)
 

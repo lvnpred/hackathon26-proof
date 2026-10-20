@@ -4,8 +4,7 @@
 // whose fetch wrapper adds the X-DD-Client header and sends a 401 to the login page.
 (function () {
   const API = "/api/v1/users";
-  const MEDS = "/api/v1/formulary";
-  const t = { me: null, dialog: null, tabs: null, names: {}, seq: 0, admin: false };
+  const t = { me: null, dialog: null, tabs: null, admin: false, owner: false };
   const el = (id) => document.getElementById(id);
   const FIELDS = [
     ["teamNewUsername", "Username (3 to 40 letters, digits, '.', '_' or '-')", "username"],
@@ -66,111 +65,57 @@
     return d;
   }
 
-  // "Clinic medicines": the names this clinic learned from confirmed prescriptions. Built and inserted for clinic admins
-  // only (showMedsTab), so a doctor's page has no such element at all; the server answers 403 to them as well.
+  // Medicines and Investigations tabs (clinlists.js): built and inserted for clinic admins only (showListTabs), so a
+  // doctor's page has no such element at all; the server answers 403 to them on the learned-name Remove as well.
+  const TABS = [["teamTabMeds", "teamMeds", "Medicines", "medicine"], ["teamTabTests", "teamTests", "Investigations", "investigation"]];
+  const OWNER_TAB = ["teamTabShared", "teamShared", "Shared lists", "shared"];   // the app owner's tab (ownerlists.js)
   function buildTabs() {
     const tabs = make("div", { class: "team-tabs", role: "tablist", "aria-label": "Team sections" });
-    tabs.append(make("button", { id: "teamTabPeople", type: "button", class: "team-tab", role: "tab", "aria-selected": "true", "aria-controls": "teamPeople" }, "People"),
-      make("button", { id: "teamTabMeds", type: "button", class: "team-tab", role: "tab", "aria-selected": "false", "aria-controls": "teamMeds" }, "Clinic medicines"));
+    tabs.append(make("button", { id: "teamTabPeople", type: "button", class: "team-tab", role: "tab", "aria-selected": "true", "aria-controls": "teamPeople" }, "People"));
+    shownTabs().forEach(([tab, panel, label]) => tabs.append(make("button", { id: tab, type: "button", class: "team-tab", role: "tab", "aria-selected": "false", "aria-controls": panel }, label)));
     return tabs;
   }
-  function buildMeds() {
-    const hrow = make("tr");
-    ["Medicine", "Confirmed on", "Last seen", "Added by", "Actions"].forEach((h) => hrow.append(make("th", { scope: "col" }, h)));
-    const thead = make("thead");
-    thead.append(hrow);
-    const table = make("table", { class: "team-table team-meds-table" });      // stacked per row on a phone (team.css)
-    table.append(thead, make("tbody", { id: "teamMedRows" }));
-    const tableBox = make("div", { class: "team-table-box" });
-    tableBox.append(table);
-    const panel = make("div", { id: "teamMeds", class: "team-tab-body", role: "tabpanel", "aria-labelledby": "teamTabMeds", hidden: true });
-    panel.append(make("p", { class: "team-hint" }, "Medicines your doctors confirmed on saved documents. Your clinic recognises them when dictating, " +
-      "and a row shows them as known to your clinic. Removing a name is not permanent: it comes back only after two new documents confirm it again."),
-      make("p", { id: "teamMedLive", class: "team-live", role: "status" }),
-      make("p", { id: "teamMedEmpty", class: "team-hint", hidden: true }, "Nothing learned yet."), tableBox);
-    return panel;
+  function shownTabs() {                           // the tabs this user gets: clinic lists for admins, Shared lists for the owner
+    return (t.admin && window.ClinicLists ? TABS : []).concat(t.owner && window.OwnerLists ? [OWNER_TAB] : []);
   }
-  function selectTab(meds) {
-    el("teamPeople").hidden = meds;
-    el("teamMeds").hidden = !meds;
-    el("teamTabPeople").setAttribute("aria-selected", String(!meds));
-    el("teamTabMeds").setAttribute("aria-selected", String(meds));
-    showErr("");
-    setLive("");
-    if (meds) loadMeds(true);
-  }
-  function setLive(m) { el("teamMedLive").textContent = m || ""; }
-  function renderMeds(items) {
-    const rows = el("teamMedRows");
-    rows.replaceChildren();
-    el("teamMedEmpty").hidden = items.length > 0;
-    items.forEach((m, index) => {
-      const tr = make("tr");
-      const added = m.added_by === null || m.added_by === undefined ? undefined : t.names[m.added_by];
-      tr.append(make("td", {}, m.name), make("td", { "data-label": "Confirmed on" }, m.confirm_count + (m.confirm_count === 1 ? " document" : " documents")),
-        make("td", { "data-label": "Last seen" }, when(m.last_seen_at)),
-        make("td", { "data-label": "Added by" }, added || "Unknown"));   // null: learned in single mode or before sign-in
-      const cell = make("td", { class: "team-row-actions" });
-      const remove = make("button", { type: "button", class: "team-med-remove" }, "Remove");
-      remove.setAttribute("aria-label", "Remove " + m.name + " from your clinic's medicines");
-      remove.addEventListener("click", () => removeMed(m, index));
-      cell.append(remove);
-      tr.append(cell);
-      rows.append(tr);
+  function selectTab(kind) {                       // kind: "medicine" | "investigation" | "shared" | null for People
+    el("teamPeople").hidden = Boolean(kind);
+    el("teamTabPeople").setAttribute("aria-selected", String(!kind));
+    shownTabs().forEach(([tab, panel, , k]) => {
+      el(panel).hidden = k !== kind;
+      el(tab).setAttribute("aria-selected", String(k === kind));
     });
+    showErr("");
+    if (t.admin && window.ClinicLists) window.ClinicLists.clearLive();
+    if (t.owner && window.OwnerLists) window.OwnerLists.clearLive();
+    if (kind === "shared") window.OwnerLists.load();
+    else if (kind) window.ClinicLists.load(kind);
   }
-  async function loadNames() {                    // added_by is a user id: name it from the team list; Unknown if that cannot be read
-    try {
-      const r = await fetch(API);
-      const b = r.ok ? await r.json() : {};
-      t.names = {};
-      (b.users || []).forEach((u) => { t.names[u.id] = u.display_name || u.username; });
-    } catch (e) { /* the list still shows, with Unknown */ }
-  }
-  async function loadMeds(withNames) {
-    const mine = ++t.seq;                          // only the newest load may draw: an older answer arriving late is dropped
-    el("teamMedRows").replaceChildren();           // never show old rows as current while (or after failing) to reload
-    el("teamMedEmpty").hidden = true;
-    setLive("Loading…");
-    if (withNames) await loadNames();
-    const b = await send(MEDS);
-    if (mine !== t.seq) return;
-    setLive("");
-    if (b) renderMeds(b.items || []);              // on a failure the table stays empty and the error box says why
-  }
-  function focusAfterRemoval(index) {              // next row's Remove, else the previous row's, else the tab
-    const rows = el("teamMedRows").children;
-    const row = rows[index] || rows[rows.length - 1];
-    (row ? row.children[row.children.length - 1].children[0] : el("teamTabMeds")).focus();
-  }
-  async function removeMed(m, index) {
-    if (!window.confirm("Remove " + m.name + " from your clinic's medicines? Doctors will be asked about it again, " +
-      "and it comes back only after two new documents confirm it.")) return;
-    setLive("");
-    const b = await send(MEDS + "/" + Number(m.id), { method: "DELETE" }, "That medicine was already removed. The list has been refreshed.");
-    const msg = b ? "" : el("teamError").textContent;     // the row on screen may be stale: reload it, keep the error visible
-    await loadMeds(false);
-    showErr(msg);
-    if (b) setLive("Removed " + m.name + ". It comes back only after two new documents confirm it.");
-    if (b) focusAfterRemoval(index); else el("teamTabMeds").focus();
-  }
-  async function isAdmin() {                       // the signed-in user's role, from /api/v1/auth/me; anything unclear is "not an admin"
+  async function whoami() {                        // the signed-in user, from /api/v1/auth/me; anything unclear is "not an admin, not the owner"
     try {
       const r = await fetch("/api/v1/auth/me");
-      const me = r.ok ? await r.json() : {};
-      return me.role === "admin";
-    } catch (e) { return false; }
+      return r.ok ? await r.json() : {};
+    } catch (e) { return {}; }
   }
-  function showMedsTab() {
-    if (!t.admin) return;
+  function showListTabs() {
+    const tabs = shownTabs();
+    if (!tabs.length) return;
     const people = el("teamPeople");
     people.setAttribute("role", "tabpanel");
     people.setAttribute("aria-labelledby", "teamTabPeople");
+    const host = { send, showErr, errText: () => el("teamError").textContent };
     t.tabs = buildTabs();
     people.parentNode.insertBefore(t.tabs, people);
-    people.parentNode.append(buildMeds());
-    el("teamTabPeople").addEventListener("click", () => selectTab(false));
-    el("teamTabMeds").addEventListener("click", () => selectTab(true));
+    if (t.admin && window.ClinicLists) {
+      window.ClinicLists.init(host);
+      TABS.forEach(([, , , kind]) => people.parentNode.append(window.ClinicLists.buildPanel(kind)));
+    }
+    if (t.owner && window.OwnerLists) {
+      window.OwnerLists.init(host);
+      people.parentNode.append(window.OwnerLists.buildPanel());
+    }
+    el("teamTabPeople").addEventListener("click", () => selectTab(null));
+    tabs.forEach(([tab, , , kind]) => el(tab).addEventListener("click", () => selectTab(kind)));
   }
 
   function errorText(b, status) {                 // our routes answer {"error"}; FastAPI's 422 answers {"detail": text | [{msg}]}
@@ -308,7 +253,7 @@
   function openPanel() {
     clearSecret();
     showErr("");
-    if (t.tabs) selectTab(false);                 // always start on People
+    if (t.tabs) selectTab(null);                 // always start on People
     t.dialog.showModal();
     refresh();
   }
@@ -320,7 +265,9 @@
       const r = await fetch(API);
       if (r.status !== 200) return;               // single mode (404) or not signed in: no Team button
     } catch (e) { return; }
-    t.admin = await isAdmin();                    // decided before the dialog is built: a doctor's page never has the admin controls
+    const me = await whoami();                    // decided before the dialog is built: a doctor's page never has the admin controls
+    t.admin = me.role === "admin";
+    t.owner = me.is_owner === true;
     t.dialog = build();
     document.body.append(t.dialog);
     el("teamCloseBtn").addEventListener("click", () => t.dialog.close());
@@ -331,6 +278,6 @@
     if (t.admin) el("teamAddForm").addEventListener("submit", addUser);
     btn.addEventListener("click", openPanel);
     btn.hidden = false;
-    showMedsTab();
+    showListTabs();
   });
 })();

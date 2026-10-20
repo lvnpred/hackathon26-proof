@@ -8,7 +8,7 @@ tolerates either a real PDF file or a clear ``RuntimeError`` mentioning chromium
 
 Run:  ./.venv-arm64/Scripts/python -m pytest tests/ -q
 """
-from doctor_dictation.pdf import build_sheet_html, render_pdf
+from doctor_dictation.pdf import DISCLAIMER, build_sheet_html, render_pdf
 
 
 def test_sheet_html_escapes_and_has_sections():
@@ -22,8 +22,9 @@ def test_sheet_html_escapes_and_has_sections():
     assert "MEDICATIONS" in html
 
 
-def test_sheet_html_empty_rx_placeholder():
-    assert "—" in build_sheet_html({}, {})
+def test_sheet_html_empty_sections_print_nothing():
+    html = build_sheet_html({}, {})
+    assert 'colspan="6"' not in html and "<li>—</li>" not in html and DISCLAIMER in html
 
 
 # --- clinic/doctor profile header (Task 3) ---------------------------------

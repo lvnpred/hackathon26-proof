@@ -18,6 +18,7 @@ ID_TABLE = (("/api/v1/documents/", "documents"), ("/api/v1/templates/", "templat
 BODIES = {   # so an id route reaches its lookup instead of a 422 (A10, A11)
     ("PUT", "/api/v1/templates/{id}"): {"profile": {}, "lines": []},
     ("PUT", "/api/v1/templates/{id}/doctors"): {"mode": "all", "ids": []},
+    ("PUT", "/api/v1/templates/{id}/lines"): {"lines": [], "keep": []},
     ("POST", "/api/v1/templates/{id}/accept"): {"scope": "clinic"},
 }
 EXTRA_GETS = ("/api/v1/encounters/today?scope=clinic",)                     # A4
@@ -30,10 +31,13 @@ def _norm(path):
 ADMIN_ONLY = ("/api/v1/formulary/", "/api/v1/users/")      # admin-only routes: swept with admin clients in test_isolation_formulary.py, not with a doctor (a doctor gets 403 first)
 
 
+LIST_ROUTES = ("/api/v1/lists/", "/api/v1/owner/lists/")      # {kind} names a list ("medicine"), not a row id: nothing to look up in another clinic; test_lists_routes.py
+
+
 def id_routes(app):
     out = []
     for path, ops in app.openapi()["paths"].items():
-        if "{" in path and not path.startswith(ADMIN_ONLY):
+        if "{" in path and not path.startswith(ADMIN_ONLY + LIST_ROUTES):
             out.extend((m.upper(), path) for m in ops if m.upper() in WRITE | {"GET"})
     return sorted(out)
 
@@ -81,7 +85,7 @@ def test_every_id_route_answers_404_for_an_id_only_clinic_a_has(world):
         table.append(f"{method} {url} -> {r.status_code}")
         if r.status_code != 404 or leaks(r.text, A_MARKERS):
             wrong.append(f"{method} {url} -> {r.status_code} {r.text[:160]}")
-    assert len(routes) == 8, routes      # the live count of doctor-sweepable id operations (the 3 user actions and the formulary DELETE are admin only); a new one must be reviewed here
+    assert len(routes) == 9, routes      # the live count of doctor-sweepable id operations (the 3 user actions and the formulary DELETE are admin only); a new one must be reviewed here
     assert not wrong, wrong
     assert fingerprint(A) == before, table
 
@@ -180,6 +184,11 @@ CLASSIFIED = {
     "GET /api/v1/users": "list: test_no_list_or_page_shows_the_other_clinics_data",
     "GET /api/v1/formulary": "list: test_no_list_or_page_shows_the_other_clinics_data; test_formulary_routes.py",
     "DELETE /api/v1/formulary/{entry_id}": "admin only: test_formulary_routes.py (404 for another clinic's id, 403 for a doctor)",
+    "GET /api/v1/lists/{kind}": "list by kind: test_lists_routes.py::test_other_clinic_cannot_see_or_reset",
+    "POST /api/v1/lists/{kind}/changes": "admin only; the clinic's own overlay: test_lists_routes.py (403 for a doctor, 404 for another clinic's key)",
+    "GET /api/v1/owner/lists/{kind}": "owner only, a store shared by every clinic: test_owner_lists.py (404 for a non-owner)",
+    "POST /api/v1/owner/lists/{kind}/changes": "owner only, a store shared by every clinic: test_owner_lists.py (404 for a non-owner)",
+    "GET /api/v1/owner/lists/{kind}/export": "owner only, a store shared by every clinic: test_owner_lists.py (404 for a non-owner)",
     "POST /api/v1/users": "test_writes_land_in_the_callers_clinic_only[users] (an admin client)",
     "POST /api/v1/users/{user_id}/disable": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
     "POST /api/v1/users/{user_id}/enable": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
@@ -188,6 +197,7 @@ CLASSIFIED = {
     "POST /api/format": "per-clinic result cache: test_the_format_cache_is_per_clinic",
     "POST /api/v1/rx/check-row": "reads the caller's own clinic layer via use_clinic_layer: test_formulary_routes.py (a clinic's names never reach another clinic)",
     "POST /api/v1/review-date": "stateless: no database, no clinic data (plan I2-b)",
+    "POST /api/v1/investigations/lookup": "reads the caller's own clinic list via use_investigations: test_investigations_api.py (another clinic's test is never verified)",
     "GET /api/health": "public",
     "GET /health": "public",
     "GET /login": "public page",

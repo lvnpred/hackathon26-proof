@@ -15,7 +15,7 @@ def test_the_generic_line_prints_under_a_brand_and_a_generic_row_gets_a_screen_t
       const pick = (tr, s) => tr.querySelectorAll(s).map((n) => [n.textContent, n.className]);
       console.log(JSON.stringify({ b: [pick(b, ".rx-gen"), pick(b, ".rx-gen-tag")], g: [pick(g, ".rx-gen"), pick(g, ".rx-gen-tag")],
         u: [pick(u, ".rx-gen"), pick(u, ".rx-gen-tag")], h: pick(h, ".rx-gen")[0][0], e: [pick(e, ".rx-gen"), pick(e, ".rx-gen-tag")] }));""")
-    assert r["b"] == [[["generic: Paracetamol", "rx-extra rx-sub rx-gen"]], []]       # no no-print: the browser print shows it too
+    assert r["b"] == [[["generic: Paracetamol", "rx-sub rx-gen"]], []]                 # no no-print: the browser print shows it too (genericedit.js)
     assert r["g"] == [[], [["generic", "rx-extra rx-gen-tag no-print"]]]               # the same name, any case: a tag, no line
     assert r["u"] == [[], []] and r["h"] == "generic: <b>x</b>"                        # textContent: shown as text, never markup
     assert r["e"] == [[], []]                                                          # blank row: no line and no tag
@@ -116,3 +116,20 @@ def test_the_generic_styles_are_muted_the_pill_stacks_and_the_tag_stays_in_one_p
     tag = rule(".rx-gen-tag")
     assert "white-space:nowrap" in tag and "display:inline-block" in tag
     assert re.search(r"\.rx-gen-tag \+ \.cell::before\s*\{\s*content:\" \"", css)           # the space between name and strength survives the tag
+
+
+def test_a_combination_row_shows_a_screen_only_add_generic_button_and_never_a_generic_line():
+    r = _run("""
+      const c = mkRow("c1", "unknown-medicine", { name: "Zerodol-P" }, { combo_base: "Zerodol" });
+      const k = mkRow("c2", "verified", { name: "Crocin" }, { generic: "Paracetamol", generic_source: "lexicon" });
+      const pick = (tr, s) => tr.querySelectorAll(s).map((n) => [n.textContent, n.className]);
+      console.log(JSON.stringify({ c: [pick(c, ".rx-gen"), pick(c, ".rx-add-gen")], k: pick(k, ".rx-add-gen"),
+        reason: RxView.reasonFor(c), title: c.querySelector(".rx-add-gen").attrs.title }));""")
+    assert r["c"] == [[], [["Add generic", "rx-act mini no-print rx-add-gen"]]] and r["k"] == []     # plan g task 7: a button in the generic line
+    assert r["reason"] == '"Zerodol-P" is a combination of Zerodol. Its generic is not in the medicine list.'
+    assert r["title"] == "A combination of Zerodol: add its generic"
+
+
+def test_the_script_pins_for_the_add_generic_tag():
+    html = open("frontend/index.html").read()
+    assert "rxstate.js?v=11" in html and "rxview.js?v=14" in html and "genericedit.js?v=3" in html

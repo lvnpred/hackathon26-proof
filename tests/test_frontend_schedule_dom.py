@@ -52,7 +52,7 @@ def test_the_badge_sits_with_the_generic_and_a_rerender_keeps_exactly_one():
       console.log(JSON.stringify({ first, again: order(), brand: brand.querySelector("td").children.map((c) => c.className) }));""")
     want = ["form", "name", "rx-extra rx-gen-tag no-print", "rx-extra rx-sched no-print", "strength"]
     assert r["first"] == want and r["again"] == want
-    assert r["brand"][:2] == ["rx-extra rx-sub rx-gen", "rx-extra rx-sched no-print"]      # a brand row: after its generic line
+    assert r["brand"][:2] == ["rx-genbox", "rx-extra rx-sched no-print"]                   # a brand row: after its generic line
 
 
 def test_hostile_text_is_inserted_as_text_never_as_markup_and_never_makes_a_badge():

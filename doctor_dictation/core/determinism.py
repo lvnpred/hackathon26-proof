@@ -13,10 +13,15 @@ from .repair import (  # noqa: F401  (api/format.py and tests import these from 
     FORMAT_LLM_CAP, MAX_CANDIDATE_ROWS, RX_VERIFIED, UNKNOWN_MEDICINE_TEXT, _UNKNOWN_ISSUE_RE,
     build_repair_message, loop_should_continue, open_issues,
 )
-from . import formulary, rowcheck
-from .commonwords import WORDS as COMMON_WORDS
+from . import formulary, investigations, overlay, rowcheck, vitals
+from .commonwords import WORDS as COMMON_WORDS  # noqa: F401
 from .lasa import lasa_row
-from .surface import _generic_of, ambiguous_names, mask_as_dictated, surface_map
+from .combo import combo_suffix
+from .surface import generic_fields, surface_map  # noqa: F401  (drugnames reads surface_map from here; tests patch it)
+from .drugnames import (  # noqa: F401  (name matching lives in drugnames; callers import it from here)
+    _SEP_RE, _alias_map, _alias_slot, _ambiguous_for, _block_slot, _build_alias_map, _canonical_lookup, _exact_lookup,
+    _maps, _maps_slot, _sep_map, _sep_slot, blocked_names, correct_drugs, is_blocked, without_blocked,
+)
 
 LEXICON_PATH = Path(__file__).resolve().parent / "lexicon" / "drugs.json"
 LEXICON_VERSION = "1.0.0"
@@ -57,7 +62,8 @@ _FORMAT_CACHE: dict = {}
 _FORMAT_CACHE_MAX = 512
 
 
-def load_lexicon():
+def shipped_lexicon():
+    """The shipped drugs.json entries, read once (``_lexicon_cache``). Callers must not mutate them."""
     global _lexicon_cache, LEXICON_VERSION
     if _lexicon_cache is not None:
         return _lexicon_cache
@@ -71,133 +77,41 @@ def load_lexicon():
     return entries
 
 
+def load_lexicon():
+    """The medicine list this request matches against: the shipped list with the active clinic overlay applied (the
+    shipped list itself when the clinic changed nothing). One object per overlay version; callers must not mutate it."""
+    return overlay.effective_view("medicine", shipped_lexicon())
+
+
+overlay.register_shipped("medicine", shipped_lexicon)
+
+
 def lexicon_size() -> int:
-    return len(load_lexicon())
+    """The SHIPPED list's size (health reports the shipped list; it runs outside any clinic)."""
+    return len(shipped_lexicon())
 
 
 def lexicon_version() -> str:
-    """Lexicon version read from the loaded drugs.json (source of truth).
+    """Lexicon version read from the loaded drugs.json (source of truth): the SHIPPED version, also outside a clinic.
 
     Reads live from the lexicon after it is (lazily) loaded, so consumers such
     as /api/health report the version in the file rather than the ``1.0.0``
     default bound by value at import time.
     """
-    load_lexicon()
+    shipped_lexicon()
     return LEXICON_VERSION
 
 
-def _alias_map():
-    """alias_lower -> canonical.
-
-    Deterministic and file-order independent: pass 1 claims canonical names +
-    aliases (sorted by canonical), pass 2 claims brands. So brands always
-    resolve to their generic (crocin -> Paracetamol), never to a stub entry.
-    """
-    m: dict = {}
-    entries = sorted(load_lexicon(), key=lambda e: e.get("canonical", ""))
-    for e in entries:
-        canon = e.get("canonical", "")
-        if not canon:
-            continue
-        for a in [canon] + e.get("aliases", []):
-            key = a.strip().lower()
-            if key and key not in m:
-                m[key] = canon
-    for e in entries:
-        canon = e.get("canonical", "")
-        if not canon:
-            continue
-        for a in e.get("brands", []):
-            key = a.strip().lower()
-            if key and key not in m:
-                m[key] = canon
-    return m
-
-
-_maps_cache = (None, None, None)  # (lexicon list, surface map, ambiguous names)
-
-
-def _maps():
-    """(surface map, ambiguous names), cached per loaded lexicon list."""
-    global _maps_cache
-    lex = load_lexicon()
-    if _maps_cache[0] is not lex:
-        _maps_cache = (lex, surface_map(lex, _alias_map()), ambiguous_names(lex))
-    return _maps_cache[1], _maps_cache[2]
+def lexicon_identity() -> str:
+    """The list a match was made against: shipped version + this request's overlay version. Key any cache of a
+    lexicon-dependent answer on this, never on ``lexicon_version`` alone (that would serve one clinic another's)."""
+    return f"{lexicon_version()}+{overlay.active().version}"
 
 
 def normalize_numbers(text: str) -> str:
     def _rep(m):
         return str(NUMBER_WORDS[m.group(1).lower()])
     return _NUMBER_RE.sub(_rep, text)
-
-
-def correct_drugs(text: str) -> str:
-    """Fix STT splits/misspellings against the local lexicon (deterministic)."""
-    amap, amb = _maps()  # alias -> text to write (generic, or the brand as spelled); ambiguous names
-    if not amap:
-        return text
-    out = text
-    # 0) multiword aliases canonicalized (longest first), with canonical
-    #    phrases masked BEFORE alias replacement so a shorter alias can never
-    #    match inside an already-correct phrase ("magnesium citrate" inside
-    #    "Potassium Magnesium Citrate"). Mask tokens are digit-only, invisible
-    #    to the [A-Za-z] passes below.
-    masked = {}
-
-    def _mask(s: str) -> str:
-        for i, canon in enumerate(sorted({c for c in amap.values() if " " in c or "-" in c},
-                                         key=len, reverse=True)):
-            pat = re.compile(r"\b" + re.escape(canon) + r"\b", re.I)
-            if pat.search(s):
-                token = f"\x00{i}\x00"
-                if token not in masked:
-                    masked[token] = canon
-                s = pat.sub(token, s)
-        return s
-
-    def _restore(s: str) -> str:
-        for token, canon in masked.items():
-            s = s.replace(token, canon)
-        return s
-
-    out = _mask(mask_as_dictated(out, amb, masked))  # a phrase two generics claim: kept whole
-    for alias in sorted((a for a in amap if " " in a or "-" in a), key=len, reverse=True):
-        out = re.sub(r"\b" + re.escape(alias) + r"\b", amap[alias], out, flags=re.I)
-    out = _mask(out)  # protect canonicals introduced by alias replacement
-
-    nospace = {}
-    for alias, canon in amap.items():
-        key = re.sub(r"[^a-z]", "", alias)
-        if len(key) >= 5 and key not in nospace:
-            nospace[key] = canon
-    # 1) two-word splits: "tam sulosin" -> canonical
-    tokens = re.findall(r"[A-Za-z]+", out)
-    for i in range(len(tokens) - 1):
-        w1, w2 = tokens[i], tokens[i + 1]
-        if len(w1) < 2 or len(w2) < 3 or {w1.lower(), w2.lower()} <= COMMON_WORDS:
-            continue
-        key = (w1 + w2).lower()
-        if key in nospace and not _ambiguous_for(key):
-            canon = nospace[key]
-            out = re.sub(r"\b" + re.escape(w1) + r"\s+" + re.escape(w2) + r"\b",
-                         canon, out, count=1, flags=re.I)
-    out = _mask(out)  # a hyphenated or spaced brand written by the split must survive pass 2
-    # 2) single-word exact alias + fuzzy (cutoff fixed, sorted keys)
-    keys = sorted(k for k in amap if len(k) >= 5 and " " not in k)
-    for tok in set(re.findall(r"[A-Za-z]{5,}", out)):
-        low = tok.lower()
-        # two generics claim it (or a near spelling), or it is an ordinary word ("twice", "after"): leave it as dictated
-        if _ambiguous_for(low) or low in COMMON_WORDS:
-            continue
-        if low in amap and " " not in low:
-            if tok != amap[low]:
-                out = re.sub(r"\b" + re.escape(tok) + r"\b", amap[low], out, flags=re.I)
-            continue
-        best = difflib.get_close_matches(low, keys, n=1, cutoff=0.84)
-        if best:
-            out = re.sub(r"\b" + re.escape(tok) + r"\b", amap[best[0]], out, flags=re.I)
-    return _restore(out)
 
 
 def normalize_transcript(transcript: str) -> str:
@@ -238,32 +152,6 @@ def normalize_duration(window_lower: str) -> str:
     return ""
 
 
-def _canonical_lookup(name: str) -> str:
-    """Resolve a dictated/LLM drug name to the lexicon canonical form.
-
-    Exact alias match first, then fixed-cutoff fuzzy. Returns "" when the
-    medicine is not in the list. Deterministic (sorted keys).
-    """
-    amap = _alias_map()
-    low = (name or "").strip().lower()
-    if not low:
-        return ""
-    if low in amap:
-        return amap[low]
-    keys = sorted(k for k in amap if len(k) >= 5)
-    best = difflib.get_close_matches(low, keys, n=1, cutoff=0.84)
-    return amap[best[0]] if best else ""
-
-
-def _ambiguous_for(low: str) -> tuple:
-    """Generics a dictated name could mean when two claim it (exact or a near spelling); else ()."""
-    amb = _maps()[1]
-    if low in amb:
-        return amb[low]
-    near = difflib.get_close_matches(low, sorted(k for k in amb if len(k) >= 5), n=1, cutoff=0.84)
-    return amb[near[0]] if near and low not in _alias_map() else ()
-
-
 def _norm_strength(s: str) -> str:
     return re.sub(r"\s+", "", (s or "").lower())
 
@@ -278,6 +166,11 @@ def _ground_row(name: str, strength: str, transcript_lower: str):
         if amb:  # a name two generics claim (a combination brand): never guess
             return (RX_UNVERIFIED_NAME, "",
                     f"'{name}': matches more than one medicine ({', '.join(amb)})")
+        if combo_suffix(name):  # known brand + combination suffix (Zerodol-P): the generic is unknown, never guessed
+            hit = formulary.ground_clinic(name, transcript_lower, _name_in_transcript)
+            if hit and hit[0] == formulary.LOOKALIKE and formulary._lexicon_twin(name) == _exact_lookup(combo_suffix(name)[0]):
+                return (RX_VERIFIED, "", None)  # a learned combination only sounds like its own base's generic: the clinic's name
+            return hit or (RX_UNKNOWN_MEDICINE, "", None)
         canon = _canonical_lookup(name)
         if not canon:
             return formulary.ground_clinic(name, transcript_lower, _name_in_transcript) or (
@@ -317,7 +210,7 @@ def ground_rx(rx_rows, transcript: str, raw_transcript: str = ""):
         if not name:
             row["status"] = RX_UNVERIFIED_NAME
             row["lexicon_match"] = ""
-            row.update(generic="", heard="", lookalike="")
+            row.update(generic="", generic_source="", combo_base="", heard="", lookalike="")
             issues.append(f"rx[{i}]: empty medicine name")
             grounded.append(row)
             continue
@@ -325,7 +218,7 @@ def ground_rx(rx_rows, transcript: str, raw_transcript: str = ""):
         status, extra = lasa_row(status, match, name, raw_transcript)
         row["status"] = status
         row["lexicon_match"] = match
-        row.update(generic=_generic_of(name, match), **extra)
+        row.update(**generic_fields(name, match), **extra)
         if issue:
             issues.append(f"rx[{i}] {issue}")
         grounded.append(row)
@@ -336,6 +229,7 @@ def _name_in_transcript(name: str, transcript_lower: str) -> bool:
     nl = name.strip().lower()
     if not nl:
         return True
+    transcript_lower = without_blocked(transcript_lower, name)   # never heard inside a name the clinic removed
     if nl in transcript_lower:
         return True
     toks = re.findall(r"[a-z]+", transcript_lower)
@@ -353,7 +247,7 @@ def _name_in_transcript(name: str, transcript_lower: str) -> bool:
     return best >= 0.8
 
 
-def validate_structured(data: dict, transcript: str, raw_transcript: str = "", age_sex: str = ""):
+def validate_structured(data: dict, transcript: str, raw_transcript: str = "", age_sex: str = "", vitals_typed: bool = False):
     """Coerce to schema, normalize enums, flag rx names absent from transcript.
 
     Returns (validated_dict, warnings_list). Never raises on bad input.
@@ -361,9 +255,9 @@ def validate_structured(data: dict, transcript: str, raw_transcript: str = "", a
     warnings = []
     d = data if isinstance(data, dict) else {}
 
-    def _capped(values, field):
-        """Stringify + drop blanks, then cap at LIST_ITEM_LIMIT with a warning."""
-        items = [str(x) for x in (values or []) if str(x).strip()]
+    def _capped(values, field, items=None):
+        """Stringify + drop blanks (or the given items), then cap at LIST_ITEM_LIMIT with a warning."""
+        items = [str(x) for x in (values or []) if str(x).strip()] if items is None else items
         if len(items) > LIST_ITEM_LIMIT:
             warnings.append(
                 f"{field}: truncated {len(items) - LIST_ITEM_LIMIT} rows "
@@ -378,11 +272,13 @@ def validate_structured(data: dict, transcript: str, raw_transcript: str = "", a
         "opNo": str(d.get("opNo") or ""),
         "diagnosis": _capped(d.get("diagnosis"), "diagnosis"),
         "complaints": _capped(d.get("complaints"), "complaints"),
-        "investigations": _capped(d.get("investigations"), "investigations"),
+        "investigations": _capped(None, "investigations", investigations.coerce_items(d.get("investigations"))),   # items, unchecked
         "rx": [],
         "advice": _capped(d.get("advice"), "advice"),
         "review": str(d.get("review") or ""),
     }
+    out["vitals"], notes = vitals.coerce_vitals(d.get("vitals"), vitals_typed)
+    warnings += notes
     rx = d.get("rx") or []
     if isinstance(rx, list) and len(rx) > RX_ROW_LIMIT:
         warnings.append(

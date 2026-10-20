@@ -4,12 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=11" />
-<link rel="stylesheet" href="rx.css?v=7" />
+<link rel="stylesheet" href="styles.css?v=12" />
+<link rel="stylesheet" href="rx.css?v=9" />
+<link rel="stylesheet" href="ixlist.css?v=2" />
 <link rel="stylesheet" href="steps.css?v=2" />
 <link rel="stylesheet" href="polish.css?v=1" />
-<link rel="stylesheet" href="letterhead.css?v=8" />
-<link rel="stylesheet" href="team.css?v=2" />
+<link rel="stylesheet" href="letterhead.css?v=9" />
+<link rel="stylesheet" href="team.css?v=5" />
 </head>
 <body>
 <header class="topbar no-print">
@@ -101,6 +102,14 @@
         <span class="pf pf-name" id="pName" contenteditable="true" data-field="patientName" data-placeholder="Patient name"></span>
         <span class="pf" id="pAge" contenteditable="true" data-field="ageSex" data-placeholder="Age / Sex"></span>
       </div>
+      <div class="sub vitals-row no-print" id="pVitals" role="group" aria-label="Vitals">
+        <span class="vl" id="vBpL">BP</span><span class="pf pv" id="vBp" contenteditable="true" role="textbox" aria-labelledby="vBpL" data-placeholder="140/90"></span>
+        <span class="vl" id="vPulseL">Pulse</span><span class="pf pv" id="vPulse" contenteditable="true" role="textbox" aria-labelledby="vPulseL" data-placeholder="88/min"></span>
+        <span class="vl" id="vWeightL">Weight</span><span class="pf pv" id="vWeight" contenteditable="true" role="textbox" aria-labelledby="vWeightL" data-placeholder="72 kg"></span>
+        <span class="vl" id="vSpo2L">SpO2</span><span class="pf pv" id="vSpo2" contenteditable="true" role="textbox" aria-labelledby="vSpo2L" data-placeholder="98%"></span>
+        <span class="vl" id="vTempL">Temp</span><span class="pf pv" id="vTemp" contenteditable="true" role="textbox" aria-labelledby="vTempL" data-placeholder="101 F"></span>
+        <span class="vhint" id="vHint" role="status" hidden></span>
+      </div>
       <div id="sheetBody">
         <div class="sec-title">CHIEF COMPLAINTS &amp; BRIEF HISTORY</div>
         <ul id="pCc" class="editable-list prose-list"></ul>
@@ -109,7 +118,7 @@
         <ul id="pDx" class="editable-list prose-list"></ul>
         <p id="pDxNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
         <div class="sec-title">INVESTIGATIONS ADVISED</div>
-        <ul id="pIx" class="editable-list"></ul>
+        <ul id="pIx" class="ix-list"></ul>
         <div class="sec-title">Rx (MEDICATIONS)</div>
         <table class="rx">
           <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th class="check">Check</th><th></th></tr></thead>
@@ -183,6 +192,8 @@
     <div class="lh-body">
       <p id="lhStatus" class="lh-current" role="status" aria-live="polite"></p>
       <button id="lhStopBtn" type="button" class="lh-act lh-stop" hidden>Stop using this letterhead</button>
+      <button id="lhTidyBtn" type="button" class="lh-act" hidden>Fix lines on the clinic letterhead</button>
+      <button id="lhTidyMineBtn" type="button" class="lh-act" hidden>Fix lines on my letterhead</button>
       <div id="lhDone" class="lh-done" role="status" hidden></div>
       <div id="lhError" class="lh-error" role="alert" hidden></div>
       <div id="lhProgress" class="lh-progress" hidden>
@@ -211,7 +222,8 @@
             <div id="lhPreview" class="lh-preview" aria-live="polite"></div>
           </div>
           <div class="lh-form-col">
-            <div id="lhLinesBox"><h3>Text lines on the pad</h3><div id="lhLines"></div></div>
+            <div id="lhLinesBox"><h3>Text lines on the pad</h3><p id="lhSkipped" class="panel-hint" hidden></p><div id="lhLines"></div><div id="lhDupes"></div></div>
+            <div id="lhDetailsPart">
             <fieldset id="lhDoctorsBox" class="lh-choice" hidden>
               <legend>Doctors this letterhead lists</legend>
               <p id="lhHints" class="panel-hint" hidden></p>
@@ -230,6 +242,7 @@
             <div id="lhProfileFields"></div>
             <h3>Doctors</h3>
             <div id="lhDoctorGrid"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -239,6 +252,7 @@
       <button id="lhReuploadBtn" type="button" class="lh-act">Re-upload</button>
       <button id="lhUpdateBtn" type="button" class="lh-act">Update preview</button>
       <button id="lhAcceptBtn" type="button" class="primary lh-act">Accept</button>
+      <button id="lhTidySaveBtn" type="button" class="primary lh-act" hidden>Save changes</button>
     </div>
   </div>
 </dialog>
@@ -255,15 +269,22 @@
 <script src="auth.js?v=4"></script>
 <script src="authorship.js?v=4"></script>
 <script src="doctorgrid.js?v=1"></script>
-<script src="rxstate.js?v=7"></script>
+<script src="rxstate.js?v=11"></script>
 <script src="suglist.js?v=4"></script>
-<script src="rxview.js?v=8"></script>
+<script src="rxview.js?v=14"></script>
+<script src="genericedit.js?v=3"></script>
 <script src="spellmodal.js?v=2"></script>
 <script src="steps.js?v=1"></script>
 <script src="dates.js?v=2"></script>
 <script src="sections.js?v=3"></script>
-<script src="app.js?v=36"></script>
-<script src="letterhead.js?v=11"></script>
-<script src="team.js?v=3"></script>
+<script src="vitals.js?v=2"></script>
+<script src="ixlist.js?v=2"></script>
+<script src="app.js?v=45"></script>
+<script src="lhlines.js?v=1"></script>
+<script src="letterhead.js?v=12"></script>
+<script src="listedit.js?v=1"></script>
+<script src="clinlists.js?v=3"></script>
+<script src="ownerlists.js?v=1"></script>
+<script src="team.js?v=5"></script>
 </body>
 </html>

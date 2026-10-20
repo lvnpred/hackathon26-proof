@@ -14,6 +14,7 @@ import re
 
 from .correction import (DERIVED_ROW_FIELDS, GROUNDING_MARKERS, LIST_FIELDS, MIN_ALIAS_LETTERS,
                          _norm_name, _text, same_medicine_rows)
+from .doctor_generic import DOCTOR_GENERIC_FIELDS
 
 _FIELDS = ("rx",) + LIST_FIELDS
 
@@ -78,7 +79,7 @@ def _miss(kind, ref, field):
 
 
 def _regrounded(row, new_name):
-    out = {k: v for k, v in row.items() if k not in ("status", "lexicon_match", *DERIVED_ROW_FIELDS)}
+    out = {k: v for k, v in row.items() if k not in ("status", "lexicon_match", *DERIVED_ROW_FIELDS, *DOCTOR_GENERIC_FIELDS)}
     out["name"] = new_name
     if "instructions" in out:
         text = str(out["instructions"] or "")

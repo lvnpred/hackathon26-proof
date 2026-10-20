@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 from .candidates import phonetic_key
+from .lexmemo import per_lexicon
 
 RX_LOOKALIKE = "lookalike-check"
 PAIRS_PATH = Path(__file__).resolve().parent / "lexicon" / "lasa_pairs.json"
@@ -18,7 +19,7 @@ MIN_EVIDENCE_LETTERS = 5   # a twin phrase shorter than this ("iron") is too com
 MIN_HEARD = 0.8    # the cut-off grounding uses to find a name in a transcript
 MAX_NAME_WORDS = 8   # heard_as skips a longer name
 
-_cache = (None, None)  # (lexicon list the index was built from, index)
+_slot: dict = {}  # per_lexicon: lexicon list -> look-alike index
 
 
 def _words(text) -> list:
@@ -45,12 +46,13 @@ def _curated() -> list:
 
 def _index() -> dict:
     """by_low / twins / always / names / amap / exact, cached per loaded lexicon list."""
-    global _cache
-    from .determinism import _alias_map, load_lexicon
-
+    from .determinism import load_lexicon
     lex = load_lexicon()
-    if _cache[0] is lex:
-        return _cache[1]
+    return per_lexicon(_slot, lex, lambda: _build_index(lex))
+
+
+def _build_index(lex) -> dict:
+    from .determinism import _alias_map
     canons = sorted({str(e["canonical"]).strip() for e in lex if str(e.get("canonical") or "").strip()})
     by_low = {c.lower(): c for c in canons}
     keys = {c: phonetic_key(c) for c in canons}
@@ -78,11 +80,9 @@ def _index() -> dict:
         c = str(e.get("canonical") or "").strip()
         if c:
             names[c] += [tuple(_words(x)) for x in [c, *e.get("aliases", []), *e.get("brands", [])]]
-    amap = _alias_map()
+    amap = _alias_map(lex)
     exact = {" ".join(_words(k)): v for k, v in amap.items()}   # first spelling wins
-    index = {"by_low": by_low, "twins": twins, "always": always, "names": names, "amap": amap, "exact": exact}
-    _cache = (lex, index)
-    return index
+    return {"by_low": by_low, "twins": twins, "always": always, "names": names, "amap": amap, "exact": exact}
 
 
 def twins(canonical: str) -> list:

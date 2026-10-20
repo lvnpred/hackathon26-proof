@@ -9,6 +9,8 @@
 [data-state="you"], [data-rxstate="you"] { --c:#3a3ea6; --bg:#ececfb; --bd:#bcbdf0; }
 /* Nothing about checking prints (decision 2026-10-16): the Check column is hidden on paper, as the PDF has none. */
 @media print { table.rx th.check, td.check, table.rx th:nth-last-child(2) { display:none !important; } }
+/* The medicine name prints in capitals, as on the PDF (pdf/sections.py); form and strength keep their case. Screen stays as dictated. */
+@media print { table.rx [data-col="name"] { text-transform:uppercase; } }
 @media screen {
   td.check { min-width:180px; text-align:left; white-space:normal; }
   #sheet { overflow-x:auto; }                                   /* a wide table scrolls inside the sheet, never the page */
@@ -72,3 +74,12 @@ dialog.spell-dlg[open] { display:flex; flex-direction:column; }      /* scoped: 
 .rx-gen { color:var(--rx-muted); }
 .rx-gen-tag + .cell::before { content:" "; }
 @media print { .rx-gen { font-size:10px; color:#444; } }
+/* The generic line (genericedit.js): the doctor's generic is editable in place; "AI suggests" and the Remember tick never print. */
+.rx-genbox { margin-top:2px; }
+.rx-genbox .rx-gen-text { display:inline-block; min-width:6ch; border-bottom:1px dotted var(--rx-muted); }
+.rx-genbox .rx-gen-text:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.rx-remember { margin-left:8px; font-size:12px; color:var(--rx-muted); }
+.rx-sugg { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px; padding:2px 6px; border-radius:6px; font-size:12px; color:var(--rx-muted); }
+.rx-sugg.amber { color: var(--warn); background:#fff8e1; }
+#sheet.view-only .rx-remember, #sheet.view-only .rx-genbox button, #sheet.view-only .rx-sugg button { display:none; }   /* view-only can start after the render */
+@media print { .rx-genbox .rx-gen-text { border:0; } }

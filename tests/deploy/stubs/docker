@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stand-in for docker: FAKE_DOCKER_FAIL=1 fails; otherwise 4 KB of random bytes on stdout.
+[ "${FAKE_DOCKER_FAIL:-}" = 1 ] && exit 1
+head -c 4096 /dev/urandom

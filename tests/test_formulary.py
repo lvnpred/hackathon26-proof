@@ -204,3 +204,32 @@ def test_a_clinic_name_close_to_a_lexicon_spelling_is_rewritten_before_grounding
     row = _rows([{"name": "Metformin", "strength": "500 mg"}], t)[0]
     assert (row["source"], row["lexicon_match"]) == ("lexicon", "Metformin")
     assert _rows([{"name": "Metformn"}], "metformn")[0]["lexicon_match"] == "Metformin"   # even unrewritten, the lexicon's fuzzy lookup wins first
+
+
+def test_learnable_uses_exact_matching_so_a_combination_brand_is_learned():
+    form = {"rx": [{"name": "Zerodol-P"}, {"name": "Zerodol"}, {"name": "Moxikind CV"}, {"name": "Crocinn"}]}
+    assert F.learnable(form, [0, 1, 2, 3]) == [("Zerodol-P", ""), ("Crocinn", "")]
+
+
+def test_a_learned_combination_grounds_as_the_clinics_name_not_as_a_lookalike_of_its_base():
+    from doctor_dictation.core import rowcheck
+    F.activate(F.ClinicLayer(items=(("Zerodol-P", ""),)))
+    try:
+        row, _n = rowcheck.ground_with_notes({"name": "Zerodol-P", "dose": "1-0-1"}, "tab zerodol p", "tab zerodol p")
+        assert (row["status"], row["source"], row["generic"], row["combo_base"]) == ("verified", "clinic", "", "Zerodol")
+        assert not row["lookalike"]                                 # always present; empty means no look-alike reason
+        other, _n = rowcheck.ground_with_notes({"name": "Zerodol-P"}, "", "")
+        assert other["status"] == "unverified-name"                 # not dictated: the clinic rule still applies
+    finally:
+        F.activate(F.ClinicLayer())
+
+
+def test_a_learned_combination_whose_twin_is_another_drug_stays_a_lookalike(monkeypatch):
+    from doctor_dictation.core import rowcheck
+    monkeypatch.setattr(F, "_lexicon_twin", lambda name: "Prednisolone")   # not Zerodol's own generic (Aceclofenac)
+    F.activate(F.ClinicLayer(items=(("Zerodol-P", ""),)))
+    try:
+        row, _n = rowcheck.ground_with_notes({"name": "Zerodol-P", "dose": "1-0-1"}, "tab zerodol p", "tab zerodol p")
+        assert (row["status"], row["lookalike"]) == ("lookalike-check", "Prednisolone")
+    finally:
+        F.activate(F.ClinicLayer())

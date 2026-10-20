@@ -13,7 +13,7 @@ from doctor_dictation.db import templates as tdb
 from doctor_dictation.policy import can
 from doctor_dictation.pdf import LayoutError, validate_layout
 from doctor_dictation.textclean import clean_text
-from doctor_dictation.templates import TemplateError, doctors
+from doctor_dictation.templates import TemplateError, doctors, lines as letterhead_lines
 from doctor_dictation.templates.builder import PROFILE_FIELDS as FIELDS, build_draft
 from doctor_dictation.templates.images import clean_image
 
@@ -56,7 +56,8 @@ def view(row) -> dict:
             "layout": {k: v for k, v in lay.items() if k != "profile"}, "profile": lay.get("profile", {}),
             "scope": "clinic" if row["owner_user_id"] is None else "mine",
             "doctors": {"mode": row["doctors_mode"], "ids": doctors.stored_ids(row)},
-            "warnings": doctors.literal_warnings(lay)}
+            "warnings": doctors.literal_warnings(lay),
+            "fill_in": letterhead_lines.fill_in_lines(lay), "duplicates": letterhead_lines.duplicate_fields(lay)}
 
 
 def purge_expired(conn, settings, now=None) -> int:
@@ -117,7 +118,16 @@ def _draft(conn, template_id, user=None):
     return row
 
 
-def edit(conn, template_id: int, profile: dict, lines: list, actor=None, user=None) -> dict:
+def _checked(lay: dict, lines, keep) -> None:
+    """Apply line edits, removals and ``keep`` to ``lay``, then validate; TemplateError(400) on any failure."""
+    try:
+        letterhead_lines.apply_line_changes(lay, lines, keep)
+        validate_layout(lay)
+    except LayoutError as exc:
+        raise TemplateError(400, f"edit rejected: {exc}") from None
+
+
+def edit(conn, template_id: int, profile: dict, lines: list, keep=None, actor=None, user=None) -> dict:
     row = _draft(conn, template_id, user)
     lay = json.loads(row["layout_json"])
     profile = {} if profile is None else profile
@@ -128,22 +138,33 @@ def edit(conn, template_id: int, profile: dict, lines: list, actor=None, user=No
         if key not in FIELDS or not isinstance(value, str):
             raise TemplateError(400, f"unknown or non-text profile field: {key}")
         lay["profile"][key] = value.strip()
-    for ln in lines:
-        if not isinstance(ln, dict) or not isinstance(ln.get("text"), str):
-            raise TemplateError(400, "each line needs section, index and text")
-        section, index = ln.get("section"), ln.get("index")
-        if (section not in ("header", "footer") or isinstance(index, bool) or not isinstance(index, int)
-                or not 0 <= index < len(lay[section])):
-            raise TemplateError(400, "no such line")
-        block = lay[section][index]
-        if block.get("type") != "text" or "text" not in block:
-            raise TemplateError(400, "only literal text lines can be edited")
-        block["text"] = ln["text"].strip()
-    try:
-        validate_layout(lay)
-    except LayoutError as exc:
-        raise TemplateError(400, f"edit rejected: {exc}") from None
+    _checked(lay, lines, [] if keep is None else keep)
     tdb.update_template_layout(conn, template_id, lay)
+    return view(tdb.get_template(conn, template_id))
+
+
+def tidy(conn, template_id: int, lines, keep, actor=None, user=None) -> dict:
+    """Remove or edit literal lines and choose where a duplicated field prints, on a draft or an ACTIVE letterhead.
+    Same visibility and archived rules as ``set_doctors``. The audit row carries counts and field names, no line text."""
+    row = tdb.get_template(conn, template_id)
+    if not visible(row, user):
+        raise TemplateError(404, "template not found")
+    if row["status"] == "archived":
+        raise TemplateError(409, "this letterhead is no longer in use")
+    lines = [] if lines is None else lines
+    keep = [] if keep is None else keep
+    if lines == [] and keep == []:
+        return view(row)          # nothing to change: no write, no audit row
+    lay = json.loads(row["layout_json"])
+    stored = json.loads(json.dumps(lay))
+    _checked(lay, lines, keep)
+    removed = len({(ln["section"], ln["index"]) for ln in lines if ln.get("remove") is True})
+    edited = sum(1 for ln in lines if ln.get("remove") is not True
+                 and not letterhead_lines.same_text(ln["text"], stored[ln["section"]][ln["index"]].get("text", "")))
+    tdb.update_template_layout(conn, template_id, lay)
+    dbmod.log_audit(conn, actor=actor, action="template_tidy", entity="template", entity_id=str(template_id),
+                    detail={"clinic": row["clinic"], "removed": removed, "edited": edited,
+                            "keep": letterhead_lines.check_keep(keep)})
     return view(tdb.get_template(conn, template_id))
 
 

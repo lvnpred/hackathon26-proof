@@ -187,9 +187,9 @@ def pairs_file(tmp_path, monkeypatch):
         if content is not None:
             p.write_text(content, encoding="utf-8")
         monkeypatch.setattr(lasa, "PAIRS_PATH", p)
-        lasa._cache = (None, None)
+        lasa._slot.clear()
     yield put
-    lasa._cache = (None, None)
+    lasa._slot.clear()
 
 
 @pytest.mark.parametrize("content", ['{"pairs": null}', '{"pairs": 5}', "[]", "not json {", None])

@@ -90,7 +90,7 @@ def _said(text):
 def test_no_form_word_spoken_leaves_the_form_empty_and_is_never_a_form_mismatch(monkeypatch, tmp_path):
     _ref(monkeypatch, tmp_path, ["Tab.", "Inj."])
     raw, row = _said("ceftriaxone 250 mg once daily")
-    assert (raw, row["form"], row["dose_note"]) == ("", "Tab.", "")                # the printed default stays Tab.
+    assert (raw, row["form"], row["dose_note"]) == ("", "", "")                # no form spoken: none printed
     assert fallback_format("have paracetamol twice a day")["rx"][0]["form"] == ""
 
 def test_explicit_wrong_form_against_a_full_reference_is_dose_check(monkeypatch, tmp_path):

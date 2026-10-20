@@ -298,6 +298,17 @@ Evidence: `.superpowers/sdd/2026-10-17-i1-g-lexicon-simple/task-1-report.md` to 
 - **Risk.** False warnings; an operator who needs another path. **Size.** S.
 - **Recommendation.** Later; before promotion runs on more than one operator machine.
 
+## (al) Letterhead fill-in slots (DEFERRED by the owner, 2026-10-19)
+
+- **Value.** A pad with pre-printed "Name: ___ Age: ___ Date: ___" or "Visit after ___" labels gets the values printed
+  into those labels, so the PDF matches the paper pad exactly and the app's own patient line can be left out.
+- **Why deferred.** Hard to get right: it needs new layout block types (a slot per field), the vision model must place
+  each slot exactly where the pad leaves space, and a wrong guess prints a value over the pad's text or in the wrong
+  place. Skipping fill-in labels and letting the doctor delete lines (prescription-quality plan, decision 5) already
+  removes the duplicate.
+- **Risk.** Values printed in the wrong place on the page. **Size.** L.
+- **Recommendation.** Later, only if clinics ask for a pad-exact print.
+
 ---
 
 ## (j) Deferred items still open (from the project memory, 2026-10-17)
@@ -407,5 +418,6 @@ One line each, grouped by area, with the plan they came from. Dropped as closed 
 | (ai) `read_csv` memory cap | Robustness | None | S | none | Later |
 | (aj) `.venv` symlink ignore | Hygiene | None | S | owner | **Do next** (one line) |
 | (ak) review CSV on a shared drive | Privacy | False warnings | S | none | Later (before a second operator) |
+| (al) letterhead fill-in slots | Pad-exact print | Values printed in the wrong place | L | letterhead delete-a-line | Deferred by the owner |
 
 **Decision needed:** approve (o) with (ad), (aa), (ac), (ae) and (aj) as the next items. Card (f) stays deferred by the owner. Not decided here on purpose: the product questions of card (a), and the open decisions in the index section 5.

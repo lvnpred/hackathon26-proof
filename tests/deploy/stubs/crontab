@@ -1,0 +1,7 @@
+#!/bin/sh
+# Stand-in for crontab: the file $FAKE_CRONTAB is the crontab. -l lists (exit 1 when missing), - installs stdin.
+case "${1:-}" in
+  -l) [ -f "$FAKE_CRONTAB" ] || { echo "no crontab for fake" >&2; exit 1; }; cat "$FAKE_CRONTAB";;
+  -) new=$(cat); printf '%s\n' "$new" > "$FAKE_CRONTAB";;   # read all stdin first, like real crontab: the writer must not truncate the file the reader still lists
+  *) echo "crontab stub: unsupported args" >&2; exit 2;;
+esac

@@ -27,7 +27,8 @@ def test_post_201_shape(tclient):
     r = _post(tclient)
     body = r.json()
     assert r.status_code == 201 and body["status"] == "draft" and body["profile"] == PROFILE
-    assert set(body) == {"id", "status", "layout", "profile", "scope", "doctors", "warnings"} and "profile" not in body["layout"]
+    assert set(body) == {"id", "status", "layout", "profile", "scope", "doctors", "warnings",
+                         "fill_in", "duplicates"} and "profile" not in body["layout"]
 
 
 def test_post_without_image_or_with_text_is_400(tclient):
@@ -231,3 +232,15 @@ def test_use_details_route_409_on_active_and_keeps_it_active(tclient):
     other = _post(tclient).json()["id"]
     assert tclient.post(f"{URL}/{other}/use-details").status_code == 200
     assert tclient.get(URL + "/active").json()["id"] == tid
+
+
+def test_put_lines_route_on_an_active_template(tclient):
+    tid = _post(tclient).json()["id"]
+    tclient.post(f"{URL}/{tid}/accept")
+    r = tclient.put(f"{URL}/{tid}/lines", json={"lines": [{"section": "header", "index": 2, "remove": True}], "keep": []})
+    assert r.status_code == 200
+    texts = [b.get("text") for b in tclient.get(URL + "/active").json()["layout"]["header"]]
+    assert "Open Mon to Sat" not in texts
+    assert tclient.put(f"{URL}/999/lines", json={"lines": [], "keep": []}).status_code == 404
+    assert tclient.put(f"{URL}/{tid}/lines", json={"lines": [], "keep": "x"}).status_code == 400
+    assert tclient.put(f"{URL}/{tid}/lines", json={"lines": "x", "keep": []}).status_code == 400

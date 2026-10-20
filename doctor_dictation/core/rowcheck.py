@@ -5,7 +5,10 @@ import re
 
 from . import dosing, formulary, generics
 from .candidates import MIN_SCORE, scored_spellings, similarity, suggest_candidates
+from .combo import SEP_CHARS, combo_suffix
+from .doctor_generic import doctor_fields, generic_problem, unknown_components
 from .lasa import lasa_row
+from .surface import generic_fields
 
 SUGGESTION_LIMIT = 5
 D_UNKNOWN = "unknown-medicine"        # determinism is imported lazily, so its RX_UNKNOWN_MEDICINE is not usable here
@@ -15,6 +18,22 @@ INLINE_LETTERS, INLINE_TEXT = 6, 0.7  # ... of a name with 6+ letters whose spel
 INLINE_POOL = 40                      # names looked at for a longer name the typed one is the start of
 
 
+_FORM_WORDS = {"tab": "Tab.", "tabs": "Tab.", "tablet": "Tab.", "tablets": "Tab.",
+               "cap": "Cap.", "caps": "Cap.", "capsule": "Cap.", "capsules": "Cap.",
+               "syr": "Syr.", "syrup": "Syr.", "syrups": "Syr.",
+               "inj": "Inj.", "injection": "Inj.", "injections": "Inj."}
+
+
+def _coerce_form(value) -> str:
+    """An allowed form unchanged; a whole form word (Tablet, Capsules, Syrup, Injection...) maps to the short form;
+    anything else ("Syringe", "capsicum") is "" (not dictated)."""
+    from . import determinism as D
+    text = str(value or "").strip()
+    if text in D.ALLOWED_FORMS:
+        return text
+    return _FORM_WORDS.get(text.strip(" .,;:").casefold(), "")
+
+
 def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: str, age_sex: str = "", index: int = 0):
     """(row, notes): the coerced, grounded row, or None for an empty one (no name and no strength).
 
@@ -22,9 +41,7 @@ def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: st
     """
     from . import determinism as D   # lazy: determinism imports this module
     notes = []
-    form = str(item.get("form") or "Tab.")
-    if form not in D.ALLOWED_FORMS:
-        form = "Tab."
+    form = _coerce_form(item.get("form"))
     name = str(item.get("name") or "").strip().strip(".")
     strength = str(item.get("strength") or "").strip()
     dose = str(item.get("dose") or "").strip()
@@ -51,7 +68,7 @@ def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: st
         return None, notes + [f"rx[{index}]: dropped empty row"]
     # Agent-loop grounding: status + lexicon match on every row.
     status, match, issue = D._ground_row(name, strength, (normalized_transcript or "").lower())
-    given = form if item.get("form") == form else ""  # a defaulted or coerced form is not a form mismatch
+    given = form if item.get("form") == form else ""  # a coerced form is not a form mismatch
     status, extra = dosing.ground_extra(status, match, given, strength, dose, age_sex, name)
     status, lextra = lasa_row(status, match, name, raw_transcript)
     if status == D.RX_VERIFIED:
@@ -65,14 +82,23 @@ def ground_with_notes(item: dict, raw_transcript: str, normalized_transcript: st
     elif status == D.RX_UNVERIFIED_NAME:
         notes.append(f"rx[{index}] {issue} -> flagged unverified")
         instructions = (instructions + " [unverified: confirm with doctor]").strip()
-    return {
+    row = {
         "form": form, "name": name, "strength": strength,
         "dose": dose, "timing": timing, "duration": duration,
         "instructions": instructions, "status": status,
-        "lexicon_match": match, "generic": D._generic_of(name, match), "schedule": generics.schedule_of(match),
+        "lexicon_match": match, **generic_fields(name, match), "schedule": generics.schedule_of(match),
         **extra, **lextra,
         **formulary.row_extras(name, match, status), **did_you_mean(name, status),
-    }, notes
+    }
+    listed = row["generic"] if row["generic_source"] == "lexicon" and D._exact_lookup(name) else ""
+    # Last, so a hidden (Fefol) or near-spelling generic that generic_fields blanked never blanks the doctor's own.
+    row.update(doctor_fields(item, name))
+    if listed and row["generic_source"] == "doctor":
+        row["generic_listed"] = listed          # the page's Remember tick and the restore when cleared (read, never sent)
+    row["generic_suggestion_unknown"] = unknown_components(row["generic_suggestion"]) if row["generic_suggestion"] else []
+    if item.get("generic_source") == "doctor" and row["generic_source"] != "doctor":
+        notes.append(f"rx[{index}] {name}: generic not kept ({generic_problem(item.get('generic'))})")
+    return row, notes
 
 
 def ground_one(row: dict, raw_transcript: str, normalized_transcript: str, age_sex: str = "") -> dict:
@@ -93,7 +119,10 @@ def suggestions(row: dict) -> list:
     seen, out = set(), []
     match = [row["lexicon_match"]] if row.get("lexicon_match") else []
     own = [] if match else [hit[0] for hit in [formulary.active_layer().get(row.get("name", ""))] if hit]
-    alikes = suggest_candidates(row.get("name", "")) if match else formulary.sound_alikes(row.get("name", ""))
+    if not match and _blocked(row.get("name", "")):
+        alikes = []                      # a name the clinic took off its list is never steered to a look-alike
+    else:
+        alikes = suggest_candidates(row.get("name", "")) if match else formulary.sound_alikes(row.get("name", ""))
     for name in match + own + alikes + list(twins):
         if name.casefold() not in seen:
             seen.add(name.casefold())
@@ -105,10 +134,18 @@ def _letters(text) -> str:
     return re.sub(r"[^a-z]", "", str(text or "").lower())
 
 
+def _blocked(name) -> bool:
+    from .determinism import is_blocked     # lazy: determinism imports this module
+    return is_blocked(name)
+
+
 def _sound_options(name, k, clinic=True, prefix_first=True):
     """[(name, generic, score, reason)]: lexicon spellings ("sounds") and, when ``clinic``, this clinic's single-word
     names ("clinic") by one score, then the I1-r1 near-tie rule (usage moves clinic names only).
-    ``prefix_first``: a name that starts with the typed letters ("paracet" -> Paracetamol) comes before the others."""
+    ``prefix_first``: a name that starts with the typed letters ("paracet" -> Paracetamol) comes before the others.
+    [] for a name the clinic's overlay took off the list (blocked): it is never steered to a look-alike."""
+    if _blocked(name):
+        return []
     layer = formulary.active_layer()
     mine = [(n, g, s, "clinic") for n, g in layer.items if clinic and (s := similarity(name, n)) >= MIN_SCORE]
     lex = [(s, c, sc, "sounds") for s, c, sc in scored_spellings(name, k + len(mine))]
@@ -144,7 +181,7 @@ def options(row: dict, cap: int = MAX_OPTIONS):
     return out[:cap], len(out)
 
 
-_DYM_CACHE: dict = {}        # (letters of the name, clinic layer) -> (lexicon list, result); bounded, see _DYM_MAX
+_DYM_CACHE: dict = {}        # (letters of the name, clinic layer, id(lexicon list)) -> (lexicon list, result); bounded, see _DYM_MAX
 _DYM_MAX = 512
 _NO_DYM = {"did_you_mean": "", "did_you_mean_generic": ""}
 
@@ -172,19 +209,37 @@ def _best_alike(name: str) -> dict:
     return {"did_you_mean": top[0], "did_you_mean_generic": top[1]}
 
 
+_HEAD_TAIL_RE = re.compile(rf"^(?P<head>.+?)[{SEP_CHARS}]+[A-Za-z]{{1,5}}(?:[{SEP_CHARS}]*\d+(?:\.\d+)?)?$")
+
+
+def _steers_to_head(name: str, suggestion: dict) -> bool:
+    """True when ``name`` is a head plus a short letter tail and the suggestion is the head or its spelling fix (a combination, not a typo)."""
+    m = _HEAD_TAIL_RE.match(re.sub(r"\s+", " ", (name or "").strip()).rstrip(".").strip())
+    if not m or not suggestion.get("did_you_mean"):
+        return False
+    from .determinism import _exact_lookup
+    head = m.group("head").casefold()
+    shown = suggestion["did_you_mean"].casefold()
+    if shown == head or shown == _exact_lookup(m.group("head")).casefold() != "":
+        return True
+    return difflib.SequenceMatcher(None, _letters(head), _letters(shown)).ratio() >= INLINE_TEXT   # a misspelt head, corrected
+
+
 def did_you_mean(name: str, status: str) -> dict:
     """The inline suggestion for an ``unknown-medicine`` row: the top sound-alike when it scores >= INLINE_MIN, is
     INLINE_GAP ahead of the next different generic and is not on the curated look-alike list. A suggestion only.
 
     Cached per (letters of the name, clinic layer object, lexicon list object): a clinic list or usage change builds a
-    new layer, a lexicon reload a new list, so a hit is never another clinic's or version's suggestion. Max _DYM_MAX."""
-    if status != D_UNKNOWN:
-        return dict(_NO_DYM)
+    new layer, a lexicon reload or clinic overlay a new list, so a hit is never another clinic's or version's suggestion.
+    The entry holds the list, so its id is not reused while cached; the slot is read once. Max _DYM_MAX."""
+    if status != D_UNKNOWN or combo_suffix(name) or _blocked(name):   # a known brand + suffix, or a name the clinic
+        return dict(_NO_DYM)                                          # removed: nothing to correct to
     from .determinism import load_lexicon
     layer, lex, letters = formulary.active_layer(), load_lexicon(), re.sub(r"[^a-z]", "", (name or "").lower())
-    hit = _DYM_CACHE.get((letters, layer))
+    ckey = (letters, layer, id(lex))
+    hit = _DYM_CACHE.get(ckey)
     if hit is None or hit[0] is not lex:
         if len(_DYM_CACHE) >= _DYM_MAX:
             _DYM_CACHE.clear()
-        hit = _DYM_CACHE[(letters, layer)] = (lex, _best_alike(name))
-    return dict(hit[1])
+        hit = _DYM_CACHE[ckey] = (lex, _best_alike(name))
+    return dict(_NO_DYM) if _steers_to_head(name, hit[1]) else dict(hit[1])

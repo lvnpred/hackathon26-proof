@@ -21,9 +21,11 @@ Merge rules (see the plan, Task 4):
   rows not named in the patch are left untouched. A brand and its generic are one
   medicine: `match_by_generic` renames such a patch row to the form's row first.
 """
-import json
 from collections import deque
 
+from .combo import combo_suffix
+from .correction_prompt import CORRECTION_INSTRUCTION, build_correction_messages  # noqa: F401 (re-exported)
+from .vitals import merge_vitals
 from .determinism import (  # determinism never imports this module
     RX_UNVERIFIED_NAME, _alias_map, _ambiguous_for, _canonical_lookup,
 )
@@ -35,48 +37,6 @@ from .surface import _generic_of
 
 SCALAR_FIELDS = ("patientName", "ageSex", "opNo", "review")
 LIST_FIELDS = ("diagnosis", "complaints", "investigations", "advice")
-
-CORRECTION_INSTRUCTION = (
-    "You are applying a spoken correction to an existing prescription form. "
-    "Change ONLY what this correction states; leave every other field "
-    "byte-identical. Return ONLY a JSON object containing the fields that "
-    "change, using the same schema as the form. If the correction changes "
-    "nothing, return {}.\n"
-    "RULES:\n"
-    '1. Every rx row you return MUST include "name": the medicine the correction '
-    "is about, copied from the current form with its exact spelling. If the doctor "
-    "refers to a medicine, find it in the current form and use that name. "
-    "A medicine that is not on the current form is a NEW row: use the name the "
-    "doctor dictated. Never return an rx row without a name. A brand and its generic are the "
-    "same medicine (Zyloric is Allopurinol): when the doctor names the other one, use the name "
-    "on the current form.\n"
-    '2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". '
-    "Map: once daily/OD -> 1-0-0; twice daily/BD -> 1-0-1; thrice daily/TDS -> 1-1-1; "
-    "at bedtime/HS -> 0-0-1; as needed/for pain -> SOS.\n"
-    '3. Allowed timing ONLY: "After food", "Before food", "At bedtime", or "".\n'
-    '4. ageSex format is "<age> / <M|F>", for example "45 / M".\n'
-    '5. Duration format: "<N> days/weeks/months" with digits; two weeks -> 14 days.\n'
-    "6. Never invent strengths, durations or drugs. Return only fields the doctor stated.\n"
-    '7. To REMOVE something add a top-level "remove" object: {"rx": ["<row name>"], '
-    '"diagnosis": [], "complaints": [], "investigations": [], "advice": []} '
-    "(list the exact text of each item to delete). To CHANGE the name or text of one "
-    'existing row/item add a top-level "replace" object: {"rx": [{"from": "<current name>", '
-    '"to": "<right name>"}], "diagnosis": [{"from": "<current text>", "to": "<new text>"}], '
-    '"complaints": [], "investigations": [], "advice": []}. Both keys are optional; omit '
-    "empty ones.\n"
-    '8. Use "remove"/"replace" ONLY when the doctor explicitly asks to remove, delete, '
-    "drop, cancel or stop something, or says a name/text is wrong and gives the right one. "
-    'Copy "from" and each removed item exactly as it appears in the current form. Never '
-    "remove or rename anything the doctor did not name. For a wrong drug name use "
-    '"replace" and do NOT also add a new row for it.\n'
-    '9. Never use "remove" to change a dose, strength, timing or duration: give the new '
-    'value in an rx row. Use "remove" only when the doctor says to remove, delete, drop, '
-    "cancel or stop the medicine or item entirely.\n"
-    "Examples:\n"
-    '- "remove the Pantoprazole" -> {"remove": {"rx": ["Pantoprazole"]}}\n'
-    '- "the drug name is wrong, it is Cefixime not Cephixime" -> '
-    '{"replace": {"rx": [{"from": "Cephixime", "to": "Cefixime"}]}}'
-)
 
 
 def _norm_name(value) -> str:
@@ -251,6 +211,8 @@ def merge_form(current: dict, patch: dict) -> dict:
 
         if key == "rx":
             out["rx"] = _merge_rx(cur_val, pat_val)
+        elif key == "vitals":
+            out[key] = merge_vitals(cur_val, pat_val)  # field by field, never wholesale
         elif key in LIST_FIELDS:
             if isinstance(pat_val, list) and pat_val:
                 out[key] = list(pat_val)
@@ -267,7 +229,8 @@ def merge_form(current: dict, patch: dict) -> dict:
 
 
 # Row fields validate_structured derives from the name and the grounding (screen only).
-DERIVED_ROW_FIELDS = ("generic", "schedule", "heard", "lookalike", "dose_note", "source", "did_you_mean", "did_you_mean_generic")
+DERIVED_ROW_FIELDS = ("generic", "schedule", "heard", "lookalike", "dose_note", "source", "did_you_mean", "did_you_mean_generic",
+                      "generic_source", "combo_base")
 
 
 DID_YOU_MEAN_FIELDS = ("did_you_mean", "did_you_mean_generic")
@@ -275,27 +238,38 @@ DID_YOU_MEAN_FIELDS = ("did_you_mean", "did_you_mean_generic")
 
 def _recomputed_generic(row: dict) -> str:
     """`generic` from the name + restored `lexicon_match`; "" when they no longer agree (a name
-    hand-edited in the UI keeps the old data-lexicon: Febuxostat must not show "Allopurinol")."""
-    name, match = row.get("name", ""), row.get("lexicon_match", "")
-    return _generic_of(name, match) if match and _canonical_lookup(name) == match else ""
+    hand-edited in the UI keeps the old data-lexicon: Febuxostat must not show "Allopurinol").
+    The exact-name check lives in `_generic_of`."""
+    return _generic_of(row.get("name", ""), row.get("lexicon_match", ""))
 
 
 def _backed(row: dict) -> bool:
-    """True when the lexicon (a match, or the name itself) or the active clinic layer knows the row's name."""
+    """True when the lexicon (a match, or the name itself) or the active clinic layer knows the row's name.
+    A fuzzy hit on a combination name ("Zerodol-P") does not back it."""
     name = row.get("name", "")
-    return bool(row.get("lexicon_match") or _canonical_lookup(name) or active_layer().get(name))
+    return bool(row.get("lexicon_match") or (combo_suffix(name) is None and _canonical_lookup(name)) or active_layer().get(name))
 
 
 # DERIVED_ROW_FIELDS that depend on name + lexicon_match only: recomputed for an untouched row, never
 # copied from the prior row (the client's readRx does not send them back). The rest are restored.
 RECOMPUTED_ROW_FIELDS = {
     "generic": _recomputed_generic,
+    "generic_source": lambda row: "lexicon" if _recomputed_generic(row) else "",
+    "combo_base": lambda row: (combo_suffix(row.get("name", "")) or ("", ""))[0],
     "schedule": lambda row: schedule_of(_recomputed_generic(row)),     # information only: a hand-edited name gets none
     # the page never sends `source` back: "clinic" when the restored row has no lexicon match and the active layer knows it
     # never "lexicon" without a lexicon match: a name nothing backs gets "" (and its row is regraded below)
     "source": lambda row: source_of(row.get("name", ""), row.get("lexicon_match", ""))
     if _backed(row) else "",
 }
+
+_DOCTOR_KEPT = ("generic", "generic_source")
+
+
+def _doctor_generic(row: dict) -> bool:
+    """True when validation kept a generic the doctor entered (``generic_source == "doctor"``) on this row."""
+    return row.get("generic_source") == "doctor"
+
 
 def _dose_note(row: dict, prev: dict, age_sex) -> str:
     """Why a restored dose-check row was flagged, recomputed from the validated row (the page does not send
@@ -361,6 +335,55 @@ def strip_grounding_markers(form: dict) -> dict:
     return out
 
 
+def _paired_prior(current: dict, structured: dict) -> list:
+    """One entry per `structured["rx"]` item: the prior row of the same name key, else None.
+
+    The Nth output row of a name takes the Nth prior row of that name (page order). The prior
+    slot is used up by every output row of that key, named or not. None when no prior row is
+    left or the item is not a dict.
+    """
+    prior = {}       # name key -> the prior rows of that name, in page order
+    cur_rows = current.get("rx") if isinstance(current, dict) else None
+    for row in cur_rows if isinstance(cur_rows, list) else []:
+        if isinstance(row, dict):
+            prior.setdefault(_norm_name(row.get("name")), deque()).append(row)
+    out_rows = structured.get("rx") if isinstance(structured, dict) else None
+    paired = []
+    for row in out_rows if isinstance(out_rows, list) else []:
+        queue = prior.get(_norm_name(row.get("name"))) if isinstance(row, dict) else None
+        paired.append(queue.popleft() if queue else None)
+    return paired
+
+
+_CLINICAL_FIELDS = ("form", "name", "strength", "dose", "timing", "duration")
+
+
+def _clinical(row: dict) -> tuple:
+    """The clinical fields of an rx row, whitespace-collapsed and casefolded."""
+    return tuple(" ".join(str(row.get(f) or "").split()).casefold() for f in _CLINICAL_FIELDS)
+
+
+def changed_rx_rows(current: dict, patch: dict, structured: dict, extra_named=()) -> list:
+    """Sorted indexes of `structured["rx"]` rows a correction changed.
+
+    Exactly the rows `preserve_untouched_rx_status` does not restore: named by the patch or
+    `extra_named`, or with no prior row (new, or renamed by validation); non-dict items count as
+    changed. When either `rx` is not a list nothing can be paired: every index (or [] when
+    `structured["rx"]` is not a list). A paired row also counts as changed when validation rewrote
+    a clinical field (form, name, strength, dose, timing, duration; case and spacing ignored). Pure.
+    """
+    out_rows = structured.get("rx") if isinstance(structured, dict) else None
+    if not isinstance(out_rows, list):
+        return []
+    cur_rows = current.get("rx") if isinstance(current, dict) else None
+    if not isinstance(cur_rows, list):
+        return list(range(len(out_rows)))
+    named = _patch_rx_names(patch) | {_norm_name(n) for n in extra_named}
+    return [i for i, (row, prev) in enumerate(zip(out_rows, _paired_prior(current, structured)))
+            if not isinstance(row, dict) or prev is None or _norm_name(row.get("name")) in named
+            or _clinical(row) != _clinical(prev)]
+
+
 def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
                                  extra_named=()) -> dict:
     """Restore prior rx verification state for rows the patch does not name.
@@ -374,19 +397,11 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
     recomputed. Mutates and returns `structured`.
     """
     named = _patch_rx_names(patch) | {_norm_name(n) for n in extra_named}
-    prior = {}       # name key -> the prior rows of that name, in page order: the Nth output row of a name takes the Nth prior one
-    cur_rows = current.get("rx") if isinstance(current, dict) else None
-    for row in cur_rows if isinstance(cur_rows, list) else []:
-        if isinstance(row, dict):
-            prior.setdefault(_norm_name(row.get("name")), deque()).append(row)
     out_rows = structured.get("rx") if isinstance(structured, dict) else None
-    for row in out_rows if isinstance(out_rows, list) else []:
+    for row, prev in zip(out_rows if isinstance(out_rows, list) else [], _paired_prior(current, structured)):
         if not isinstance(row, dict):
             continue
-        key = _norm_name(row.get("name"))
-        queue = prior.get(key)
-        prev = queue.popleft() if queue else None     # popped for a named row too, so later same-name rows keep their own slot
-        if key in named or prev is None:
+        if _norm_name(row.get("name")) in named or prev is None:
             continue
         for field in ("status", "lexicon_match", "instructions"):
             if field in prev:
@@ -399,6 +414,8 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
                 row["instructions"] = f"{row.get('instructions') or ''} {GROUNDING_MARKERS[0]}".strip()
         suggestion = None
         for field in DERIVED_ROW_FIELDS:  # follow the restored status; absent when the prior row had none
+            if field in _DOCTOR_KEPT and _doctor_generic(row):
+                continue                  # the doctor's generic, kept by validation: never recalculated or dropped
             if "status" not in prev:
                 row.pop(field, None)
             elif field in DID_YOU_MEAN_FIELDS:  # one computation per row for both fields, from the restored name + status
@@ -411,17 +428,6 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
             else:
                 row[field] = prev.get(field, "")
     return structured
-
-
-def build_correction_messages(correction_text: str, current_form: dict) -> list:
-    """LLM messages: the current form plus the new dictation to apply."""
-    return [
-        {"role": "system", "content": CORRECTION_INSTRUCTION},
-        {"role": "user", "content": json.dumps(
-            {"current_form": current_form if isinstance(current_form, dict) else {},
-             "correction": correction_text or ""},
-            ensure_ascii=False)},
-    ]
 
 
 async def extract_correction(correction_text: str, current_form: dict, complete=None) -> dict:

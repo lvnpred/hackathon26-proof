@@ -57,3 +57,42 @@ def test_check_row_sends_the_generic_for_a_resolved_name_whatever_its_status(mon
         assert got["Cetirizine"] == ("unverified-name", "Cetirizine", "Cetirizine")
         assert got["Crocin"] == ("unverified-name", "Paracetamol", "Paracetamol")
         assert got["Citrizene"][2] == ""                                                    # an unresolved name never gets one
+
+
+def _client(tmp_path, monkeypatch):
+    override_settings(monkeypatch, openai_api_key="", deepseek_api_key="")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "a.db"))
+    conn = dbmod.get_conn(tmp_path / "a.db")
+    dbmod.migrate(conn)
+    return TestClient(M.app), conn
+
+
+def test_untouched_combination_row_keeps_its_blank_generic_after_a_correction(tmp_path, monkeypatch):
+    client, conn = _client(tmp_path, monkeypatch)
+    conn.close()
+    row = {"form": "Tab.", "name": "Zerodol-P", "strength": "", "dose": "1-0-1", "timing": "", "duration": "",
+           "instructions": "", "status": "unknown-medicine", "lexicon_match": ""}
+    out = client.post("/api/v1/correct", json={"transcript": "", "current_form": {"rx": [row]}}).json()["structured"]["rx"][0]
+    assert (out["generic"], out["generic_source"], out["combo_base"], out["did_you_mean"]) == ("", "", "Zerodol", "")
+
+
+def test_a_stale_match_on_a_fuzzy_name_saves_no_generic(tmp_path, monkeypatch):
+    client, conn = _client(tmp_path, monkeypatch)
+    base = {"form": "Tab.", "strength": "500 mg", "dose": "1-0-1", "timing": "", "duration": "", "instructions": "",
+            "status": "verified", "lexicon_match": "Paracetamol"}
+    rows = [{**base, "name": "Crocinn"}, {**base, "name": "Crocin"}]
+    r = client.post("/api/v1/documents", json={"structured": {"patientName": "Anita", "opNo": "OP-9", "rx": rows}, "confirmed_rows": [0]})
+    assert r.status_code == 200, r.text
+    saved = json.loads(dbmod.get_document(conn, r.json()["document_id"])["structured_json"])["rx"]
+    conn.close()
+    assert [(x["name"], x["generic"], x["generic_source"]) for x in saved] == [
+        ("Crocinn", "", ""), ("Crocin", "Paracetamol", "lexicon")]
+
+
+def test_restored_rows_recompute_the_three_generic_fields():
+    from doctor_dictation.core.correction import preserve_untouched_rx_status
+    prev = [{"name": n, "status": "verified", "lexicon_match": "Paracetamol"} for n in ("Crocinn", "Crocin")]
+    fresh = [{"name": n, "status": "verified", "lexicon_match": "Paracetamol", "generic": "X", "generic_source": "X", "combo_base": "X"}
+             for n in ("Crocinn", "Crocin")]
+    out = preserve_untouched_rx_status({"rx": prev}, {}, {"rx": fresh})["rx"]
+    assert [(r["generic"], r["generic_source"], r["combo_base"]) for r in out] == [("", "", ""), ("Paracetamol", "lexicon", "")]

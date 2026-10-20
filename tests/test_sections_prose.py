@@ -22,15 +22,16 @@ def test_the_sheet_prints_brief_history_first_then_diagnosis_as_paragraphs_with_
     s = {"complaints": ["C/o fever with chills for 3 days, associated body aches, no vomiting.", "No h/o similar episodes."],
          "diagnosis": ["Viral fever"], "review": "1 week", "review_date": "2026-10-24"}
     html = build_sheet_html(s, META)
-    assert html.index("Chief Complaints &amp; Brief History") < html.index("Diagnosis / Clinical Impression") < html.index("Investigations Advised")
+    assert html.index("Chief Complaints &amp; Brief History") < html.index("Diagnosis / Clinical Impression")
+    assert "Investigations" not in html
     assert ('<div class="prose"><p>C/o fever with chills for 3 days, associated body aches, no vomiting.</p>'
             "<p>No h/o similar episodes.</p></div>") in html and '<div class="prose"><p>Viral fever</p></div>' in html
-    assert '<div>1 week <span class="rev-date">(Sat 24 Oct 2026)</span></div>' in html
+    assert '<span class="inl-label">Review:</span> 1 week <span class="rev-date">(Sat 24 Oct 2026)</span></div>' in html
     empty = build_sheet_html({"review_date": "2026-10-24"}, META)
-    assert '<div class="prose"><p>—</p></div>' in empty and "<div>—</div>" in empty and 'class="rev-date"' not in empty   # no review, no date
+    assert '<p>—</p>' not in empty and "Review" not in empty and 'class="rev-date"' not in empty   # no review, no date
     old = build_sheet_html({"complaints": ["epigastric pain"], "diagnosis": ["Gastritis"]}, META)   # a document saved before I2-b
     assert old.index("epigastric pain") < old.index("Gastritis")
-    assert "<li>CBC</li>" in build_sheet_html({"investigations": ["CBC"]}, META)          # the other sections keep bullets
+    assert '<span class="inl-label">Investigations:</span> CBC</div>' in build_sheet_html({"investigations": ["CBC"]}, META)          # the other sections keep bullets
     assert "<p>&lt;b&gt;x&lt;/b&gt;</p>" in build_sheet_html({"complaints": ["<b>x</b>"]}, META)
 
 
@@ -125,7 +126,7 @@ def test_an_old_saved_document_reprints_in_the_new_order_with_no_date_and_a_new_
     conn.close()
     assert c.get(f"/api/v1/documents/{doc}/pdf").status_code == 200
     html = seen[-1]
-    assert html.index("epigastric pain") < html.index("Gastritis") and "<div>1 week</div>" in html and 'class="rev-date"' not in html
+    assert html.index("epigastric pain") < html.index("Gastritis") and '<span class="inl-label">Review:</span> 1 week</div>' in html and 'class="rev-date"' not in html
 
 
 def test_correct_checks_only_the_prose_lists_the_patch_replaced(monkeypatch):

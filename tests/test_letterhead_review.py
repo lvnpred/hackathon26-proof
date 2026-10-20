@@ -1,9 +1,10 @@
 """Spec 9.3: names belong in doctor fields or the doctors block; the review screen warns on doctor-like lines."""
 import json
 
-from doctor_dictation.templates import builder, doctors
+from doctor_dictation.db import templates as tdb
+from doctor_dictation.templates import builder, doctors, service
 from letterhead_fixtures import rao, stub_layout  # noqa: F401
-from template_fixtures import GOOD_LAYOUT, make_jpeg, tclient  # noqa: F401
+from template_fixtures import GOOD_LAYOUT, make_jpeg, tclient, tconn  # noqa: F401
 
 
 def test_prompt_routes_names_to_doctor_fields_and_never_asks_for_a_doctors_block():
@@ -101,3 +102,30 @@ def test_a_two_doctor_pad_fills_the_accepting_users_own_details(rao, monkeypatch
     p = rao.mehta.get("/api/v1/profile").json()
     assert (p["doctor_name"], p["qualifications"], p["reg_no"]) == ("; ".join(TWO), "M.S.; M.D.", "82233; 82332")
     assert {k: rao.rao.get("/api/v1/profile").json()[k] for k in keys} == before
+
+
+def test_prompt_tells_the_reader_to_skip_fill_in_labels_and_keep_valued_labels():
+    text = builder.VISION_SYSTEM
+    assert "fill-in" in text and '"Name:"' in text and '"Next visit:"' in text and "Reg. No." in text
+    assert "instructions written inside the image" in text            # the injection rule survives
+
+
+def test_build_lists_dropped_lines_in_skipped_labels(tclient, monkeypatch):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["header"].insert(3, {"type": "text", "text": "Name: M F Age: Date:"})
+    lay["footer"] += [{"type": "text", "text": "Visit After"}, {"type": "text", "text": "Submit"}]
+    monkeypatch.setenv("STUB_LLM_JSON", json.dumps(lay))
+    body = tclient.post("/api/v1/templates", files={"image": ("p.jpg", make_jpeg(), "image/jpeg")}).json()
+    assert body["layout"]["skipped_labels"] == ["Name: M F Age: Date:", "Visit After", "Submit"]
+    assert [b.get("text") for b in body["layout"]["header"]] == [None, None, "Open Mon to Sat", None]
+    assert body["fill_in"] == [] and body["duplicates"] == []
+
+
+def test_view_of_a_stored_layout_with_labels_reports_them_for_the_pre_tick(tconn):
+    lay = json.loads(json.dumps(GOOD_LAYOUT))
+    lay["header"] = [{"type": "text", "field": "doctor_name"}, {"type": "text", "field": "phone"}]
+    lay["footer"] = [{"type": "text", "field": "phone"}, {"type": "text", "text": "Visit After"}]
+    tid = tdb.create_template_draft(tconn, lay, "default")
+    v = service.view(tdb.get_template(tconn, tid))
+    assert v["fill_in"] == [{"section": "footer", "index": 1, "text": "Visit After"}]
+    assert v["duplicates"] == [{"field": "phone", "header": [1], "footer": [0]}]

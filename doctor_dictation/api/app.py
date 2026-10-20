@@ -17,6 +17,9 @@ from doctor_dictation import sessions
 from doctor_dictation.api import format as format_api
 from doctor_dictation.api import auth, health, persistence, profile, review, rx, stt
 from doctor_dictation.api import formulary as formulary_api
+from doctor_dictation.api import investigations as investigations_api
+from doctor_dictation.api import lists as lists_api
+from doctor_dictation.api import owner_lists as owner_lists_api
 from doctor_dictation.api.session import SessionMiddleware
 from doctor_dictation.api import templates as templates_api
 from doctor_dictation.api import users as users_api
@@ -77,7 +80,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (auth, health, stt, format_api, profile, persistence, users_api, rx, formulary_api, review):
+    for module in (auth, health, stt, format_api, profile, persistence, users_api, rx, formulary_api, investigations_api, lists_api,
+                   owner_lists_api, review):
         app.include_router(module.router)
     app.include_router(templates_api.router)
     # Serve the frontend from the same process; mounted last so it never shadows /api.

@@ -129,8 +129,13 @@ def test_a_short_combination_and_its_own_component_are_not_lookalikes_but_other_
         return {"canonical": canon, "aliases": [canon.lower()], "brands": [], "forms": [], "strengths": []}
     lex = [entry("Zorbexin"), entry("Zorbexin + A"), entry("Zorbexen"), entry("Zorbexen + A"), entry("A + Zorbexin")]
     monkeypatch.setattr(D, "_lexicon_cache", lex)
-    monkeypatch.setattr(lasa, "_cache", (None, None))
+    monkeypatch.setattr(lasa, "_slot", {})
     assert "Zorbexin + A" not in lasa.twins("Zorbexin") and "Zorbexin" not in lasa.twins("Zorbexin + A")   # 0.8 alike by spelling, same family
     assert "A + Zorbexin" not in lasa.twins("Zorbexin") and "Zorbexin" not in lasa.twins("A + Zorbexin")   # the component may be the second part
     assert "Zorbexen" in lasa.twins("Zorbexin")                                                              # a different drug that looks alike still is
     assert "Zorbexen" in lasa.twins("Zorbexin + A") or "Zorbexen + A" in lasa.twins("Zorbexin + A")
+
+
+def test_a_brand_plus_suffix_prints_no_generic_line():
+    html = build_sheet_html({"patientName": "A", "rx": [_row("Zerodol-P"), _row("Crocinn", text="tab crocinn")]}, {})
+    assert "generic:" not in html and "ZERODOL-P" in html

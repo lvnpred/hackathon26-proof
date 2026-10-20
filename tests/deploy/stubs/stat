@@ -1,0 +1,6 @@
+#!/bin/sh
+# Stand-in for stat: on macOS maps GNU "-c %s F" to BSD "-f %z F"; elsewhere runs the real stat.
+if [ "$(uname)" = Darwin ] && [ "${1:-}" = "-c" ] && [ "${2:-}" = "%s" ]; then
+  exec /usr/bin/stat -f %z "$3"
+fi
+exec /usr/bin/stat "$@"

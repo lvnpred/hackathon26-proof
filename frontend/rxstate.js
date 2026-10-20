@@ -12,7 +12,7 @@
   const NEEDS = ["dose", "confirm"];
   const ICON = { ok: "check-circle", dose: "capsule", confirm: "triangle", you: "shield-check", known: "book" };
   const LABEL = { ok: "Matched", dose: "Check dose", confirm: "Confirm medicine", you: "Confirmed by you", known: "Known to your clinic" };
-  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule"];
+  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule", "generic_source", "combo_base", "generic_suggestion", "generic_listed"];
   const MAX_CHIPS = 8;
   // The extra row fields the server sends (contract 4.1), with safe defaults.
   function metaOf(r) {
@@ -20,6 +20,8 @@
     const m = {};
     META_KEYS.forEach((k) => { m[k] = str(r[k]); });
     m.strength_options = optsOf(r.strength_options);
+    m.generic_pending = r.generic_pending === true;                  // older cached results lack these keys: default them
+    m.generic_suggestion_unknown = optsOf(r.generic_suggestion_unknown);
     return m;
   }
   // The Drugs and Cosmetics Rules mark a screen badge may show: only H, H1 or X (the server sends nothing else); information only.
@@ -64,10 +66,16 @@
       const twin = str(row.lookalike).trim();
       return (heard ? 'Heard "' + heard + '". ' : "") + (twin ? "It looks like " + twin + ". They are different medicines." : "Another medicine has a very similar name.");
     }
+    if (status === "unknown-medicine" && str(row.combo_base).trim()) return '"' + (heard || name) + '" is a combination of ' + str(row.combo_base).trim() + ". Its generic is not in the medicine list.";
     if (status === "unknown-medicine") return (heard || name) ? '"' + (heard || name) + '" is not in the medicine list.' : "This medicine is not in the medicine list.";
     if (status === "unverified-name") return (heard ? 'Heard "' + heard + '". ' : "") + "The name was not clearly dictated.";
     if (status === "") return "You changed this row. Confirm it before saving.";
     return "This row needs a check (status: " + status + ").";
+  }
+  // A row that needs you for another reason AND has a pending doctor generic: confirming it confirms the generic too, so say so.
+  function pendingNote(row, state, ctx) {
+    const g = str(row.generic).trim();
+    return !ctx.confirmed && row.generic_pending === true && g && NEEDS.indexOf(state) >= 0 ? " The generic " + g + " was entered for it." : "";
   }
   // row: the Rx row fields (status, source, heard, lookalike, dose_note, strength_options, usual_strength, ...).
   // ctx: { confirmed: bool, strength: current strength text, how: "confirm" | "spell" | "chip" }.
@@ -84,14 +92,18 @@
     else if (DOSE_STATUS.indexOf(status) >= 0) state = "dose";
     else state = "confirm";                       // name statuses, "" (edited) and any future status: the safe side
     const edited = state === "confirm" && status === "";
+    // A generic the doctor typed stays pending until the doctor confirms the row: a matched row becomes "Confirm generic".
+    const pendingGeneric = !ctx.confirmed && row.generic_pending === true && (state === "ok" || state === "known");
+    if (pendingGeneric) state = "confirm";
     return {
       state,
       icon: ICON[state],
-      label: edited ? "Confirm row" : LABEL[state],
-      reason: reasonFor(Object.assign({}, row, { status }), state, ctx),
+      label: pendingGeneric ? "Confirm generic" : edited ? "Confirm row" : LABEL[state],
+      reason: pendingGeneric ? "You entered the generic " + str(row.generic).trim() + ". Confirm the row before saving."
+        : reasonFor(Object.assign({}, row, { status }), state, ctx) + pendingNote(row, state, ctx),
       needsYou: NEEDS.indexOf(state) >= 0,
       canConfirm: NEEDS.indexOf(state) >= 0,
-      canSpell: state === "confirm",
+      canSpell: state === "confirm" && !pendingGeneric,
       canReopen: state === "you",
       chips: state === "dose" ? chipsFor(row) : [],
       didYouMean: state === "confirm" && status === "unknown-medicine" && str(row.did_you_mean).trim() && !same(row.did_you_mean, row.name)
@@ -102,7 +114,7 @@
   function afterEdit(meta, col) {
     const m = Object.assign({}, meta);
     m.heard = ""; m.lookalike = ""; m.dose_note = "";
-    if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; m.did_you_mean = ""; m.did_you_mean_generic = ""; m.schedule = ""; }
+    if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; m.did_you_mean = ""; m.did_you_mean_generic = ""; m.schedule = ""; m.generic_source = ""; m.combo_base = ""; m.generic_suggestion = ""; m.generic_suggestion_unknown = []; m.generic_pending = false; m.generic_listed = ""; m.remember_generic = false; }
     return m;
   }
   // After "Use this": the doctor chose the NAME, so name questions are answered; dose questions and a name the
@@ -165,11 +177,41 @@
     return "The microphone could not start. Type the name.";
   }
 
+  // Which prior row id each row of a correction keeps: name + occurrence, the server's pairing
+  // (core/correction.py `_paired_prior`); changed rows and an untrusted `changed_rows` get none.
+  function carryRowids(priorRowids, priorRows, nextRows, changed) {
+    if (!Array.isArray(nextRows)) return [];
+    const n = nextRows.length;
+    const out = nextRows.map(() => null);
+    if (!Array.isArray(changed) || changed.some((i) => !Number.isInteger(i) || i < 0 || i >= n)) return out;
+    const key = (r) => (typeof r.name === "string" ? r.name.trim().toLowerCase() : "");
+    const isRow = (r) => r !== null && typeof r === "object" && !Array.isArray(r);
+    const queues = new Map();
+    (Array.isArray(priorRows) ? priorRows : []).forEach((r, i) => {
+      if (!isRow(r)) return;
+      if (!queues.has(key(r))) queues.set(key(r), []);
+      queues.get(key(r)).push(i);
+    });
+    const ids = Array.isArray(priorRowids) ? priorRowids : [];
+    const gone = new Set(changed);
+    const used = new Set();
+    nextRows.forEach((r, j) => {
+      if (!isRow(r)) return;
+      const q = queues.get(key(r));
+      const at = q && q.length ? q.shift() : -1;
+      const id = at >= 0 ? ids[at] : null;
+      if (gone.has(j) || typeof id !== "string" || id === "" || used.has(id)) return;
+      used.add(id);
+      out[j] = id;
+    });
+    return out;
+  }
+
   // The "[unverified: confirm with doctor]" and "[unverified strength: confirm with doctor]" texts check-row adds to Instructions; the doctor's
   // own confirmation removes exactly them (and one space before each). Other words, however similar, stay.
   function stripMarker(text) {
     return str(text).replace(/ ?\[unverified(?: strength)?: confirm with doctor\]/g, "").trim();
   }
 
-  root.RxState = { scheduleOf, rowState, metaOf, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, voiceError, stripMarker, sameName: same, NEEDS };
+  root.RxState = { scheduleOf, rowState, metaOf, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, voiceError, stripMarker, carryRowids, sameName: same, NEEDS };
 })(typeof window !== "undefined" ? window : globalThis);

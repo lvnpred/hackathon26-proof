@@ -34,6 +34,12 @@ class EditBody(BaseModel):
     # Shape is validated by service.edit so a malformed body answers 400, not FastAPI's 422/500.
     profile: Any = Field(default_factory=dict)
     lines: Any = Field(default_factory=list)
+    keep: Any = Field(default_factory=list)
+
+
+class LinesBody(BaseModel):
+    lines: Any = Field(default_factory=list)
+    keep: Any = Field(default_factory=list)
 
 
 def _open():
@@ -167,7 +173,18 @@ def preview(template_id: int, request: Request):
 def edit_template(template_id: int, body: EditBody, request: Request):
     conn = _open()
     try:
-        return service.edit(conn, template_id, body.profile, body.lines, actor=_actor(request), user=_ident(request))
+        return service.edit(conn, template_id, body.profile, body.lines, keep=body.keep, actor=_actor(request), user=_ident(request))
+    except TemplateError as exc:
+        return _err(exc)
+    finally:
+        conn.close()
+
+
+@router.put("/{template_id}/lines")
+def tidy_template_lines(template_id: int, body: LinesBody, request: Request):
+    conn = _open()
+    try:
+        return service.tidy(conn, template_id, body.lines, body.keep, actor=_actor(request), user=_ident(request))
     except TemplateError as exc:
         return _err(exc)
     finally:

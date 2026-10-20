@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stand-in for age: "encrypts" and "decrypts" by copying.
+# Decrypt (-d ... FILE): cat the last argument. Encrypt (age -R recipient): cat stdin.
+decrypt=0; for a; do [ "$a" = "-d" ] && decrypt=1; last=$a; done
+if [ "$decrypt" = 1 ] && [ -f "$last" ]; then cat "$last"; else cat; fi

@@ -36,3 +36,13 @@ dialog.lh-panel[open] { display:flex; }
 .lh-choice legend { font-weight:600; padding:0 4px; }
 .lh-picks { display:flex; flex-direction:column; gap:2px; padding-left:22px; }
 .lh-line-warn { margin:-4px 0 8px; font-size:13px; color:var(--bad); }
+/* Remove tick per line and the where-to-print question (PQ-b) */
+.lh-line-row { margin:0 0 8px; }
+.lh-line-row .field { margin-bottom:2px; }
+.lh-line-rm { display:flex; align-items:center; gap:4px; font-size:13px; }
+.lh-line-why { margin:2px 0 0 22px; font-size:13px; color:var(--muted); }
+.lh-dupe { border:1px solid var(--soft); border-radius:8px; padding:8px 12px; margin:0 0 10px; display:flex; flex-direction:column; gap:4px; font-size:14px; }
+.lh-dupe legend { font-weight:600; padding:0 4px; }
+.lh-dupe-opt { display:flex; align-items:center; gap:4px; }
+.lh-line-text:disabled { opacity:.55; text-decoration:line-through; }
+.lh-line-rm input:focus-visible, .lh-dupe input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }

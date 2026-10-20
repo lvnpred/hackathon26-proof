@@ -71,7 +71,7 @@ def test_the_row_follows_the_spell_it_contract_through_the_modal():
         assert token in js, token
     assert "innerHTML" not in raw and "Sounds like" not in raw and "rx-spell" not in raw and "paneWidth" not in raw and "r.panel" not in js   # the inline panel is gone
     assert "bound !== H.body" in js and js.count('H.body.addEventListener("click", onClick)') == 1 and "keydown" not in js   # keys belong to the dialog now
-    assert "return { init, attach, renderRow, sync, onEdit, meta, wire, reasonFor, restore, isBlank, stripMarker };" in js
+    assert "return { init, attach, renderRow, sync, onEdit, meta, wire, needsYou, blockReason, blockStands, reasonFor, restore, isBlank, stripMarker, afterConfirm, focusFirst };" in js
 
 
 def test_the_page_hands_over_the_spell_hooks_and_undo_restores_the_row():

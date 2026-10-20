@@ -108,6 +108,9 @@ def test_a_colleagues_own_letterhead_is_invisible_to_me(rao, monkeypatch):
     assert rao.rao.put(f"{URL}/{mine}/doctors", json={"mode": "all"}).status_code == 404
     assert rao.rao.get(f"{URL}/{mine}/preview.pdf").status_code == 404
     assert rao.mehta.put(f"{URL}/{mine}/doctors", json={"mode": "all"}).status_code == 200
+    body = {"lines": [{"section": "header", "index": 2, "remove": True}], "keep": []}
+    assert rao.rao.put(f"{URL}/{mine}/lines", json=body).status_code == 404
+    assert rao.mehta.put(f"{URL}/{mine}/lines", json=body).status_code == 200
     assert rao.mehta.get(f"{URL}/{mine}/preview.pdf").status_code == 200
 
 

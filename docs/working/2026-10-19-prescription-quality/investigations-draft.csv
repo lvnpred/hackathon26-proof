@@ -1,0 +1,189 @@
+# DRAFT 2026-10-19 - NOT REVIEWED. Owner (clinician) must review every row before plan pq-h Task 1 converts it to investigations.json. Lines starting with # are skipped. aliases are semicolon-separated; print = what the sheet prints in brackets (short code for common tests; full name for rare ones).
+canonical,aliases,category,print
+Complete Blood Count,cbc;complete blood picture;cbp;hemogram;haemogram,Blood,CBC
+Haemoglobin,hb;hemoglobin;hgb,Blood,Hb
+Total Leucocyte Count,tlc;total wbc count;wbc count;total count,Blood,TLC
+Differential Leucocyte Count,dlc;differential count,Blood,DLC
+Total and Differential Leucocyte Count,tlc dc;tlc/dc;tc dc;tc/dc;tc and dc,Blood,TLC/DC
+Platelet Count,platelets;plt;platelet,Blood,Platelet count
+Erythrocyte Sedimentation Rate,esr,Blood,ESR
+Peripheral Blood Smear,peripheral smear;pbs;general blood picture;gbp,Blood,Peripheral smear
+Packed Cell Volume,pcv;haematocrit;hematocrit;hct,Blood,PCV
+Reticulocyte Count,retic count;reticulocytes,Blood,Retic count
+Blood Grouping and Rh Typing,blood group;blood grouping;abo rh;blood group and rh,Blood,Blood group
+Absolute Eosinophil Count,aec,Blood,AEC
+Malaria Parasite Smear,mp smear;smear for mp;malaria smear;smear for malarial parasite,Blood,MP smear
+Malaria Antigen Test,malaria rapid test;malaria card test;mp card;rapid malaria antigen,Blood,Malaria antigen
+Dengue NS1 Antigen,ns1;dengue ns1;ns1 antigen,Blood,Dengue NS1
+Dengue IgM and IgG,dengue serology;dengue igm;dengue antibodies;dengue igm igg,Blood,Dengue IgM/IgG
+Widal Test,widal,Blood,Widal
+Typhidot,typhi dot;typhoid igm,Blood,Typhidot
+Prothrombin Time with INR,pt inr;pt/inr;prothrombin time;inr,Blood,PT/INR
+Activated Partial Thromboplastin Time,aptt;ptt,Blood,APTT
+Bleeding Time and Clotting Time,bt ct;bt/ct;bleeding time;clotting time,Blood,BT/CT
+D-Dimer,d dimer;ddimer,Blood,D-dimer
+Fasting Blood Sugar,fbs;fasting sugar;fasting blood glucose;fbg;fasting plasma glucose;fpg,Blood,FBS
+Post Prandial Blood Sugar,ppbs;post prandial sugar;pp sugar;ppbg;postprandial blood sugar;2 hour post prandial sugar,Blood,PPBS
+Random Blood Sugar,rbs;random sugar;random blood glucose;grbs,Blood,RBS
+Glycated Haemoglobin,hba1c;glycosylated haemoglobin;glycosylated hemoglobin;glycated hemoglobin;a1c;hb a1c,Blood,HbA1c
+Oral Glucose Tolerance Test,ogtt;gtt;glucose tolerance test,Blood,OGTT
+Fasting Insulin,serum insulin;fasting serum insulin,Blood,Fasting insulin
+Renal Function Test,rft;kft;kidney function test;renal profile;kidney profile;renal function tests,Blood,RFT
+Serum Creatinine,creatinine;s creatinine;sr creatinine;s. creatinine,Blood,S. Creatinine
+Blood Urea,urea;serum urea;s urea,Blood,Blood urea
+Blood Urea Nitrogen,bun,Blood,BUN
+Serum Electrolytes,electrolytes;s electrolytes;serum na k;sodium potassium;s. electrolytes,Blood,S. Electrolytes
+Serum Sodium,sodium;s sodium;s. sodium,Blood,S. Sodium
+Serum Potassium,potassium;s potassium;s. potassium,Blood,S. Potassium
+Serum Calcium,calcium;s calcium;s. calcium;total calcium,Blood,S. Calcium
+Ionised Calcium,ionized calcium;ica,Blood,Ionised calcium
+Serum Phosphorus,phosphorus;phosphate;s phosphorus;serum phosphate,Blood,S. Phosphorus
+Serum Magnesium,magnesium;s magnesium,Blood,S. Magnesium
+Serum Uric Acid,uric acid;s uric acid;s. uric acid,Blood,S. Uric acid
+Serum Bicarbonate,bicarbonate;hco3;s bicarbonate,Blood,S. Bicarbonate
+Estimated GFR,egfr;gfr;estimated glomerular filtration rate,Blood,eGFR
+Serum Cystatin C,cystatin c;cystatin,Blood,Serum Cystatin C
+Arterial Blood Gas,abg;blood gas;abg analysis,Blood,ABG
+Serum Albumin,albumin;s albumin;s. albumin,Blood,S. Albumin
+Serum Total Protein,total protein;serum protein;total proteins;albumin globulin ratio,Blood,Total protein
+Parathyroid Hormone,pth;intact pth;ipth;s pth;serum pth,Hormones,PTH
+Liver Function Test,lft;liver profile;hepatic panel;liver function tests,Blood,LFT
+Serum Bilirubin,bilirubin;s bilirubin;total bilirubin;bilirubin total and direct,Blood,S. Bilirubin
+Aspartate Aminotransferase,sgot;ast;s g o t,Blood,SGOT
+Alanine Aminotransferase,sgpt;alt;s g p t,Blood,SGPT
+Alkaline Phosphatase,alp;alk phos;serum alkaline phosphatase,Blood,ALP
+Gamma Glutamyl Transferase,ggt;gamma gt;ggtp,Blood,GGT
+Serum Amylase,amylase;s amylase,Blood,S. Amylase
+Serum Lipase,lipase;s lipase,Blood,S. Lipase
+Lactate Dehydrogenase,ldh;serum ldh,Blood,LDH
+Lipid Profile,fasting lipid profile;lipids;cholesterol profile;lipid panel,Blood,Lipid profile
+Serum Cholesterol,total cholesterol;cholesterol,Blood,S. Cholesterol
+Thyroid Function Test,tft;thyroid profile;t3 t4 tsh;thyroid function tests,Hormones,TFT
+Thyroid Stimulating Hormone,tsh;s tsh;serum tsh,Hormones,TSH
+Free T4,ft4;free thyroxine,Hormones,FT4
+Free T3,ft3;free triiodothyronine,Hormones,FT3
+Serum Testosterone,testosterone;total testosterone;s testosterone,Hormones,S. Testosterone
+Follicle Stimulating Hormone,fsh;serum fsh,Hormones,FSH
+Luteinising Hormone,lh;luteinizing hormone;serum lh,Hormones,LH
+Serum Prolactin,prolactin;s prolactin,Hormones,S. Prolactin
+Serum Cortisol,cortisol;morning cortisol;8 am cortisol,Hormones,S. Cortisol
+Vitamin D,vit d;25 oh vitamin d;25 hydroxy vitamin d;vitamin d3 level;vitamin d level,Blood,Vit D
+Vitamin B12,vit b12;b12;serum b12;cobalamin;vitamin b12 level,Blood,Vit B12
+Serum Ferritin,ferritin;s ferritin,Blood,S. Ferritin
+Iron Studies,iron profile;serum iron;tibc;transferrin saturation,Blood,Iron studies
+Serum Beta hCG,bhcg;beta hcg;serum beta hcg;s beta hcg,Hormones,Beta-hCG
+Aldosterone Renin Ratio,arr;aldosterone renin;plasma aldosterone renin ratio,Hormones,Aldosterone Renin Ratio
+Plasma Free Metanephrines,metanephrines;plasma metanephrines,Hormones,Plasma Free Metanephrines
+C-Reactive Protein,crp;c reactive protein;quantitative crp;crp quantitative,Blood,CRP
+High Sensitivity CRP,hscrp;hs crp;high sensitivity c reactive protein,Blood,hs-CRP
+Procalcitonin,pct;serum procalcitonin,Blood,Procalcitonin
+Rheumatoid Factor,ra factor;rf;ra test,Blood,RA factor
+Anti-CCP Antibody,anti ccp;accp;anti cyclic citrullinated peptide,Blood,Anti-CCP
+Antinuclear Antibody,ana;ana ifa;ana profile,Blood,ANA
+Anti-dsDNA Antibody,anti dsdna;anti ds dna;ds dna,Blood,Anti-dsDNA
+ANCA,anca;p anca c anca;antineutrophil cytoplasmic antibody,Blood,ANCA
+Complement C3 and C4,c3 c4;complement levels;serum complement,Blood,Complement C3 and C4
+Anti-PLA2R Antibody,pla2r;anti pla2r,Blood,Anti-PLA2R Antibody
+Serum Protein Electrophoresis,spep;protein electrophoresis,Blood,SPEP
+Serum Free Light Chains,free light chains;sflc;kappa lambda ratio,Blood,Serum Free Light Chains
+Antistreptolysin O Titre,aso;aso titre;aso titer,Blood,ASO
+HIV 1 and 2 Antibody,hiv;hiv test;hiv elisa;hiv 1 2;rvd;retroviral test,Blood,HIV
+Hepatitis B Surface Antigen,hbsag;australia antigen;hep b surface antigen,Blood,HBsAg
+Anti-HCV Antibody,hcv;anti hcv;hepatitis c antibody;hcv antibody,Blood,Anti-HCV
+VDRL Test,vdrl;rpr;syphilis test,Blood,VDRL
+Viral Markers,viral markers;viral screen;hiv hbsag hcv,Blood,Viral markers
+Leptospira IgM,lepto;leptospira;lepto igm,Blood,Leptospira IgM
+Scrub Typhus IgM,scrub typhus;scrub igm,Blood,Scrub typhus IgM
+Tacrolimus Trough Level,tacrolimus level;tac level;fk level;tacrolimus,Blood,Tacrolimus level
+Cyclosporine Trough Level,cyclosporine level;cyclosporin level;csa level,Blood,Cyclosporine Trough Level
+HLA Typing,hla;hla tissue typing;tissue typing,Blood,HLA Typing
+Prostate Specific Antigen,psa;total psa;serum psa;s psa;s. psa,Tumour markers,PSA
+Free PSA,free psa;free to total psa ratio;percent free psa,Tumour markers,Free PSA
+Carcinoembryonic Antigen,cea,Tumour markers,CEA
+CA 125,ca125;ca 125,Tumour markers,CA-125
+CA 19-9,ca 19 9;ca19 9;ca 199,Tumour markers,CA 19-9
+Alpha Fetoprotein,afp;serum afp,Tumour markers,AFP
+Urine Routine Examination,urine routine;urine re;urine r/e;urine r e;urine analysis;urinalysis;cue;complete urine examination;urine rm;urine routine and microscopy,Urine,Urine R/E
+Urine Microscopy,urine for pus cells;urine microscopic examination,Urine,Urine microscopy
+Urine Culture and Sensitivity,urine c/s;urine c s;urine c&s;urine c and s;urine culture;urine culture sensitivity;urine cs,Microbiology,Urine C/S
+Urine Sugar,urine glucose;urine sugar test,Urine,Urine sugar
+Urine Ketones,urine ketone bodies;urine acetone;urine ketone,Urine,Urine ketones
+Urine Albumin,urine protein;urine albumin dipstick,Urine,Urine albumin
+Urine Albumin Creatinine Ratio,uacr;acr;microalbumin;urine microalbumin;spot urine acr;urine acr,Urine,UACR
+Urine Protein Creatinine Ratio,upcr;spot upcr;urine pcr;spot urine pcr,Urine,UPCR
+24 Hour Urine Protein,24 hr urine protein;24 hour urinary protein;24h urine protein;24 hours urine protein,Urine,24-h urine protein
+24 Hour Urine Calcium,24 hour urinary calcium;24 hr urine calcium,Urine,24 Hour Urine Calcium
+24 Hour Urine Uric Acid,24 hour urinary uric acid;24 hr urine uric acid,Urine,24 Hour Urine Uric Acid
+24 Hour Urine Citrate,urine citrate;24 hr urine citrate,Urine,24 Hour Urine Citrate
+24 Hour Urine Oxalate,urine oxalate;24 hr urine oxalate,Urine,24 Hour Urine Oxalate
+24 Hour Urine Metabolic Profile,stone risk profile;24 hour urine stone profile;metabolic stone workup;24 hour urine stone risk,Urine,24 Hour Urine Metabolic Profile
+Creatinine Clearance,24 hour creatinine clearance;crcl,Urine,CrCl
+Urine Cytology,urine for malignant cells;urine for atypical cells;urine cytology for malignant cells,Urine,Urine cytology
+Urine for AFB,urine afb;urine zn stain;urine for acid fast bacilli,Microbiology,Urine for AFB
+Urine Spot Sodium,spot urine sodium;urine sodium,Urine,Urine Spot Sodium
+Urine Pregnancy Test,upt;pregnancy test;urine hcg,Urine,UPT
+Semen Analysis,semen;seminal fluid analysis;sfa,Urology,Semen analysis
+Stool Routine Examination,stool routine;stool re;stool r/e;stool r e;stool analysis,Stool,Stool R/E
+Stool for Occult Blood,stool occult blood;fobt;stool obt;occult blood,Stool,Stool occult blood
+Stool for Ova and Cyst,stool ova cyst;stool o/c;stool for ova and cysts,Stool,Stool ova & cyst
+Stool Culture and Sensitivity,stool c/s;stool c s;stool culture,Microbiology,Stool C/S
+Blood Culture and Sensitivity,blood culture;blood c/s;blood c s,Microbiology,Blood C/S
+Sputum for AFB,sputum afb;sputum zn stain;sputum for tb;sputum for acid fast bacilli,Microbiology,Sputum AFB
+Sputum Culture and Sensitivity,sputum c/s;sputum c s;sputum culture,Microbiology,Sputum C/S
+Pus Culture and Sensitivity,pus c/s;pus c s;pus culture;wound swab culture,Microbiology,Pus C/S
+CBNAAT,genexpert;gene xpert;cb naat;truenat,Microbiology,CBNAAT
+Gram Stain,gram staining,Microbiology,Gram stain
+KOH Mount,koh;koh preparation,Microbiology,KOH mount
+Ultrasound Kidneys Ureters and Bladder,usg kub;ultrasound kub;usg kidney ureter bladder;ultrasound kidneys;usg kidneys;us kub;uss kub,Imaging,USG KUB
+USG KUB with Post Void Residue,usg kub pvr;usg kub with pvr;ultrasound kub with pvr;usg kub with post void residue,Imaging,USG KUB + PVR
+Post Void Residual Urine,pvr;post void residue;post void residual;pvru;residual urine,Urology,PVR
+Ultrasound Abdomen and Pelvis,usg abdomen;ultrasound abdomen;usg whole abdomen;usg abdomen pelvis;usg abdomen and pelvis;uss abdomen,Imaging,USG abdomen
+Ultrasound Scrotum,usg scrotum;scrotal ultrasound;usg testis;scrotal usg,Imaging,USG scrotum
+Ultrasound Thyroid,usg thyroid;usg neck;ultrasound neck,Imaging,USG thyroid
+Transrectal Ultrasound,trus;trus prostate;transrectal ultrasound prostate,Imaging,TRUS
+Renal Doppler,renal artery doppler;doppler kidneys;renal doppler study;renal artery doppler study,Imaging,Renal Doppler
+Scrotal Doppler,doppler scrotum;testicular doppler,Imaging,Scrotal Doppler
+Lower Limb Venous Doppler,venous doppler;lower limb doppler;venous doppler lower limb,Imaging,Lower Limb Venous Doppler
+Chest X-ray,cxr;x ray chest;xray chest;chest xray;chest x ray pa view;x ray chest pa view,Imaging,CXR
+X-ray KUB,xray kub;x ray kub;plain x ray kub;kub x ray;kub film,Imaging,X-ray KUB
+X-ray Lumbosacral Spine,xray ls spine;x ray ls spine;x ray lumbar spine,Imaging,X-ray LS spine
+X-ray Knee,xray knee;x ray knee;x ray both knees,Imaging,X-ray knee
+NCCT KUB,ct kub;plain ct kub;non contrast ct kub;ct stone protocol;ncct abdomen kub,Imaging,NCCT KUB
+CT Urography,ctu;ct urogram;cect kub;contrast ct kub,Imaging,CT urography
+CECT Abdomen and Pelvis,cect abdomen;contrast ct abdomen;ct abdomen;ct abdomen pelvis;ct abdomen and pelvis,Imaging,CECT abdomen
+CT Brain,ct head;ncct brain;ncct head,Imaging,CT brain
+MRI Brain,mri head,Imaging,MRI brain
+MRI Lumbosacral Spine,mri ls spine;mri lumbar spine,Imaging,MRI LS spine
+MRI Pelvis,mri of pelvis,Imaging,MRI pelvis
+Multiparametric MRI Prostate,mpmri;mp mri prostate;mri prostate;mp mri,Imaging,mpMRI prostate
+Intravenous Urography,ivu;ivp;intravenous pyelogram;iv urogram,Imaging,IVU
+Micturating Cystourethrogram,mcu;mcug;vcug;voiding cystourethrogram,Imaging,MCU
+Retrograde Urethrogram,rgu;ascending urethrogram;retrograde urethrography,Imaging,RGU
+DTPA Renal Scan,dtpa;dtpa scan;renogram;diuretic renogram,Imaging,DTPA scan
+DMSA Renal Scan,dmsa;dmsa scan,Imaging,DMSA scan
+Bone Scan,whole body bone scan;bone scintigraphy,Imaging,Bone scan
+PSMA PET-CT,psma pet;psma scan;psma pet ct,Imaging,PSMA PET-CT
+Mammography,mammogram,Imaging,Mammography
+Electrocardiogram,ecg;ekg;12 lead ecg,Cardiac,ECG
+2D Echocardiography,2d echo;echo;echocardiogram;2 d echo;echocardiography,Cardiac,2D Echo
+Treadmill Test,tmt;stress test;exercise stress test,Cardiac,TMT
+Holter Monitoring,holter;24 hour holter,Cardiac,Holter
+Cardiac Troponin,troponin;troponin i;troponin t;trop i;trop t;hs troponin,Cardiac,Troponin
+NT-proBNP,nt pro bnp;ntprobnp;bnp,Cardiac,NT-proBNP
+CK-MB,ck mb;cpk mb,Cardiac,CK-MB
+Ambulatory BP Monitoring,abpm;24 hour bp monitoring;24 hour blood pressure monitoring,Cardiac,ABPM
+Uroflowmetry,uroflow;uroflow study;urine flow study;flow rate study;uroflowmetry study,Urology,Uroflowmetry
+Urodynamic Study,uds;urodynamics;cystometry;pressure flow study,Urology,UDS
+Cystoscopy,cysto;diagnostic cystoscopy;check cystoscopy,Urology,Cystoscopy
+TRUS-guided Prostate Biopsy,trus biopsy;prostate biopsy;trus guided biopsy,Urology,TRUS biopsy
+Stone Analysis,renal stone analysis;calculus analysis;stone composition,Urology,Stone analysis
+Kidney Biopsy,renal biopsy;kidney biopsy,Urology,Kidney biopsy
+Pulmonary Function Test,pft;spirometry,Other,PFT
+Mantoux Test,mantoux;tuberculin skin test;tst,Other,Mantoux
+Fundus Examination,fundoscopy;fundus;dilated fundus examination,Other,Fundus exam
+Upper GI Endoscopy,ogd;ugie;endoscopy;upper gi scopy;ugi endoscopy,Other,UGI endoscopy
+Colonoscopy,colonoscopy study,Other,Colonoscopy
+Electroencephalogram,eeg,Other,EEG
+Nerve Conduction Study,ncs;ncv;nerve conduction velocity,Other,Nerve Conduction Study
+Pap Smear,pap;cervical smear;pap test,Other,Pap smear
+Fine Needle Aspiration Cytology,fnac,Other,FNAC

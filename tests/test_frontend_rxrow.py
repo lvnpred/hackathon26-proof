@@ -71,7 +71,7 @@ def test_chips_put_the_usual_strength_first_drop_duplicates_and_only_show_on_dos
 
 def test_a_hand_edit_drops_stale_reasons_and_a_name_edit_drops_the_old_drugs_data():
     name, dose = _node('[RxState.afterEdit({heard:"x",lookalike:"y",dose_note:"z",generic:"G",source:"clinic",usual_strength:"5 mg",strength_options:["5 mg"]}, "name"), RxState.afterEdit({generic:"G",heard:"x",strength_options:["5 mg"]}, "dose")]')
-    assert name == {"heard": "", "lookalike": "", "dose_note": "", "generic": "", "source": "", "usual_strength": "", "strength_options": [], "did_you_mean": "", "did_you_mean_generic": "", "schedule": ""}   # I2-a: a name edit clears the suggestion too; I2-d: and the schedule badge
+    assert name == {"heard": "", "lookalike": "", "dose_note": "", "generic": "", "source": "", "usual_strength": "", "strength_options": [], "did_you_mean": "", "did_you_mean_generic": "", "schedule": "", "generic_source": "", "combo_base": "", "generic_suggestion": "", "generic_suggestion_unknown": [], "generic_pending": False, "generic_listed": "", "remember_generic": False}   # I2-a: a name edit clears the suggestion too; I2-d: and the schedule badge
     assert dose["generic"] == "G" and dose["heard"] == "" and dose["strength_options"] == ["5 mg"]
 
 def test_summary_words():
@@ -204,7 +204,7 @@ def test_app_js_edits_are_hooks_and_the_save_request_still_carries_confirmed_row
                   "if (state.confirmed.has(k.rowid)) confirmed_rows.push(i);", "      confirmed_rows,\n"):
         assert token in app, token
     assert "PILL" not in app and "confirmAllBtn" not in app and "statusText(" not in app
-    assert "RxView.isBlank(tr)" in app.split("function openRows()")[1].split("function updateGrounding()")[0]
+    assert "RxView.needsYou(tr)" in app.split("function openRows()")[1].split("function updateGrounding()")[0]
     body = _strip_comments(app).split("function setWorking(")[1].split("\n}\n")[0]          # a commented-out sync must fail this
     assert body.index("RxView.sync()") < body.index("Authorship.enforce()") and body.rstrip().splitlines()[-1].count("Authorship.enforce()") == 1
 
@@ -307,7 +307,7 @@ def test_the_409_panel_reason_comes_from_the_row_not_just_the_status():
     assert r[4] == "Empty row: removed when you save"
     app = _strip_comments(_read("app.js"))
     panel = app.split("function refreshBlockPanel()")[1].split("function hideBlockPanel")[0]
-    assert "RxView.reasonFor(rowTr)" in panel and "RxState.rowState({ status: b.status }, {}).reason" in panel and "rowTr ?" in panel
+    assert "RxView.blockReason(rowTr, b)" in panel and "RxState.rowState({ status: b.status }, {}).reason" in panel and "rowTr ?" in panel
     assert "reasonFor" in _read("rxview.js").split("return { init")[1]
 
 
@@ -385,3 +385,12 @@ def test_a_wide_rx_table_scrolls_inside_the_sheet_and_the_check_column_is_not_fo
     assert re.search(r"td\.check\s*\{\s*min-width:\s*(?:1\d\d|\d\d)px", css) and "min-width:250px" not in css
     assert re.search(r"#sheet\s*\{\s*overflow-x:\s*auto", css)
     assert "ResizeObserver" in _read("rxview.js")
+
+
+def test_the_on_screen_print_fallback_prints_the_medicine_name_in_capitals():
+    """Final review M4: window.print() of the on-screen sheet capitalises the name like the PDF; screen keeps the case."""
+    css = (FRONT / "rx.css").read_text(encoding="utf-8")
+    prints = re.findall(r"@media print \{([^@]*?)\}\s*\}", css)
+    assert any(re.search(r'table\.rx \[data-col="name"\] \{ text-transform:uppercase; ', p) for p in prints)
+    assert css.count('[data-col="name"]') == 1                          # only in print: the screen stays as dictated
+    assert 'rx.css?v=9"' in (FRONT / "index.html").read_text(encoding="utf-8")

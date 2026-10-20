@@ -1,0 +1,37 @@
+/* Investigation items (ixlist.js). Chip colours are the rx.css row-state colours: green "In list" (ok), amber "New test"
+   (dose), red "Not dictated" (confirm). Meaning is always the chip's words, never colour alone. Chips, Keep, Remember,
+   Full name, x and "+ Add test" are .no-print; the test name and its " (full name)" print. */
+:root {
+  --ix-ok-c:#17703a; --ix-ok-bg:#e5f4ea; --ix-ok-bd:#a8d6b6;
+  --ix-new-c:#7d5200; --ix-new-bg:#fff2cf; --ix-new-bd:#e6c46f;
+  --ix-red-c:#a8261d; --ix-red-bg:#fdeceb; --ix-red-bd:#efb0aa;
+}
+ul.ix-list { margin:6px 0; padding-left:20px; }
+ul.ix-list:empty::before { content:"—"; color:#bbb; margin-left:-20px; }
+ul.ix-list li.ix-item { padding:2px 3px; display:list-item; }
+.ix-text { outline:none; min-width:2em; display:inline-block; }
+.ix-text:empty::before { content:"Type a test"; color:#9aa59f; }
+.ix-chip { display:inline-flex; align-items:center; margin-left:8px; padding:1px 8px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid; vertical-align:middle; }
+.ix-chip[hidden] { display:none; }
+.ix-chip[data-chip="verified"] { color:var(--ix-ok-c); background:var(--ix-ok-bg); border-color:var(--ix-ok-bd); }
+.ix-chip[data-chip="new"] { color:var(--ix-new-c); background:var(--ix-new-bg); border-color:var(--ix-new-bd); }
+.ix-chip[data-chip="not-dictated"] { color:var(--ix-red-c); background:var(--ix-red-bg); border-color:var(--ix-red-bd); }
+li.ix-item[data-status="not-dictated"] { background:#fff8f7; border-left:4px solid var(--ix-red-c); }
+li.ix-item.ix-blocked .ix-text { text-decoration:underline wavy var(--ix-red-c); }
+.ix-act { margin-left:8px; font-size:13px; padding:2px 10px; min-height:32px; border-radius:8px; border:1px solid #b5c0ba; background:#fff; font-weight:600; }
+.ix-act:hover:not(:disabled) { border-color:var(--accent); }
+.ix-act:disabled { opacity:.55; cursor:not-allowed; }
+.ix-act:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.ix-act[hidden], .ix-remember[hidden], .ix-fullname[hidden] { display:none; }
+.ix-remember, .ix-fullname { margin-left:10px; font-size:12px; color:#566660; }
+.ix-fullname input { font-size:13px; padding:2px 6px; min-width:14em; }
+ul.ix-list li .x-btn { margin-left:8px; }
+/* View only (a colleague's prescription): the controls are always built (view-only can start after the render), so this
+   rule hides them; Authorship.enforce locks the text and ixlist.js refuses every action while view-only. */
+#sheet.view-only .ix-act, #sheet.view-only .ix-add, #sheet.view-only .ix-keep, #sheet.view-only .ix-remember, #sheet.view-only .ix-fullname, #sheet.view-only ul.ix-list .x-btn { display:none !important; }
+@media print {
+  .ix-chip, .ix-act, .ix-remember, .ix-fullname { display:none !important; }
+  li.ix-item[data-status="not-dictated"] { background:none; border-left:none; }
+  li.ix-item.ix-blocked .ix-text { text-decoration:none; }
+  .ix-text:empty::before, ul.ix-list:empty::before { content:""; }
+}

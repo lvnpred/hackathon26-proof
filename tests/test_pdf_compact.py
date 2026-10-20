@@ -37,10 +37,11 @@ def test_a_filled_sheet_prints_all_six_sections_in_order():
     marks = ["C-fever", "D-viral", "I-CBC", "R-CROCIN", "A-rest", "V-1 week"]
     assert [html.index(m) for m in marks] == sorted(html.index(m) for m in marks)
 
-def test_short_lists_print_on_one_line_with_a_label():
+def test_lists_print_as_titled_bullets_under_the_screen_headings():          # owner 2026-10-20: match the screen
     html = build_sheet_html({"investigations": ["CBC", "RFT"], "advice": ["Fluids 3 L/day", "Rest"]}, META)
-    assert '<span class="inl-label">Investigations:</span> CBC \u00b7 RFT</div>' in html
-    assert '<span class="inl-label">Advice:</span> Fluids 3 L/day \u00b7 Rest</div>' in html and "<li>" not in html
+    assert '<div class="sec-title">Investigations Advised</div><ul><li>CBC</li><li>RFT</li></ul>' in html
+    assert '<div class="sec-title">Dietary &amp; General Advice</div><ul><li>Fluids 3 L/day</li><li>Rest</li></ul>' in html
+    assert "inl-label" not in html
 
 def test_a_list_with_one_long_item_keeps_the_titled_bullets():
     long = "Avoid oily and spicy food, take small frequent meals, no alcohol"   # 64 characters
@@ -57,7 +58,7 @@ def test_item_text_uses_plan_h_print_text_for_items_only(monkeypatch):
     monkeypatch.setitem(sys.modules, MOD, fake)
     assert sections.item_text({"text": "RFT"}) == "RFT (Renal Function Test)" and sections.item_text("RFT") == "RFT"
     html = build_sheet_html({"investigations": ["CBC", {"text": "RFT"}, {"text": "<b>x</b>"}]}, META)
-    assert "CBC \u00b7 RFT (Renal Function Test) \u00b7 &lt;b&gt;x&lt;/b&gt; (Renal Function Test)</div>" in html
+    assert "<li>CBC</li><li>RFT (Renal Function Test)</li><li>&lt;b&gt;x&lt;/b&gt; (Renal Function Test)</li>" in html
 
 def test_item_text_reraises_a_broken_investigations_module(monkeypatch):
     def broken(name, *a, **k):
@@ -68,9 +69,9 @@ def test_item_text_reraises_a_broken_investigations_module(monkeypatch):
     with pytest.raises(ModuleNotFoundError):
         sections.item_text({"text": "RFT"})
 
-def test_review_prints_inline_with_its_date_label():
+def test_review_prints_under_its_heading_with_its_date_label():
     html = build_sheet_html({"review": "1 week", "review_date": "2026-10-24"}, META)
-    assert '<span class="inl-label">Review:</span> 1 week <span class="rev-date">(Sat 24 Oct 2026)</span></div>' in html
+    assert '<div class="sec-title">Review / Follow-up</div><div class="prose"><p>' + '1 week <span class="rev-date">(Sat 24 Oct 2026)</span></p></div>' in html
 
 
 def _d(*parts): return "<td>" + " · ".join(f'<span class="dir">{p}</span>' for p in parts) + "</td>"

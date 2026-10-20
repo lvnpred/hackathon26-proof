@@ -11,7 +11,6 @@ def esc(value) -> str:
 
 
 SEP = " \u00b7 "
-INLINE_ITEM_MAX = 60
 
 
 def _print_text():
@@ -54,14 +53,9 @@ def bullet_section(title: str, values) -> str:
     return f'<div class="sec-title">{title}</div><ul>' + "".join(f"<li>{esc(v)}</li>" for v in items) + "</ul>"
 
 
-def list_section(label: str, title: str, values) -> str:
-    """A short list prints on one labelled line; any item over ``INLINE_ITEM_MAX`` characters keeps titled bullets."""
-    texts = [x for x in (item_text(v) for v in (values if isinstance(values, list) else [])) if x]
-    if not texts:
-        return ""
-    if all(len(x) <= INLINE_ITEM_MAX for x in texts):
-        return f'<div class="inl"><span class="inl-label">{label}:</span> {SEP.join(esc(x) for x in texts)}</div>'
-    return bullet_section(title, texts)
+def list_section(title: str, values) -> str:
+    """A titled bullet list under the same heading as the screen (owner, 2026-10-20); nothing when empty."""
+    return bullet_section(title, [item_text(v) for v in (values if isinstance(values, list) else [])])
 
 
 def _rx_row(index: int, row: dict, with_instructions: bool) -> str:
@@ -110,10 +104,11 @@ def vitals_strip(vitals) -> str:
     return f'<div class="vitals">{SEP.join(parts)}</div>' if parts else ""
 
 
-def review_line(review, review_date) -> str:
+def review_section(title: str, review, review_date) -> str:
+    """The follow-up under its screen heading, with the computed date in brackets; nothing when empty."""
     text = str(review or "").strip()
     if not text:
         return ""
     label = date_label(review_date)
     when = f' <span class="rev-date">({esc(label)})</span>' if label else ""
-    return f'<div class="inl"><span class="inl-label">Review:</span> {esc(review)}{when}</div>'
+    return f'<div class="sec-title">{title}</div><div class="prose"><p>{esc(review)}{when}</p></div>'

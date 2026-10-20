@@ -3,7 +3,7 @@ import re
 
 from .doctors_text import block, doctor_groups, group_lines
 from .layout import ALIGNS, MAX_DOCTORS, PROFILE_KEYS, Layout
-from .sections import list_section, prose_section, review_line, rx_section, vitals_strip
+from .sections import list_section, prose_section, review_section, rx_section, vitals_strip
 from .sections import esc as _esc
 
 DISCLAIMER = (
@@ -240,8 +240,6 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
   ul {{ margin: 0 0 6px; padding-left: 20px; }}
   .prose p {{ margin: 0 0 4px; }}
   .vitals {{ text-align: center; font-size: 12px; margin: -4px 0 8px; }}
-  .inl {{ font-size: 12px; margin: 8px 0 0; }}
-  .inl-label {{ font-weight: bold; }}
   .rev-date {{ color: #333; }}
   table.rx {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
   table.rx th, table.rx td {{ border: 1px solid #999; padding: 3px 6px; text-align: left; }}
@@ -266,10 +264,10 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 {vitals_strip(s.get("vitals"))}
 {prose_section("Chief Complaints &amp; Brief History", s.get("complaints"))}
 {prose_section("Diagnosis / Clinical Impression", s.get("diagnosis"))}
-{list_section("Investigations", "Investigations Advised", s.get("investigations"))}
+{list_section("Investigations Advised", s.get("investigations"))}
 {rx_section(s.get("rx"))}
-{list_section("Advice", "Dietary &amp; General Advice", s.get("advice"))}
-{review_line(s.get("review"), s.get("review_date"))}
+{list_section("Dietary &amp; General Advice", s.get("advice"))}
+{review_section("Review / Follow-up", s.get("review"), s.get("review_date"))}
 <div class="disclaimer">{DISCLAIMER}</div>
 </body>
 </html>

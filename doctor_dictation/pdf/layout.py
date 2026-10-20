@@ -10,6 +10,18 @@ _ENUMS = {"role": (("title", "subtitle", "normal", "small"), "normal"), "align":
 _FIELDS = {"text": ("role", "align"), "logo": ("align",), "rule": ("thickness",),
            "doctors": ("role", "align")}   # enum keys each block type takes; "doctors" is filled at print time
 _HEX = re.compile(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})")
+POWERED_BY = "Powered By Lightday"      # the app's print credit (owner, 2026-10-20)
+_POWERED = re.compile(r"\s*powered\s+by\b", re.IGNORECASE)
+
+
+def credit_text(text: str) -> str:
+    """A pad's own "Powered by ..." line becomes the app's credit; any other text is returned unchanged."""
+    return POWERED_BY if _POWERED.match(text or "") else text
+
+
+def has_credit(blocks) -> bool:
+    """True when a literal text block among ``blocks`` is a "Powered by ..." line."""
+    return any(b.get("type") == "text" and "text" in b and _POWERED.match(str(b["text"])) for b in blocks)
 
 
 class LayoutError(ValueError):

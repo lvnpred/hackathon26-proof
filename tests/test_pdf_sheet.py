@@ -94,3 +94,15 @@ def test_investigations_print_as_dictated_with_the_full_name():
 def test_an_investigation_canonical_is_escaped():
     html = build_sheet_html({"investigations": [{"text": "X", "canonical": "<b>y</b>", "status": "new", "source": "doctor"}]}, META)
     assert "&lt;b&gt;y&lt;/b&gt;" in html and "<b>y</b>" not in html
+
+
+def test_every_sheet_carries_the_lightday_credit_once():                     # owner 2026-10-20
+    from doctor_dictation.pdf.layout import POWERED_BY, credit_text
+    assert POWERED_BY == "Powered By Lightday" and credit_text(" powered by WONDRx ") == POWERED_BY and credit_text("Mary's Arcade") == "Mary's Arcade"
+    plain = build_sheet_html({"rx": []}, META)                                # no letterhead: a small credit line at the bottom
+    assert plain.count('<div class="credit">Powered By Lightday</div>') == 1
+    assert build_sheet_html({"rx": []}, META, LAYOUT).count('<div class="credit">Powered By Lightday</div>') == 1   # a pad without one
+    pad = validate_layout({"header": [], "body": {"top": 0.2, "bottom": 0.9}, "profile": {},
+                           "footer": [{"type": "text", "text": "Powered By WONDRx", "role": "small", "align": "right"}]})
+    html = build_sheet_html({"rx": []}, META, pad)                            # the pad's own line now names Lightday
+    assert "WONDRx" not in html and "Powered By Lightday" in html and 'class="credit">' not in html

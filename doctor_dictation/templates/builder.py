@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from doctor_dictation.pdf import LayoutError, validate_layout
-from doctor_dictation.pdf.layout import MAX_PROFILE
+from doctor_dictation.pdf.layout import MAX_PROFILE, credit_text
 from doctor_dictation.providers.llm.factory import make_llm
 from doctor_dictation.templates import TemplateError
 from doctor_dictation.templates.images import crop_fraction, to_data_uri
@@ -124,6 +124,8 @@ async def build_draft(jpeg: bytes, settings) -> Draft:
         layout["skipped_labels"] = skipped
     logo = None
     for block in list(layout["header"]) + list(layout["footer"]):
+        if block.get("type") == "text" and "text" in block:
+            block["text"] = credit_text(block["text"])     # a pad's "Powered by ..." line shows the app's credit
         if block.get("type") == "text" and "field" in block and block["field"] not in PROFILE_FIELDS:
             raise TemplateError(502, f"the model referenced an unknown field: {block['field']}")
         if block.get("type") == "logo" and logo is None:

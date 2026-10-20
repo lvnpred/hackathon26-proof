@@ -2,7 +2,7 @@
 import re
 
 from .doctors_text import block, doctor_groups, group_lines
-from .layout import ALIGNS, MAX_DOCTORS, PROFILE_KEYS, Layout
+from .layout import ALIGNS, MAX_DOCTORS, POWERED_BY, PROFILE_KEYS, Layout, credit_text, has_credit
 from .sections import list_section, prose_section, review_section, rx_section, vitals_strip
 from .sections import esc as _esc
 
@@ -101,7 +101,7 @@ def _doctor_entries(doctors, values: dict) -> list:
 
 
 def _line(b: dict, values: dict) -> str:
-    return str(values.get(b["field"], "") if "field" in b else b["text"]).strip()
+    return str(values.get(b["field"], "") if "field" in b else credit_text(b["text"])).strip()
 
 
 def _entry_groups(entries: list) -> list:
@@ -212,6 +212,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
     """
     s = structured if isinstance(structured, dict) else {}
     m = meta if isinstance(meta, dict) else {}
+    credit = "" if layout is not None and has_credit(layout.footer) else f'<div class="credit">{POWERED_BY}</div>'   # the pad's own line carries it
     date = _esc(m.get("date"))
     op_no = _esc(m.get("opNo") or s.get("opNo"))
     name = _esc(s.get("patientName"))
@@ -246,6 +247,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
   .dir {{ white-space: nowrap; }}
   .gen {{ font-size: 10px; color: #444; margin-top: 1px; }}
   .disclaimer {{ margin-top: 12px; font-size: 11px; color: #555; font-style: italic; break-before: avoid; }}
+  .credit {{ margin-top: 4px; font-size: 10px; color: #697586; text-align: right; break-before: avoid; }}
   .clinic-head {{ text-align: center; margin-bottom: 12px; }}
   .clinic-rule {{ border: 0; border-top: 1px solid #999; margin: 6px 0; }}
   table.clinic-doctors, table.lh-doctors {{ width: 100%; border-collapse: collapse; margin-top: 4px; }}
@@ -269,6 +271,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 {list_section("Dietary &amp; General Advice", s.get("advice"))}
 {review_section("Review / Follow-up", s.get("review"), s.get("review_date"))}
 <div class="disclaimer">{DISCLAIMER}</div>
+{credit}
 </body>
 </html>
 """

@@ -37,9 +37,15 @@ from doctor_dictation.core.determinism import load_lexicon
 from doctor_dictation.core.hints import build_hints
 from doctor_dictation.providers.stt.factory import make_stt
 
-# USD per audio minute. THIRD-PARTY FIGURES, NOT CHECKED AGAINST A BILL: confirm
-# before quoting (openai = whisper-1 list price). Missing provider shows "n/a".
-PRICE_PER_MINUTE: dict[str, float] = {"openai": 0.006, "faster-whisper": 0.0, "onnx": 0.0, "stub": 0.0}
+# USD per audio minute, list prices NOT CHECKED AGAINST A BILL: confirm before quoting.
+# openai = whisper-1; groq = whisper-large-v3 at $0.111/hour (console.groq.com/docs/models,
+# 2026-10-19; turbo is $0.04/hour). Groq bills at least 10 s per request. assemblyai =
+# universal-3-5-pro $0.21 + keyterms $0.05 per hour (assemblyai.com/pricing, 2026-10-19);
+# Medical Mode adds $0.15/hour and universal-2 is $0.15 base: adjust when benchmarking those.
+# muse = $0.18/hour, no add-ons (dev.meta.ai pricing, 2026-10-19). Missing shows "n/a".
+PRICE_PER_MINUTE: dict[str, float] = {"openai": 0.006, "groq": 0.111 / 60, "assemblyai": 0.26 / 60,
+                                      "muse": 0.18 / 60,
+                                      "faster-whisper": 0.0, "onnx": 0.0, "stub": 0.0}
 
 
 def audio_seconds(clip: Clip) -> float | None:

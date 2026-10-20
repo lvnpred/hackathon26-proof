@@ -143,3 +143,22 @@ def test_openai_error_body_never_leaks_the_key(monkeypatch):
     with pytest.raises(SttError) as e:
         _run(p.transcribe(b"\x00", "d.webm"))
     assert "sk-secret-key-123" not in str(e.value) and "[redacted]" in str(e.value)
+
+
+def test_groq_uses_its_own_url_key_and_model(monkeypatch):
+    from doctor_dictation.providers.stt.groq import GroqStt
+    seen = _httpx(monkeypatch, body={"text": "fever"})
+    p = GroqStt(override_settings(monkeypatch, groq_api_key="gsk-x", openai_api_key="sk-x"))
+    t = _run(p.transcribe(b"\x00", "d.webm", ["Metformin"]))
+    assert (t.text, t.engine) == ("fever", "groq-whisper-api")
+    assert seen[0]["url"] == "https://api.groq.com/openai/v1/audio/transcriptions"
+    assert seen[0]["headers"] == {"Authorization": "Bearer gsk-x"}  # never the OpenAI key
+    assert seen[0]["data"] == {"model": "whisper-large-v3", "language": "en", "prompt": "Metformin"}
+    _httpx(monkeypatch, status=500)
+    with pytest.raises(SttError) as bad:
+        _run(p.transcribe(b"\x00", "d.webm"))
+    assert str(bad.value).startswith("Groq STT 500: down") and "gsk-x" not in str(bad.value)
+    p = GroqStt(override_settings(monkeypatch, groq_api_key="", groq_stt_model="whisper-large-v3-turbo"))
+    with pytest.raises(SttUnavailable, match="GROQ_API_KEY"):
+        _run(p.transcribe(b"\x00", "d.webm"))
+    assert p._model == "whisper-large-v3-turbo"

@@ -161,3 +161,15 @@ def test_llm_error_body_never_leaks_the_key(monkeypatch):
     with pytest.raises(LlmError) as e:
         run(llm.complete(MSG))
     assert "sk-secret-key-123" not in str(e.value)
+
+
+def test_meta_provider_uses_its_own_key_url_and_model():
+    m = make_llm(_settings(llm_provider="meta", meta_api_key="mk", openai_api_key="k"))
+    assert (m.name, m.base_url, m.model, m._key) == ("meta", "https://api.meta.ai/v1", "muse-spark-1.3", "mk")
+    assert make_llm(_settings(llm_provider="meta", meta_api_key="")) is None  # never falls back to the OpenAI key
+
+
+def test_groq_provider_shares_the_groq_key_and_picks_gpt_oss():
+    g = make_llm(_settings(llm_provider="groq", groq_api_key="gk", openai_api_key="k"))
+    assert (g.name, g.base_url, g.model, g._key) == ("groq", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b", "gk")
+    assert make_llm(_settings(llm_provider="groq", groq_api_key="", groq_llm_model="openai/gpt-oss-20b")) is None

@@ -25,15 +25,22 @@ def health():
         "faster-whisper": f"local:{whisper_model_name()}",
         "onnx": "onnx-whisper",
         "openai-whisper-api": "openai-whisper-api (cloud default)",
+        "groq-whisper-api": f"groq-whisper-api ({settings.groq_stt_model})",
+        "muse-api": f"muse-api ({settings.muse_stt_model})",
+        "assemblyai-api": f"assemblyai-api ({settings.assemblyai_model}"
+                          f"{', medical' if settings.assemblyai_medical else ''})",
         "browser-webspeech": "browser-webspeech (no server STT installed)",
     }.get(active, active)
     onnx_ok, onnx_detail = onnx_stt_status()
     llm = make_llm(settings)
     # Presence only -- booleans from the resolved settings snapshot, never values.
     presence = secret_presence(
-        ("OPENAI_API_KEY", "DEEPSEEK_API_KEY"),
+        ("OPENAI_API_KEY", "DEEPSEEK_API_KEY", "GROQ_API_KEY", "ASSEMBLYAI_API_KEY", "META_API_KEY"),
         overrides={"OPENAI_API_KEY": settings.openai_api_key,
-                   "DEEPSEEK_API_KEY": settings.deepseek_api_key},
+                   "DEEPSEEK_API_KEY": settings.deepseek_api_key,
+                   "GROQ_API_KEY": settings.groq_api_key,
+                   "ASSEMBLYAI_API_KEY": settings.assemblyai_api_key,
+                   "META_API_KEY": settings.meta_api_key},
     )
     return {
         "ok": True,
@@ -44,6 +51,9 @@ def health():
         "onnx_stt": {"available": onnx_ok, "detail": onnx_detail},
         "openai_configured": presence["OPENAI_API_KEY"],
         "deepseek_configured": presence["DEEPSEEK_API_KEY"],
+        "groq_configured": presence["GROQ_API_KEY"],
+        "assemblyai_configured": presence["ASSEMBLYAI_API_KEY"],
+        "meta_configured": presence["META_API_KEY"],
         "llm_provider": llm.name if llm else settings.llm_provider,
         "llm_model": llm.model if llm else "",
         "llm_configured": llm is not None,

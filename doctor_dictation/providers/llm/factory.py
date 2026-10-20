@@ -19,6 +19,12 @@ def make_llm(s: Settings, *, vision: bool = False) -> LlmProvider | None:
     if s.llm_provider == "deepseek":
         name, base, model = "deepseek", s.deepseek_base_url, s.deepseek_model
         key, seed = s.deepseek_api_key, s.deepseek_seed
+    elif s.llm_provider == "groq":  # OpenAI-compatible, same key as Groq STT
+        name, base, model = "groq", "https://api.groq.com/openai/v1", s.groq_llm_model
+        key, seed = s.groq_api_key, s.llm_seed
+    elif s.llm_provider == "meta":  # Muse Spark; assumes an OpenAI-style /chat/completions
+        name, base, model = "meta", s.meta_base_url, s.meta_model
+        key, seed = s.meta_api_key, s.llm_seed
     else:
         name, base, model = "openai", s.openai_base_url, s.llm_model
         key, seed = s.openai_api_key, s.llm_seed

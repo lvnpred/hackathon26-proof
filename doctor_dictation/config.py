@@ -49,6 +49,9 @@ class Settings:
     # --- secrets (resolved via secret_loader.load_secret) ---
     openai_api_key: str
     deepseek_api_key: str
+    groq_api_key: str
+    assemblyai_api_key: str
+    meta_api_key: str  # Meta Model API: Muse Voice Transcribe and the Muse LLMs
 
     # --- persistence (db/__init__.py still reads DB_PATH directly) ---
     # "" means "unset"; the effective default is doctor_dictation/data/app.db, owned by
@@ -59,6 +62,14 @@ class Settings:
     stt_use_hints: bool = False
     stt_hint_limit: int = 70
     stt_trim_silence: bool = False
+    groq_stt_model: str = "whisper-large-v3"  # or whisper-large-v3-turbo: cheaper, more word errors
+    assemblyai_model: str = "universal-3-5-pro"  # or universal-2: cheaper
+    assemblyai_medical: bool = False  # Medical Mode: better drug names, billed extra per hour
+    muse_stt_model: str = "muse-voice-transcribe-1.0"
+    muse_language_bias: tuple[str, ...] = ("English",)  # e.g. English,Hindi for mixed dictation
+    meta_base_url: str = "https://api.meta.ai/v1"  # LLM_PROVIDER=meta (OpenAI-compatible: not yet verified)
+    meta_model: str = "muse-spark-1.3"
+    groq_llm_model: str = "openai/gpt-oss-120b"  # LLM_PROVIDER=groq; openai/gpt-oss-20b is cheaper
 
     # --- letterhead templates (B2b) ---
     template_uploads_per_day: int = 10
@@ -112,6 +123,17 @@ def build_settings() -> Settings:
         deepseek_base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         openai_api_key=load_secret("OPENAI_API_KEY"),
         deepseek_api_key=load_secret("DEEPSEEK_API_KEY"),
+        groq_api_key=load_secret("GROQ_API_KEY"),
+        groq_stt_model=os.getenv("GROQ_STT_MODEL", "").strip() or "whisper-large-v3",
+        assemblyai_api_key=load_secret("ASSEMBLYAI_API_KEY"),
+        assemblyai_model=os.getenv("ASSEMBLYAI_MODEL", "").strip() or "universal-3-5-pro",
+        assemblyai_medical=_bool_env("ASSEMBLYAI_MEDICAL"),
+        meta_api_key=load_secret("META_API_KEY"),
+        muse_stt_model=os.getenv("MUSE_STT_MODEL", "").strip() or "muse-voice-transcribe-1.0",
+        muse_language_bias=tuple(p.strip() for p in os.getenv("MUSE_LANGUAGE_BIAS", "English").split(",") if p.strip()),
+        meta_base_url=os.getenv("META_BASE_URL", "").strip() or "https://api.meta.ai/v1",
+        meta_model=os.getenv("META_MODEL", "").strip() or "muse-spark-1.3",
+        groq_llm_model=os.getenv("GROQ_LLM_MODEL", "").strip() or "openai/gpt-oss-120b",
         db_path=os.getenv("DB_PATH", ""),
         stt_use_hints=os.getenv("STT_USE_HINTS", "").strip().lower() in ("1", "true", "yes", "on"),
         stt_hint_limit=_int_env("STT_HINT_LIMIT", 70),

@@ -113,3 +113,12 @@ def test_chain_reports_availability_like_a_single_provider():
     assert FallbackStt([Off("openai", "x"), _Fake("faster-whisper", "y")]).available() is True
     assert FallbackStt([Off("openai", "x")]).available() is False
     assert FallbackStt([]).available() is False
+
+
+def test_groq_engine_falls_back_locally_and_counts_as_cloud(monkeypatch):
+    assert derive_chain(_cfg(monkeypatch, stt_engine="groq")) == ("groq", "faster-whisper")
+    chain = make_stt(_cfg(monkeypatch, stt_engine="groq", groq_api_key="gsk-x"))
+    assert chain.chain_names == ("groq", "faster-whisper") and chain.active_name() == "groq-whisper-api"
+    err = SttChainError([("groq", SttError("down")), ("faster-whisper", SttUnavailable("no pkg"))])
+    status, body = failure_response(err, ("groq", "faster-whisper"))
+    assert status == 502 and body["error"].startswith("Cloud STT failed")  # cloud, not a local 500

@@ -4,22 +4,28 @@ from typing import Sequence
 from doctor_dictation.core.determinism import normalize_transcript, transcript_sha
 from doctor_dictation.providers.stt.base import (
     SttChainError, SttError, SttModelLoadError, SttNotImplemented, SttUnavailable, Transcript)
+from doctor_dictation.providers.stt.assemblyai import AssemblyAiStt
 from doctor_dictation.providers.stt.browser import BrowserStt
+from doctor_dictation.providers.stt.groq import GroqStt
 from doctor_dictation.providers.stt.local import LocalWhisperStt
+from doctor_dictation.providers.stt.muse import MuseStt
 from doctor_dictation.providers.stt.onnx import OnnxStt
 from doctor_dictation.providers.stt.openai import OpenAiStt
 from doctor_dictation.providers.stt.stub import StubStt
 
-STT_REGISTRY = {"openai": OpenAiStt, "faster-whisper": LocalWhisperStt, "onnx": OnnxStt,
-                "browser": BrowserStt, "stub": StubStt}
-DISPLAY = {"openai": "openai-whisper-api", "faster-whisper": "faster-whisper",
-           "onnx": "onnx", "stub": "stub"}
+STT_REGISTRY = {"openai": OpenAiStt, "groq": GroqStt, "assemblyai": AssemblyAiStt,
+                "muse": MuseStt, "faster-whisper": LocalWhisperStt, "onnx": OnnxStt, "browser": BrowserStt, "stub": StubStt}
+DISPLAY = {"openai": "openai-whisper-api", "groq": "groq-whisper-api", "assemblyai": "assemblyai-api", "muse": "muse-api",
+           "faster-whisper": "faster-whisper", "onnx": "onnx", "stub": "stub"}
+CLOUD = {"openai", "groq", "assemblyai", "muse"}  # a failure here may fall back to a local engine
 
 
 def derive_chain(s) -> tuple[str, ...]:
     # STT_CHAIN when set, else implied by STT_ENGINE (unknown values act as auto)
     return s.stt_chain or {"faster-whisper": ("faster-whisper",), "onnx": ("onnx",),
-                           "stub": ("stub",)}.get(s.stt_engine, ("openai", "faster-whisper"))
+                           "groq": ("groq", "faster-whisper"),
+                           "assemblyai": ("assemblyai", "faster-whisper"),
+                           "muse": ("muse", "faster-whisper"), "stub": ("stub",)}.get(s.stt_engine, ("openai", "faster-whisper"))
 
 
 class FallbackStt:
@@ -86,7 +92,7 @@ def failure_response(err: SttChainError, chain: Sequence[str]) -> tuple[int, dic
         if isinstance(e, SttNotImplemented):
             return 501, {"error": str(e), "fallback": "browser"}
     real = [(n, e) for n, e in err.failures if not isinstance(e, SttUnavailable)]
-    local = [e for n, e in real if n != "openai"]
+    local = [e for n, e in real if n not in CLOUD]
     if local:  # a local engine really failed: never loop back to the cloud
         body = {"error": str(local[-1])[:500]}
         if not isinstance(local[-1], SttModelLoadError):

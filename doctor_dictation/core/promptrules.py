@@ -2,8 +2,8 @@
 
 FORM_RULE = ('form: use the form as dictated ("tablet" -> "Tab.", "capsule" -> "Cap.", "syrup" -> "Syr.", '
              '"injection" -> "Inj."). If no form was dictated, use "". Never guess a form from the medicine name.')
-ONE_SECTION_RULE = "Each item goes into exactly one section: never put the same text in both complaints and diagnosis."
-NO_DEMOGRAPHICS_RULE = ("Never repeat the patient name, age, sex or vitals in complaints, diagnosis or advice; "
+ONE_SECTION_RULE = "Each item goes into exactly one section: never put the same text in two of complaints, findings and diagnosis."
+NO_DEMOGRAPHICS_RULE = ("Never repeat the patient name, age, sex or vitals in complaints, findings, diagnosis or advice; "
                         "they go only in patientName, ageSex and vitals.")
 INVESTIGATIONS_RULE = ("investigations: copy each test as dictated. Never add a test that was not dictated. If none "
                        'was dictated, return []. Tests that share a body site stay one item: "X-ray, CT and MRI of '

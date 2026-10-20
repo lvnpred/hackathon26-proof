@@ -3,7 +3,7 @@ words of an item the dictation never said (information for the doctor; nothing i
 import difflib
 import re
 
-PROSE_FIELDS = ("complaints", "diagnosis")
+PROSE_FIELDS = ("complaints", "diagnosis", "findings")
 ITEM_CHARS, MIN_WORD = 400, 4
 NEGATION = frozenset("no not without denies denied nil absent negative never none".split())
 FRAME = frozenset("""about after along also associated before case clinical complaint complaints days diagnosis during episode episodes from history

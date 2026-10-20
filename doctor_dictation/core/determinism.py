@@ -272,6 +272,7 @@ def validate_structured(data: dict, transcript: str, raw_transcript: str = "", a
         "opNo": str(d.get("opNo") or ""),
         "diagnosis": _capped(d.get("diagnosis"), "diagnosis"),
         "complaints": _capped(d.get("complaints"), "complaints"),
+        "findings": _capped(d.get("findings"), "findings"),
         "investigations": _capped(None, "investigations", investigations.coerce_items(d.get("investigations"))),   # items, unchecked
         "rx": [],
         "advice": _capped(d.get("advice"), "advice"),

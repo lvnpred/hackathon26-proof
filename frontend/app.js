@@ -313,7 +313,7 @@ async function openDocument(row) {
     hideBlockPanel();
     clearError();
     renderTranscript();
-    renderSheet(state.structured);
+    renderSheet(state.structured, savedConfirmations(state.structured));
     updateResaveNote();
     if (window.Authorship) Authorship.onOpen(j);   // a colleague's prescription opens view-only
     RxView.focusFirst();                           // view-only: no focus move
@@ -657,6 +657,7 @@ function serializeForm() {
   base.vitals = Vitals.read();
   base.diagnosis = readList("pDx");
   base.complaints = readList("pCc");
+  base.findings = readList("pFx");
   base.investigations = IxList.read($("pIx"));      // items {text, canonical, status, source}; blanks dropped as the server does
   base.advice = readList("pAdv");
   base.review = text($("pRev"));
@@ -677,7 +678,7 @@ function hasContent(s) {
   if (!s) return false;
   if ((s.patientName || "").trim()) return true;
   if ((s.opNo || "").trim()) return true;
-  if ((s.diagnosis || []).length || (s.complaints || []).length) return true;
+  if ((s.diagnosis || []).length || (s.complaints || []).length || (s.findings || []).length) return true;
   return (s.rx || []).some(r => r && (r.name || r.strength));
 }
 
@@ -841,6 +842,7 @@ function fixLists(e) {
   if (ul) normalizeList(ul);
   if (ul && ul.id === "pCc") Sections.clearProse("complaints");
   if (ul && ul.id === "pDx") Sections.clearProse("diagnosis");
+  if (ul && ul.id === "pFx") Sections.clearProse("findings");
 }
 sheetEl.addEventListener("input", fixLists);
 sheetEl.addEventListener("keyup", fixLists);
@@ -903,6 +905,12 @@ function rxRow(r, index, rowid) {                      // rowid: Undo restores a
   return tr;
 }
 
+// Row ids for a reopened document; a row Save stored as doctor_confirmed opens confirmed (before the first render, like Undo).
+function savedConfirmations(s) {
+  const rows = s && Array.isArray(s.rx) ? s.rx : [];
+  return rows.map(r => { const id = String(++rowSeq); if (r && r.doctor_confirmed === true) state.confirmed.add(id); return id; });
+}
+
 function renderRx(rows, rowids) {
   rxBody.innerHTML = "";
   const list = Array.isArray(rows) ? rows : [];
@@ -927,6 +935,7 @@ function renderSheet(s, rowids) {
   renderList($("pDx"), s.diagnosis);
   renderList($("pCc"), s.complaints);
   IxList.render($("pIx"), s.investigations);
+  renderList($("pFx"), s.findings);
   renderList($("pAdv"), s.advice);
   setText($("pRev"), s.review || "");
   Sections.showDate(s.review_date || "");
@@ -1232,7 +1241,7 @@ function newPatient() {
   setText($("pOp"), "");
   Vitals.render({});
   setText($("pDate"), today());
-  ["pDx", "pCc", "pIx", "pAdv"].forEach(id => { $(id).innerHTML = ""; });
+  ["pDx", "pCc", "pIx", "pFx", "pAdv"].forEach(id => { $(id).innerHTML = ""; });
   rxBody.innerHTML = "";
   setText($("pRev"), "");
   Sections.showDate(""); Sections.showProseCheck([]);

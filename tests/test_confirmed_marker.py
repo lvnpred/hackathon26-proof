@@ -58,3 +58,21 @@ def test_a_marker_the_page_kept_is_stripped_at_save_because_the_gate_passed(tmp_
     client = _client(tmp_path, monkeypatch)
     r = _save(client, [{"name": "Zyloprim", "status": "unknown-medicine", "instructions": "x " + MARK}], [0])
     assert _stored(tmp_path, r.json()["document_id"])["rx"][0]["instructions"] == "x"
+
+
+def test_a_confirmed_row_is_stored_as_confirmed_so_a_reopen_does_not_ask_again(tmp_path, monkeypatch):
+    # owner, 2026-10-20: a reopened prescription showed "Confirm as is" on rows confirmed before Save
+    client = _client(tmp_path, monkeypatch)
+    rows = [{"dose": "SOS", "status": "unverified-name"},                                  # no name or strength: Save drops it
+            {"name": "Adopiline", "status": "unknown-medicine"},
+            {"name": "Crocin", "strength": "500 mg", "status": "verified", "doctor_confirmed": True}]
+    r = _save(client, rows, [0, 1])
+    assert r.status_code == 200, r.text
+    got = _stored(tmp_path, r.json()["document_id"])["rx"]
+    assert [(x["name"], x.get("doctor_confirmed")) for x in got] == [("Adopiline", True), ("Crocin", None)]
+
+
+def test_a_flag_the_page_sends_never_confirms_a_row_by_itself(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    r = _save(client, [{"name": "Zyloprim", "status": "unknown-medicine", "doctor_confirmed": True}], [])
+    assert r.status_code == 409

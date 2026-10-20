@@ -79,7 +79,15 @@ def tidy_sections(structured, fields=PROSE_FIELDS):
                 warnings.append(f"{field}[{i}]: moved to vitals")
                 continue
             kept.append(text)
-        items[:] = kept
+        seen, unique = set(), []
+        for item in kept:                       # a correction adds to the list: a stripped line can repeat an earlier one
+            key = _norm(item) if isinstance(item, str) else None
+            if key and key in seen:
+                warnings.append(f'{field}: dropped "{item}", already on the list')
+                continue
+            seen.add(key)
+            unique.append(item)
+        items[:] = unique
     comps, dx = structured.get("complaints"), structured.get("diagnosis")
     if "complaints" in fields and isinstance(comps, list) and isinstance(dx, list):
         seen = {_norm(d) for d in dx if isinstance(d, str)} - {""}

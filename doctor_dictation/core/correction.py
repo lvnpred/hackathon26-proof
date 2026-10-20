@@ -11,8 +11,9 @@ brand-new dict and never mutates `current`.
 Merge rules (see the plan, Task 4):
 - Scalars (`patientName`, `ageSex`, `opNo`, `review`) overwrite only when the
   patch value is non-empty.
-- List fields (`diagnosis`, `complaints`, `investigations`, `advice`) replace
-  only when the patch list is non-empty.
+- List fields (`diagnosis`, `complaints`, `findings`, `investigations`, `advice`) upsert (owner, 2026-10-20): a
+  patch item not already on the list is appended, one already there (case, spaces and a final full stop ignored) is
+  skipped. Changing or deleting an item is the "replace"/"remove" ops (`ops.apply_ops`), never the list itself.
 - `rx` merges by case-insensitive `name`: a patch row naming an existing
   medicine **overlays** that row, field-by-field -- fields present in the patch
   overwrite, fields the patch omits are **retained** (a dose-only correction
@@ -36,7 +37,7 @@ from .rowcheck import did_you_mean
 from .surface import _generic_of
 
 SCALAR_FIELDS = ("patientName", "ageSex", "opNo", "review")
-LIST_FIELDS = ("diagnosis", "complaints", "investigations", "advice")
+LIST_FIELDS = ("diagnosis", "complaints", "findings", "investigations", "advice")
 
 
 def _norm_name(value) -> str:
@@ -190,6 +191,26 @@ def _merge_rx(current_rows, patch_rows):
     return out
 
 
+def item_key(item) -> str:
+    """A list item's identity for the upsert: its text (an investigation item's ``text``), case and spaces ignored, no final full stop."""
+    text = item.get("text") if isinstance(item, dict) else item
+    return " ".join(str(text or "").casefold().split()).rstrip(".")
+
+
+def _upsert_list(cur_val, pat_val):
+    """The current list plus each patch item it does not already have, in patch order; an empty patch keeps the list."""
+    if not (isinstance(pat_val, list) and pat_val):
+        return list(cur_val) if isinstance(cur_val, list) else cur_val
+    out = list(cur_val) if isinstance(cur_val, list) else []
+    seen = {item_key(x) for x in out}
+    for item in pat_val:
+        key = item_key(item)
+        if key and key not in seen:
+            out.append(item)
+            seen.add(key)
+    return out
+
+
 def _merged_keys(current: dict, patch: dict):
     """Current keys first (stable order), then any patch-only keys."""
     keys = list(current.keys())
@@ -214,10 +235,7 @@ def merge_form(current: dict, patch: dict) -> dict:
         elif key == "vitals":
             out[key] = merge_vitals(cur_val, pat_val)  # field by field, never wholesale
         elif key in LIST_FIELDS:
-            if isinstance(pat_val, list) and pat_val:
-                out[key] = list(pat_val)
-            else:
-                out[key] = list(cur_val) if isinstance(cur_val, list) else cur_val
+            out[key] = _upsert_list(cur_val, pat_val)
         elif key in SCALAR_FIELDS:
             out[key] = pat_val if pat_val else cur_val
         elif key in pat:

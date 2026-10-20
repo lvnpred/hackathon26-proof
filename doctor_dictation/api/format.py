@@ -15,6 +15,7 @@ from doctor_dictation.core.correction import (
     changed_rx_rows,
     extract_correction,
     flag_unsure_rows,
+    item_key,
     match_by_generic,
     merge_form,
     preserve_untouched_rx_status,
@@ -45,13 +46,13 @@ SYSTEM_PROMPT = """You are a DETERMINISTIC clinical extraction engine. Same inpu
 Take the raw dictated clinical text and format it into a standardized outpatient prescription and consultation summary.
 
 STRICT RULES:
-1. Extract the Brief history (complaints), Diagnosis, Investigations Advised, Vitals and Medications.
+1. Extract the Brief history (complaints), Diagnosis, Investigations Advised, Findings, Vitals and Medications.
 2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". Map: once daily/OD -> 1-0-0; twice daily/BD -> 1-0-1; thrice daily/TDS -> 1-1-1; at bedtime/HS -> 0-0-1; as needed/for pain -> SOS. Never output OD/BD/TDS/HS text.
 3. Allowed timing ONLY: "After food", "Before food", "At bedtime", or "". Map "after meal" -> After food, "empty stomach" -> Before food, "at night" -> At bedtime.
 4. Copy drug strength VERBATIM from the transcript (e.g. "0.4 mg"). If no strength dictated, use "". Never invent strengths, durations, or drugs. Write each medicine name exactly as dictated, including brand names; never replace a brand with its generic. If a field is missing, return empty string or empty array, never hallucinate.
 5. If the doctor dictates patient demographics (e.g. "patient Rahul Sharma, 45 year old male"), extract patientName and ageSex (format "45 / M"). If an OP/registration number is dictated, copy it VERBATIM into opNo (e.g. "OP 1234" -> "OP 1234"); use "" if not dictated. Otherwise return empty strings.
 6. Duration format: "<N> days/weeks/months" with digits (e.g. "14 days"). Map "two weeks" -> "14 days".
-7. complaints: the brief history as 1 to 3 short sentences, the way a doctor writes it, for example "C/o fever with chills for 3 days, associated body aches, no vomiting." and "No h/o similar episodes.". diagnosis: 1 or 2 short phrases or sentences. Restate ONLY what was dictated: never add a symptom, duration, negative finding, past history or diagnosis the doctor did not say. If nothing was dictated, use []. Each item at most 400 characters.
+7. complaints: the brief history as 1 to 3 short sentences, the way a doctor writes it, for example "C/o fever with chills for 3 days, associated body aches, no vomiting." and "No h/o similar episodes.". diagnosis: 1 or 2 short phrases or sentences. Restate ONLY what was dictated: never add a symptom, duration, negative finding, past history or diagnosis the doctor did not say. If nothing was dictated, use []. Each item at most 400 characters. findings: what the doctor found on examination and the results of reports the patient brought, one short sentence each, for example "Pedal oedema present." and "USG: right lower ureteric calculus 5 mm.". Copy every number and unit verbatim. A test the doctor ADVISES goes in investigations, never in findings; a result already in hand goes in findings. Never add a finding that was not dictated.
 """ + promptrules.rules_text(8) + """
 13. For each rx row also return "generic_suggestion": for a brand name you recognise, its active ingredients joined by " + " (for example "Aceclofenac + Paracetamol"). Use "" when the name is already a generic or you are not sure. It is a suggestion for the doctor only. Never put it in "name".
 14. Return ONLY valid JSON matching this exact schema, no markdown, no extra text. EXAMPLE input: "right flank pain and burning micturition since 2 days. 5 mm lower ureteric calculus. tablet Tamsulosin 0.4 mg once daily at bedtime after food for 2 weeks, tablet Paracetamol 650 mg as needed for pain." -> rx doses "0-0-1" and "SOS", timings "After food" and "":
@@ -63,6 +64,7 @@ STRICT RULES:
   "complaints": ["short sentence of the dictated history"],
   "diagnosis": ["short phrase or sentence"],
   "investigations": ["string"],
+  "findings": ["short sentence of a dictated examination or report finding"],
   "rx": [{"form": "Tab.|Cap.|Syr.|Inj.|empty", "name": "string", "strength": "string", "dose": "1-0-0|1-0-1|1-1-1|0-0-1|SOS", "timing": "After food|Before food|At bedtime|empty", "duration": "e.g. 14 days", "instructions": "string", "generic_suggestion": "string: ingredients joined by ' + ', or empty"}],
   "advice": ["string"],
   "review": "string"
@@ -217,6 +219,13 @@ def _ground_patch_vitals(patch, *texts):
     return {**patch, "vitals": pv}, notes + [w + "; kept the previous value" for w in ungrounded]
 
 
+def _added_unheard(before: dict, after: dict, *transcripts) -> list:
+    """``prose.unheard`` for the prose lines a correction added (lists upsert), numbered by their place on the merged list."""
+    added = {f: {i for i, x in enumerate(after.get(f) or []) if item_key(x) not in {item_key(y) for y in before.get(f) or []}}
+             for f in prose.PROSE_FIELDS}
+    return [e for e in prose.unheard(after, *transcripts) if e["index"] in added[e["field"]]]
+
+
 @router.post("/api/v1/correct", dependencies=[Depends(use_clinic_layer)])
 async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use_investigations)):
     """Merge a spoken correction into the current form, then re-ground it.
@@ -269,6 +278,6 @@ async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use
     grounding = {"rounds": 0, "open_issues": open_issues(structured),
                  "llm_calls": llm_calls}
     return {"structured": structured, "grounding": grounding, "engine": engine,
-            "prose_check": prose.unheard({f: patch2.get(f) for f in prose.PROSE_FIELDS}, text, normalized),   # only the lists the patch replaced
+            "prose_check": _added_unheard(current2, structured, text, normalized),   # only the lines this correction added
             "warnings": generic_notes + ops_notes + merge_warnings + same_notes + vital_notes + tidy_notes,
             "changed_rows": changed_rows}

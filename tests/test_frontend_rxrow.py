@@ -393,4 +393,4 @@ def test_the_on_screen_print_fallback_prints_the_medicine_name_in_capitals():
     prints = re.findall(r"@media print \{([^@]*?)\}\s*\}", css)
     assert any(re.search(r'table\.rx \[data-col="name"\] \{ text-transform:uppercase; ', p) for p in prints)
     assert css.count('[data-col="name"]') == 1                          # only in print: the screen stays as dictated
-    assert 'rx.css?v=9"' in (FRONT / "index.html").read_text(encoding="utf-8")
+    assert 'rx.css?v=10"' in (FRONT / "index.html").read_text(encoding="utf-8")

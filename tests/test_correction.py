@@ -10,7 +10,7 @@ import json
 
 import doctor_dictation.main as M
 from doctor_dictation.config import override_settings
-from doctor_dictation.core.correction import extract_correction, merge_form, resolve_blank_names
+from doctor_dictation.core.correction import CORRECTION_INSTRUCTION, extract_correction, merge_form, resolve_blank_names
 
 
 def test_correction_replaces_named_rx_row_and_keeps_others():
@@ -44,11 +44,19 @@ def test_non_empty_scalar_overwrites():
     assert out["review"] == "after 1 week"
 
 
-def test_non_empty_list_replaces_and_empty_list_keeps():
+def test_a_list_correction_adds_to_the_list_and_an_empty_list_keeps():
+    # owner, 2026-10-20: a correction upserts a list section (adds what is new), never replaces it wholesale
     cur = {"diagnosis": ["Right flank pain"], "complaints": ["burning micturition"]}
     out = merge_form(cur, {"diagnosis": ["Renal calculus"], "complaints": []})
-    assert out["diagnosis"] == ["Renal calculus"]
+    assert out["diagnosis"] == ["Right flank pain", "Renal calculus"]
     assert out["complaints"] == ["burning micturition"]
+
+
+def test_an_item_already_on_the_list_is_not_added_twice():
+    cur = {"diagnosis": ["Restlessness", "Weird thinking"], "advice": ["Plenty of fluids."]}
+    out = merge_form(cur, {"diagnosis": ["restlessness", "Sleeplessness", "Anaemia", "sleeplessness"], "advice": ["plenty of  fluids"]})
+    assert out["diagnosis"] == ["Restlessness", "Weird thinking", "Sleeplessness", "Anaemia"]
+    assert out["advice"] == ["Plenty of fluids."]
 
 
 def test_merge_never_mutates_current():
@@ -395,3 +403,15 @@ def test_correction_prompt_allows_a_new_medicine():
     # Final review #5: "copy the name from the current form" must not block adding a medicine.
     from doctor_dictation.core.correction import CORRECTION_INSTRUCTION as P
     assert "NEW row" in P
+
+
+def test_a_spoken_list_correction_adds_lines_and_checks_only_the_new_ones(monkeypatch):
+    # owner, 2026-10-20: "update diagnosis as sleeplessness and anaemia" kept "Restlessness"; the model may echo the old line
+    _stub_llm(monkeypatch, {"diagnosis": ["Restlessness", "Sleeplessness", "Anaemia 9.5"]})
+    from fastapi.testclient import TestClient
+    j = TestClient(M.app).post("/api/v1/correct", json={
+        "transcript": "update diagnosis as sleeplessness and anaemia", "current_form": {"diagnosis": ["Restlessness"]}}).json()
+    assert "structured" in j, j
+    assert j["structured"]["diagnosis"] == ["Restlessness", "Sleeplessness", "Anaemia 9.5"]
+    assert j["prose_check"] == [{"field": "diagnosis", "index": 2, "words": ["9.5"]}]   # "Restlessness" was not re-checked
+    assert "ONLY the new items" in CORRECTION_INSTRUCTION

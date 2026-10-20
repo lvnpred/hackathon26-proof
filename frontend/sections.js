@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   const URL = "/api/v1/review-date";
-  const NOTE = { complaints: "pCcNote", diagnosis: "pDxNote" };
+  const NOTE = { complaints: "pCcNote", diagnosis: "pDxNote", findings: "pFxNote" };
   let H = { post: null, waitMs: 400 };
   let seq = 0;
   let timer = null;

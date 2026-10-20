@@ -17,7 +17,7 @@ from doctor_dictation.core import followup, investigations
 from doctor_dictation.core.correction import preserve_untouched_rx_status
 from doctor_dictation.core.determinism import validate_structured
 from doctor_dictation.core.doctor_generic import settle
-from doctor_dictation.core.safety import screen_unverified, strip_grounding_markers
+from doctor_dictation.core.safety import mark_confirmed, screen_unverified, strip_grounding_markers
 from doctor_dictation.db import authorship as adb
 from doctor_dictation.db.opno import create_patient_with_new_op
 from doctor_dictation.pdf import PdfUnavailable, render_prescription
@@ -230,6 +230,7 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
     preserve_untouched_rx_status(structured, {}, validated)
     strip_grounding_markers(validated)  # the gate passed: each row is verified or confirmed, so no "confirm with doctor" text prints
     settle(validated)  # the gate passed: no doctor generic is pending any more
+    mark_confirmed(structured, req.confirmed_rows, validated)  # a reopen shows the doctor's confirmations, not Confirm again
     day = visit.today()  # a NEW document's visit day; a re-save keeps the day fixed at first save (below)
     conn = dbmod.get_conn()
     try:

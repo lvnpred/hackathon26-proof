@@ -66,3 +66,31 @@ def _generic_block(row: dict, confirmed: bool) -> str:
     if not clean_generic(row.get("generic")):
         return "invalid"
     return "pending" if row.get("generic_pending") is True and not confirmed else ""
+
+
+def mark_confirmed(structured: dict, confirmed_rows, validated: dict) -> dict:
+    """Stamp ``doctor_confirmed: True`` on each saved row the doctor confirmed that is not ``verified``, so a reopened document
+    does not ask again (owner, 2026-10-20); every other row loses the key. Mutates and returns ``validated``.
+
+    ``confirmed_rows`` indexes ``structured["rx"]`` (the page's rows); validation can drop rows, so a saved row takes the next
+    page row of the same name (case and spaces ignored), in page order."""
+    confirmed = set(confirmed_rows or [])
+    queues: dict = {}
+    page = structured.get("rx") if isinstance(structured, dict) else None
+    for index, row in enumerate(page if isinstance(page, list) else []):
+        if isinstance(row, dict):
+            queues.setdefault(_name_key(row), []).append(index in confirmed)
+    rows = validated.get("rx") if isinstance(validated, dict) else None
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        queue = queues.get(_name_key(row))
+        was = queue.pop(0) if queue else False
+        row.pop("doctor_confirmed", None)
+        if was and row.get("status") != "verified":
+            row["doctor_confirmed"] = True
+    return validated
+
+
+def _name_key(row: dict) -> str:
+    return " ".join(str(row.get("name") or "").casefold().split())

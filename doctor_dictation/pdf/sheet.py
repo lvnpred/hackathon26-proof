@@ -267,6 +267,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 {prose_section("Chief Complaints &amp; Brief History", s.get("complaints"))}
 {prose_section("Diagnosis / Clinical Impression", s.get("diagnosis"))}
 {list_section("Investigations Advised", s.get("investigations"))}
+{prose_section("Findings", s.get("findings"))}
 {rx_section(s.get("rx"))}
 {list_section("Dietary &amp; General Advice", s.get("advice"))}
 {review_section("Review / Follow-up", s.get("review"), s.get("review_date"))}

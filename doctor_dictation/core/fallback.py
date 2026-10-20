@@ -80,6 +80,7 @@ def fallback_format(transcript: str) -> dict:
         "opNo": op_no,
         "diagnosis": [],
         "complaints": [],
+        "findings": [],
         "investigations": [],
         "rx": [],
         "advice": [],

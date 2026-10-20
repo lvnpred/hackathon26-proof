@@ -29,12 +29,15 @@ CORRECTION_INSTRUCTION = (
     '4. ageSex format is "<age> / <M|F>", for example "45 / M".\n'
     '5. Duration format: "<N> days/weeks/months" with digits; two weeks -> 14 days.\n'
     "6. Never invent strengths, durations or drugs. Return only fields the doctor stated.\n"
-    '7. To REMOVE something add a top-level "remove" object: {"rx": ["<row name>"], '
-    '"diagnosis": [], "complaints": [], "investigations": [], "advice": []} '
+    '7. A list section (complaints, findings, diagnosis, investigations, advice) keeps its items: return in it ONLY the '
+    'new items the correction adds ("also", "add", "update ... as" add items). To CHANGE an existing item use "replace" '
+    'and to DELETE one use "remove", only when the doctor names that item. '
+    'To REMOVE something add a top-level "remove" object: {"rx": ["<row name>"], '
+    '"diagnosis": [], "complaints": [], "findings": [], "investigations": [], "advice": []} '
     "(list the exact text of each item to delete). To CHANGE the name or text of one "
     'existing row/item add a top-level "replace" object: {"rx": [{"from": "<current name>", '
     '"to": "<right name>"}], "diagnosis": [{"from": "<current text>", "to": "<new text>"}], '
-    '"complaints": [], "investigations": [], "advice": []}. Both keys are optional; omit '
+    '"complaints": [], "findings": [], "investigations": [], "advice": []}. Both keys are optional; omit '
     "empty ones.\n"
     '8. Use "remove"/"replace" ONLY when the doctor explicitly asks to remove, delete, '
     "drop, cancel or stop something, or says a name/text is wrong and gives the right one. "

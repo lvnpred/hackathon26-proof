@@ -25,7 +25,7 @@ def test_strips_a_leading_demographics_clause():                        # spec 5
                                                    "45-year-old female with knee pain", "65 yrs M c/o giddiness", "78 yr old male.",
                                                    "45M with chest pain", "45 M, chest pain", "45-F; cough", "50 y/o, asthma", "65 yrs old, BP 140/90"])
     w = tidy_sections(s)
-    assert s["complaints"] == ["C/o fever for 3 days", "Cough", "Knee pain", "C/o giddiness", "Chest pain", "Chest pain", "Cough", "Asthma"]
+    assert s["complaints"] == ["C/o fever for 3 days", "Cough", "Knee pain", "C/o giddiness", "Chest pain", "Asthma"]   # repeats dropped
     assert s["vitals"]["bp"] == "140/90"
     assert w[0] == "complaints[0]: removed the patient's details from the start (they print in the patient line)"
 
@@ -72,5 +72,5 @@ def test_format_and_correct_routes_tidy(monkeypatch):
     assert not any("dropped" in w for w in j["warnings"])
     _stub_llm(monkeypatch, [{"complaints": ["Fever", "78 yr old male, cough"]}])
     j = TestClient(M.app).post("/api/v1/correct", json={"transcript": "complaints are fever and cough", "current_form": form}).json()
-    assert j["structured"]["complaints"] == ["Cough"]            # replaced field: dedupe and strip apply
+    assert j["structured"]["complaints"] == ["Cough"]            # added to: strip, then the diagnosis and repeat dedupe apply
     assert 'complaints: dropped "Fever", the same as a diagnosis' in j["warnings"]

@@ -161,4 +161,16 @@ def test_app_js_hooks_fire_only_after_a_confirm_and_when_a_sheet_appears():
     corr = app.split("async function applyCorrection")[1].split("} catch")[0]
     assert "RxView.focusFirst();" in corr and corr.index("renderSheet(") < corr.index("RxView.focusFirst();")
     assert app.index("Authorship.onOpen(j);") < app.index("RxView.focusFirst();")     # view-only is known before the first focus
-    assert "rxview.js?v=14" in html and "app.js?v=45" in html
+    assert "rxview.js?v=14" in html and "app.js?v=47" in html
+
+
+def test_a_reopened_document_restores_the_saved_confirmations_and_the_waiting_row_is_marked():
+    app, css = (FRONT / "app.js").read_text(encoding="utf-8"), (FRONT / "rx.css").read_text(encoding="utf-8")
+    opened = app.split("state.confirmed.clear();")[1].split("Authorship.onOpen(j)")[0]   # openDocument: clear, then restore
+    assert "renderSheet(state.structured, savedConfirmations(state.structured));" in opened
+    fn = "function savedConfirmations(s)" + app.split("function savedConfirmations(s)")[1].split("\n}\n")[0] + "\n}\n"
+    r = _run("let rowSeq = 0; const state = { confirmed: new Set() };\n" + fn +
+             "const ids = savedConfirmations({ rx: [{ name: 'A', doctor_confirmed: true }, { name: 'B' }, { name: 'C', doctor_confirmed: 'yes' }] });"
+             "out([ids, [...state.confirmed]]);")
+    assert r == [["1", "2", "3"], ["1"]]                                   # only a true flag counts
+    assert 'tr[data-rxstate]:has(.rx-act:focus)' in css and 'content:"Press Enter' in css

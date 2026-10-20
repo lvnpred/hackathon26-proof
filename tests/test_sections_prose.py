@@ -129,12 +129,12 @@ def test_an_old_saved_document_reprints_in_the_new_order_with_no_date_and_a_new_
     assert html.index("epigastric pain") < html.index("Gastritis") and '<div class="sec-title">Review / Follow-up</div><div class="prose"><p>1 week</p></div>' in html and 'class="rev-date"' not in html
 
 
-def test_correct_checks_only_the_prose_lists_the_patch_replaced(monkeypatch):
+def test_correct_checks_only_the_prose_lines_the_patch_added(monkeypatch):
     _stub_llm(monkeypatch, [{"complaints": ["Known diabetic for 5 years."]}])
     form = {"complaints": ["C/o fever."], "diagnosis": ["Acute febrile illness"], "rx": []}
     j = TestClient(M.app).post("/api/v1/correct", json={"transcript": "also fever with sweating", "current_form": form}).json()
-    assert j["structured"]["complaints"] == ["Known diabetic for 5 years."]
-    assert j["prose_check"] == [{"field": "complaints", "index": 0, "words": ["diabetic", "5"]}]     # the untouched diagnosis is not checked
+    assert j["structured"]["complaints"] == ["C/o fever.", "Known diabetic for 5 years."]          # added, not replaced (owner, 2026-10-20)
+    assert j["prose_check"] == [{"field": "complaints", "index": 1, "words": ["diabetic", "5"]}]     # only the added line, by its place
 
 
 def test_the_rules_path_cuts_history_at_a_drug_name_and_caps_long_prose_on_every_engine_path(monkeypatch):

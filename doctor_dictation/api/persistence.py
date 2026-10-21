@@ -13,6 +13,7 @@ from doctor_dictation import db as dbmod
 from doctor_dictation.api import authorship, visit
 from doctor_dictation.api.formulary import learn_doctor_generics, learn_from_save, use_clinic_layer
 from doctor_dictation.api.investigations import remember_from_save, use_investigations
+from doctor_dictation.config import get_settings
 from doctor_dictation.core import followup, investigations
 from doctor_dictation.core.correction import preserve_untouched_rx_status
 from doctor_dictation.core.determinism import validate_structured
@@ -21,10 +22,22 @@ from doctor_dictation.core.safety import mark_confirmed, screen_unverified, stri
 from doctor_dictation.db import authorship as adb
 from doctor_dictation.db.opno import create_patient_with_new_op
 from doctor_dictation.pdf import PdfUnavailable, render_prescription
+from doctor_dictation.providers.stt.factory import make_stt
 from doctor_dictation.templates import service as template_service
 
 router = APIRouter()
 log = logging.getLogger(__name__)
+
+
+def speech_settings() -> dict:
+    """The speech settings a first save records in documents.model_versions, so edit rates can be compared with
+    hints and silence trimming on and off. Read at save time: they change only when the server restarts."""
+    s = get_settings()
+    try:
+        engine = make_stt(s).active_name()
+    except ValueError:  # bad STT_CHAIN, or stub without ALLOW_STUB_PROVIDERS (as /api/health reports it)
+        engine = "misconfigured"
+    return {"stt": {"engine": engine, "hints": s.stt_use_hints, "trim": s.stt_trim_silence}}
 
 
 class PatientCreate(BaseModel):
@@ -312,6 +325,7 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
                 req.transcript_sha256,
                 validated,
                 engine=req.engine or None,
+                model_versions=speech_settings(),   # a re-save keeps the first save's: the draft came from those
                 finalized_by=ident.user_id if ident else None,
                 finalized_at=dbmod._utcnow(),
                 pdf_path=pdf_path,

@@ -41,11 +41,14 @@ def _offline_provider_keys(monkeypatch):
     Set blank, never delete: load_dotenv() does not override a variable that exists, so a blank
     survives it, and load_secret() treats a present-but-empty env var as winning over secrets.json.
     The settings snapshot is cached, so drop it too: the next get_settings() rebuilds with blank keys.
-    monkeypatch restores the old snapshot at teardown.
+    monkeypatch restores the old snapshot at teardown. The ACC2 flags are pinned off the same way, so a .env that
+    turns them on cannot change what a test sends; a test that needs them on uses override_settings.
     """
     from doctor_dictation import config
-    for name in ("OPENAI_API_KEY", "DEEPSEEK_API_KEY"):
+    for name in ("OPENAI_API_KEY", "DEEPSEEK_API_KEY", "GROQ_API_KEY", "ASSEMBLYAI_API_KEY", "META_API_KEY"):
         monkeypatch.setenv(name, "")
+    for name in ("STT_USE_HINTS", "STT_TRIM_SILENCE"):
+        monkeypatch.setenv(name, "0")
     monkeypatch.setattr(config, "_settings", None)
 
 

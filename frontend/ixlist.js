@@ -162,8 +162,10 @@ window.IxList = (function () {
     li.append(span, el("span", "ix-full"), el("span", "ix-chip no-print"));
     li.appendChild(button("ix-keep ix-act no-print", "Keep", () => keep(li)));
     li.append(...rememberBox(li));
-    const x = button("x-btn no-print", "×", () => {}); x.dataset.action = "delete-ix"; x.title = "Delete this test";
-    li.appendChild(x);                                                      // app.js routes the click (IxList.remove)
+    // Not button(): its click handler stops propagation, and app.js routes the x from #sheet (IxList.remove).
+    const x = el("button", "x-btn no-print", "×"); x.type = "button"; x.contentEditable = "false";
+    x.dataset.action = "delete-ix"; x.title = "Delete this test";
+    li.appendChild(x);
     if (viewOnly()) { span.contentEditable = "false"; span.dataset.ro = "1"; x.disabled = true; }
     paint(li);
     return li;

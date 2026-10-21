@@ -246,6 +246,20 @@ def test_delete_and_undo_put_the_test_back_with_its_state():
     assert r["remember"] == [1] and r["at"] == 1 and r["x"] == "delete-ix"
 
 
+def test_clicking_x_reaches_the_sheet_router_and_deletes_the_test():
+    # app.js routes every x by a click listener on #sheet (data-action "delete-ix" -> IxList.remove): the x's own
+    # click must bubble up to it.
+    r = _run(f"""
+      IxList.render(ul, [{_js(VERIFIED)}, {_js(NEW)}]);
+      sheet.addEventListener("click", (e) => {{
+        const b = e.target.closest(".x-btn");
+        if (b && b.dataset.action === "delete-ix") IxList.remove(b.closest("li"));
+      }});
+      click(q(items()[0], ".x-btn"));
+      out({{ read: IxList.read(ul).map((i) => i.text), hook: removed.length }});""")
+    assert r == {"read": ["Uroflow at home"], "hook": 1}
+
+
 def test_show_blocked_marks_the_named_items():
     r = _run(f"""
       IxList.render(ul, [{_js(VERIFIED)}, {_js(NEW)}, {_js({**RED, "status": ""})}, {_js(LEGACY)}]);
@@ -351,6 +365,6 @@ def test_app_js_hooks():
 def test_index_html_pins():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
     assert html.index("rx.css?v=10") < html.index("ixlist.css?v=2")
-    assert html.index("ixlist.js?v=2") < html.index("app.js?v=47")
+    assert html.index("ixlist.js?v=3") < html.index("app.js?v=47")
     assert '<ul id="pIx" class="ix-list"></ul>' in html and not re.search(r'id="pIx"[^>]*editable-list', html)
     assert len((FRONT / "ixlist.js").read_text(encoding="utf-8").splitlines()) < 300

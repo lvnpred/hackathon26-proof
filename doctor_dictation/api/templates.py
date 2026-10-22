@@ -11,13 +11,14 @@ from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from doctor_dictation import db as dbmod
+from doctor_dictation.api.forms import FormLimitRoute
 from doctor_dictation.api.profile import profile_response
 from doctor_dictation.config import get_settings
 from doctor_dictation.db import templates as tdb
 from doctor_dictation.pdf import PdfUnavailable, render_prescription, validate_layout
 from doctor_dictation.templates import TemplateError, doctors, service
 
-router = APIRouter(prefix="/api/v1/templates", tags=["templates"])
+router = APIRouter(prefix="/api/v1/templates", tags=["templates"], route_class=FormLimitRoute)
 
 SAMPLE = {
     "patientName": "Sample Patient", "ageSex": "34 / F", "opNo": "OP-0001", "review": "Review after 5 days",

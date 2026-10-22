@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
 
 from doctor_dictation import db as dbmod
+from doctor_dictation.api.forms import FormLimitRoute
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.audio.trim import trim_silence
 from doctor_dictation.config import get_settings
@@ -15,7 +16,7 @@ from doctor_dictation.providers.stt.base import SttChainError
 from doctor_dictation.providers.stt.factory import failure_response, make_stt, success_body
 from doctor_dictation.scope import NoScope, current_scope
 
-router = APIRouter()
+router = APIRouter(route_class=FormLimitRoute)
 
 
 def _doctor_top(limit: int) -> list[str]:

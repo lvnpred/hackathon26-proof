@@ -81,6 +81,7 @@
   function selectTab(kind) {                       // kind: "medicine" | "investigation" | "shared" | null for People
     el("teamPeople").hidden = Boolean(kind);
     el("teamTabPeople").setAttribute("aria-selected", String(!kind));
+    t.dialog.setAttribute("data-wide", String(Boolean(kind)));   // a list tab's table gets the wide dialog (team.css)
     shownTabs().forEach(([tab, panel, , k]) => {
       el(panel).hidden = k !== kind;
       el(tab).setAttribute("aria-selected", String(k === kind));

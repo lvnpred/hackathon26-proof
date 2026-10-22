@@ -156,7 +156,9 @@ def test_get_document_loads_structured(client_with_today_doc):
         "transcript_sha256",
         "created_at",
         "visit_date",      # I3: the clinic-zone day of created_at
+        "past",            # UI-A: an earlier day's prescription is view and reprint only
     }
+    assert j["past"] is False
     assert j["document_id"] == doc["document_id"]
     assert j["structured"] == {"diagnosis": ["Fever"]}
     assert j["transcript_sha256"] == "sha-today"

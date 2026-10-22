@@ -2,6 +2,7 @@
 .team-panel [hidden] { display:none !important; }
 dialog.team-panel { width:min(780px, 96vw); max-height:92vh; border-radius:16px; }
 dialog.team-panel[open] { display:flex; flex-direction:column; }
+dialog.team-panel[data-wide="true"] { width:min(1100px, 96vw); }   /* a list tab (team.js selectTab): room for the table */
 .team-panel .team-head { display:flex; justify-content:space-between; align-items:center; padding:20px 24px 12px; }
 .team-panel .team-head h2 { margin:0; font-size:20px; }
 .team-panel .team-body { padding:8px 24px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
@@ -25,6 +26,26 @@ dialog.team-panel[open] { display:flex; flex-direction:column; }
 .team-panel button { min-height:44px; }
 .team-panel .team-row-actions button { margin:0 6px 4px 0; min-height:36px; border-radius:8px; font-weight:600; }
 .team-panel .team-meds-table td:first-child { overflow-wrap:anywhere; word-break:break-word; }   /* a long unbroken name wraps, never scrolls the table sideways */
+/* The list tabs (clinlists.js, plan UI-A Task 4): about one text line per row, the actions on one line, the table scrolling
+   inside the panel under a sticky header row. The compact buttons go back to 44px on a phone (the block below). */
+.team-panel .team-meds-table th, .team-panel .team-meds-table td { padding:3px 8px; }
+.team-panel .team-meds-table th { padding-top:8px; padding-bottom:8px; }
+.team-panel .team-meds-table .team-row-actions { white-space:nowrap; }
+.team-panel .team-meds-table .team-row-actions button { margin:0 4px 0 0; padding:0 10px; min-height:32px; }
+.team-panel .team-list-box { flex:none; overflow:auto; max-height:max(240px, calc(92vh - 330px)); border:1px solid var(--soft); border-radius:10px; }
+.team-panel .team-list-box th { position:sticky; top:0; z-index:1; background:var(--card); box-shadow:inset 0 -1px 0 var(--soft); }
+.team-panel .team-tag { display:inline-block; white-space:nowrap; padding:1px 8px; border:1px solid var(--soft); border-radius:999px; font-size:12px; font-weight:600; color:var(--muted); background:var(--bg); }
+.team-panel .team-tag-learned { color:var(--accent); border-color:var(--accent); background:var(--card); }
+.team-panel .team-tag-clinic-added, .team-panel .team-tag-clinic-edited { color:var(--ok); border-color:var(--ok); background:var(--card); }
+.team-panel .team-tag-hidden { color:var(--warn); border-color:var(--warn); background:var(--card); }
+.team-panel .team-chip-bar { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.team-panel .team-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.team-panel .team-chip { min-height:32px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:500; color:var(--muted); background:var(--card); }
+.team-panel .team-chip[aria-pressed="true"] { color:var(--card); background:var(--accent); border-color:var(--accent); font-weight:600; }
+.team-panel .team-count { margin:0; font-size:13px; color:var(--muted); }
+.team-panel .team-count:empty { display:none; }
+.team-panel .team-more summary { cursor:pointer; font-size:14px; color:var(--accent); font-weight:600; }
+.team-panel .team-more p { margin:6px 0 0; }
 .team-panel .team-row-actions .team-med-remove { min-height:44px; padding:0 14px; }
 @media (max-width:520px) {   /* the medicines table only: one block per medicine, so nothing sits off-screen to the right */
   .team-panel .team-meds-table thead { display:none; }
@@ -33,7 +54,10 @@ dialog.team-panel[open] { display:flex; flex-direction:column; }
   .team-panel .team-meds-table td { padding:2px 0; border:0; font-size:13px; color:var(--muted); }
   .team-panel .team-meds-table td:first-child { font-size:16px; font-weight:600; color:var(--ink); }
   .team-panel .team-meds-table td[data-label]::before { content:attr(data-label) ": "; }
-  .team-panel .team-meds-table .team-row-actions { padding-top:8px; }
+  .team-panel .team-meds-table .team-row-actions { padding-top:8px; white-space:normal; }
+  .team-panel .team-meds-table .team-row-actions button { margin:0 6px 4px 0; padding:0 14px; min-height:44px; }   /* a finger, not a mouse */
+  .team-panel .team-list-box { max-height:none; overflow:visible; border:0; }
+  .team-panel .team-chip { min-height:44px; }
 }
 .team-panel .team-tab-body { display:flex; flex-direction:column; gap:14px; }
 .team-panel .team-hint { margin:0; font-size:14px; color:var(--muted); }

@@ -6,7 +6,8 @@ UTC timestamps are not changed by this module.
 """
 import logging
 import os
-from datetime import date, datetime, timezone
+import re
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from doctor_dictation.config import get_settings
@@ -50,6 +51,30 @@ def to_clinic(dt: datetime, name=None) -> datetime:
 def today(now=None) -> date:
     """The clinic calendar day: the day the PDF prints on Save (api/persistence.py). ``now`` is an aware instant for tests."""
     return to_clinic(now or datetime.now(timezone.utc)).date()
+
+
+def day_bounds_utc(day: date) -> tuple[str, str]:
+    """UTC bounds ``[start, end)`` of the clinic-zone calendar ``day``, formatted like stored ``created_at`` values
+    (``%Y-%m-%dT%H:%M:%SZ``). Missing zone data: the server's local zone, as ``to_clinic``."""
+    zone = _zone()
+
+    def midnight(d):
+        local = datetime(d.year, d.month, d.day, tzinfo=zone) if zone else datetime(d.year, d.month, d.day).astimezone()
+        return local.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return midnight(day), midnight(day + timedelta(days=1))
+
+
+_ISO_DAY = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+
+
+def parse_day(text) -> date | None:
+    """A strict ``YYYY-MM-DD`` that is a real day, else None (``date.fromisoformat`` alone also takes other forms)."""
+    if not isinstance(text, str) or not _ISO_DAY.fullmatch(text):
+        return None
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        return None
 
 
 def locale() -> str:

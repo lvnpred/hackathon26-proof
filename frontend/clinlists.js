@@ -6,19 +6,28 @@
 (function () {
   const LISTS = "/api/v1/lists/";
   const MEDS = "/api/v1/formulary";
-  const BADGE = { shipped: "Shared list", "clinic-added": "Added by clinic", "clinic-edited": "Edited by clinic", hidden: "Hidden", learned: "Learned" };
+  const BADGE = { shipped: "Shared", "clinic-added": "Added by clinic", "clinic-edited": "Edited by clinic", hidden: "Hidden", learned: "Learned" };
+  // The filter chips above the table (they replaced the "Only changed or flagged" checkbox; Clinic changes is what it showed).
+  const CHIPS = [["all", "All", "All"], ["clinic", "Clinic changes", "Clinic"], ["learned", "Learned", "Learned"], ["hidden", "Hidden", "Hidden"]];
+  const CHIPS_TEXT = "Clinic changes: every row your clinic changed, plus rows flagged or waiting for approval.";
   const FLAG = { "shipped-changed": "Updated in the shared list", "safety-override": "Safety entry: the shared list is used" };
   const KINDS = {
-    medicine: { tab: "teamTabMeds", panel: "teamMeds", rows: "teamMedRows", live: "teamMedLive", empty: "teamMedEmpty", filter: "teamMedFilter", only: "teamMedOnly",
-      add: "Add a medicine", addId: "teamMedAdd", cols: ["Medicine", "Generic", "Brands", "Source", "Actions"], none: "Nothing in this list yet.",
-      hint: "The medicines your clinic's doctors can dictate: the shared list plus your clinic's changes. Names your doctors confirmed on saved documents show as Learned, " +
-        "and your clinic recognises them when dictating. Removing a learned name is not permanent: it comes back only after two new documents confirm it again." },
-    investigation: { tab: "teamTabTests", panel: "teamTests", rows: "teamTestRows", live: "teamTestLive", empty: "teamTestEmpty", filter: "teamTestFilter", only: "teamTestOnly",
-      add: "Add a test", addId: "teamTestAdd", cols: ["Test", "Print", "Category", "Source", "Actions"], none: "No investigations in this list yet.",
-      hint: "The investigations your clinic's doctors can dictate: the shared list plus your clinic's changes." },
+    medicine: { tab: "teamTabMeds", panel: "teamMeds", rows: "teamMedRows", live: "teamMedLive", empty: "teamMedEmpty", filter: "teamMedFilter", chip: "teamMedChip",
+      count: "teamMedCount", head: "teamMedHead", add: "Add a medicine", addId: "teamMedAdd", cols: ["Medicine", "Generic", "Brands", "Source", "Actions"],
+      none: "Nothing in this list yet.", search: ["Search medicines", "Search name, generic or brand"],
+      hint: "The medicines your doctors can dictate: the shared list plus your clinic's changes.",
+      more: ["Shared: on the shared list, unchanged. Added by clinic and Edited by clinic: your clinic's own changes. Hidden: doctors no longer find it; " +
+        "Reset to default brings it back.", "Learned: names your doctors confirmed on saved documents; your clinic recognises them when dictating. " +
+        "Removing a learned name is not permanent: it comes back only after two new documents confirm it again.", CHIPS_TEXT] },
+    investigation: { tab: "teamTabTests", panel: "teamTests", rows: "teamTestRows", live: "teamTestLive", empty: "teamTestEmpty", filter: "teamTestFilter", chip: "teamTestChip",
+      count: "teamTestCount", head: "teamTestHead", add: "Add a test", addId: "teamTestAdd", cols: ["Test", "Print", "Category", "Source", "Actions"],
+      none: "The shared test list is not loaded yet. Tests your doctors add or remember appear here.", search: ["Search investigations", "Search name, print name or category"],
+      hint: "The tests your doctors can dictate: the shared list plus your clinic's changes.",
+      more: ["Shared: on the shared list, unchanged. Added by clinic and Edited by clinic: your clinic's own changes. Hidden: doctors no longer find it; " +
+        "Reset to default brings it back.", CHIPS_TEXT] },
   };
   const host = { send: async () => null, showErr: () => {}, errText: () => "" };
-  const state = { medicine: { items: [], seq: 0 }, investigation: { items: [], seq: 0 } };
+  const state = { medicine: { items: [], seq: 0, chip: "all" }, investigation: { items: [], seq: 0, chip: "all" } };
   const el = (id) => document.getElementById(id);
 
   function make(tag, attrs, text) {
@@ -34,25 +43,32 @@
     const k = KINDS[kind];
     const hrow = make("tr");
     k.cols.forEach((h) => hrow.append(make("th", { scope: "col" }, h)));
-    const thead = make("thead");
+    const thead = make("thead", { id: k.head });
     thead.append(hrow);
     const table = make("table", { class: "team-table team-meds-table" });          // stacked per row on a phone (team.css)
     table.append(thead, make("tbody", { id: k.rows }));
-    const tableBox = make("div", { class: "team-table-box" });
+    const tableBox = make("div", { class: "team-table-box team-list-box" });   // scrolls inside the panel under a sticky header row
     tableBox.append(table);
-    const search = make("input", { id: k.filter, type: "search", autocomplete: "off", "aria-label": "Filter the list" });
-    const only = make("input", { id: k.only, type: "checkbox" });
-    const onlyLabel = make("label", { class: "team-only" });
-    onlyLabel.append(only, make("span", {}, "Only changed or flagged"));
-    const bar = make("div", { class: "team-filter" });
-    bar.append(search, onlyLabel);
-    search.addEventListener("input", () => rerender(kind));      // one event each: the text box on input, the checkbox on change
-    only.addEventListener("change", () => rerender(kind));
+    const search = make("input", { id: k.filter, type: "search", autocomplete: "off", "aria-label": k.search[0], placeholder: k.search[1] });
+    search.addEventListener("input", () => rerender(kind));      // one render per keystroke; the chips render on click
     const add = make("button", { id: k.addId, type: "button", class: "primary team-list-add" }, k.add);
     add.addEventListener("click", () => addEntry(kind));
+    const bar = make("div", { class: "team-filter" });
+    bar.append(search, add);
+    const chips = make("div", { class: "team-chips", role: "group", "aria-label": "Show" });
+    CHIPS.forEach(([key, label, id]) => {
+      const c = make("button", { id: k.chip + id, type: "button", class: "team-chip", "aria-pressed": String(key === "all") }, label);
+      c.addEventListener("click", () => { state[kind].chip = key; rerender(kind); });
+      chips.append(c);
+    });
+    const counts = make("div", { class: "team-chip-bar" });
+    counts.append(chips, make("p", { id: k.count, class: "team-count", role: "status" }));
+    const more = make("details", { class: "team-more" });
+    more.append(make("summary", {}, "What do these mean?"));
+    k.more.forEach((line) => more.append(make("p", { class: "team-hint" }, line)));
     const panel = make("div", { id: k.panel, class: "team-tab-body", role: "tabpanel", "aria-labelledby": k.tab, hidden: true });
-    panel.append(make("p", { class: "team-hint" }, k.hint), make("p", { id: k.live, class: "team-live", role: "status" }),
-      add, bar, make("p", { id: k.empty, class: "team-hint", hidden: true }, k.none), tableBox);
+    panel.append(make("p", { class: "team-hint" }, k.hint), more, make("p", { id: k.live, class: "team-live", role: "status" }),
+      bar, counts, make("p", { id: k.empty, class: "team-hint", hidden: true }, k.none), tableBox);
     return panel;
   }
 
@@ -65,6 +81,7 @@
     return [generic, generic, brands.join(", ")];
   }
   function changed(item) { return item.badge !== "shipped" || Boolean(item.flag) || Boolean(item.pending); }
+  const SHOWS = { all: () => true, clinic: changed, learned: (item) => item.badge === "learned", hidden: (item) => item.badge === "hidden" };
   function matches(kind, item, text) {
     if (!text) return true;
     const e = item.entry || {};
@@ -73,7 +90,7 @@
   }
   function sourceCell(item) {
     const td = make("td", { "data-label": "Source" });
-    td.append(make("div", {}, BADGE[item.badge] || item.badge));
+    td.append(make("span", { class: "team-tag team-tag-" + String(item.badge) }, BADGE[item.badge] || item.badge));
     if (item.flag) td.append(make("div", { class: "team-flag" }, FLAG[item.flag] || item.flag));
     if (item.flag && item.flag_reason) td.append(make("div", { class: "team-flag-reason" }, item.flag_reason));   // why the row is set aside
     if (item.pending) {
@@ -87,12 +104,19 @@
   function render(kind) {
     const k = KINDS[kind], s = state[kind];
     const text = el(k.filter).value.trim().toLowerCase();
-    const only = el(k.only).checked;
+    const shows = SHOWS[s.chip];
     const rows = el(k.rows);
     rows.replaceChildren();
     el(k.empty).hidden = !s.loaded || s.items.length > 0;
+    el(k.head).hidden = s.items.length === 0;                 // no column headings (nor an empty framed box) over an empty or loading list
+    el(k.head).parentNode.parentNode.hidden = s.items.length === 0;
+    CHIPS.forEach(([key, label, id]) => {
+      const c = el(k.chip + id);
+      c.textContent = label + " (" + s.items.filter(SHOWS[key]).length + ")";
+      c.setAttribute("aria-pressed", String(key === s.chip));
+    });
     s.items.forEach((item) => {
-      if ((only && !changed(item)) || !matches(kind, item, text)) return;
+      if (!shows(item) || !matches(kind, item, text)) return;
       const [a, b, c] = names(kind, item);
       const tr = make("tr", { "data-key": item.entry_key });
       tr.append(make("td", {}, a), make("td", { "data-label": k.cols[1] }, b), make("td", { "data-label": k.cols[2] }, c), sourceCell(item));
@@ -101,6 +125,7 @@
       tr.append(cell);
       rows.append(tr);
     });
+    el(k.count).textContent = s.loaded ? "Showing " + rows.children.length + " of " + s.items.length : "";
   }
   function rerender(kind) { render(kind); }
 

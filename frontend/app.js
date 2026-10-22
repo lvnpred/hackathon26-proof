@@ -10,6 +10,8 @@ const TRANSCRIBE_TIMEOUT_MS = 300000; // 5 minutes
 const FORMAT_TIMEOUT_MS = 90000;
 const CORRECT_TIMEOUT_MS = 90000;
 const SAVE_TIMEOUT_MS = 60000;
+const MAX_RECORD_S = 300;   // a dictation stops itself at 5 minutes (reccap.js) ...
+const WARN_RECORD_S = 270;  // ... after a warning 30 seconds before
 
 const recBtn = $("recBtn");
 const timerEl = $("timer");
@@ -48,6 +50,8 @@ const state = {
   documentId: null,     // set only when opened from "Today" -> a re-save updates it
   profile: null,        // last loaded clinic profile
   today: [],            // last loaded "Today" rows
+  listDay: "",          // the day the list shows: "" = today, else an earlier ISO day (daynav.js moves it)
+  shownDay: "",         // the day whose rows are on screen (listDay goes back to it when a fetch fails)
 };
 
 // Stable identity for Rx rows. Confirmations key on this, not on the positional
@@ -219,7 +223,7 @@ function renderToday(rows) {
   if (!state.today.length) {
     const empty = document.createElement("div");
     empty.className = "today-empty";
-    empty.textContent = "No patients completed yet today.";
+    empty.textContent = window.DayNav ? DayNav.emptyText(state.listDay) : "No patients completed yet today.";
     todayList.appendChild(empty);
     return;
   }
@@ -259,13 +263,18 @@ let todaySeq = 0;   // only the newest request may render (a late answer to an e
 async function loadToday() {
   const seq = ++todaySeq;
   try {
-    const r = await fetch("/api/v1/encounters/today" + (window.Authorship ? Authorship.todayQuery() : ""));
+    const q = window.Authorship ? Authorship.todayQuery() : "";
+    const r = await fetch(window.DayNav ? DayNav.url("/api/v1/encounters/today", q, state.listDay) : "/api/v1/encounters/today" + q);
     if (!r.ok) throw new Error("today " + r.status);
     const rows = await safeJson(r);
     if (seq !== todaySeq) return;
+    state.shownDay = state.listDay;
+    if (window.DayNav) DayNav.render();
     renderToday(rows);
   } catch {
-    // Leave the sidebar as-is; a refresh failure must not disturb the sheet.
+    // Leave the sidebar as-is; a refresh failure must not disturb the sheet. The title goes back to the day whose rows
+    // are still on screen.
+    if (seq === todaySeq && window.DayNav) { state.listDay = state.shownDay || ""; DayNav.render(); }
   }
 }
 
@@ -323,7 +332,10 @@ async function openDocument(row) {
     setStep("opened", { viewOnly: viewOnlyNow, ...stepCounts() });       // openDocument: nothing was heard this time
     const author = viewOnlyNow ? window.Authorship.viewOnlyAuthor() : "";
     refreshMicLabel();
-    setStatus(viewOnlyNow
+    setStatus(viewOnlyNow && !author && j.past
+      ? "Viewing " + (row.patient_name || "document") + " from " + ((window.Dates && Dates.date(j.visit_date)) || j.visit_date || "an earlier day") +
+        ". Past prescriptions are view and reprint only."
+      : viewOnlyNow
       ? "Viewing " + (row.patient_name || "document") + " (" + author + "'s prescription). You can print it, not edit it."
       : "Reopened " + (row.patient_name || "document") + " — Print it as is, or edit and Save to update this document.");
   } catch (e) {
@@ -343,6 +355,7 @@ function updateResaveNote() {
 
 // ---- recorder --------------------------------------------------------------
 let mr = null, chunks = [], tick = null, t0 = 0;
+const recCap = RecCap.create({ max: MAX_RECORD_S, warn: WARN_RECORD_S, timer: timerEl, status: setStatus, stop: () => { if (mr && mr.state === "recording") mr.stop(); } });
 
 recBtn.addEventListener("click", () => {
   if (state.working || (window.SpellModal && SpellModal.busy())) return;
@@ -378,7 +391,8 @@ async function beginRecording() {
   refreshPrintButton();
   t0 = Date.now();
   timerEl.textContent = "00:00";
-  tick = setInterval(() => { timerEl.textContent = fmtTime(Math.floor((Date.now() - t0) / 1000)); }, 500);
+  recCap.reset();
+  tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); timerEl.textContent = fmtTime(s); recCap.tick(s); }, 500);
   recBtn.classList.add("recording");
   setMicLabel("■ Stop");
   wave.classList.add("on");
@@ -393,6 +407,7 @@ async function beginRecording() {
 function stopStream(stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
 function endRecordingUI() {
   if (tick) { clearInterval(tick); tick = null; }
+  timerEl.classList.remove("rec-warn");
   recBtn.classList.remove("recording");
   wave.classList.remove("on");
   refreshMicLabel();
@@ -484,7 +499,7 @@ async function postJson(url, body, timeoutMs, outer) {
 }
 
 async function transcribe(blob) {
-  setWorking(true, "Transcribing…");
+  setWorking(true, recCap.capped() ? recCap.stopText : "Transcribing…");   // a 5-minute stop keeps saying why it stopped
   setStep("transcribing");
   const fd = new FormData();
   fd.append("audio", blob, "dictation.webm");
@@ -1045,6 +1060,7 @@ async function saveDocument() {
     }
   }
   const gen = state.editGen; // edits after this point are NOT in the payload
+  const wasNew = state.documentId == null;   // a NEW document is today's: the list goes back to today to show it
 
   setWorking(true, "Saving…");
   try {
@@ -1079,6 +1095,7 @@ async function saveDocument() {
     updateResaveNote();
     refreshMicLabel();
     setWorking(false); // also refreshes Print (now enabled)
+    if (wasNew) state.listDay = "";
     loadToday();
     refreshPrintButton();
     setStatus(changedWhileSaving
@@ -1098,7 +1115,11 @@ async function saveDocument() {
       setStatus(n ? "Some medicines still need confirmation before saving." : "Some tests were not heard in the dictation.");
       showError(IxList.blockedMessage(n, ix.length));
     } else {
-      showError(errorMessage(e, "Save failed"));
+      showError((e && e.status === 409 && e.data && e.data.hint) || errorMessage(e, "Save failed"));   // e.g. a past prescription
+      if (e && e.status === 409 && e.data && e.data.error === "past prescription") {
+        if (window.Authorship) Authorship.lockPast(state.visitDate);   // opened before midnight, saved after: view and reprint only
+        refreshMicLabel();
+      }
     }
   }
 }
@@ -1231,6 +1252,7 @@ function newPatient() {
   clearError();
   renderTranscript();
   updateResaveNote();
+  backToToday();
   if (window.Authorship) Authorship.clear();
   sheetEl.classList.add("empty");
   saveBtn.hidden = true;
@@ -1251,6 +1273,13 @@ function newPatient() {
   refreshMicLabel();
   setStep("idle");
   setStatus("Ready — press the mic and dictate the visit.");
+}
+
+// The list shows today again (New patient): reloaded only when it showed an earlier day.
+function backToToday() {
+  if (!state.listDay) return;
+  state.listDay = "";
+  loadToday();
 }
 
 $("newPatientBtn").addEventListener("click", newPatient);
@@ -1275,5 +1304,6 @@ setText($("pDate"), today());
 refreshMicLabel();
 setStep("idle");
 setStatus("Ready — press the mic and dictate the visit.");
+if (window.DayNav) DayNav.init({ day: () => state.listDay, go: (d) => { state.listDay = d; loadToday(); } });
 loadProfile();
 loadToday();

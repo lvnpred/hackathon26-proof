@@ -51,7 +51,7 @@ def test_clinlists_is_plain_text_only_and_uses_the_lists_route():
 
 def test_index_loads_clinlists_before_team_and_bumps_the_versions():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
-    assert "clinlists.js?v=3" in html and "listedit.js?v=1" in html and "team.js?v=5" in html and "team.css?v=5" in html
+    assert "clinlists.js?v=4" in html and "listedit.js?v=1" in html and "team.js?v=6" in html and "team.css?v=6" in html
     assert html.index("listedit.js?v=") < html.index("clinlists.js?v=") < html.index("team.js?v=")
 
 
@@ -70,7 +70,7 @@ def test_admin_sees_three_tabs_and_medicines_lists_badges():
     assert r["labels"] == ["People", "Medicines", "Investigations"]
     assert r["cols"] == ["Medicine", "Generic", "Brands", "Source", "Actions"]
     sources = {row[0]: row[3] for row in r["rows"]}
-    assert "Shared list" in sources["metformin"] and "Added by clinic" in sources["paracetamol"] and "Learned" in sources["Zorbexin"]
+    assert sources["metformin"] == "Shared" and "Added by clinic" in sources["paracetamol"] and "Learned" in sources["Zorbexin"]   # a short tag (UI-A Task 4)
     assert "Edited by clinic" in sources["amoxicillin"]
 
 
@@ -101,7 +101,7 @@ def test_filter_narrows_rows_without_a_new_request():
       await p.type("teamMedFilter", "glyco");
       const text = p.rows().map((x) => x[0]);
       await p.type("teamMedFilter", "");
-      p.ids.teamMedOnly.checked = true; await p.ids.teamMedOnly.fire("change");
+      await p.ids.teamMedChipClinic.click();                  // the "Clinic changes" chip replaced the "Only changed or flagged" checkbox
       console.log(JSON.stringify({calls, after: p.calls.length, text, only: p.rows().map((x) => x[0])}));""", lists={"medicine": MEDS})
     assert r["calls"] == r["after"] and r["text"] == ["metformin"]
     assert sorted(r["only"]) == ["Zorbexin", "amoxicillin", "cetirizine", "paracetamol"]      # pending rows stay; plain shared ones go
@@ -256,7 +256,7 @@ def test_add_a_medicine_and_add_a_test_post_op_add():
 
 def test_the_filter_renders_once_per_keystroke():
     js = _code("clinlists.js")
-    assert js.count('addEventListener("input"') == 1 and js.count('addEventListener("change"') == 1
+    assert js.count('addEventListener("input"') == 1 and js.count('addEventListener("change"') == 0    # chips are buttons (click)
 
 
 def test_listedit_is_text_only_exports_open_and_the_owner_gets_the_safety_box():
@@ -297,3 +297,109 @@ def test_two_clicks_on_approve_send_one_post_and_a_failure_re_enables_the_row():
       btn.click(); await p.tick();
       console.log(JSON.stringify({off: btn.disabled}))""", lists={"medicine": LIST_MEDS})
     assert f == {"off": False}
+
+
+# --- light polish (plan UI-A Task 4) -----------------------------------------------------------------------------------
+
+def _css():
+    return re.sub(r"/\*.*?\*/", "", (FRONT / "team.css").read_text(encoding="utf-8"), flags=re.S)
+
+
+def test_the_search_is_labelled_and_a_count_says_showing_n_of_m():
+    r = _page("""
+      await p.openMeds(); const s = p.ids.teamMedFilter;
+      const start = p.ids.teamMedCount.textContent;
+      await p.type("teamMedFilter", "glyco");
+      console.log(JSON.stringify({label: s.attrs["aria-label"], ph: s.attrs.placeholder, start, typed: p.ids.teamMedCount.textContent,
+        role: p.ids.teamMedCount.attrs.role, tph: p.ids.teamTestFilter.attrs.placeholder, tlabel: p.ids.teamTestFilter.attrs["aria-label"]}))""",
+              lists={"medicine": MEDS})
+    assert r["label"] == "Search medicines" and r["ph"] == "Search name, generic or brand"
+    assert r["tlabel"] == "Search investigations" and r["tph"]
+    assert (r["start"], r["typed"], r["role"]) == ("Showing 5 of 5", "Showing 1 of 5", "status")
+
+
+def test_filter_chips_show_counts_filter_the_rows_and_say_which_is_pressed():
+    r = _page("""
+      await p.openMeds(); const calls = p.calls.length;
+      const ids = ["teamMedChipAll", "teamMedChipClinic", "teamMedChipLearned", "teamMedChipHidden"];
+      const state = () => ids.map((i) => p.ids[i].attrs["aria-pressed"]);
+      const out = {labels: ids.map((i) => p.ids[i].textContent), types: ids.map((i) => p.ids[i].attrs.type), start: state(),
+        group: p.ids.teamMedChipAll.parentNode.attrs.role};
+      for (const [i, name] of [[2, "learned"], [3, "hidden"], [1, "clinic"]]) {
+        await p.ids[ids[i]].click(); out[name] = {rows: p.rows().map((x) => x[0]), pressed: state(), count: p.ids.teamMedCount.textContent};
+      }
+      await p.type("teamMedFilter", "zer");  out.both = p.rows().map((x) => x[0]);      // the search narrows inside the chip
+      await p.type("teamMedFilter", "");
+      await p.ids.teamMedChipAll.click(); out.all = p.rows().length; out.after = p.calls.length - calls;
+      console.log(JSON.stringify(out))""", lists={"medicine": LIST_MEDS})
+    assert r["labels"] == ["All (9)", "Clinic changes (8)", "Learned (2)", "Hidden (1)"]
+    assert r["types"] == ["button"] * 4 and r["group"] == "group" and r["start"] == ["true", "false", "false", "false"]
+    assert r["learned"] == {"rows": ["Zorbexin", "Zerodol-P"], "pressed": ["false", "false", "true", "false"], "count": "Showing 2 of 9"}
+    assert r["hidden"]["rows"] == ["ramipril"] and r["hidden"]["pressed"] == ["false", "false", "false", "true"]
+    assert "acarbose" not in r["clinic"]["rows"] and len(r["clinic"]["rows"]) == 8 and r["clinic"]["count"] == "Showing 8 of 9"
+    assert r["both"] == ["Zerodol-P"] and r["all"] == 9 and r["after"] == 0       # chips and search never send a request
+
+
+def test_the_chip_stays_on_after_an_action_reloads_the_list():
+    r = _page("""
+      await p.openMeds(); await p.ids.teamMedChipHidden.click(); await p.press('teamMedRows', 0, 'Reset to default');
+      console.log(JSON.stringify({pressed: p.ids.teamMedChipHidden.attrs["aria-pressed"], posts: p.posts, rows: p.rows().map((x) => x[0])}))""",
+              lists={"medicine": LIST_MEDS})
+    assert r["posts"] == [{"op": "reset", "entry_key": "ramipril", "data": {}}]
+    assert r["pressed"] == "true" and r["rows"] == ["ramipril"]
+
+
+def test_the_source_is_a_small_tag_and_the_actions_sit_on_one_compact_line():
+    r = _page("""
+      await p.openMeds(); const tr = p.ids.teamMedRows.children[0];
+      const tag = tr.children[3].children[0];
+      console.log(JSON.stringify({tag: tag.tag, cls: tag.attrs.class, text: tag.textContent, acts: tr.children[4].children.map((b) => b.tag)}))""",
+              lists={"medicine": LIST_MEDS})
+    assert r["tag"] == "span" and "team-tag" in r["cls"].split() and r["text"] == "Shared" and r["acts"] == ["button", "button"]
+    css = _css()
+    wide = css.split("@media")[0]
+    assert re.search(r"\.team-panel \.team-tag \{[^}]*white-space:nowrap", wide)
+    assert re.search(r"\.team-panel \.team-meds-table \.team-row-actions \{[^}]*white-space:nowrap", wide)          # Edit and Hide on one line
+    assert re.search(r"\.team-panel \.team-meds-table td \{[^}]*padding:[0-9]px", wide)                         # about one text line per row
+    assert not re.search(r"#[0-9a-fA-F]{3,6}\b", css.split(".team-panel .team-tag")[1].split("@media")[0])   # tokens, no raw colours
+
+
+def test_the_list_tabs_widen_the_dialog_and_the_header_row_stays_in_view():
+    r = _page("""
+      const seen = []; const w = () => p.ids.teamPanel.attrs["data-wide"];
+      await p.openMeds(); seen.push(w()); await p.openTests(); seen.push(w());
+      await p.ids.teamTabPeople.click(); seen.push(w());
+      const box = p.ids.teamMedRows.parentNode.parentNode.attrs.class;
+      console.log(JSON.stringify({seen, box}))""")
+    assert r["seen"] == ["true", "true", "false"] and "team-list-box" in r["box"].split()
+    css = _css()
+    assert re.search(r'dialog\.team-panel\[data-wide="true"\] \{ width:min\(1100px, 96vw\); \}', css)
+    box = re.search(r"\.team-panel \.team-list-box \{([^}]*)\}", css.split("@media")[0]).group(1)
+    assert "overflow:auto" in box and "max-height:" in box
+    th = re.search(r"\.team-panel \.team-list-box th \{([^}]*)\}", css).group(1)
+    assert "position:sticky" in th and "top:0" in th and "background:var(--card)" in th
+
+
+def test_the_intro_is_one_sentence_with_the_rest_behind_what_do_these_mean():
+    r = _page("""
+      const out = {};
+      for (const id of ["teamMeds", "teamTests"]) {
+        const panel = p.ids[id]; const d = panel.querySelectorAll("details")[0];
+        out[id] = {hint: panel.children[0].textContent, summary: d.querySelectorAll("summary")[0].textContent, more: d.textContent};
+      }
+      console.log(JSON.stringify(out))""")
+    for v in r.values():
+        assert v["hint"].count(". ") == 0 and v["hint"].endswith(".") and len(v["hint"]) < 100, v["hint"]
+        assert v["summary"] == "What do these mean?"
+    assert "two new documents" in r["teamMeds"]["more"] and "Clinic changes" in r["teamMeds"]["more"]
+
+
+def test_an_empty_list_hides_the_header_row_and_the_test_list_says_why():
+    r = _page("""
+      const box = (id) => p.ids[id].querySelectorAll(".team-list-box")[0].hidden;
+      await p.openTests(); const t = {head: p.ids.teamTests.querySelectorAll("thead")[0].hidden, box: box("teamTests"), text: p.ids.teamTestEmpty.textContent, shown: !p.ids.teamTestEmpty.hidden};
+      await p.openMeds(); const m = {head: p.ids.teamMeds.querySelectorAll("thead")[0].hidden, box: box("teamMeds")};
+      console.log(JSON.stringify({t, m}))""", lists={"medicine": MEDS})
+    assert r["t"] == {"head": True, "box": True, "shown": True,
+                      "text": "The shared test list is not loaded yet. Tests your doctors add or remember appear here."}
+    assert r["m"] == {"head": False, "box": False}

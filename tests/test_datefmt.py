@@ -225,7 +225,7 @@ def _set_created(doc_id, created):
     conn.close()
 
 
-def test_a_resave_on_a_later_day_keeps_the_first_visit_day_everywhere(tmp_path, monkeypatch):
+def test_a_resave_on_a_later_day_is_refused_and_the_first_visit_day_stays_everywhere(tmp_path, monkeypatch):
     c, seen = _setup(tmp_path, monkeypatch)
     monkeypatch.setattr(visit, "today", lambda *a, **k: date(2026, 10, 17))                 # day 1
     form = {"patientName": "Anita", "opNo": "OP-9", "review": "1 week", "rx": []}
@@ -233,16 +233,16 @@ def test_a_resave_on_a_later_day_keeps_the_first_visit_day_everywhere(tmp_path, 
     doc = r.json()["document_id"]
     assert r.json()["visit_date"] == "2026-10-17" and seen[-1] == ("17 Oct 2026", "2026-10-24")   # a first save uses visit.today()
     _set_created(doc, "2026-10-17T05:00:00Z")                                              # created_at as a real day-1 save stores it
-    monkeypatch.setattr(visit, "today", lambda *a, **k: date(2026, 10, 19))                 # day 3
-    r2 = c.post("/api/v1/documents", json={"structured": form, "document_id": doc, "confirmed_rows": []})
-    assert r2.status_code == 200 and r2.json()["visit_date"] == "2026-10-17"
-    assert seen[-1] == ("17 Oct 2026", "2026-10-24")                                       # header AND review date: still day 1 (+7)
-    assert c.get(f"/api/v1/documents/{doc}").json()["visit_date"] == "2026-10-17"          # the screen: day 1
-    # a changed review text recomputes from the SAME visit day
-    r3 = c.post("/api/v1/documents", json={"structured": {**form, "review": "2 weeks"}, "document_id": doc, "confirmed_rows": []})
-    assert seen[-1] == ("17 Oct 2026", "2026-10-31") and r3.json()["visit_date"] == "2026-10-17"
+    # a same-day re-save recomputes a changed review text from the SAME visit day
+    r2 = c.post("/api/v1/documents", json={"structured": {**form, "review": "2 weeks"}, "document_id": doc, "confirmed_rows": []})
+    assert r2.status_code == 200 and r2.json()["visit_date"] == "2026-10-17" and seen[-1] == ("17 Oct 2026", "2026-10-31")
+    monkeypatch.setattr(visit, "today", lambda *a, **k: date(2026, 10, 19))                 # day 3: past prescriptions are view only (UI-A)
+    r3 = c.post("/api/v1/documents", json={"structured": form, "document_id": doc, "confirmed_rows": []})
+    assert r3.status_code == 409 and r3.json()["error"] == "past prescription"
+    got = c.get(f"/api/v1/documents/{doc}").json()
+    assert (got["visit_date"], got["past"]) == ("2026-10-17", True)                         # the screen: day 1
     stored = json.loads(dbmod.get_document(dbmod.get_conn(), doc)["structured_json"])
-    assert stored["review_date"] == "2026-10-31"
+    assert stored["review_date"] == "2026-10-31"                                           # nothing written by the refused re-save
 
 
 def test_visit_day_is_the_clinic_zone_day_of_created_at_and_old_rows_derive_it(tmp_path, monkeypatch):
@@ -252,8 +252,12 @@ def test_visit_day_is_the_clinic_zone_day_of_created_at_and_old_rows_derive_it(t
     doc = c.post("/api/v1/documents", json={"structured": form, "confirmed_rows": []}).json()["document_id"]
     _set_created(doc, "2026-10-17T19:00:00Z")                                              # 00:30 IST on the 18th (UTC says the 17th)
     assert c.get(f"/api/v1/documents/{doc}").json()["visit_date"] == "2026-10-18"
-    c.post("/api/v1/documents", json={"structured": form, "document_id": doc, "confirmed_rows": []})
-    assert seen[-1] == ("18 Oct 2026", "2026-10-25")                                       # an old document: derived from created_at, not today
+    conn = dbmod.get_conn()
+    conn.execute("UPDATE documents SET pdf_path = NULL WHERE id = ?", (doc,))
+    conn.commit()
+    conn.close()
+    assert c.get(f"/api/v1/documents/{doc}/pdf").status_code == 200                       # a reprint (a re-save of a past day is refused)
+    assert seen[-1][0] == "18 Oct 2026"                                                    # an old document: derived from created_at, not today
     for bad in ("", "garbage"):
         _set_created(doc, bad)
         assert c.get(f"/api/v1/documents/{doc}").json()["visit_date"] == ""               # no created_at: ''

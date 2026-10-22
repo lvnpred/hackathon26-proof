@@ -8,6 +8,8 @@ window.Authorship = (function () {
   const el = (id) => document.getElementById(id);
   const busy = () => typeof state !== "undefined" && !!state.working;   // app.js's state
   let viewOnly = null;      // the author's name while a colleague's prescription is on the sheet
+  let pastDay = null;       // the ISO visit day while an earlier day's prescription is on the sheet (view and reprint only)
+  const locked = () => viewOnly !== null || pastDay !== null;
   let ownHeader = false;    // an opened prescription's own doctor lines are on the sheet header
   let scope = "mine";       // the Today list: "mine" | "clinic"
 
@@ -73,10 +75,11 @@ window.Authorship = (function () {
   function enforce() {
     const banner = el("viewOnlyBanner");
     if (banner) {
-      banner.hidden = !viewOnly;
-      banner.textContent = viewOnly ? viewOnly + "'s prescription: view only" : "";
+      banner.hidden = !locked();
+      banner.textContent = viewOnly ? viewOnly + "'s prescription: view only"      // a colleague's past one: the colleague banner
+        : pastDay !== null ? "Prescription from " + ((window.Dates && Dates.date(pastDay)) || pastDay) + ": view and reprint only" : "";
     }
-    if (!viewOnly) return;
+    if (!locked()) return;
     ["recBtn", "saveBtn", "confirmAllBtn"].forEach((id) => { const b = el(id); if (b) b.disabled = true; });
     const sheet = el("sheet");
     if (sheet) {
@@ -88,13 +91,16 @@ window.Authorship = (function () {
     if (note) note.hidden = true;
     const cue = el("correctingCue");
     if (cue) cue.hidden = true;
+    const ready = el("grounding");                  // "…You can Save." cannot apply to a sheet that cannot be saved
+    if (ready) ready.hidden = true;
   }
 
   // Leave view-only (New patient, or opening a prescription you may edit). Outside view-only nothing on the
   // sheet was locked, so single-database mode leaves every button exactly as app.js has it.
   function clear() {
-    const was = viewOnly;
+    const was = locked();
     viewOnly = null;
+    pastDay = null;
     ownHeader = false;
     if (was) {
       const sheet = el("sheet");
@@ -115,6 +121,7 @@ window.Authorship = (function () {
   // app.js openDocument() hands over the GET /api/v1/documents/{id} body once the sheet is rendered.
   function onOpen(doc) {
     clear();
+    if (doc && doc.past) { pastDay = String(doc.visit_date || ""); enforce(); }   // the server refuses a past re-save; locked in both modes
     const a = doc && doc.author;
     if (!a) return;                                   // single-database mode: no author data
     showAuthor(a);
@@ -123,7 +130,7 @@ window.Authorship = (function () {
     enforce();
   }
 
-  function isViewOnly() { return viewOnly !== null; }
+  function isViewOnly() { return locked(); }
   function viewOnlyAuthor() { return viewOnly || ""; }
   function keepsOwnHeader() { return ownHeader; }
   function todayQuery() { return "?scope=" + scope; }
@@ -151,5 +158,8 @@ window.Authorship = (function () {
   }
   init();
 
-  return { renderDoctorLines, onOpen, clear, enforce, isViewOnly, viewOnlyAuthor, keepsOwnHeader, todayQuery, authorLabel };
+  // A sheet opened on its own day and saved after midnight: the server refused the re-save (409 "past prescription").
+  function lockPast(day) { pastDay = String(day || ""); enforce(); }
+
+  return { renderDoctorLines, onOpen, clear, enforce, lockPast, isViewOnly, viewOnlyAuthor, keepsOwnHeader, todayQuery, authorLabel };
 })();

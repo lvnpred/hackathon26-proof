@@ -51,6 +51,9 @@
   const time = (instant) => { const p = parts(instant); return p ? timeText(p.hh, p.mm) : ""; };               // "3:05 pm"
   const dateTime = (instant) => { const p = parts(instant); return p ? dateText(p.y, p.m, p.d) + ", " + timeText(p.hh, p.mm) : ""; };
   const today = (now) => { const p = parts(now || new Date()); return p ? dateText(p.y, p.m, p.d) : ""; };      // the clinic day
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const todayIso = (now) => { const p = parts(now || new Date()); return p ? p.y + "-" + pad2(p.m) + "-" + pad2(p.d) : ""; };   // "2026-10-17", the clinic day
+  const short = (iso) => { const p = ymd(iso); return p ? table().days[(p.t.getUTCDay() + 6) % 7] + ", " + p.d + " " + table().months[p.m - 1] : ""; };   // "Sat, 17 Oct"
 
   // The page starts before /api/health answers: it shows the default day. When health arrives, apply it, and re-default the
   // sheet date node only if it still shows what the default produced (the field is read-only; a reopened document's own
@@ -61,6 +64,6 @@
     if (node && node.textContent === before) node.textContent = today(now);
   }
 
-  root.Dates = { init, initFrom, date, label, time, dateTime, today, locale: () => locale, zone: () => zone, tables: TABLES };   // tables: tests add a locale to prove init reads the health field
+  root.Dates = { init, initFrom, date, label, short, time, dateTime, today, todayIso, locale: () => locale, zone: () => zone, tables: TABLES };   // tables: tests add a locale to prove init reads the health field
   if (typeof module !== "undefined" && module.exports) module.exports = root.Dates;
 })(typeof window !== "undefined" ? window : globalThis);

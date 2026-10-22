@@ -2,15 +2,15 @@
 import json
 import logging
 import sqlite3
-from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import authorship, visit
+from doctor_dictation.api.pastday import is_past, past_refusal, visit_day, visit_day_iso
 from doctor_dictation.api.formulary import learn_doctor_generics, learn_from_save, use_clinic_layer
 from doctor_dictation.api.investigations import remember_from_save, use_investigations
 from doctor_dictation.config import get_settings
@@ -109,18 +109,23 @@ def create_encounter(req: EncounterCreate, request: Request):
 
 
 @router.get("/api/v1/encounters/today")
-def list_today_encounters(request: Request, scope: str = "mine"):
-    """Saved documents for the server-local calendar day (the "Today" sidebar).
+def list_today_encounters(request: Request, scope: str = "mine", day: str | None = Query(None, alias="date")):
+    """Saved documents for one clinic-zone calendar day (the "Today" sidebar): ``date=YYYY-MM-DD``, default today.
 
-    Signed in: ``scope=mine`` (default) keeps the signed-in doctor's prescriptions, ``scope=clinic`` the whole
+    A malformed or future ``date`` is a 400. Signed in: ``scope=mine`` (default) keeps the signed-in doctor's prescriptions, ``scope=clinic`` the whole
     clinic; rows gain ``author_id`` and ``doctor_name``. Single-database mode: every row, in the old shape (``scope`` is ignored).
     """
     ident = authorship.identity(request)
     if ident is not None and scope not in ("mine", "clinic"):
         return JSONResponse(status_code=400, content={"error": "scope must be mine or clinic"})
+    listed = visit.today() if day is None else visit.parse_day(day)
+    if listed is None:
+        return JSONResponse(status_code=400, content={"error": "date must be YYYY-MM-DD"})
+    if listed > visit.today():
+        return JSONResponse(status_code=400, content={"error": "date is in the future"})
     conn = dbmod.get_conn()
     try:
-        start, end = dbmod.local_day_bounds_utc()
+        start, end = visit.day_bounds_utc(listed)
         if ident is None:
             return [dict(r) for r in dbmod.list_documents_between(conn, start, end)]
         return adb.list_today(conn, start, end, ident.user_id if scope == "mine" else None)
@@ -136,19 +141,6 @@ class DocumentCreate(BaseModel):
     engine: str = ""
     transcript_sha256: str = ""
     document_id: int | None = None
-
-
-def visit_day(row):
-    """The document's visit day: the clinic-zone day of its created_at (fixed at first save). None when absent or unreadable."""
-    try:
-        return visit.to_clinic(datetime.fromisoformat(str(row["created_at"]).replace("Z", "+00:00"))).date()
-    except (ValueError, TypeError, KeyError, IndexError):
-        return None
-
-
-def visit_day_iso(row) -> str:
-    day = visit_day(row)
-    return day.isoformat() if day else ""
 
 
 def _pdf_inputs(conn, structured, day, encounter_id):
@@ -222,6 +214,9 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
         denied = authorship.check_document(request, "document.edit", req.document_id)
         if denied is not None:
             return denied
+        past = past_refusal(req.document_id)          # before the verify gate: a past day is never re-saved
+        if past is not None:
+            return past
     structured = req.structured if isinstance(req.structured, dict) else {}
     block = screen_unverified(structured, req.confirmed_rows)
     ix_block = investigations.screen(structured)
@@ -390,6 +385,7 @@ def get_document(document_id: int, request: Request):
             "transcript_sha256": row["transcript_sha"],
             "created_at": row["created_at"],
             "visit_date": visit_day_iso(row),          # the clinic-zone day the sheet shows (I3)
+            "past": is_past(row),                      # an earlier day: the page opens it view and reprint only
             **authorship.author_view(conn, request, document_id),
         }
     finally:

@@ -43,7 +43,7 @@ def test_authorship_js_shows_the_banner_and_locks_the_sheet():
 def test_app_js_calls_authorship_only_through_a_guard():
     js = _read("app.js")
     calls = re.findall(r"Authorship\.(\w+)\(", js)
-    assert sorted(set(calls)) == ["authorLabel", "clear", "enforce", "isViewOnly", "keepsOwnHeader", "onOpen", "renderDoctorLines", "todayQuery", "viewOnlyAuthor"]
+    assert sorted(set(calls)) == ["authorLabel", "clear", "enforce", "isViewOnly", "keepsOwnHeader", "lockPast", "onOpen", "renderDoctorLines", "todayQuery", "viewOnlyAuthor"]
     for line in (ln for ln in js.splitlines() if "Authorship." in ln):
         assert "window.Authorship" in line, line
 
@@ -115,7 +115,7 @@ def test_the_top_bar_keeps_the_signed_in_users_own_name():
     assert 'setText($("topDoctor"), p.doctor_name || (window.DDUser && window.DDUser.display_name) || "Doctor")' in app
     assert 'doctor.textContent.trim() === "Doctor"' in auth          # the login name never overwrites a known profile name
     html = _read("index.html")
-    assert all(v in html for v in ("auth.js?v=4", "authorship.js?v=4")) and int(re.search(r"app\.js\?v=(\d+)", html).group(1)) >= 26
+    assert all(v in html for v in ("auth.js?v=4", "authorship.js?v=5")) and int(re.search(r"app\.js\?v=(\d+)", html).group(1)) >= 26
 
 
 def test_the_engine_badge_is_hidden_unless_debug_or_offline():

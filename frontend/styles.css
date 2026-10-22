@@ -57,6 +57,7 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 .mic.recording { background:#d00; box-shadow:0 8px 20px rgba(221,0,0,.28); }
 .mic.busy { background:#666; box-shadow:none; }
 .timer { font-variant-numeric: tabular-nums; font-weight:700; font-size:20px; min-width:56px; text-align:center; }
+.timer.rec-warn { color:var(--warn); }
 .rec-dot { display:none; color:#d00; font-size:13px; font-weight:700; }
 .rec-dot.on { display:inline; animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity:.3; } }
@@ -208,6 +209,13 @@ dialog.panel h2 { margin:0; font-size:18px; }
 }
 
 /* Authorship (M3): Today scope toggle, view-only banner, Profile split into two parts. */
+.day-nav { display:flex; align-items:center; gap:4px; margin:0 0 8px; position:relative; }
+.day-title { flex:1; margin:0; text-align:center; }
+.day-btn { font-size:14px; line-height:1; padding:3px 8px; border-radius:6px; border:1px solid var(--soft); background:transparent; }
+.day-btn:disabled { opacity:.4; cursor:default; }
+.day-input { position:absolute; right:0; bottom:0; width:1px; height:1px; opacity:0; border:0; padding:0; pointer-events:none; }
+.day-today { display:block; width:100%; font-size:12px; padding:4px 6px; margin:0 0 10px; border-radius:6px; border:1px solid var(--soft); background:transparent; color:var(--accent); }
+.day-today[hidden] { display:none; }
 .today-scope { display:flex; gap:4px; margin:0 0 10px; }
 .today-scope[hidden] { display:none; }
 .today-scope button { flex:1; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid var(--soft); background:transparent; }

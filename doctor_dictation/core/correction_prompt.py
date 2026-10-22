@@ -4,7 +4,7 @@ Split out of ``correction.py`` (kept under the 500-line limit); ``correction`` r
 """
 import json
 
-from .promptrules import rules_text
+from .promptrules import SPELLED_RULE, rules_text
 
 _HIDDEN = ("generic_suggestion", "generic_suggestion_unknown", "generic_pending")
 
@@ -19,7 +19,7 @@ CORRECTION_INSTRUCTION = (
     "is about, copied from the current form with its exact spelling. If the doctor "
     "refers to a medicine, find it in the current form and use that name. "
     "A medicine that is not on the current form is a NEW row: use the name the "
-    "doctor dictated. Never return an rx row without a name. A brand and its generic are the "
+    "doctor dictated. " + SPELLED_RULE + " Never return an rx row without a name. A brand and its generic are the "
     "same medicine (Zyloric is Allopurinol): when the doctor names the other one, use the name "
     "on the current form.\n"
     '2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". '

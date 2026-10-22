@@ -91,6 +91,12 @@ window.RxView = (function () {
       acts.appendChild(c);
     } else {
       if (st.didYouMean) { const b = SugList.item(st.didYouMean, { action: "dym", prefix: "Did you mean " }); b.disabled = vo || H.working(); b.setAttribute("aria-disabled", String(b.disabled)); acts.appendChild(b); }
+      if (!blank && st.spelledUndo) {
+        const h = st.spelledUndo.heard, b = btn("mini spelled-undo", "spelled-undo", 'Heard "' + h + '" · Undo');
+        b.dataset.value = h; b.disabled = vo || H.working(); b.setAttribute("aria-disabled", String(b.disabled));
+        b.title = "You spelled this name. Undo puts back the words that were heard."; b.setAttribute("aria-label", "Undo spelling: use " + h + " for this row");
+        acts.appendChild(b);
+      }
       if (st.canConfirm) { const b = btn("mini solid confirm-btn", "confirm", "Confirm as is"); b.disabled = vo; b.title = "Accept this medicine exactly as written"; b.setAttribute("aria-label", "Confirm as is: " + name); acts.appendChild(b); }
       if (st.canSpell) {
         const b = btn("mini", "spell"); b.disabled = vo; b.append(icon("pencil", 14), el("span", null, "Spell it"));
@@ -114,7 +120,7 @@ window.RxView = (function () {
     $("rxReady").lastChild.textContent = s.ready; $("rxNeeds").lastChild.textContent = s.needs;
     $("rxNeeds").dataset.state = needs ? "dose" : "ok";
     const vo = !!(window.Authorship && Authorship.isViewOnly());
-    rows().forEach((tr) => { const b = tr.querySelector('[data-action="dym"]'); if (b) { b.disabled = vo || H.working(); b.setAttribute("aria-disabled", String(b.disabled)); } });   // looks as dead as it is while busy
+    rows().forEach((tr) => ['[data-action="dym"]', '[data-action="spelled-undo"]'].forEach((q) => { const b = tr.querySelector(q); if (b) { b.disabled = vo || H.working(); b.setAttribute("aria-disabled", String(b.disabled)); } }));   // looks as dead as it is while busy
     H.saveBtn.textContent = vo ? "View only" : s.saveLabel;
     H.saveBtn.disabled = H.working() || s.saveDisabled || vo;
   }
@@ -191,7 +197,7 @@ window.RxView = (function () {
     const a = b.dataset.action;
     if (a === "chip") pickChip(tr, b.dataset.value);
     else if (a === "spell") openSpell(tr);
-    else if (a === "dym") useName(tr, b.dataset.value);
+    else if (a === "dym" || a === "spelled-undo") useName(tr, b.dataset.value);   // Undo of a spelling: the heard words, checked like any typed name
   }
   function init(hooks) {
     H = hooks;
@@ -228,12 +234,13 @@ window.RxView = (function () {
     return tr.querySelector(".rx-state");
   }
   const meta = (tr) => Object.assign({}, rx(tr).meta, { how: rx(tr).how });
-  // The fields the server reads back: heard + lookalike always; a doctor-entered generic (and its pending flag) and a non-empty suggestion.
+  // The fields the server reads back: heard + lookalike always; a doctor-entered generic (and its pending flag), a non-empty suggestion and spelled_heard.
   const wire = (tr) => {
     const m = rx(tr).meta || {}, s = (v) => (typeof v === "string" ? v : "");
     const w = { heard: s(m.heard), lookalike: s(m.lookalike) };
     if (m.generic_source === "doctor") { w.generic = s(m.generic); w.generic_source = "doctor"; w.generic_pending = m.generic_pending === true; }
     if (s(m.generic_suggestion)) w.generic_suggestion = m.generic_suggestion;
+    if (s(m.spelled_heard)) w.spelled_heard = m.spelled_heard;          // a correction keeps the Undo on rows it leaves alone
     return w;
   };
   const needsYou = (tr) => !isBlank(tr) && RxState.rowState(rowOf(tr), ctxOf(tr)).needsYou;       // the bar, the open rows and the block panel share this

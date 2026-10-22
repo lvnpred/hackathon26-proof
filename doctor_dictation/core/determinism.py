@@ -13,7 +13,7 @@ from .repair import (  # noqa: F401  (api/format.py and tests import these from 
     FORMAT_LLM_CAP, MAX_CANDIDATE_ROWS, RX_VERIFIED, UNKNOWN_MEDICINE_TEXT, _UNKNOWN_ISSUE_RE,
     build_repair_message, loop_should_continue, open_issues,
 )
-from . import formulary, investigations, overlay, rowcheck, vitals
+from . import formulary, investigations, overlay, rowcheck, spelled, vitals
 from .commonwords import WORDS as COMMON_WORDS  # noqa: F401
 from .lasa import lasa_row
 from .combo import combo_suffix
@@ -117,8 +117,10 @@ def normalize_numbers(text: str) -> str:
 def normalize_transcript(transcript: str) -> str:
     t = (transcript or "").strip()
     t = re.sub(r"\s+", " ", t)
+    t, found = spelled.apply(t)          # letters the doctor spelled win over the words heard before them
     t = normalize_numbers(t)
-    t = correct_drugs(t)
+    t, tokens = spelled.mask(t, found)   # ... and are never rewritten to a listed name
+    t = spelled.unmask(correct_drugs(t), tokens)
     t = re.sub(r"\s+", " ", t).strip()
     return t
 

@@ -111,4 +111,4 @@ def test_open_rows_and_the_block_panel_use_the_same_predicate_as_the_bar():
 
 def test_pins_are_bumped():
     html = _read("index.html")
-    assert re.search(r"rxstate\.js\?v=11\b", html) and re.search(r"rxview\.js\?v=14\b", html) and re.search(r"app\.js\?v=48\b", html)
+    assert re.search(r"rxstate\.js\?v=12\b", html) and re.search(r"rxview\.js\?v=15\b", html) and re.search(r"app\.js\?v=48\b", html)

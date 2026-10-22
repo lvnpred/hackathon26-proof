@@ -12,7 +12,7 @@
   const NEEDS = ["dose", "confirm"];
   const ICON = { ok: "check-circle", dose: "capsule", confirm: "triangle", you: "shield-check", known: "book" };
   const LABEL = { ok: "Matched", dose: "Check dose", confirm: "Confirm medicine", you: "Confirmed by you", known: "Known to your clinic" };
-  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule", "generic_source", "combo_base", "generic_suggestion", "generic_listed"];
+  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule", "generic_source", "combo_base", "generic_suggestion", "generic_listed", "spelled_heard"];
   const MAX_CHIPS = 8;
   // The extra row fields the server sends (contract 4.1), with safe defaults.
   function metaOf(r) {
@@ -108,13 +108,15 @@
       chips: state === "dose" ? chipsFor(row) : [],
       didYouMean: state === "confirm" && status === "unknown-medicine" && str(row.did_you_mean).trim() && !same(row.did_you_mean, row.name)
         ? { name: str(row.did_you_mean).trim(), generic: str(row.did_you_mean_generic).trim() } : null,
+      // The doctor spelled this name over words that only sounded like it: the row offers those words back (core/spelled.py).
+      spelledUndo: str(row.spelled_heard).trim() && !same(row.spelled_heard, row.name) ? { heard: str(row.spelled_heard).trim() } : null,
     };
   }
   // After an edit by hand the old reasons are stale: drop them (a name edit also drops what belonged to the old name).
   function afterEdit(meta, col) {
     const m = Object.assign({}, meta);
     m.heard = ""; m.lookalike = ""; m.dose_note = "";
-    if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; m.did_you_mean = ""; m.did_you_mean_generic = ""; m.schedule = ""; m.generic_source = ""; m.combo_base = ""; m.generic_suggestion = ""; m.generic_suggestion_unknown = []; m.generic_pending = false; m.generic_listed = ""; m.remember_generic = false; }
+    if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; m.did_you_mean = ""; m.did_you_mean_generic = ""; m.schedule = ""; m.generic_source = ""; m.combo_base = ""; m.generic_suggestion = ""; m.generic_suggestion_unknown = []; m.generic_pending = false; m.generic_listed = ""; m.remember_generic = false; m.spelled_heard = ""; }
     return m;
   }
   // After "Use this": the doctor chose the NAME, so name questions are answered; dose questions and a name the

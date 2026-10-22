@@ -9,7 +9,7 @@ from doctor_dictation.api import authorship, visit
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.api.investigations import use_investigations
 from doctor_dictation.config import get_settings
-from doctor_dictation.core import doctor_generic, followup, formulary, investigations, promptrules, prose, tidy, vitals
+from doctor_dictation.core import doctor_generic, followup, formulary, investigations, promptrules, prose, spelled, tidy, vitals
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     changed_rx_rows,
@@ -49,7 +49,7 @@ STRICT RULES:
 1. Extract the Brief history (complaints), Diagnosis, Investigations Advised, Findings, Vitals and Medications.
 2. Allowed dose codes ONLY: "1-0-0", "1-0-1", "1-1-1", "0-0-1", "SOS". Map: once daily/OD -> 1-0-0; twice daily/BD -> 1-0-1; thrice daily/TDS -> 1-1-1; at bedtime/HS -> 0-0-1; as needed/for pain -> SOS. Never output OD/BD/TDS/HS text.
 3. Allowed timing ONLY: "After food", "Before food", "At bedtime", or "". Map "after meal" -> After food, "empty stomach" -> Before food, "at night" -> At bedtime.
-4. Copy drug strength VERBATIM from the transcript (e.g. "0.4 mg"). If no strength dictated, use "". Never invent strengths, durations, or drugs. Write each medicine name exactly as dictated, including brand names; never replace a brand with its generic. If a field is missing, return empty string or empty array, never hallucinate.
+4. Copy drug strength VERBATIM from the transcript (e.g. "0.4 mg"). If no strength dictated, use "". Never invent strengths, durations, or drugs. Write each medicine name exactly as dictated, including brand names; never replace a brand with its generic. """ + promptrules.SPELLED_RULE + """ If a field is missing, return empty string or empty array, never hallucinate.
 5. If the doctor dictates patient demographics (e.g. "patient Rahul Sharma, 45 year old male"), extract patientName and ageSex (format "45 / M"). If an OP/registration number is dictated, copy it VERBATIM into opNo (e.g. "OP 1234" -> "OP 1234"); use "" if not dictated. Otherwise return empty strings.
 6. Duration format: "<N> days/weeks/months" with digits (e.g. "14 days"). Map "two weeks" -> "14 days".
 7. complaints: the brief history as 1 to 3 short sentences, the way a doctor writes it, for example "C/o fever with chills for 3 days, associated body aches, no vomiting." and "No h/o similar episodes.". diagnosis: 1 or 2 short phrases or sentences. Restate ONLY what was dictated: never add a symptom, duration, negative finding, past history or diagnosis the doctor did not say. If nothing was dictated, use []. Each item at most 400 characters. findings: what the doctor found on examination and the results of reports the patient brought, one short sentence each, for example "Pedal oedema present." and "USG: right lower ureteric calculus 5 mm.". Copy every number and unit verbatim. A test the doctor ADVISES goes in investigations, never in findings; a result already in hand goes in findings. Never add a finding that was not dictated.
@@ -109,6 +109,7 @@ def _answer(structured, normalized, raw, **rest):
     this clinic's list on the copy too, so the cache holds them unchecked and a test the clinic adds later shows on the
     next answer (plan PQ-h)."""
     s = followup.stamp(dict(structured), visit.today())
+    s["rx"] = spelled.tag_rows(s.get("rx"), spelled.found_in(raw))   # copies: the cached rows stay untagged
     s["investigations"] = investigations.check_items(s.get("investigations"), raw, normalized)
     return {"structured": s, "prose_check": prose.unheard(s, raw, normalized), "normalized_transcript": normalized, **rest}
 
@@ -269,7 +270,8 @@ async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use
         vitals_typed=True)  # vitals are on the sheet already, or patch values merge_vitals validated
     structured["investigations"] = investigations.reconcile(   # kept items keep status; new or changed are checked
         investigations.coerce_items(previous.get("investigations")), structured.get("investigations"), text, normalized)
-    preserve_untouched_rx_status(current, patch2, structured, extra_named=touched)
+    preserve_untouched_rx_status(current, patch2, structured, extra_named=touched)   # untouched rows keep spelled_heard
+    structured["rx"] = spelled.tag_rows(structured.get("rx"), spelled.found_in(text))
     changed_rows = changed_rx_rows(current, patch2, structured, extra_named=touched)
     flag_unsure_rows(structured, unsure)  # appended, not placed: the doctor must confirm it
     fields = tuple(f for f in prose.PROSE_FIELDS if isinstance(patch2.get(f), list) and patch2.get(f))

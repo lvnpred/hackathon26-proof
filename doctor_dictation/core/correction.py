@@ -248,7 +248,7 @@ def merge_form(current: dict, patch: dict) -> dict:
 
 # Row fields validate_structured derives from the name and the grounding (screen only).
 DERIVED_ROW_FIELDS = ("generic", "schedule", "heard", "lookalike", "dose_note", "source", "did_you_mean", "did_you_mean_generic",
-                      "generic_source", "combo_base")
+                      "generic_source", "combo_base", "spelled_heard")
 
 
 DID_YOU_MEAN_FIELDS = ("did_you_mean", "did_you_mean_generic")

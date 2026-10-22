@@ -71,7 +71,7 @@ def test_chips_put_the_usual_strength_first_drop_duplicates_and_only_show_on_dos
 
 def test_a_hand_edit_drops_stale_reasons_and_a_name_edit_drops_the_old_drugs_data():
     name, dose = _node('[RxState.afterEdit({heard:"x",lookalike:"y",dose_note:"z",generic:"G",source:"clinic",usual_strength:"5 mg",strength_options:["5 mg"]}, "name"), RxState.afterEdit({generic:"G",heard:"x",strength_options:["5 mg"]}, "dose")]')
-    assert name == {"heard": "", "lookalike": "", "dose_note": "", "generic": "", "source": "", "usual_strength": "", "strength_options": [], "did_you_mean": "", "did_you_mean_generic": "", "schedule": "", "generic_source": "", "combo_base": "", "generic_suggestion": "", "generic_suggestion_unknown": [], "generic_pending": False, "generic_listed": "", "remember_generic": False}   # I2-a: a name edit clears the suggestion too; I2-d: and the schedule badge
+    assert name == {"heard": "", "lookalike": "", "dose_note": "", "generic": "", "source": "", "usual_strength": "", "strength_options": [], "did_you_mean": "", "did_you_mean_generic": "", "schedule": "", "generic_source": "", "combo_base": "", "generic_suggestion": "", "generic_suggestion_unknown": [], "generic_pending": False, "generic_listed": "", "remember_generic": False, "spelled_heard": ""}   # I2-a: a name edit clears the suggestion too; I2-d: and the schedule badge
     assert dose["generic"] == "G" and dose["heard"] == "" and dose["strength_options"] == ["5 mg"]
 
 def test_summary_words():

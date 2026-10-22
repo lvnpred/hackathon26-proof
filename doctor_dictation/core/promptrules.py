@@ -11,6 +11,9 @@ INVESTIGATIONS_RULE = ("investigations: copy each test as dictated. Never add a 
 VITALS_RULE = ('vitals: copy only the vitals dictated, with digits: bp "140/90", pulse "88/min", weight "72 kg", '
                'spo2 "98%", temp "101 F". Use "" for each vital not dictated.')
 
+SPELLED_RULE = ("If the doctor spells a word letter by letter, write the spelled word: it replaces the spoken word "
+                "before it.")
+
 SHARED_RULES = (FORM_RULE, ONE_SECTION_RULE, NO_DEMOGRAPHICS_RULE, INVESTIGATIONS_RULE, VITALS_RULE)
 
 

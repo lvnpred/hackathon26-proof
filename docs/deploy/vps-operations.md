@@ -194,7 +194,10 @@ Done on 2026-10-20. Repeat only on a new server or a new Cloudflare account.
    endpoint = https://<ACCOUNT_ID>.r2.cloudflarestorage.com
    acl = private
    no_check_bucket = true
+   no_head = true
    ```
+   `no_head = true` stops rclone reading each upload back with `?versionId=`, which R2 answers with a 501 (see
+   Troubleshooting). The backup script checks the uploaded size itself.
 6. Check the remote. `rclone listremotes` must print `r2:`. `rclone lsf r2:dictdoc-backups` prints the file list (empty
    at first) and no error.
    ```
@@ -381,7 +384,7 @@ rm -rf ~/dictdoc-restore
 | Same error, header present | Leading spaces or Windows line endings | `sed -E 's/=.*/= …/' ~/.config/rclone/rclone.conf \| cat -A` shows the structure with values masked; remove leading spaces; `sed -i 's/\r$//' ~/.config/rclone/rclone.conf` |
 | `rclone config file` names another path | Run with `sudo` or as another user | Run as `deploy`, without sudo |
 | `SignatureDoesNotMatch` or `AccessDenied` on `lsf` | Wrong key ID, secret or endpoint, or a token for another bucket | Recheck them in `nano`; the token must cover `dictdoc-backups` |
-| `NotImplemented: Not Implemented, status code: 501` errors, then `Attempt 2/3 succeeded` | R2 rejects one request rclone makes. Seen on 2026-10-20; every archive still arrived complete. | No action needed while runs end in `verified`. If `Attempt 3/3 failed` appears, report it. |
+| `NotImplemented: Not Implemented, status code: 501` errors, then `Attempt 2/3 succeeded` | After the upload (which works), rclone 1.60 reads the object back as `HEAD …?versionId=…`; R2 does not support `versionId` and answers 501. Found on 2026-10-22: every run hit it; every archive still arrived complete. | Add `no_head = true` to the `[r2]` section (4.2 step 5). The script's own size check still verifies each copy. |
 | `rclone deletefile` on a new archive succeeds | The bucket lock is off | Redo 4.1 step 3 at once |
 
 ### Backup script messages

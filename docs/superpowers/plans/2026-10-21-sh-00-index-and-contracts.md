@@ -243,5 +243,12 @@ candidate or nothing. Candidates: in multi-clinic mode only patients with an enc
   near-tie rule in Spell it only. Size M. Must keep S1.
 - **SH-B5 Learn from typed fixes.** Typing a name clears the row's `heard` (`frontend/rxstate.js:116`), so H2 learns
   nothing from it. Keep the last heard text when the doctor types over a misheard name. Size S. Must keep S1.
+- **SH-B6 "Your usual" medicines for a diagnosis** (owner yes, 2026-10-22). Once the draft has a diagnosis, show
+  this doctor's usual rows for it below Rx, for example "BPH · Your usual: [+ Tab Urimax 0.4 mg 0-0-1 × 30 days]
+  (14 times)". Source: `term_links` for the diagnosis key (H3), with strength, dose, timing and duration read from
+  the linked documents (`term_link_docs`); the usual strength follows D-SH2. Rules: the doctor's own prescriptions
+  only (no clinic-wide or AI suggestions); never added without a tap; at least 2 uses; never a name the clinic
+  removed; the look-alike (LASA) check runs on the added row; hidden on a view-only or past sheet. Diagnosis only
+  (symptom-based suggestions are weaker; reconsider with real data). Needs H1 and H3. Size M (2–3 days).
 - **SH-B3 Vectors for diagnosis wording** ("throat infection" ≈ "pharyngitis"), local only (`sqlite-vec` + a small
   local embedding model). Only if exact `diagnosis_key` matches prove too narrow in real data.

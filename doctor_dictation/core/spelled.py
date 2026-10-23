@@ -12,14 +12,18 @@ import re
 
 SIMILAR = 0.5           # how alike the spoken words must be to the spelled word for a replacement without a cue
 MAX_SPOKEN_WORDS = 3    # the spoken name the letters replace: at most this many words
-MIN_LONE_LETTERS = 4    # letters with nothing to replace are joined only from this many ("B, C, D" stays as dictated)
+MIN_LONE_LETTERS = 4    # letters with nothing to replace are joined from this many, or after a form or name label
 
 # 3+ single letters separated by spaces, hyphens, commas or full stops: "S-I-L-O-D-A-L", "U S G", "T. A. M."
 _RUN = re.compile(r"\b[A-Za-z](?:(?:\s*[-.,]\s*|\s+)[A-Za-z]\b){2,}\.?")
 _CUE = re.compile(r"(?:,\s*)?\b(?:spelled as|spelt as|spelling is|spelled|spelt|spelling|that is)\b\s*[:,-]?\s*$", re.I)
 _FORMS = {"tablet", "tab", "tabs", "capsule", "cap", "caps", "syrup", "syr", "injection", "inj", "drops", "ointment", "cream"}
-_STOP = _FORMS | {"and", "then", "also", "advised", "advise", "with", "for", "of", "the", "a", "an", "to", "is", "start",
-                  "give", "continue", "stop", "plus"}
+_NAME_LABELS = {"patient", "name", "named", "mr", "mrs", "ms", "dr", "shri", "smt", "master", "baby"}
+_STOP = _FORMS | _NAME_LABELS | {  # never replaced: a span stops here
+    "and", "then", "also", "advised", "advise", "with", "for", "of", "the", "a", "an", "to", "is", "as", "start",
+    "give", "continue", "stop", "plus", "diagnosis", "diagnosed", "complaint", "complaints", "complains", "history",
+    "finding", "findings", "impression", "advice", "review", "test", "tests", "investigation", "investigations",
+    "known", "case"}
 _WORD_AT_END = re.compile(r"[A-Za-z][A-Za-z'-]*$")
 
 
@@ -27,10 +31,24 @@ def _letters(text: str) -> str:
     return "".join(re.findall(r"[A-Za-z]", text)).lower()
 
 
-def _join(run: str) -> str:
-    """The spelled word: short ones read as abbreviations (USG, KFT), longer ones as names (Silodal)."""
-    word = "".join(re.findall(r"[A-Za-z]", run))
-    return word.upper() if len(word) <= 4 else word.capitalize()
+def _after_label(prefix: str) -> bool:
+    """True when the word before is a form or a name label ("tablet", "patient", "Mrs"): a name follows."""
+    last = re.findall(r"[A-Za-z]+", prefix)[-1:]
+    return bool(last) and last[0].lower() in _FORMS | _NAME_LABELS
+
+
+def _cased(letters: str, heard: str, prefix: str) -> str:
+    """The spelled letters in the casing of what they replace ("Anu" -> "Anu", "calculus" -> "calculus", "USG" ->
+    "USG"). After a form or a name label they read as a name ("tablet cello dial" -> "Silodal", "patient anu" ->
+    "Anu"). With nothing replaced, a short word is an abbreviation (USG) and a longer one a name (Silodal)."""
+    if _after_label(prefix):
+        return letters.capitalize()
+    if not heard:
+        return letters.upper() if len(letters) <= 4 else letters.capitalize()
+    said = re.sub(r"[^A-Za-z]", "", heard)
+    if len(said) > 1 and said.isupper():
+        return letters.upper()
+    return letters.capitalize() if heard[0].isupper() else letters.lower()
 
 
 def similarity(spoken: str, word: str) -> float:
@@ -46,8 +64,8 @@ def _spans(head: str) -> list:
     rest, out = head.rstrip(" ,"), []
     for _ in range(MAX_SPOKEN_WORDS):
         m = _WORD_AT_END.search(rest)
-        if not m or m.group().lower() in _STOP:
-            break
+        if not m or m.group().lower() in _STOP or (m.start() and rest[m.start() - 1] not in " \t"):
+            break                                   # a stop word, or glued to "c/" of "c/o": not a spoken name
         out.append((m.start(), head[m.start():len(head.rstrip(" ,"))]))
         rest = rest[:m.start()]
         if not re.search(r"[ \t]$", rest):
@@ -76,17 +94,20 @@ def apply(text: str):
     out, found, pos = [], [], 0
     for m in _RUN.finditer(text):
         run = m.group()
-        word = _join(run)
+        letters = "".join(re.findall(r"[A-Za-z]", run))
         stop = "." if run.endswith(".") and "." not in run[:-1] else ""   # "S-I-L-O-D-A-L." still ends its sentence
         before = text[pos:m.start()]
         cue = _CUE.search(before)
         head = before[:cue.start()] if cue else before
-        best = _best(_spans(head), word)
+        best = _best(_spans(head), letters)
         if best and (cue or best[2] >= SIMILAR):
+            word = _cased(letters, best[1], head[:best[0]])
             out.append(head[:best[0]] + word + stop)
             found.append({"spelled": word, "heard": best[1], "why": "cue" if cue else "alike"})
-        elif cue or len(word) >= MIN_LONE_LETTERS:
-            out.append((head.rstrip(" ,") + " " if cue else before) + word + stop)
+        elif cue or len(letters) >= MIN_LONE_LETTERS or _after_label(before):
+            prefix = head.rstrip(" ,") + " " if cue else before
+            word = _cased(letters, "", prefix)
+            out.append(prefix + word + stop)
             found.append({"spelled": word, "heard": "", "why": ""})
         else:
             out.append(before + run)                # "B, C, D" or "U S G" with nothing to replace: as dictated

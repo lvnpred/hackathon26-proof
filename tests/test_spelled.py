@@ -111,3 +111,23 @@ def test_a_correction_keeps_the_undo_on_untouched_rows_and_tags_a_new_spelled_ro
 def test_a_spoken_rename_drops_the_undo():
     from doctor_dictation.core.ops import _regrounded
     assert "spelled_heard" not in _regrounded({**_row("Silodal"), "spelled_heard": "Cello dial"}, "Tamsulosin")
+
+
+@pytest.mark.parametrize("said, written", [
+    ("patient Anu, A-N-U, 30 female", "patient Anu, 30 female"),                 # a short name is not an abbreviation
+    ("patient anu A-N-U", "patient Anu"),                                         # after a name label: a name
+    ("Mrs Anu A-N-U", "Mrs Anu"),
+    ("patient Sri Devi S-R-I-D-E-V-I, 52 female", "patient Sridevi, 52 female"),
+    ("diagnosis ureteric calculus, spelled C-A-L-C-U-L-U-S", "diagnosis ureteric calculus"),   # prose keeps its case
+    ("c/o dysuria D-Y-S-U-R-I-A for 3 days", "c/o dysuria for 3 days"),
+    ("tablet cello dial S-I-L-O-D-A-L 8 mg", "tablet Silodal 8 mg"),              # after a form: a name
+    ("tablet P-A-N 40", "tablet Pan 40"),
+    ("advised, spelled U-S-G, abdomen", "advised USG, abdomen"),                 # nothing to replace: an abbreviation
+])
+def test_the_spelled_word_takes_the_casing_of_what_it_replaces(said, written):
+    assert _apply(said)[0] == written
+
+
+def test_label_words_are_never_replaced():
+    assert _apply("patient name R-A-M, 40 male")[0] == "patient name Ram, 40 male"   # "name" sounds a bit like "Ram"
+    assert _apply("diagnosis B-P-H")[0] == "diagnosis B-P-H"                         # 3 letters, nothing to replace

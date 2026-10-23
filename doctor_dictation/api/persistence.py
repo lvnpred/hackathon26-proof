@@ -13,6 +13,7 @@ from doctor_dictation.api import authorship, visit
 from doctor_dictation.api.pastday import is_past, past_refusal, visit_day, visit_day_iso
 from doctor_dictation.api.formulary import learn_doctor_generics, learn_from_save, use_clinic_layer
 from doctor_dictation.api.investigations import remember_from_save, use_investigations
+from doctor_dictation.api.spoken import learn_spoken_terms
 from doctor_dictation.config import get_settings
 from doctor_dictation.core import followup, investigations
 from doctor_dictation.core.correction import preserve_untouched_rx_status
@@ -243,6 +244,7 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
     conn = dbmod.get_conn()
     try:
         resave = req.document_id is not None
+        previous = None                    # a re-save: the form saved before, so its spoken terms are taken back
         if resave:
             existing = dbmod.get_document(conn, req.document_id)
             if existing is None:
@@ -255,6 +257,7 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
             # payload naming another patient cannot rebind/rename a row, and a
             # blank OP cannot leak a fresh patient on every re-save.
             day = visit_day(existing) or day  # fixed at first save: the screen, the PDF and the review date share it
+            previous = existing["structured_json"]
             encounter_id = existing["encounter_id"]
             enc = dbmod.get_encounter(conn, encounter_id)
             patient_id = enc["patient_id"]
@@ -342,6 +345,8 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
                               ident.user_id if ident else None)  # commits: after the document's own commit
         remember_from_save(conn, validated["investigations"], req.remember_investigations, document_id,
                            ident.user_id if ident else None)       # commits too; never raises
+        learn_spoken_terms(conn, validated, document_id, ident.user_id if ident else None,
+                           previous=previous)                       # SH-H1: last; commits; never raises
         return {
             "patient_id": patient_id,
             "encounter_id": encounter_id,

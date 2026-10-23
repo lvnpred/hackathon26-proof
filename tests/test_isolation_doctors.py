@@ -99,7 +99,7 @@ def test_the_authors_own_reprint_prints_only_their_details(world):
 def test_hints_come_from_the_signed_in_doctors_own_prescriptions(world, monkeypatch):
     override_settings(monkeypatch, stt_use_hints=True)
     seen = []
-    monkeypatch.setattr("doctor_dictation.api.stt.build_hints", lambda top, limit: seen.append(set(top)) or [])
+    monkeypatch.setattr("doctor_dictation.api.stt.build_hints", lambda top, limit: seen.append({t.phrase for t in top}) or [])
     for who in ("rao", "mehta", "iyer"):
         r = getattr(world, who).post("/api/transcribe", files={"audio": ("d.webm", b"fake audio", "audio/webm")},
                                      headers=H)

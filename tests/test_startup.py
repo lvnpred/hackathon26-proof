@@ -55,7 +55,7 @@ def test_transcribe_without_a_scope_is_401_not_an_unpersonalised_success(multi, 
     from doctor_dictation.api import stt
     from doctor_dictation.scope import NoScope
     with pytest.raises(NoScope):
-        stt._doctor_top(10)
+        stt._doctor_terms()
 
 
 def test_multi_mode_refuses_an_old_sqlite(multi, monkeypatch):

@@ -95,6 +95,15 @@ ssh -i ~/.ssh/id_ed25519_dictdoc_vps deploy@200.234.34.10
    ```
    cp ~/app/scripts/deploy/03-backup.sh ~/03-backup.sh
    ```
+6. Once, on the first update that brings spoken hints (plan SH-H1), count the saved prescriptions into each
+   doctor's spoken terms:
+   ```
+   cd ~/app && docker compose --env-file .env.production exec app python -m doctor_dictation.admin backfill-spoken-terms
+   ```
+   Until it runs, each doctor's own hints are empty and only new saves fill them. It prints one line per clinic:
+   `<clinic>: N documents read, M new term uses`. It is safe to run twice: the second run counts nothing. It exits 1
+   and prints `<clinic>: FAILED ...` if a clinic database failed; the other clinics are still counted. Fix the cause
+   and run it again.
 
 **Browser** (https://gsr.lightday.online):
 1. Log in and dictate one short prescription.

@@ -27,12 +27,17 @@ def key(name) -> str:
     return " ".join(str(name or "").split()).casefold()
 
 
+def has_letters(name) -> bool:
+    """At least 3 letters: "9876543210" or "B2" typed into a name cell is not a medicine name."""
+    return sum(c.isalpha() for c in str(name or "")) >= 3
+
+
 def clean_name(raw) -> str:
     """The name to store, or "" for anything that is not plausibly a medicine name."""
     name = " ".join(str(raw or "").split())
     if not (3 <= len(name) <= MAX_NAME) or len(name.split()) > MAX_WORDS or not _NAME_OK.fullmatch(name):
         return ""
-    if sum(c.isalpha() for c in name) < 3:
+    if not has_letters(name):
         return ""
     return re.sub(r"[A-Za-z]+", lambda m: m.group(0).capitalize(), name) if name.isupper() or name.islower() else name
 

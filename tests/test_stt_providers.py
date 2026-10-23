@@ -39,7 +39,7 @@ def test_openai_request_hints_errors_and_no_key(monkeypatch):
     assert seen[0]["data"] == {"model": "whisper-1", "language": "en"}  # no prompt without hints
     assert seen[0]["files"]["file"] == ("d.webm", b"\x00", "audio/webm")
     _run(p.transcribe(b"\x00", "d.webm", ["Telmisartan", "Metformin"]))
-    assert seen[1]["data"]["prompt"] == "Telmisartan, Metformin"
+    assert seen[1]["data"]["prompt"] == "Telmisartan. Metformin."
     _httpx(monkeypatch, status=500)
     with pytest.raises(SttError) as bad:
         _run(p.transcribe(b"\x00", "d.webm"))
@@ -76,7 +76,7 @@ def test_local_decode_hints_and_temp_file_cleanup(monkeypatch):
     existed, path, kw = calls[0]
     assert existed and path.endswith(".webm") and not os.path.exists(path) and kw == L.STT_DECODE
     _run(p.transcribe(b"\x00", "d.webm", ["Telmisartan", "Metformin"]))
-    assert calls[1][2]["initial_prompt"].endswith(", Telmisartan, Metformin")
+    assert calls[1][2]["initial_prompt"].endswith(". Telmisartan. Metformin.")
     assert "Telmisartan" not in L.STT_DECODE["initial_prompt"]  # constant untouched
 
 def test_local_errors_and_the_small_model_pin(monkeypatch):
@@ -153,7 +153,7 @@ def test_groq_uses_its_own_url_key_and_model(monkeypatch):
     assert (t.text, t.engine) == ("fever", "groq-whisper-api")
     assert seen[0]["url"] == "https://api.groq.com/openai/v1/audio/transcriptions"
     assert seen[0]["headers"] == {"Authorization": "Bearer gsk-x"}  # never the OpenAI key
-    assert seen[0]["data"] == {"model": "whisper-large-v3", "language": "en", "prompt": "Metformin"}
+    assert seen[0]["data"] == {"model": "whisper-large-v3", "language": "en", "prompt": "Metformin."}
     _httpx(monkeypatch, status=500)
     with pytest.raises(SttError) as bad:
         _run(p.transcribe(b"\x00", "d.webm"))

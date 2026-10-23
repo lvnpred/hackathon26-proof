@@ -248,7 +248,7 @@ def test_transcribe_hints_come_from_the_callers_own_scope(world, monkeypatch):
     seen, tops = {}, []
 
     def spy(top, limit):
-        tops.append(list(top))
+        tops.append([t.phrase for t in top])
         return []
 
     monkeypatch.setattr(api_stt, "build_hints", spy)

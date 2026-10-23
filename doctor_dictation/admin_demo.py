@@ -21,6 +21,7 @@ from PIL import Image
 from doctor_dictation import accounts, clinics
 from doctor_dictation import scope as scopemod
 from doctor_dictation import db as dbmod
+from doctor_dictation.api.spoken import learn_spoken_terms
 from doctor_dictation.db import details, opno
 from doctor_dictation.db import templates as tdb
 from doctor_dictation.directory import list_clinics, open_directory
@@ -146,6 +147,7 @@ def _prescription(conn, author_id: int, author: str, patient: str, age_sex: str,
                                       finalized_at=dbmod._utcnow())
     dbmod.log_audit(conn, actor=author, role="doctor", action="finalize", entity="encounter",
                     entity_id=str(encounter_id), detail={"document_id": document_id, "seeded": True})
+    learn_spoken_terms(conn, form, document_id, author_id)
     return document_id
 
 

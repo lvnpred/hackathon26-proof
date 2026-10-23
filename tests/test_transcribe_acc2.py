@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import stt as route_mod
 from doctor_dictation.api.app import create_app
+from doctor_dictation.api.spoken import learn_spoken_terms
 from doctor_dictation.config import override_settings
 from doctor_dictation.providers.stt.base import Transcript
 
@@ -41,8 +42,10 @@ def test_hints_on_sends_doctors_medicines_first_then_lexicon(env):
     conn = dbmod.get_conn()
     dbmod.migrate(conn)
     eid = dbmod.create_encounter(conn, dbmod.create_patient(conn, "P", "40 / M", None))
-    dbmod.save_document(conn, eid, "sha", {"rx": [{"name": "Tamsulosin"}, {"name": "Tamsulosin"},
-                                                  {"name": "Paracetamol"}]}, finalized_at="2026-10-13T00:00:00Z")
+    for names in (["Tamsulosin", "Tamsulosin", "Paracetamol"], ["Tamsulosin"]):      # a document counts a name once
+        form = {"rx": [{"name": n} for n in names]}
+        doc = dbmod.save_document(conn, eid, "sha", form, finalized_at="2026-10-13T00:00:00Z")
+        learn_spoken_terms(conn, form, doc, None)
     conn.close()
     override_settings(mp, stt_use_hints=True, stt_hint_limit=12)
     assert _post(client).status_code == 200
@@ -54,7 +57,7 @@ def test_hints_on_sends_doctors_medicines_first_then_lexicon(env):
 def test_hints_on_survives_a_database_error(env):
     client, rec, _, mp = env
     override_settings(mp, stt_use_hints=True, stt_hint_limit=5)
-    mp.setattr(route_mod.dbmod, "top_medicines", lambda conn, limit=30: 1 / 0)
+    mp.setattr(route_mod.spoken_db, "doctor_hint_terms", lambda conn, doctor_id, today: 1 / 0)
     assert _post(client).status_code == 200
     assert len(rec.calls[0]["hints"]) == 5            # lexicon names only
 

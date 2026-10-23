@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import stt as stt_api
+from doctor_dictation.api.spoken import learn_spoken_terms
 from doctor_dictation.config import override_settings
 from doctor_dictation.providers.stt.base import Transcript
 from authorship_fixtures import H, SAVE, as_user, clinic_conn, legacy_document, save, team  # noqa: F401
@@ -84,7 +85,9 @@ def test_hints_come_from_the_signed_in_doctors_own_prescriptions(team, monkeypat
     with clinic_conn() as conn:
         for author, names in ((team.rao, ["Tamsulosin", "Tamsulosin"]), (team.mehta, ["Paracetamol"])):
             eid = dbmod.create_encounter(conn, dbmod.create_patient(conn, "P", "", None), doctor_id=author)
-            dbmod.save_document(conn, eid, "sha", {"rx": [{"name": n} for n in names]}, finalized_at=dbmod._utcnow())
+            form = {"rx": [{"name": n} for n in names]}
+            doc = dbmod.save_document(conn, eid, "sha", form, finalized_at=dbmod._utcnow())
+            learn_spoken_terms(conn, form, doc, author)
     audio = {"audio": ("note.webm", b"RAWBYTES", "audio/webm")}
     c = team.client
     assert as_user(c, team.mehta).post("/api/transcribe", files=audio, headers=H).status_code == 200

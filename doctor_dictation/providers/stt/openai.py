@@ -1,6 +1,7 @@
 """OpenAI Whisper API provider (cloud default), plus the shared OpenAI-compatible request."""
 import httpx
 
+from doctor_dictation.core.hints import prompt_text
 from doctor_dictation.providers.stt.base import SttError, SttUnavailable, Transcript
 
 URL = "https://api.openai.com/v1/audio/transcriptions"
@@ -21,7 +22,7 @@ class OpenAiCompatibleStt:
             raise SttUnavailable(f"{self.key_env} is not set")
         data = {"model": self._model, "language": "en"}
         if hints:
-            data["prompt"] = ", ".join(hints)
+            data["prompt"] = prompt_text(hints)
         files = {"file": (filename or "dictation.webm", audio, "audio/webm")}
         try:  # httpx.AsyncClient is looked up at call time so tests can patch it
             async with httpx.AsyncClient(timeout=90) as client:

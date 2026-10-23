@@ -1,6 +1,7 @@
 """Operator command line: ``python -m doctor_dictation.admin <command>``. Run on the host, never over HTTP.
 
-Commands: create-clinic, list-clinics, migrate-all, adopt-existing, create-user, reset-password, seed-demo (demo only).
+Commands: create-clinic, list-clinics, migrate-all, adopt-existing, create-user, reset-password, seed-demo (demo only),
+backfill-spoken-terms (count the saved prescriptions into each doctor's spoken terms, once).
 promote-candidates and promote-apply (doctor_dictation/promotion.py). apply-list-changes (doctor_dictation/listchanges.py).
 create-clinic and adopt-existing take ``--first-user``. A temporary password is printed once on stdout
 and is never logged or audited.
@@ -19,9 +20,10 @@ from dotenv import find_dotenv, load_dotenv
 
 from doctor_dictation import accounts, admin_demo, clinics, listchanges, promotion
 from doctor_dictation import db as dbmod
+from doctor_dictation.api.spoken import replay_saved
 from doctor_dictation.directory import DirectoryError, check_clinic_fields, create_clinic, get_clinic, list_clinics, open_directory
 from doctor_dictation.directory.logins import lookup_username
-from doctor_dictation.scope import clinic_dir
+from doctor_dictation.scope import clinic_dir, multi_clinic_enabled
 
 
 def _precheck_username(username) -> None:
@@ -78,6 +80,23 @@ def _migrate_all(_args) -> int:
         print(f"{slug}: {', '.join(applied) if applied else 'up to date'}")
     for slug, why in failed.items():
         print(f"{slug}: FAILED {why}", file=sys.stderr)
+    return 1 if failed else 0
+
+
+def _backfill_spoken(_args) -> int:
+    """Replay every saved prescription into the spoken terms, per database. The ledger makes a re-run count nothing."""
+    failed = False
+    for label, path in promotion.clinic_dbs():
+        try:
+            if not Path(path).is_file():            # before init_db: a missing database is never created
+                raise FileNotFoundError(f"no database at {path}")
+            dbmod.init_db(path)                     # applies migration 011 when the clinic has not had it yet
+            with closing(dbmod.get_conn(path)) as conn:
+                docs, uses = replay_saved(conn, by_doctor=multi_clinic_enabled())
+            print(f"{label}: {docs} documents read, {uses} new term uses")
+        except Exception as exc:  # noqa: BLE001 - one bad database never stops the others; exit 1 says it failed
+            failed = True
+            print(f"{label}: FAILED {exc}", file=sys.stderr)
     return 1 if failed else 0
 
 
@@ -183,7 +202,8 @@ def _adopt(args) -> int:
 
 
 COMMANDS = {"create-clinic": _create, "list-clinics": _list, "migrate-all": _migrate_all, "adopt-existing": _adopt,
-            "create-user": _create_user, "reset-password": _reset_password}
+            "create-user": _create_user, "reset-password": _reset_password,
+            "backfill-spoken-terms": _backfill_spoken}
 
 
 def main(argv=None) -> int:
@@ -210,6 +230,7 @@ def main(argv=None) -> int:
     a.add_argument("--name", help="clinic name (default: the saved profile's clinic name, else the slug)")
     a.add_argument("--first-user", help="also create this user from the saved profile and print a temporary password once")
     a.add_argument("--display-name", help="display name for --first-user")
+    sub.add_parser("backfill-spoken-terms", help="count the saved prescriptions into each doctor's spoken terms (safe to re-run)")
     admin_demo.register(sub, COMMANDS)          # seed-demo: DEMO_MODE=1 only
     promotion.register(sub, COMMANDS)           # promote-candidates, promote-apply (plan I1-g simple, Task 4)
     listchanges.register(sub, COMMANDS)         # apply-list-changes (plan PQ-f, Task 10)

@@ -6,6 +6,7 @@ import threading
 from pathlib import Path
 
 from doctor_dictation.config import get_settings
+from doctor_dictation.core.hints import prompt_text
 from doctor_dictation.providers.stt.base import (
     SttError, SttModelLoadError, SttUnavailable, Transcript)
 
@@ -85,7 +86,7 @@ class LocalWhisperStt:
                 f"STT model failed to load ({whisper_model_name()}): {e}".strip()[:500]) from e
         decode = dict(STT_DECODE)
         if hints:
-            decode["initial_prompt"] += ", " + ", ".join(hints)
+            decode["initial_prompt"] += ". " + prompt_text(hints)
         suffix = Path(filename or "audio.webm").suffix or ".webm"
 
         def _run():

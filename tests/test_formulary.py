@@ -3,7 +3,8 @@ import pytest
 
 from doctor_dictation.core import determinism as D
 from doctor_dictation.core import formulary as F
-from doctor_dictation.core.hints import MAX_HINT_CHARS, _MAX_DOCTOR_NAME, build_hints
+from doctor_dictation.core.hints import MAX_HINT_CHARS, _MAX_DOCTOR_NAME, build_hints, prompt_text
+from doctor_dictation.core.spoken import HintTerm
 
 
 @pytest.fixture(autouse=True)
@@ -177,17 +178,17 @@ def test_the_page_shows_known_to_your_clinic_for_a_clinic_name_after_a_correctio
 
 
 def test_hints_keep_clinic_names_inside_the_budget_and_still_leave_room_for_the_lexicon():
-    assert build_hints(["Zorbexin"], limit=5)[0] != "Zorbexin"                       # no layer: dropped, as before
+    assert build_hints([HintTerm("Zorbexin", 1.0)], limit=5)[0] != "Zorbexin"                       # no layer: dropped, as before
     F.activate(layer("Zorbexin", *[f"Longnamedclinicmedicine{i} Forte Plus" for i in range(40)]))
-    out = build_hints(["Zorbexin", "Ramesh Kumar"], limit=70)
+    out = build_hints([HintTerm("Zorbexin", 2.0), HintTerm("Ramesh Kumar", 1.0)], limit=70)
     assert out[0] == "Zorbexin" and "Ramesh Kumar" not in out
-    assert len(", ".join(out)) <= MAX_HINT_CHARS and len(out) >= 20 and "Paracetamol" in out
+    assert len(prompt_text(out)) <= MAX_HINT_CHARS and len(out) >= 20 and "Paracetamol" in out
     names = F.active_layer().hint_names()
     assert len(names) <= F.MAX_HINTS and len(", ".join(names)) <= F.HINT_CHARS
     alone = build_hints([], limit=70)                                      # no doctor history: the layer's newest names lead
     assert alone[:len(names)] == names and len(names) >= 2 and "Paracetamol" in alone
     old = "Longnamedclinicmedicine39 Forte Plus"                              # on the layer, too old for hint_names
-    assert old not in names and build_hints([old], limit=70)[0] == old       # the doctor's own use still keeps it
+    assert old not in names and build_hints([HintTerm(old, 1.0)], limit=70)[0] == old       # the doctor's own use still keeps it
 
 
 def test_a_clinic_name_close_to_a_lexicon_spelling_is_rewritten_before_grounding():

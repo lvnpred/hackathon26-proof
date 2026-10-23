@@ -39,7 +39,8 @@ UPLOAD_PAD = {"header": [{"type": "logo", "crop": [0.05, 0.02, 0.25, 0.10], "ali
                          {"type": "text", "text": UPLOAD_PAD_LINE, "role": "small", "align": "center"}],
               "footer": [], "body": {"top": 0.22, "bottom": 0.92}, "profile": {}}
 TABLES = ("patients", "encounters", "documents", "templates", "users", "clinic_profile", "audit_log",
-          "schema_migrations", "clinic_formulary", "clinic_formulary_docs")
+          "schema_migrations", "clinic_formulary", "clinic_formulary_docs",
+          "spoken_terms", "spoken_term_docs", "spoken_term_strengths")
 
 
 class _Page:
@@ -220,7 +221,7 @@ def today(client, scope=None):                                              # A4
 
 
 def hint_lookup():                                                          # A5
-    return stt._doctor_top(5)
+    return stt._doctor_terms()
 
 
 def set_doctors(client, template_id, mode, ids=()):                         # A10

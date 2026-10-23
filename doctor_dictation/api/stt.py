@@ -1,6 +1,7 @@
 """Speech-to-text endpoint. Providers come from the factory at request time."""
 import asyncio
 from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import PurePath
 
 from fastapi import APIRouter, Depends, File, UploadFile
@@ -12,6 +13,8 @@ from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.audio.trim import trim_silence
 from doctor_dictation.config import get_settings
 from doctor_dictation.core.hints import build_hints
+from doctor_dictation.core.spoken import HintTerm
+from doctor_dictation.db import spoken as spoken_db
 from doctor_dictation.providers.stt.base import SttChainError
 from doctor_dictation.providers.stt.factory import failure_response, make_stt, success_body
 from doctor_dictation.scope import NoScope, current_scope
@@ -19,17 +22,18 @@ from doctor_dictation.scope import NoScope, current_scope
 router = APIRouter(route_class=FormLimitRoute)
 
 
-def _doctor_top(limit: int) -> list[str]:
-    """The signed-in doctor's most-used medicines (every prescription in single-database mode, where no one
-    signs in); any database problem means no personalisation."""
+def _doctor_terms(context=None) -> list[HintTerm]:
+    """The signed-in doctor's spoken terms (every term in single-database mode, where no one signs in, doctor 0);
+    any database problem means no personalisation. ``context`` is unused until H3 and H4."""
     sc = current_scope()
     try:
         with closing(dbmod.get_conn()) as conn:
-            return dbmod.top_medicines(conn, min(30, limit), doctor_id=sc.user_id if sc is not None else None)
+            return spoken_db.doctor_hint_terms(
+                conn, sc.user_id if sc is not None and sc.user_id else 0, datetime.now(timezone.utc).date())
     except NoScope:
         raise                      # a missing scope is an auth bug, not "no hints"
     except Exception as exc:  # noqa: BLE001 - hints are optional
-        print(f"hints: top_medicines unavailable: {exc}", flush=True)
+        print(f"hints: spoken terms unavailable: {exc}", flush=True)
         return []
 
 
@@ -41,8 +45,8 @@ async def _prepare_audio(raw: bytes, filename: str, settings) -> tuple[bytes, st
         if trimmed is not raw:                         # new bytes are Ogg/Opus
             raw, filename = trimmed, PurePath(filename).stem + ".ogg"
     if settings.stt_use_hints:
-        top = await asyncio.to_thread(_doctor_top, settings.stt_hint_limit)
-        hints = tuple(build_hints(top, settings.stt_hint_limit))
+        terms = await asyncio.to_thread(_doctor_terms)
+        hints = tuple(build_hints(terms, settings.stt_hint_limit))
     return raw, filename, hints
 
 

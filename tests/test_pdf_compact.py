@@ -39,7 +39,7 @@ def test_a_filled_sheet_prints_all_six_sections_in_order():
 
 def test_lists_print_as_titled_bullets_under_the_screen_headings():          # owner 2026-10-20: match the screen
     html = build_sheet_html({"investigations": ["CBC", "RFT"], "advice": ["Fluids 3 L/day", "Rest"]}, META)
-    assert '<div class="sec-title">Investigations Advised</div><ul><li>CBC</li><li>RFT</li></ul>' in html
+    assert '<div class="sec-title">Investigations Advised</div><div class="inline-list"><span class="item">CBC</span> <span class="sep"></span> <span class="item">RFT</span></div>' in html   # owner 2026-10-23: wraps, saves paper
     assert '<div class="sec-title">Dietary &amp; General Advice</div><ul><li>Fluids 3 L/day</li><li>Rest</li></ul>' in html
     assert "inl-label" not in html
 
@@ -58,7 +58,7 @@ def test_item_text_uses_plan_h_print_text_for_items_only(monkeypatch):
     monkeypatch.setitem(sys.modules, MOD, fake)
     assert sections.item_text({"text": "RFT"}) == "RFT (Renal Function Test)" and sections.item_text("RFT") == "RFT"
     html = build_sheet_html({"investigations": ["CBC", {"text": "RFT"}, {"text": "<b>x</b>"}]}, META)
-    assert "<li>CBC</li><li>RFT (Renal Function Test)</li><li>&lt;b&gt;x&lt;/b&gt; (Renal Function Test)</li>" in html
+    assert '<div class="inline-list"><span class="item">CBC</span> <span class="sep"></span> <span class="item">RFT (Renal Function Test)</span> <span class="sep"></span> <span class="item">&lt;b&gt;x&lt;/b&gt; (Renal Function Test)</span></div>' in html
 
 def test_item_text_reraises_a_broken_investigations_module(monkeypatch):
     def broken(name, *a, **k):
@@ -228,3 +228,9 @@ def test_the_medicine_name_prints_in_capitals_and_the_rest_keeps_its_case():
                                  "generic": "Aceclofenac + Paracetamol", "dose": "1-0-1"}])
     assert "Tab. ZERODOL-P 500 mg" in html and "generic: Aceclofenac + Paracetamol" in html
     assert "Zerodol-p" not in html
+
+
+def test_investigations_wrap_with_a_diamond_between_and_skip_blanks():   # owner 2026-10-23
+    html = build_sheet_html({"investigations": ["Blood test", " ", "Urine test", "MRI scans"]}, META)
+    assert html.count('<span class="sep"></span>') == 2 and "<li>Blood test</li>" not in html
+    assert ".inline-list .sep" in html and "border: 3px solid" in html   # a CSS diamond: needs no symbol font

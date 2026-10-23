@@ -31,7 +31,7 @@ def test_the_sheet_prints_brief_history_first_then_diagnosis_as_paragraphs_with_
     assert '<p>—</p>' not in empty and "Review" not in empty and 'class="rev-date"' not in empty   # no review, no date
     old = build_sheet_html({"complaints": ["epigastric pain"], "diagnosis": ["Gastritis"]}, META)   # a document saved before I2-b
     assert old.index("epigastric pain") < old.index("Gastritis")
-    assert '<div class="sec-title">Investigations Advised</div><ul><li>CBC</li></ul>' in build_sheet_html({"investigations": ["CBC"]}, META)
+    assert '<div class="sec-title">Investigations Advised</div><div class="inline-list"><span class="item">CBC</span></div>' in build_sheet_html({"investigations": ["CBC"]}, META)
     assert "<p>&lt;b&gt;x&lt;/b&gt;</p>" in build_sheet_html({"complaints": ["<b>x</b>"]}, META)
 
 

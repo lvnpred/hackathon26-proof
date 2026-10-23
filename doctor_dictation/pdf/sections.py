@@ -58,6 +58,16 @@ def list_section(title: str, values) -> str:
     return bullet_section(title, [item_text(v) for v in (values if isinstance(values, list) else [])])
 
 
+def inline_section(title: str, values) -> str:
+    """A titled run of items that wraps onto the next line, a bold diamond between items (owner, 2026-10-23: saves
+    paper); nothing when empty. Each item is an inline-block, so a name breaks only when it is wider than the line."""
+    items = _items([item_text(v) for v in (values if isinstance(values, list) else [])])
+    if not items:
+        return ""
+    return (f'<div class="sec-title">{title}</div><div class="inline-list">'
+            + ' <span class="sep"></span> '.join(f'<span class="item">{esc(v)}</span>' for v in items) + "</div>")
+
+
 def _rx_row(index: int, row: dict, with_instructions: bool) -> str:
     medicine = " ".join(        # the name prints in capitals (owner rule); form and strength keep their case ("500 mg")
         str(part) for part in (row.get("form") or "", str(row.get("name") or "").upper(), row.get("strength") or "")

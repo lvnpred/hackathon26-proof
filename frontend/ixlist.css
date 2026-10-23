@@ -34,4 +34,10 @@ ul.ix-list li .x-btn { margin-left:8px; }
   li.ix-item[data-status="not-dictated"] { background:none; border-left:none; }
   li.ix-item.ix-blocked .ix-text { text-decoration:none; }
   .ix-text:empty::before, ul.ix-list:empty::before { content:""; }
+  /* Same as the PDF (pdf/sections.py inline_section): tests wrap like text, a bold diamond between them. */
+  ul.ix-list { padding-left:0; list-style:none; line-height:1.6; }
+  ul.ix-list li.ix-item { display:inline-block; padding:0; }
+  ul.ix-list li.ix-item:has(.ix-text:empty) { display:none; }
+  ul.ix-list li.ix-item ~ li.ix-item::before { content:""; display:inline-block; width:0; height:0; border:3px solid #111;
+    transform:rotate(45deg); vertical-align:middle; margin:0 8px; }
 }

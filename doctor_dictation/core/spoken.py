@@ -8,12 +8,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from . import investigations
+from .drugnames import _exact_lookup
 from .formulary import MAX_NAME, has_letters, person_like
 
 USUAL_SHARE, USUAL_MIN = 60, 2     # the usual strength: at least 60% of a term's uses, and at least 2 uses
 # a strength as hints.py accepts one: 1-4 digits, 2 decimals at most, so a phone number is never a strength
 _STRENGTH = re.compile(r"\d{1,4}(?:\.\d{1,2})?\s*(?:mg|mcg|g|gm|ml|iu|units?|%)?(?:\s*/\s*\d{0,4}(?:\.\d{1,2})?\s*(?:ml|g|gm|tab))?", re.I)
 _TRAILING_MG = re.compile(r"\s*mg$", re.I)
+MAX_HEARD_CHARS, MAX_HEARD_WORDS = 60, 9   # check-row's name caps (api/rx.py), plus the one word heard_as may add
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,43 @@ def terms_from_save(structured, known_patient_words) -> list[Term]:
             continue
         seen.add((kind, k))
         out.append(Term(kind, k, name, form, strength, generic))
+    return out
+
+
+def mishearings_from_save(structured, known_patient_words) -> list[tuple[str, str]]:
+    """[(term key, heard)] of a saved form (plan SH-H2): medicine rows whose heard is another word than the name.
+
+    The heard text is the words a spelled name replaced (``spelled_heard``) when the row has them, else ``heard``.
+    """
+    rows = structured.get("rx") if isinstance(structured, dict) else None
+    if not isinstance(rows, list):
+        return []
+    patient = structured.get("patientName", "")
+    patient_words = {p for w in known_patient_words or () for p in key(w).split()} | set(key(patient).split())
+    out, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        heard = row.get("spelled_heard")
+        if not isinstance(heard, str) or not heard.strip():
+            heard = row.get("heard")
+        if not isinstance(heard, str):
+            continue
+        heard = _clean(heard)
+        name_key, heard_key = key(row.get("name")), key(heard)
+        if not heard or len(heard) > MAX_HEARD_CHARS or len(heard.split()) > MAX_HEARD_WORDS or not heard_key or heard_key == name_key:
+            continue
+        known = _exact_lookup(heard)
+        if known and known == _exact_lookup(_clean(row.get("name"))):
+            continue
+        if person_like(heard) or any(len(w) >= 3 and w in patient_words for w in heard_key.split()):
+            continue
+        terms = terms_from_save({"rx": [row], "patientName": patient}, known_patient_words)
+        term = next((t for t in terms if t.kind == "medicine"), None)
+        if term is None or (term.key, heard_key) in seen or (term.key + " ").startswith(heard_key + " "):
+            continue                                  # a name said without its strength ("dolo" for "Dolo 650") is no mishearing
+        seen.add((term.key, heard_key))
+        out.append((term.key, heard))
     return out
 
 

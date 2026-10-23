@@ -89,8 +89,9 @@
     showErr("");
     if (t.admin && window.ClinicLists) window.ClinicLists.clearLive();
     if (t.owner && window.OwnerLists) window.OwnerLists.clearLive();
+    if (window.Mishearings && el("teamMishear")) window.Mishearings.clearLive();
     if (kind === "shared") window.OwnerLists.load();
-    else if (kind) window.ClinicLists.load(kind);
+    else if (kind) { window.ClinicLists.load(kind); if (kind === "medicine" && window.Mishearings && el("teamMishear")) window.Mishearings.load(); }
   }
   async function whoami() {                        // the signed-in user, from /api/v1/auth/me; anything unclear is "not an admin, not the owner"
     try {
@@ -110,6 +111,7 @@
     if (t.admin && window.ClinicLists) {
       window.ClinicLists.init(host);
       TABS.forEach(([, , , kind]) => people.parentNode.append(window.ClinicLists.buildPanel(kind)));
+      if (window.Mishearings) { window.Mishearings.init(host); el("teamMeds").append(window.Mishearings.buildSection()); }   // plan SH-H2
     }
     if (t.owner && window.OwnerLists) {
       window.OwnerLists.init(host);

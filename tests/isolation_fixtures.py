@@ -40,7 +40,7 @@ UPLOAD_PAD = {"header": [{"type": "logo", "crop": [0.05, 0.02, 0.25, 0.10], "ali
               "footer": [], "body": {"top": 0.22, "bottom": 0.92}, "profile": {}}
 TABLES = ("patients", "encounters", "documents", "templates", "users", "clinic_profile", "audit_log",
           "schema_migrations", "clinic_formulary", "clinic_formulary_docs",
-          "spoken_terms", "spoken_term_docs", "spoken_term_strengths")
+          "spoken_terms", "spoken_term_docs", "spoken_term_strengths", "spoken_mishearings", "spoken_mishearing_docs")
 
 
 class _Page:

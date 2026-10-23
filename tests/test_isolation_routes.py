@@ -28,7 +28,7 @@ def _norm(path):
     return re.sub(r"\{[^}]+\}", "{id}", path)
 
 
-ADMIN_ONLY = ("/api/v1/formulary/", "/api/v1/users/")      # admin-only routes: swept with admin clients in test_isolation_formulary.py, not with a doctor (a doctor gets 403 first)
+ADMIN_ONLY = ("/api/v1/formulary/", "/api/v1/users/", "/api/v1/spoken/mishearings/")      # admin-only routes: swept with admin clients in test_isolation_formulary.py, not with a doctor (a doctor gets 403 first)
 
 
 LIST_ROUTES = ("/api/v1/lists/", "/api/v1/owner/lists/")      # {kind} names a list ("medicine"), not a row id: nothing to look up in another clinic; test_lists_routes.py
@@ -184,6 +184,8 @@ CLASSIFIED = {
     "GET /api/v1/users": "list: test_no_list_or_page_shows_the_other_clinics_data",
     "GET /api/v1/formulary": "list: test_no_list_or_page_shows_the_other_clinics_data; test_formulary_routes.py",
     "DELETE /api/v1/formulary/{entry_id}": "admin only: test_formulary_routes.py (404 for another clinic's id, 403 for a doctor)",
+    "GET /api/v1/spoken/mishearings": "list: test_isolation_mishearings.py",
+    "DELETE /api/v1/spoken/mishearings/{entry_id}": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
     "GET /api/v1/lists/{kind}": "list by kind: test_lists_routes.py::test_other_clinic_cannot_see_or_reset",
     "POST /api/v1/lists/{kind}/changes": "admin only; the clinic's own overlay: test_lists_routes.py (403 for a doctor, 404 for another clinic's key)",
     "GET /api/v1/owner/lists/{kind}": "owner only, a store shared by every clinic: test_owner_lists.py (404 for a non-owner)",

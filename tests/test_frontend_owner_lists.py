@@ -41,7 +41,7 @@ def test_ownerlists_is_plain_text_only_and_local():
 
 def test_index_loads_ownerlists_before_team():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
-    assert "ownerlists.js?v=1" in html and "team.js?v=6" in html
+    assert "ownerlists.js?v=1" in html and "team.js?v=7" in html
     assert html.index("clinlists.js?v=") < html.index("ownerlists.js?v=") < html.index("team.js?v=")
 
 

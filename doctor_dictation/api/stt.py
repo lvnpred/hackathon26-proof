@@ -1,6 +1,7 @@
 """Speech-to-text endpoint. Providers come from the factory at request time."""
 import asyncio
 from contextlib import closing
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import PurePath
 
@@ -22,14 +23,29 @@ from doctor_dictation.scope import NoScope, current_scope
 router = APIRouter(route_class=FormLimitRoute)
 
 
+def _lift_to_tier_1(conn, doctor_id, terms: list[HintTerm], term_ids, what: str) -> list[HintTerm]:
+    """``terms`` with those whose id ``term_ids(conn, doctor_id)`` returns lifted to tier 1. A failed lookup is logged
+    and leaves ``terms`` as they were: one lift going wrong never drops the doctor's other hints."""
+    try:
+        lifted = term_ids(conn, doctor_id)
+        return [replace(t, tier=max(t.tier, 1)) if t.term_id in lifted else t for t in terms]
+    except NoScope:
+        raise
+    except Exception as exc:  # noqa: BLE001 - hints are optional
+        print(f"hints: {what} unavailable: {exc}", flush=True)
+        return terms
+
+
 def _doctor_terms(context=None) -> list[HintTerm]:
     """The signed-in doctor's spoken terms (every term in single-database mode, where no one signs in, doctor 0);
-    any database problem means no personalisation. ``context`` is unused until H3 and H4."""
+    any database problem means no personalisation. A term with an active corrected mishearing (H2) is lifted to
+    tier 1; a failed lift keeps the terms unlifted. ``context`` is unused until H3 and H4."""
     sc = current_scope()
     try:
         with closing(dbmod.get_conn()) as conn:
-            return spoken_db.doctor_hint_terms(
-                conn, sc.user_id if sc is not None and sc.user_id else 0, datetime.now(timezone.utc).date())
+            doctor_id = sc.user_id if sc is not None and sc.user_id else 0
+            terms = spoken_db.doctor_hint_terms(conn, doctor_id, datetime.now(timezone.utc).date())
+            return _lift_to_tier_1(conn, doctor_id, terms, spoken_db.active_mishearing_term_ids, "mishearing lift")
     except NoScope:
         raise                      # a missing scope is an auth bug, not "no hints"
     except Exception as exc:  # noqa: BLE001 - hints are optional

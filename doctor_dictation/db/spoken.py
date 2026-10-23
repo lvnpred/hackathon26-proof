@@ -3,9 +3,13 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 
-from doctor_dictation.core.formulary import usage_score
-from doctor_dictation.core.spoken import HintTerm, Term, phrase, usual_strength
+from doctor_dictation.core.formulary import THRESHOLD, usage_score
+from doctor_dictation.core.spoken import HintTerm, Term, key, phrase, usual_strength
 from doctor_dictation.db import _utcnow
+
+# A pair is active (its term is lifted to tier 1) when counted by enough documents and neither it nor its term was
+# removed, and its term still has uses (``doctor_hint_terms`` skips a term with none). Bind :threshold.
+ACTIVE = "m.removed_at IS NULL AND m.confirm_count >= :threshold AND t.removed_at IS NULL AND t.uses > 0"
 
 
 def record_terms(conn, doctor_id, terms: list[Term], document_id, previous: Sequence[Term] = ()) -> int:
@@ -83,3 +87,72 @@ def doctor_hint_terms(conn, doctor_id, today: date) -> list[HintTerm]:
                         " WHERE doctor_id = ? AND removed_at IS NULL AND uses > 0 ORDER BY id", (doctor_id,)).fetchall()
     return [HintTerm(phrase(r["spoken"], usual_strength(strengths[r["id"]])), usage_score(r["uses"], r["last_used_at"], today),
                      term_id=r["id"], key=r["term_key"]) for r in rows]
+
+
+def record_mishearings(conn, doctor_id, pairs: Sequence[tuple[str, str]], document_id) -> int:
+    """Count one saved DOCUMENT for each (term key, heard) pair of this doctor. The same document again changes nothing.
+
+    A pair whose medicine term the doctor has not recorded is skipped. Pairs are never taken back on a re-save.
+    Returns how many pairs were counted now.
+
+    COMMITS what the caller has open first, then all of its own writes or none of them (a failure rolls back and raises)."""
+    if conn.in_transaction:                       # so the rollback below can only undo this call's own writes
+        conn.commit()
+    try:
+        counted = sum(_record_mishearing(conn, doctor_id, term_key, heard, document_id) for term_key, heard in pairs)
+        conn.commit()
+        return counted
+    except BaseException:
+        conn.rollback()
+        raise
+
+
+def _record_mishearing(conn, doctor_id, term_key, heard, document_id) -> int:
+    """Count one pair for one document; 1 when counted, 0 when skipped or this document already counted it."""
+    row = conn.execute("SELECT id FROM spoken_terms WHERE doctor_id = ? AND kind = 'medicine' AND term_key = ?",
+                       (doctor_id, term_key)).fetchone()
+    if row is None:
+        return 0
+    now = _utcnow()
+    heard_key = key(heard)
+    conn.execute("INSERT OR IGNORE INTO spoken_mishearings(term_id, heard_key, heard, first_seen_at, last_seen_at)"
+                 " VALUES (?, ?, ?, ?, ?)", (row["id"], heard_key, heard, now, now))
+    mid = conn.execute("SELECT id FROM spoken_mishearings WHERE term_id = ? AND heard_key = ?",
+                       (row["id"], heard_key)).fetchone()[0]
+    if not conn.execute("INSERT OR IGNORE INTO spoken_mishearing_docs(mishearing_id, document_id) VALUES (?, ?)",
+                        (mid, document_id)).rowcount:
+        return 0
+    conn.execute("UPDATE spoken_mishearings SET confirm_count = confirm_count + 1, last_seen_at = ?,"
+                 " removed_at = CASE WHEN confirm_count + 1 >= ? THEN NULL ELSE removed_at END WHERE id = ?",
+                 (now, THRESHOLD, mid))
+    return 1
+
+
+def active_mishearing_term_ids(conn, doctor_id) -> set[int]:
+    """The ids of this doctor's terms that have an active corrected mishearing."""
+    return {r[0] for r in conn.execute(
+        f"SELECT DISTINCT m.term_id FROM spoken_mishearings m JOIN spoken_terms t ON t.id = m.term_id"
+        f" WHERE t.doctor_id = :doctor_id AND {ACTIVE}", {"doctor_id": doctor_id, "threshold": THRESHOLD})}
+
+
+def list_active_mishearings(conn) -> list[dict]:
+    """Active corrected mishearings of every doctor in this clinic, most recently seen first."""
+    rows = conn.execute(
+        "SELECT m.id, t.spoken, m.heard, m.confirm_count, m.first_seen_at, m.last_seen_at, t.doctor_id,"
+        " COALESCE(NULLIF(u.display_name, ''), u.username, '') AS doctor"
+        " FROM spoken_mishearings m JOIN spoken_terms t ON t.id = m.term_id LEFT JOIN users u ON u.id = t.doctor_id"
+        f" WHERE {ACTIVE} ORDER BY m.last_seen_at DESC, m.id DESC", {"threshold": THRESHOLD}).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_mishearing(conn, entry_id) -> dict | None:
+    """Soft-remove an ACTIVE pair: returns its spoken and heard words, or None when there is no such active pair.
+
+    Only documents saved after this count toward bringing it back (the count restarts at 0)."""
+    row = conn.execute("SELECT t.spoken, m.heard FROM spoken_mishearings m JOIN spoken_terms t ON t.id = m.term_id"
+                       f" WHERE m.id = :id AND {ACTIVE}", {"id": entry_id, "threshold": THRESHOLD}).fetchone()
+    if row is None:
+        return None
+    conn.execute("UPDATE spoken_mishearings SET removed_at = ?, confirm_count = 0 WHERE id = ?", (_utcnow(), entry_id))
+    conn.commit()
+    return {"spoken": row["spoken"], "heard": row["heard"]}

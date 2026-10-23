@@ -1,11 +1,22 @@
 """The save hook for the doctor's spoken terms (plan SH-H1). The prescription is already saved when this runs."""
 import json
 import logging
+import sqlite3
+from contextlib import closing
 
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+
+from doctor_dictation import db as dbmod
+from doctor_dictation import policy
+from doctor_dictation.api import authorship
+from doctor_dictation.api.formulary import DENIED, EntryId, _busy
 from doctor_dictation.core import spoken
 from doctor_dictation.db import formulary as fdb
 from doctor_dictation.db import spoken as sdb
+from doctor_dictation.scope import multi_clinic_enabled
 
+router = APIRouter()
 log = logging.getLogger(__name__)
 
 
@@ -23,15 +34,20 @@ def record_from_save(conn, structured, document_id, doctor_id, patient_words=Non
     """What one saved form teaches, counted once per document for ``doctor_id``. Returns the terms counted now.
 
     The one place a save teaches spoken terms (contract 5.5): the save hook and the backfill both call it, and H2/H3
-    add theirs here. ``previous`` (a re-save: the form saved before, a dict or its JSON) is taken back first.
+    add theirs here (a pair failure is logged, never raised: the terms are already counted). ``previous`` (a re-save: the form saved before, a dict or its JSON) is taken back first.
     ``patient_words`` is read from the clinic's patients when not given, and only when a form has a term at all.
     COMMITS (``record_terms`` does) and RAISES on a database error, after rolling its own writes back."""
     previous = _form(previous)
     if not (spoken.terms_from_save(structured, ()) or spoken.terms_from_save(previous, ())):
         return 0
     words = fdb.patient_words(conn) if patient_words is None else patient_words
-    return sdb.record_terms(conn, doctor_id, spoken.terms_from_save(structured, words), document_id,
-                            previous=spoken.terms_from_save(previous, words))
+    counted = sdb.record_terms(conn, doctor_id, spoken.terms_from_save(structured, words), document_id,
+                               previous=spoken.terms_from_save(previous, words))
+    try:                                          # a pair failure never blocks the terms already counted
+        sdb.record_mishearings(conn, doctor_id, spoken.mishearings_from_save(structured, words), document_id)
+    except Exception:  # noqa: BLE001 - learning is a convenience, the prescription is already saved
+        log.warning("spoken mishearings: could not record pairs", exc_info=True)
+    return counted
 
 
 def learn_spoken_terms(conn, structured, document_id, user_id, patient_words=None, previous=None) -> None:
@@ -67,3 +83,34 @@ def replay_saved(conn, by_doctor: bool) -> tuple[int, int]:
         read += 1
         record_from_save(conn, structured, doc_id, (doctor_id if by_doctor else None) or 0, patient_words=words)
     return read, conn.execute(uses).fetchone()[0] - before
+
+
+@router.get("/api/v1/spoken/mishearings")
+def list_mishearings():
+    try:
+        with closing(dbmod.get_conn()) as conn:
+            return {"items": sdb.list_active_mishearings(conn)}
+    except sqlite3.Error:
+        log.warning("spoken mishearings: list failed", exc_info=True)
+        return _busy()
+
+
+@router.delete("/api/v1/spoken/mishearings/{entry_id}")
+def remove_mishearing_route(request: Request, entry_id: EntryId):
+    """Clinic admins only. An id from another clinic is not in this database, so it answers 404."""
+    ident = authorship.identity(request)
+    if ident is None and multi_clinic_enabled():
+        return JSONResponse(status_code=401, content={"error": "sign in required"})
+    if ident is not None and not policy.can(ident, "formulary.manage"):
+        return JSONResponse(status_code=403, content=DENIED)
+    try:
+        with closing(dbmod.get_conn()) as conn:
+            pair = sdb.remove_mishearing(conn, entry_id)
+            if pair is None:
+                return JSONResponse(status_code=404, content={"error": "no such mishearing"})
+            dbmod.log_audit(conn, action="spoken.mishearing.remove", entity="spoken_mishearing",
+                            entity_id=str(entry_id), detail=pair)
+    except sqlite3.Error:
+        log.warning("spoken mishearings: remove failed", exc_info=True)
+        return _busy()
+    return {"removed": entry_id, **pair}

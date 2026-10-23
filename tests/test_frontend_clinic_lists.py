@@ -51,7 +51,7 @@ def test_clinlists_is_plain_text_only_and_uses_the_lists_route():
 
 def test_index_loads_clinlists_before_team_and_bumps_the_versions():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
-    assert "clinlists.js?v=4" in html and "listedit.js?v=1" in html and "team.js?v=6" in html and "team.css?v=6" in html
+    assert "clinlists.js?v=4" in html and "listedit.js?v=1" in html and "team.js?v=7" in html and "team.css?v=6" in html
     assert html.index("listedit.js?v=") < html.index("clinlists.js?v=") < html.index("team.js?v=")
 
 
@@ -65,7 +65,7 @@ def test_admin_sees_three_tabs_and_medicines_lists_badges():
     r = _page("""
       const labels = p.ids.teamTabPeople.parentNode.children.map((b) => b.textContent);
       await p.openMeds();
-      console.log(JSON.stringify({labels, rows: p.rows(), cols: p.ids.teamMeds.querySelectorAll("th").map((th) => th.textContent)}));""",
+      console.log(JSON.stringify({labels, rows: p.rows(), cols: p.ids.teamMedHead.querySelectorAll("th").map((th) => th.textContent)}));""",
               lists={"medicine": MEDS})
     assert r["labels"] == ["People", "Medicines", "Investigations"]
     assert r["cols"] == ["Medicine", "Generic", "Brands", "Source", "Actions"]

@@ -42,9 +42,11 @@ const learned = (m) => ({ entry_key: m.name.toLowerCase(), badge: "learned", fla
 // opts: role (the /auth/me role; null = /auth/me answers 404), items, users, me, delete: [status, body] or a function,
 //       lists: {medicine, investigation} item arrays for GET /api/v1/lists/{kind} (default: items shown as learned names),
 //       change: [status, body] or a function(body) for POST /api/v1/lists/{kind}/changes (default 200 {item: null}); the bodies land in posts,
-//       list: [status, body] for GET /api/v1/lists/medicine, answers: confirm() replies in order (default: always true)
+//       list: [status, body] for GET /api/v1/lists/medicine, answers: confirm() replies in order (default: always true),
+//       mishearings: items for GET /api/v1/spoken/mishearings, mishearDelete: [status, body] for DELETE /api/v1/spoken/mishearings/{id}
 async function open(opts = {}) {
   let items = (opts.items || []).slice();
+  let mishear = (opts.mishearings || []).slice();
   const gate = { hold: null }, calls = [], posts = [], confirms = [], ownerPosts = [], downloads = [], blobs = [], answers = (opts.answers || []).slice();
   const body = new Node("body");
   const ids = new Proxy({}, { get: (_t, id) => body.descendants().find((n) => n.attrs.id === id) });
@@ -85,6 +87,12 @@ async function open(opts = {}) {
       posts.push(sent);
       return reply(...(typeof opts.change === "function" ? opts.change(sent) : opts.change || [200, { item: null }]));
     }
+    if (url === "/api/v1/spoken/mishearings" && method === "GET") return reply(200, { items: mishear });
+    if (method === "DELETE" && url.startsWith("/api/v1/spoken/mishearings/")) {        // opts.mishearDelete: [status, body]
+      const r = opts.mishearDelete || [200, {}];
+      if (r[0] < 300) mishear = mishear.filter((m) => url !== "/api/v1/spoken/mishearings/" + m.id);
+      return reply(r[0], r[1]);
+    }
     if (method === "DELETE") {
       const r = typeof opts.delete === "function" ? opts.delete(url) : opts.delete || [200, {}];
       if (r[0] < 300) items = items.filter((i) => url !== "/api/v1/formulary/" + i.id);       // a real removal leaves the list
@@ -95,6 +103,7 @@ async function open(opts = {}) {
   if (opts.dates) { require(require("path").join(__dirname, "..", "frontend", "dates.js")); global.window.Dates.init(opts.dates); }   // the page's date formatter, as index.html loads it before team.js
   (0, eval)(fs.readFileSync(require("path").join(__dirname, "..", "frontend", "listedit.js"), "utf8"));    // before clinlists.js, as in index.html
   (0, eval)(fs.readFileSync(require("path").join(__dirname, "..", "frontend", "clinlists.js"), "utf8"));   // loaded before team.js, as in index.html
+  (0, eval)(fs.readFileSync(require("path").join(__dirname, "..", "frontend", "mishear.js"), "utf8"));      // after clinlists.js, before team.js, as in index.html
   (0, eval)(fs.readFileSync(require("path").join(__dirname, "..", "frontend", "ownerlists.js"), "utf8"));
   (0, eval)(fs.readFileSync(process.argv[2], "utf8"));
   await boot();

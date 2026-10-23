@@ -5,6 +5,7 @@ from doctor_dictation.api import stt as api_stt
 from doctor_dictation.config import override_settings
 from doctor_dictation.core import determinism as D
 from isolation_fixtures import A, A_MARKERS, B, H, a_only_id, fingerprint, leaks, save_body, sql, user_id, world  # noqa: F401
+from test_isolation_mishearings import misheard
 from test_isolation_routes import ADMIN_ONLY      # the admin sweep reuses the doctor sweep's own skip list
 
 ROW = {"form": "Tab.", "name": "Zorbexin", "strength": "10 mg", "dose": "1-0-0", "timing": "", "duration": "5 days",
@@ -66,16 +67,21 @@ def test_the_admin_sweep_covers_every_admin_only_route_across_clinics(world):
     only A has, nothing of A changes or leaks. As A's own admin: the same requests are not refused."""
     ops = sorted((m.upper(), p) for p, o in world.app.openapi()["paths"].items() if p.startswith(ADMIN_ONLY)
                  for m in o if m.upper() in {"GET", "POST", "PUT", "PATCH", "DELETE"})
-    assert ops == [("DELETE", "/api/v1/formulary/{entry_id}"), ("POST", "/api/v1/users/{user_id}/disable"),
-                   ("POST", "/api/v1/users/{user_id}/enable"), ("POST", "/api/v1/users/{user_id}/reset-password")], ops
+    assert ops == [("DELETE", "/api/v1/formulary/{entry_id}"), ("DELETE", "/api/v1/spoken/mishearings/{entry_id}"),
+                   ("POST", "/api/v1/users/{user_id}/disable"), ("POST", "/api/v1/users/{user_id}/enable"),
+                   ("POST", "/api/v1/users/{user_id}/reset-password")], ops
     learn(world.rao, "Asha Verma")
     learn(world.rao, "Lakshmi Narayan")
+    misheard(world.rao, "Asha Verma")
+    misheard(world.rao, "Lakshmi Narayan")
+    (pair,) = world.rao_admin.get("/api/v1/spoken/mishearings", headers=H).json()["items"]
     (item,) = world.rao.get("/api/v1/formulary").json()["items"]
     colleague, a_only_user = user_id(world, "dr.mehta"), a_only_id("users")      # the admin's own id exists only in A
     before_a = fingerprint(A)
 
     def url(path, user):
-        return path.replace("{entry_id}", str(item["id"])).replace("{user_id}", str(user))
+        entry = pair if path.startswith("/api/v1/spoken/") else item
+        return path.replace("{entry_id}", str(entry["id"])).replace("{user_id}", str(user))
 
     for method, path in ops:
         r = world.rao.request(method, url(path, colleague), headers=H)                      # a doctor of A

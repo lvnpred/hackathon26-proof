@@ -4,8 +4,9 @@ from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import PurePath
+from typing import Any
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 
 from doctor_dictation import db as dbmod
@@ -13,6 +14,7 @@ from doctor_dictation.api.forms import FormLimitRoute
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.audio.trim import trim_silence
 from doctor_dictation.config import get_settings
+from doctor_dictation.core import spoken
 from doctor_dictation.core.hints import build_hints
 from doctor_dictation.core.spoken import HintTerm
 from doctor_dictation.db import spoken as spoken_db
@@ -23,29 +25,40 @@ from doctor_dictation.scope import NoScope, current_scope
 router = APIRouter(route_class=FormLimitRoute)
 
 
-def _lift_to_tier_1(conn, doctor_id, terms: list[HintTerm], term_ids, what: str) -> list[HintTerm]:
-    """``terms`` with those whose id ``term_ids(conn, doctor_id)`` returns lifted to tier 1. A failed lookup is logged
-    and leaves ``terms`` as they were: one lift going wrong never drops the doctor's other hints."""
+def _lift(conn, doctor_id, terms: list[HintTerm], term_ids, tier: int, what: str) -> list[HintTerm]:
+    """``terms`` with those whose id ``term_ids(conn, doctor_id)`` returns lifted to at least ``tier``. A failed lookup
+    is logged (the exception type only) and leaves ``terms`` as they were: one lift going wrong never drops the
+    doctor's other hints."""
     try:
         lifted = term_ids(conn, doctor_id)
-        return [replace(t, tier=max(t.tier, 1)) if t.term_id in lifted else t for t in terms]
+        return [replace(t, tier=max(t.tier, tier)) if t.term_id in lifted else t for t in terms]
     except NoScope:
         raise
     except Exception as exc:  # noqa: BLE001 - hints are optional
-        print(f"hints: {what} unavailable: {exc}", flush=True)
+        print(f"hints: {what} unavailable: {type(exc).__name__}", flush=True)
         return terms
+
+
+def _linked_tier(conn, doctor_id, terms: list[HintTerm], context) -> list[HintTerm]:
+    """``terms`` with the doctor's terms linked to the correction's diagnosis lines lifted to tier 2 (H3)."""
+    keys = spoken.diagnosis_keys((context or {}).get("diagnosis"))
+    if not keys or not terms:
+        return terms
+    return _lift(conn, doctor_id, terms, lambda c, d: spoken_db.linked_term_ids(c, d, keys), 2, "diagnosis links")
 
 
 def _doctor_terms(context=None) -> list[HintTerm]:
     """The signed-in doctor's spoken terms (every term in single-database mode, where no one signs in, doctor 0);
     any database problem means no personalisation. A term with an active corrected mishearing (H2) is lifted to
-    tier 1; a failed lift keeps the terms unlifted. ``context`` is unused until H3 and H4."""
+    tier 1, then a term linked to the correction's diagnosis (H3) to tier 2; a failed lift keeps the terms as they
+    were. ``context`` is the parsed correction context; H4 will read its patient."""
     sc = current_scope()
     try:
         with closing(dbmod.get_conn()) as conn:
             doctor_id = sc.user_id if sc is not None and sc.user_id else 0
             terms = spoken_db.doctor_hint_terms(conn, doctor_id, datetime.now(timezone.utc).date())
-            return _lift_to_tier_1(conn, doctor_id, terms, spoken_db.active_mishearing_term_ids, "mishearing lift")
+            terms = _lift(conn, doctor_id, terms, spoken_db.active_mishearing_term_ids, 1, "mishearing lift")
+            return _linked_tier(conn, doctor_id, terms, context)
     except NoScope:
         raise                      # a missing scope is an auth bug, not "no hints"
     except Exception as exc:  # noqa: BLE001 - hints are optional
@@ -53,7 +66,7 @@ def _doctor_terms(context=None) -> list[HintTerm]:
         return []
 
 
-async def _prepare_audio(raw: bytes, filename: str, settings) -> tuple[bytes, str, tuple[str, ...]]:
+async def _prepare_audio(raw: bytes, filename: str, settings, context=None) -> tuple[bytes, str, tuple[str, ...]]:
     """Apply the ACC2 flags. Both off returns (raw, filename, ())."""
     hints: tuple[str, ...] = ()
     if settings.stt_trim_silence:
@@ -61,13 +74,13 @@ async def _prepare_audio(raw: bytes, filename: str, settings) -> tuple[bytes, st
         if trimmed is not raw:                         # new bytes are Ogg/Opus
             raw, filename = trimmed, PurePath(filename).stem + ".ogg"
     if settings.stt_use_hints:
-        terms = await asyncio.to_thread(_doctor_terms)
+        terms = await asyncio.to_thread(_doctor_terms, context)
         hints = tuple(build_hints(terms, settings.stt_hint_limit))
     return raw, filename, hints
 
 
 @router.post("/api/transcribe", dependencies=[Depends(use_clinic_layer)])
-async def transcribe(audio: UploadFile = File(...)):
+async def transcribe(audio: UploadFile = File(...), context: Any = Form(None)):
     settings = get_settings()
     max_bytes = settings.max_audio_bytes
     raw = await audio.read(max_bytes + 1)
@@ -82,7 +95,10 @@ async def transcribe(audio: UploadFile = File(...)):
     except ValueError as e:
         return JSONResponse(status_code=500, content={
             "error": f"STT misconfigured: {e}", "fallback": "browser"})
-    raw, filename, hints = await _prepare_audio(raw, audio.filename or "dictation.webm", settings)
+    ctx, problem = spoken.parse_context(context)           # never sent to the speech engine
+    if problem:
+        print(f"transcribe: context ignored ({problem})", flush=True)      # the reason only, never the content
+    raw, filename, hints = await _prepare_audio(raw, audio.filename or "dictation.webm", settings, ctx)
     try:
         transcript = await stt.transcribe(raw, filename, hints)
     except SttChainError as e:

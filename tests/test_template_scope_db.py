@@ -43,7 +43,7 @@ def test_existing_letterheads_survive_the_migration_as_clinic_letterheads(tmp_pa
         conn.execute("INSERT INTO clinic_profile(id, updated_at) VALUES (1, 'x')")
         conn.commit()
         applied = dbmod.migrate(conn)
-        assert applied == ["007_templates_scope.sql", "008_clinic_profile_prefix.sql", "009_clinic_formulary.sql", "010_clinic_overlay.sql", "011_spoken_terms.sql", "012_spoken_mishearings.sql"]
+        assert applied == ["007_templates_scope.sql", "008_clinic_profile_prefix.sql", "009_clinic_formulary.sql", "010_clinic_overlay.sql", "011_spoken_terms.sql", "012_spoken_mishearings.sql", "013_term_links.sql"]
         active = tdb.get_active_template(conn)
         assert active["id"] == cur.lastrowid and active["doctors_mode"] == "author"
         assert conn.execute("SELECT op_prefix FROM clinic_profile WHERE id = 1").fetchone()[0] is None

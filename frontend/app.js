@@ -498,11 +498,21 @@ async function postJson(url, body, timeoutMs, outer) {
   }
 }
 
+// A spoken correction tells the server the sheet's diagnosis and patient (plan SH-H3). The server never sends it to a speech engine.
+function speechContext() {
+  const cut = (v) => String(v == null ? "" : v).trim().slice(0, 200);
+  const ctx = { diagnosis: readList("pDx").map(cut).filter(Boolean).slice(0, 10),
+    patient: { name: cut(text($("pName"))), age_sex: cut(text($("pAge"))), op_no: cut(text($("pOp"))) } };
+  while (ctx.diagnosis.length && new TextEncoder().encode(JSON.stringify(ctx)).length > 4096) ctx.diagnosis.pop();
+  return JSON.stringify(ctx);
+}
+
 async function transcribe(blob) {
   setWorking(true, recCap.capped() ? recCap.stopText : "Transcribing…");   // a 5-minute stop keeps saying why it stopped
   setStep("transcribing");
   const fd = new FormData();
   fd.append("audio", blob, "dictation.webm");
+  if (state.pendingMode === "correct" && state.structured) fd.append("context", speechContext());   // corrections only (plan SH-H3)
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), TRANSCRIBE_TIMEOUT_MS);
   try {

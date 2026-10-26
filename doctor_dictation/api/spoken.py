@@ -34,20 +34,31 @@ def record_from_save(conn, structured, document_id, doctor_id, patient_words=Non
     """What one saved form teaches, counted once per document for ``doctor_id``. Returns the terms counted now.
 
     The one place a save teaches spoken terms (contract 5.5): the save hook and the backfill both call it, and H2/H3
-    add theirs here (a pair failure is logged, never raised: the terms are already counted). ``previous`` (a re-save: the form saved before, a dict or its JSON) is taken back first.
+    add theirs here (a pair or link failure is logged, never raised: the terms are already counted). H3 learns the
+    diagnosis-term links of the document (``_learn_links``). ``previous`` (a re-save: the form saved before, a dict or its JSON) is taken back first.
     ``patient_words`` is read from the clinic's patients when not given, and only when a form has a term at all.
     COMMITS (``record_terms`` does) and RAISES on a database error, after rolling its own writes back."""
     previous = _form(previous)
     if not (spoken.terms_from_save(structured, ()) or spoken.terms_from_save(previous, ())):
         return 0
     words = fdb.patient_words(conn) if patient_words is None else patient_words
-    counted = sdb.record_terms(conn, doctor_id, spoken.terms_from_save(structured, words), document_id,
-                               previous=spoken.terms_from_save(previous, words))
+    terms = spoken.terms_from_save(structured, words)
+    counted = sdb.record_terms(conn, doctor_id, terms, document_id, previous=spoken.terms_from_save(previous, words))
     try:                                          # a pair failure never blocks the terms already counted
         sdb.record_mishearings(conn, doctor_id, spoken.mishearings_from_save(structured, words), document_id)
     except Exception:  # noqa: BLE001 - learning is a convenience, the prescription is already saved
         log.warning("spoken mishearings: could not record pairs", exc_info=True)
+    _learn_links(conn, structured, terms, document_id, doctor_id)
     return counted
+
+
+def _learn_links(conn, structured, terms, document_id, doctor_id) -> None:
+    """Pair each diagnosis line of the form with each of its terms (SH-H3). Never raises: the terms are already counted."""
+    try:
+        keys = spoken.diagnosis_keys(structured.get("diagnosis") if isinstance(structured, dict) else None)
+        sdb.record_links(conn, doctor_id, keys, [(t.kind, t.key) for t in terms], document_id)
+    except Exception:  # noqa: BLE001 - learning is a convenience, the prescription is already saved
+        log.warning("spoken terms: could not record diagnosis links", exc_info=True)
 
 
 def learn_spoken_terms(conn, structured, document_id, user_id, patient_words=None, previous=None) -> None:

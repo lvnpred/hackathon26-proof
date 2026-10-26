@@ -23,7 +23,7 @@ def test_a_doctors_spoken_terms_reach_only_that_doctors_hints(world, monkeypatch
     assert sql(B, "SELECT COUNT(*) FROM spoken_terms WHERE term_key = 'dolo'")[0][0] == 0
 
 def test_the_backfill_credits_each_author_in_their_own_clinic(world, capsys):
-    for t in ("spoken_term_docs", "spoken_term_strengths", "spoken_terms"):
+    for t in ("term_link_docs", "term_links", "spoken_term_docs", "spoken_term_strengths", "spoken_terms"):
         sql(A, f"DELETE FROM {t}")                                            # as before H1: documents, no terms
     before_b = [tuple(r) for r in sql(B, "SELECT * FROM spoken_terms ORDER BY id")]
     assert admin.main(["backfill-spoken-terms"]) == 0

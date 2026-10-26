@@ -3,6 +3,7 @@
 A term keeps the name as the doctor said it ("Dolo"), never the canonical name the sheet shows. A medicine or test
 that reads as a person, or carries a word of a patient's name, is never recorded. Nothing here does I/O or reads a clock.
 """
+import json
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -15,6 +16,9 @@ USUAL_SHARE, USUAL_MIN = 60, 2     # the usual strength: at least 60% of a term'
 # a strength as hints.py accepts one: 1-4 digits, 2 decimals at most, so a phone number is never a strength
 _STRENGTH = re.compile(r"\d{1,4}(?:\.\d{1,2})?\s*(?:mg|mcg|g|gm|ml|iu|units?|%)?(?:\s*/\s*\d{0,4}(?:\.\d{1,2})?\s*(?:ml|g|gm|tab))?", re.I)
 _TRAILING_MG = re.compile(r"\s*mg$", re.I)
+LINK_MIN = 2                       # a diagnosis-term link is used once this many documents counted it (H3)
+CONTEXT_BYTES, CONTEXT_LINES, CONTEXT_CHARS = 4096, 10, 200   # the correction context: bytes in all, lines, chars per line
+PATIENT_FIELDS = ("name", "age_sex", "op_no")
 MAX_HEARD_CHARS, MAX_HEARD_WORDS = 60, 9   # check-row's name caps (api/rx.py), plus the one word heard_as may add
 
 
@@ -146,3 +150,50 @@ def phrase(spoken: str, usual: str) -> str:
 def rank(terms: Sequence[HintTerm]) -> list[HintTerm]:
     """Tier first, then weight, then phrase: the same order every time."""
     return sorted(terms, key=lambda t: (-t.tier, -t.weight, t.phrase.casefold(), t.phrase))
+
+
+def diagnosis_key(line) -> str:
+    """A diagnosis line as a link key: ``key(line)`` cut to 80 characters; "" when it has under 3 letters or is no text."""
+    if not isinstance(line, str):
+        return ""
+    k = key(line)[:80]
+    return k if sum(c.isalpha() for c in k) >= 3 else ""
+
+
+def diagnosis_keys(lines) -> list[str]:
+    """The unique non-empty diagnosis keys of the text items of ``lines``, in order, at most CONTEXT_LINES."""
+    if not isinstance(lines, (list, tuple)):
+        return []
+    out: list[str] = []
+    for line in lines:
+        k = diagnosis_key(line)
+        if k and k not in out:
+            out.append(k)
+    return out[:CONTEXT_LINES]
+
+
+def parse_context(raw) -> tuple[dict | None, str]:
+    """Read the correction ``context`` field: (clean context, "") or (None, reason). None or "" is (None, "")."""
+    if raw is None or raw == "":
+        return None, ""
+    if not isinstance(raw, str):
+        return None, "not text"
+    if len(raw.encode("utf-8", errors="replace")) > CONTEXT_BYTES:
+        return None, f"over {CONTEXT_BYTES} bytes"
+    try:
+        data = json.loads(raw)
+    except (ValueError, RecursionError):
+        return None, "not JSON"
+    if not isinstance(data, dict):
+        return None, "not an object"
+    lines = data.get("diagnosis", [])
+    if not (isinstance(lines, list) and len(lines) <= CONTEXT_LINES
+            and all(isinstance(x, str) and len(x) <= CONTEXT_CHARS for x in lines)):
+        return None, "bad diagnosis"
+    patient = data.get("patient", {})
+    if not isinstance(patient, dict):
+        return None, "bad patient"
+    fields = {f: patient.get(f, "") for f in PATIENT_FIELDS}
+    if not all(isinstance(v, str) and len(v) <= CONTEXT_CHARS for v in fields.values()):
+        return None, "bad patient"
+    return {"diagnosis": [c for c in map(_clean, lines) if c], "patient": {f: _clean(v) for f, v in fields.items()}}, ""

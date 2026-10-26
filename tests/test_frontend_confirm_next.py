@@ -161,7 +161,7 @@ def test_app_js_hooks_fire_only_after_a_confirm_and_when_a_sheet_appears():
     corr = app.split("async function applyCorrection")[1].split("} catch")[0]
     assert "RxView.focusFirst();" in corr and corr.index("renderSheet(") < corr.index("RxView.focusFirst();")
     assert app.index("Authorship.onOpen(j);") < app.index("RxView.focusFirst();")     # view-only is known before the first focus
-    assert "rxview.js?v=15" in html and "app.js?v=48" in html
+    assert "rxview.js?v=15" in html and "app.js?v=49" in html
 
 
 def test_a_reopened_document_restores_the_saved_confirmations_and_the_waiting_row_is_marked():

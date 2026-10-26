@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import date
 
 from doctor_dictation.core.formulary import THRESHOLD, usage_score
-from doctor_dictation.core.spoken import HintTerm, Term, key, phrase, usual_strength
+from doctor_dictation.core.spoken import CONTEXT_LINES, LINK_MIN, HintTerm, Term, key, phrase, usual_strength
 from doctor_dictation.db import _utcnow
 
 # A pair is active (its term is lifted to tier 1) when counted by enough documents and neither it nor its term was
@@ -156,3 +156,53 @@ def remove_mishearing(conn, entry_id) -> dict | None:
     conn.execute("UPDATE spoken_mishearings SET removed_at = ?, confirm_count = 0 WHERE id = ?", (_utcnow(), entry_id))
     conn.commit()
     return {"spoken": row["spoken"], "heard": row["heard"]}
+
+
+def record_links(conn, doctor_id, diagnosis_keys: Sequence[str], term_refs: Sequence[tuple[str, str]], document_id) -> int:
+    """Make this DOCUMENT's diagnosis-term links exactly ``diagnosis_keys`` x ``term_refs`` (``[(kind, term_key)]``).
+
+    What the document counted before is taken back first (its ``term_link_docs`` rows go, each link's count drops, to 0
+    at least), so a re-save replaces its links. A term this doctor has not recorded is skipped. Returns the pairs
+    counted now that this document had not counted before: the same set again gives 0.
+
+    COMMITS what the caller has open first, then all of its own writes or none of them (a failure rolls back and raises)."""
+    if conn.in_transaction:                       # so the rollback below can only undo this call's own writes
+        conn.commit()
+    try:
+        before = {r[0] for r in conn.execute("SELECT link_id FROM term_link_docs WHERE document_id = ?", (document_id,))}
+        for lid in before:
+            conn.execute("DELETE FROM term_link_docs WHERE link_id = ? AND document_id = ?", (lid, document_id))
+            conn.execute("UPDATE term_links SET count = MAX(count - 1, 0) WHERE id = ?", (lid,))
+        now, fresh = _utcnow(), 0
+        tids = []
+        for kind, term_key in dict.fromkeys(term_refs):
+            row = conn.execute("SELECT id FROM spoken_terms WHERE doctor_id = ? AND kind = ? AND term_key = ?",
+                               (doctor_id, kind, term_key)).fetchone()
+            if row is not None:
+                tids.append(row[0])
+        for dkey in dict.fromkeys(k for k in diagnosis_keys if k):
+            for tid in tids:
+                conn.execute("INSERT OR IGNORE INTO term_links(doctor_id, diagnosis_key, term_id, last_seen_at)"
+                             " VALUES (?, ?, ?, ?)", (doctor_id, dkey, tid, now))
+                lid = conn.execute("SELECT id FROM term_links WHERE doctor_id = ? AND diagnosis_key = ? AND term_id = ?",
+                                   (doctor_id, dkey, tid)).fetchone()[0]
+                conn.execute("INSERT INTO term_link_docs(link_id, document_id) VALUES (?, ?)", (lid, document_id))
+                conn.execute("UPDATE term_links SET count = count + 1, last_seen_at = ? WHERE id = ?", (now, lid))
+                fresh += lid not in before
+        conn.commit()
+        return fresh
+    except BaseException:
+        conn.rollback()
+        raise
+
+
+def linked_term_ids(conn, doctor_id, diagnosis_keys: Sequence[str]) -> set[int]:
+    """The ids of this doctor's live terms (a use left, not removed) linked to any of the keys by LINK_MIN documents."""
+    keys = list(dict.fromkeys(diagnosis_keys))[:CONTEXT_LINES]
+    if not keys:
+        return set()
+    marks = ", ".join("?" * len(keys))
+    return {r[0] for r in conn.execute(
+        "SELECT DISTINCT l.term_id FROM term_links l JOIN spoken_terms t ON t.id = l.term_id"
+        f" WHERE l.doctor_id = ? AND l.count >= ? AND t.removed_at IS NULL AND t.uses > 0 AND l.diagnosis_key IN ({marks})",
+        (doctor_id, LINK_MIN, *keys))}

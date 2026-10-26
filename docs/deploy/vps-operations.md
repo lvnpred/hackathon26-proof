@@ -104,6 +104,8 @@ ssh -i ~/.ssh/id_ed25519_dictdoc_vps deploy@200.234.34.10
    `<clinic>: N documents read, M new term uses`. It is safe to run twice: the second run counts nothing. It exits 1
    and prints `<clinic>: FAILED ...` if a clinic database failed; the other clinics are still counted. Fix the cause
    and run it again.
+   Run it once more on the first update that brings diagnosis links (plan SH-H3): it then also teaches each
+   doctor's links between diagnoses and terms from the saved prescriptions. Until it runs, only new saves teach links.
 
 **Browser** (https://gsr.lightday.online):
 1. Log in and dictate one short prescription.

@@ -133,7 +133,7 @@ def test_a_correction_context_puts_linked_terms_first_and_never_reaches_the_engi
     for _ in range(3):
         _save(c, ["Gastritis"], "Pan", "40 mg")                                        # more used: first without context
     override_settings(monkeypatch, stt_use_hints=True, stt_trim_silence=False, stt_hint_limit=70)
-    ctx = json.dumps({"diagnosis": ["ACUTE  pharyngitis"], "patient": {"name": "Asha Verma", "age_sex": "40 / F", "op_no": ""}})
+    ctx = json.dumps({"diagnosis": ["ACUTE  pharyngitis"], "patient": {"name": "Asha Verma", "age_sex": "70 / F", "op_no": ""}})   # not the stored 40 / F patient: H4 would lift both medicines
     plain, linked = _post(c), _post(c, ctx)
     assert plain.status_code == linked.status_code == 200 and plain.json() == linked.json()   # the body is unchanged
     h0, h1 = (list(call["hints"]) for call in rec.calls)

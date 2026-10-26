@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 
 from doctor_dictation import db as dbmod
+from doctor_dictation.api import patientctx
 from doctor_dictation.api.forms import FormLimitRoute
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.audio.trim import trim_silence
@@ -51,14 +52,18 @@ def _doctor_terms(context=None) -> list[HintTerm]:
     """The signed-in doctor's spoken terms (every term in single-database mode, where no one signs in, doctor 0);
     any database problem means no personalisation. A term with an active corrected mishearing (H2) is lifted to
     tier 1, then a term linked to the correction's diagnosis (H3) to tier 2; a failed lift keeps the terms as they
-    were. ``context`` is the parsed correction context; H4 will read its patient."""
+    were. ``context`` is the parsed correction context. A term the patient it names got in their last 3 visits
+    with this doctor is lifted to tier 3 (H4), only when that patient is exactly one person."""
     sc = current_scope()
     try:
         with closing(dbmod.get_conn()) as conn:
             doctor_id = sc.user_id if sc is not None and sc.user_id else 0
             terms = spoken_db.doctor_hint_terms(conn, doctor_id, datetime.now(timezone.utc).date())
             terms = _lift(conn, doctor_id, terms, spoken_db.active_mishearing_term_ids, 1, "mishearing lift")
-            return _linked_tier(conn, doctor_id, terms, context)
+            terms = _linked_tier(conn, doctor_id, terms, context)
+            keys = patientctx.context_keys(conn, patientctx.doctor_id(), context)      # SH-H4: this patient's last 3 visits
+            terms = [replace(t, tier=max(t.tier, 3)) if t.key in keys else t for t in terms]
+            return terms
     except NoScope:
         raise                      # a missing scope is an auth bug, not "no hints"
     except Exception as exc:  # noqa: BLE001 - hints are optional

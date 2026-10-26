@@ -1,10 +1,11 @@
 """The doctor's spoken terms (plan SH-H1). SQL only; what a term is, and how it is phrased and ranked, lives in core/spoken.py."""
+import json
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 
 from doctor_dictation.core.formulary import THRESHOLD, usage_score
-from doctor_dictation.core.spoken import CONTEXT_LINES, LINK_MIN, HintTerm, Term, key, phrase, usual_strength
+from doctor_dictation.core.spoken import CONTEXT_LINES, LINK_MIN, HintTerm, Term, key, phrase, terms_from_save, usual_strength
 from doctor_dictation.db import _utcnow
 
 # A pair is active (its term is lifted to tier 1) when counted by enough documents and neither it nor its term was
@@ -206,3 +207,38 @@ def linked_term_ids(conn, doctor_id, diagnosis_keys: Sequence[str]) -> set[int]:
         "SELECT DISTINCT l.term_id FROM term_links l JOIN spoken_terms t ON t.id = l.term_id"
         f" WHERE l.doctor_id = ? AND l.count >= ? AND t.removed_at IS NULL AND t.uses > 0 AND l.diagnosis_key IN ({marks})",
         (doctor_id, LINK_MIN, *keys))}
+
+
+def patient_candidates(conn, doctor_id: int) -> list:
+    """Rows (id, name, age_sex, op_no) of the patients this doctor has seen, by id. ``doctor_id`` 0 (single-database
+    mode) has no doctor filter: every patient."""
+    if doctor_id > 0:
+        return conn.execute("SELECT id, name, age_sex, op_no FROM patients WHERE id IN "
+                            "(SELECT patient_id FROM encounters WHERE doctor_id = ?) ORDER BY id", (doctor_id,)).fetchall()
+    return conn.execute("SELECT id, name, age_sex, op_no FROM patients ORDER BY id").fetchall()
+
+
+def patient_term_keys(conn, patient_ids, doctor_id: int, visits: int = 3) -> set[str]:
+    """Keys of the terms in a patient's last ``visits`` finalized documents (``patient_ids``: one id or a person's rows).
+
+    Only this doctor's visits count; ``doctor_id`` 0 (single-database mode) has no doctor filter. A document whose JSON
+    does not parse to a dict adds nothing."""
+    ids = (patient_ids,) if isinstance(patient_ids, int) else tuple(patient_ids)
+    if not ids:
+        return set()
+    sql = ("SELECT d.structured_json FROM documents d JOIN encounters e ON e.id = d.encounter_id "
+           f"WHERE e.patient_id IN ({','.join('?' * len(ids))}) AND d.finalized_at IS NOT NULL")
+    args = list(ids)
+    if doctor_id > 0:
+        sql += " AND e.doctor_id = ?"
+        args.append(doctor_id)
+    rows = conn.execute(sql + " ORDER BY d.created_at DESC, d.id DESC LIMIT ?", (*args, max(0, int(visits)))).fetchall()
+    keys: set[str] = set()
+    for (raw,) in rows:
+        try:
+            form = json.loads(raw)
+            if isinstance(form, dict):
+                keys |= {t.key for t in terms_from_save(form, frozenset())}
+        except (TypeError, ValueError):
+            continue
+    return keys

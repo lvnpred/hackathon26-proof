@@ -28,7 +28,7 @@ def test_a_correction_sends_the_sheets_diagnosis_and_patient_and_a_first_dictati
       const sheet = { pName: "  Asha Verma ", pAge: "40 / F", pOp: "OP 7" }; let dx = [" Acute pharyngitis ", "", "Fever"];
       const $ = (id) => ({ id }), text = (el) => sheet[el.id] || "", readList = (id) => (id === "pDx" ? dx : []);
       const state = { pendingMode: "correct", structured: { rx: [] } };
-      """ + _fn(app, "function speechContext") + _fn(app, "async function transcribe(") + """
+      """ + _fn(app, "function patientContext") + _fn(app, "function speechContext") + _fn(app, "async function transcribe(") + """
       (async () => {
         await transcribe("blob");
         state.pendingMode = "dictate"; await transcribe("blob");

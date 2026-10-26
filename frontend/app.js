@@ -498,11 +498,15 @@ async function postJson(url, body, timeoutMs, outer) {
   }
 }
 
+function patientContext() {   // SH-H4: the sheet's patient, for the server only (never sent to a speech engine)
+  const cut = (v) => String(v == null ? "" : v).trim().slice(0, 200);
+  return { name: cut(text($("pName"))), age_sex: cut(text($("pAge"))), op_no: cut(text($("pOp"))) };
+}
+
 // A spoken correction tells the server the sheet's diagnosis and patient (plan SH-H3). The server never sends it to a speech engine.
 function speechContext() {
   const cut = (v) => String(v == null ? "" : v).trim().slice(0, 200);
-  const ctx = { diagnosis: readList("pDx").map(cut).filter(Boolean).slice(0, 10),
-    patient: { name: cut(text($("pName"))), age_sex: cut(text($("pAge"))), op_no: cut(text($("pOp"))) } };
+  const ctx = { diagnosis: readList("pDx").map(cut).filter(Boolean).slice(0, 10), patient: patientContext() };
   while (ctx.diagnosis.length && new TextEncoder().encode(JSON.stringify(ctx)).length > 4096) ctx.diagnosis.pop();
   return JSON.stringify(ctx);
 }

@@ -39,7 +39,7 @@ Backlog (not planned): section 7.
    Names the doctor TYPES over a misheard one are not learned now (backlog SH-B5).
 7. H4: patient rows with the same name, age and sex count as ONE person for the lookup (read-only grouping; records
    are never merged). The spoken name must match EXACTLY after casefolding and collapsing spaces (no 0.9 fuzzy
-   match: "Asha Verma" vs "Usha Verma" scores 0.9). This replaces the similarity rule in section 5.6.
+   match: "Asha Verma" vs "Usha Verma" scores 0.9). This replaces the similarity rule in section 5.6. Amended 2026-10-26 (owner, option A): rows with the same name and sex whose known ages are at most 1 year apart are also one person (a birthday between visits); a row without an age stays its own person.
 8. H3/H4: the near-tie cut stands (SH-B4).
 9. Investigations catalogue: the owner will review `docs/working/2026-10-19-prescription-quality/investigations-draft.csv`
    so plan PQ-h Task 1 Step 6 can ship `core/lexicon/investigations.json` (absent on `main`; grounding is off).

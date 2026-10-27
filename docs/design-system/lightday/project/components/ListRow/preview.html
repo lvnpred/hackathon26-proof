@@ -1,0 +1,16 @@
+<!-- @dsCard group="Lists" height=280 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className:'ld-card', style:{maxWidth:'300px', padding:'8px'}},
+  h(L.ListRow, {title:'Ravi Kumar', meta:'OP-1042 · 45 M · 10:20 am', tag:'Open', selected:true}),
+  h(L.ListRow, {title:'Anita Sharma', meta:'OP-1041 · 32 F · 9:55 am', tag:'Saved'}),
+  h(L.ListRow, {title:'Mohammed Irfan', meta:'OP-1040 · 61 M · 9:30 am', tag:'Saved'}),
+  h(L.ListRow, {title:'Lakshmi Devi', meta:'OP-1039 · 54 F · 9:05 am', tag:'Saved'})));
+</script>
+</body>
+</html>

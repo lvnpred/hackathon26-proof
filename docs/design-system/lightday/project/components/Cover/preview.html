@@ -1,0 +1,52 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lightday</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--paper); color:var(--ink); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .tint { fill:var(--sun-soft); }
+  .horizon { fill:var(--ink); }
+  .sun { fill:var(--sun); }
+  .sky { fill:var(--sky); }
+  .blk { rx:var(--radius-lg); }
+  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:440px; }
+  .name { margin:0; font-size:88px; line-height:.92; font-weight:800; letter-spacing:-0.02em; color:var(--ink); }
+  .tag { margin:var(--space-3) 0 0 4px; font-size:14px; line-height:20px; color:var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      sun-soft 192×168 (the day's sky, radius-lg) · ink slab 520×104 bled off right and bottom (the horizon) · sun half-disc r112 resting space-2 above the slab · sky 96×60 bled off the top edge, small (it only means links and info) — about a third of 960×288
+  arrangement the mark, scaled up: one half-sun sitting on a horizon slab, the tint block to its left, the sky chip top right
+  pattern     literal motif row — "a half sun resting just above a horizon, the day starting" (README, The mark): seven sun discs trace the sun's arc across a day over the tint, noon the largest
+  scales      sides in space-2 multiples; sun-to-horizon gap space-2 (as in the mark); discs r space-2, noon r space-3; corners radius-lg
+-->
+<rect class="tint blk" x="0" y="24" width="192" height="168" rx="12"/>
+<rect class="sky blk" x="392" y="-12" width="96" height="60" rx="12"/>
+<path class="sun" d="M208 200 A112 112 0 0 1 432 200 Z"/>
+<rect class="horizon blk" x="0" y="208" width="520" height="104" rx="12"/>
+<circle class="sun" cx="24" cy="176" r="8"/>
+<circle class="sun" cx="34" cy="140" r="8"/>
+<circle class="sun" cx="60" cy="114" r="8"/>
+<circle class="sun" cx="96" cy="104" r="12"/>
+<circle class="sun" cx="132" cy="114" r="8"/>
+<circle class="sun" cx="158" cy="140" r="8"/>
+<circle class="sun" cx="168" cy="176" r="8"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Lightday</h1>
+<p class="tag">Ready-made apps for your day. No setup, no subscriptions.</p>
+</div>
+</div>
+</body>
+</html>

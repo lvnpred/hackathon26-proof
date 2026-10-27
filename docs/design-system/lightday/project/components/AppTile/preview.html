@@ -1,0 +1,15 @@
+<!-- @dsCard group="Suite" height=270 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style:{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:'16px'}},
+  h(L.AppTile, {name:'Clinic', job:'Speak a prescription. Get the PDF, the mail and the follow-ups.', price:'₹[price] per prescription', status:{tone:'ready', label:'Ready'}}),
+  h(L.AppTile, {name:'Discharge', job:'Turn the operative note into a discharge summary.', price:'₹[price] per summary'}),
+  h(L.AppTile, {name:'Count guard', job:'Count swabs and instruments in and out of theatre.', price:'₹[price] per case', status:{tone:'info', label:'New'}})));
+</script>
+</body>
+</html>

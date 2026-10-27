@@ -1,0 +1,15 @@
+<!-- @dsCard group="Actions" height=150 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className:'ld-stack'},
+  h('div', {className:'ld-row-wrap'}, h(L.Button,{variant:'primary', size:'lg'},'Save prescription'), h(L.Button,null,'Print'), h(L.Button,null,'Save PDF'), h(L.Button,null,'Share')),
+  h('div', {className:'ld-row-wrap'}, h(L.Button,{icon:'mic'},'Dictate again'), h(L.Button,{variant:'quiet'},'Type instead'), h(L.Button,{variant:'danger'},'Delete draft'), h(L.Button,{disabled:true},'Share'))
+));
+</script>
+</body>
+</html>

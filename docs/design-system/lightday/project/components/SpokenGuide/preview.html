@@ -1,0 +1,17 @@
+<!-- @dsCard group="Dictation" height=420 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+var steps = [
+ {say:'Complaints …', example:'fever 3 days, known diabetic'}, {say:'Diagnosis …', example:'viral fever, likely dengue'},
+ {say:'Investigations …', example:'CBC, serum creatinine'}, {say:'Findings …', example:'pedal oedema present'},
+ {say:'Medication …', example:'Tab Dolo 650, 1-0-1, after food, 5 days'}, {say:'Advice …', example:'plenty of fluids, low salt'},
+ {say:'Review …', example:'after 1 week with reports'}];
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style:{maxWidth:'400px'}}, h(L.SpokenGuide, {steps:steps, active:3})));
+</script>
+</body>
+</html>

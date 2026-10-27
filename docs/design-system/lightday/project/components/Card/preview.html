@@ -1,0 +1,14 @@
+<!-- @dsCard group="Layout" height=150 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className:'ld-row-wrap', style:{alignItems:'stretch'}},
+  h('div', {style:{flex:'1 1 220px'}}, h(L.Card, {title:'Today'}, h('div', {className:'body'}, '12 patients · 9 prescriptions saved'))),
+  h('div', {style:{flex:'1 1 220px'}}, h(L.Card, {title:'Follow-ups', tone:'sunk'}, h('div', {className:'body'}, 'Suture removal · 3 Nov')))));
+</script>
+</body>
+</html>

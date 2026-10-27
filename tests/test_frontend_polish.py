@@ -48,6 +48,8 @@ def test_the_print_rules_are_byte_for_byte_what_they_were_and_polish_only_touche
 def test_no_page_loads_anything_from_a_third_party_and_the_fonts_are_tokens():
     for name in ("index.html", "login.html", "styles.css", "polish.css", "login.css", "team.css", "steps.css", "rx.css", "letterhead.css"):
         text = _read(name)
+        if name == "index.html":       # Lightday (2026-10-27): the one exception is its Google Fonts link (tests/test_frontend_lightday.py)
+            text = re.sub(r'<link rel="(?:preconnect|stylesheet)" href="https://fonts\.(?:googleapis|gstatic)\.com[^"]*"(?: crossorigin)? />', "", text)
         assert "googleapis" not in text and "gstatic" not in text and "@import" not in text and not re.search(r'(?:href|src)="https?://', text), name
         assert not re.search(r"url\(\s*['\"]?(?:https?:)?//", text), name
     css = _read("styles.css")
@@ -64,7 +66,7 @@ def test_no_page_loads_anything_from_a_third_party_and_the_fonts_are_tokens():
 def test_the_brand_mark_and_orb_are_inline_svg_and_the_recording_hooks_are_unchanged():
     html, login, app = _read("index.html"), _read("login.html"), _read("app.js")
     assert "✚" not in html and "🎤" not in html and "● REC" not in html and "⚕" not in login and "&#9877;" not in login
-    assert html.count('<path d="M12 5v14M5 12h14"/>') == 0 and 'M18 3v5M15.5 5.5h5' in html and login.count('<path d="M12 5v14M5 12h14"/>') == 1
+    assert html.count('<path d="M12 5v14M5 12h14"/>') == 0 and 'class="ld-mark-sun" d="M6 19a10 10 0 0 1 20 0z"' in html and login.count('<path d="M12 5v14M5 12h14"/>') == 1
     assert 'id="wave" class="rec-dot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="rec-text">REC</span>' in html
     assert 'wave.classList.add("on")' in app and 'wave.classList.remove("on")' in app and 'class="mic-label"' in html
 

@@ -1,0 +1,16 @@
+<!-- @dsCard group="Layout" height=190 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+function App(){ return h('div', {className:'ld-stack'},
+  h(L.AppBar, {appName:'Clinic', subtitle:'Dr. [Doctor name]', status:{tone:'ready', label:'Ready'}, actions:[h(L.Button,{key:1,variant:'primary'},'New patient'), h(L.Button,{key:2},'Profile')]}),
+  h(L.AppBar, {appName:'Clinic', subtitle:'Dr. [Doctor name]', status:{tone:'recording', label:'Recording'}, actions:[h(L.Button,{key:1,variant:'primary'},'New patient')]})
+); }
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>

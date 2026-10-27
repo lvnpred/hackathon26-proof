@@ -1,0 +1,65 @@
+{
+  "v": 3,
+  "assetGroups": {
+    "Logos": {
+      "files": {
+        "lightday-app-icon.svg": {
+          "blob": "bd61ccc3f71fba83263f0af229bbfe5e",
+          "name": "lightday-app-icon.svg",
+          "size": 280,
+          "type": "image/svg+xml"
+        },
+        "lightday-mark-reverse.svg": {
+          "blob": "80bc6a823d0f3aa58ffb89ddb9ef376c",
+          "name": "lightday-mark-reverse.svg",
+          "size": 220,
+          "type": "image/svg+xml"
+        },
+        "lightday-mark.svg": {
+          "blob": "08919c293f04c84c30b4d58f98d99bd9",
+          "name": "lightday-mark.svg",
+          "size": 220,
+          "type": "image/svg+xml"
+        }
+      },
+      "name": "Logos",
+      "order": [
+        "lightday-mark.svg",
+        "lightday-mark-reverse.svg",
+        "lightday-app-icon.svg"
+      ],
+      "tile": "l"
+    }
+  },
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-27T11:24:00Z",
+    "v": 1
+  },
+  "docs": {
+    "sections": []
+  },
+  "groups": [
+    "Logos"
+  ],
+  "lastChange": {
+    "at": "2026-10-27T11:24:00Z",
+    "by": "Naren L",
+    "note": "First Lightday system, evolved from the clinic dictation app.",
+    "via": "Claude (Cowork)"
+  },
+  "layout": "files",
+  "libraries": [
+    {
+      "name": "react",
+      "version": "18"
+    },
+    {
+      "name": "react-dom",
+      "version": "18"
+    }
+  ],
+  "namespace": "Lightday",
+  "sections": {},
+  "title": "Lightday"
+}

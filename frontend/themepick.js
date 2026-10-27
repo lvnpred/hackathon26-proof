@@ -1,10 +1,11 @@
-/* ThemePick (round 2, R4): the screen colour theme, per device. Loaded in <head> so <html data-theme> is set before the
-   first paint; theme.css reads it (screen only, so print never changes). Stored in localStorage "dd.theme"; a missing, bad
-   or unreadable value is the Regular theme (midnight), and storage errors never throw. The Profile panel's Appearance
-   radios follow it and set it at once. Browser global window.ThemePick; also loads under node (tests/test_frontend_themepick.py). */
+/* ThemePick (round 2, R4; Lightday 2026-10-27): the screen colour theme, per device: Lightday's Day or Dusk. Loaded in <head>
+   so <html data-theme> is set before the first paint; theme.css reads it (screen only, so print never changes). Stored in
+   localStorage "dd.theme"; a missing, bad, unreadable or retired value (the Midnight build's midnight/ink/graphite) is Day,
+   and storage errors never throw. The Profile panel's Appearance radios follow it and set it at once.
+   Browser global window.ThemePick; also loads under node (tests/test_frontend_themepick.py). */
 (function () {
   "use strict";
-  const KEY = "dd.theme", THEMES = ["midnight", "ink", "graphite"], FALLBACK = "midnight";
+  const KEY = "dd.theme", THEMES = ["day", "dusk"], FALLBACK = "day";
   const valid = (t) => THEMES.indexOf(t) >= 0;
   const radios = () => (typeof document.querySelectorAll === "function" ? [...document.querySelectorAll('input[name="ddTheme"]')] : []);
 

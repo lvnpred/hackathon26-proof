@@ -1,154 +1,216 @@
-/* Screen themes (owner-approved canvas B and its palettes): a frame (top bar + Today rail), a work area, an accent, a mic
-   that is not the accent colour, and the prescription as the one strong white sheet. Loaded last. Screen only: nothing
-   here reaches print or the browser-print fallback, so the printed sheet is exactly what styles.css prints.
-   Three token sets switch everything; <html data-theme> is set before first paint by themepick.js (per device).
-   midnight = Regular (default), ink = light frame and deep blue, graphite = dark app with the sheet still white paper. */
+/* Lightday (2026-10-27): the screen in the owner's Lightday design system (docs/design-system/lightday: tokens.json for the
+   values, components/bundle.css for the components). Loaded last. Screen only: nothing here reaches print or the
+   browser-print fallback, so the printed sheet is exactly what styles.css prints.
+   Two themes, Day (default) and Dusk, are token sets under the design system's own names; <html data-theme> is set before
+   first paint by themepick.js (per device). Every rule below the token blocks reads tokens only. The layout of the Midnight
+   build stays (owner-approved): the mic words beside the icon, a light rule before the steps, the empty sheet previews every
+   section, patient left and vitals right, the full-height list panel. */
 @media screen {
-  :root, :root[data-theme="midnight"] {
-    --t-bg:#EEF0F3; --t-top-bg:#0B1220; --t-top-fg:#FFFFFF; --t-top-sub:#A9B3C6; --t-top-line:#1E2A40; --t-top-ghost-line:#33415C;
-    --t-side-bg:#0B1220; --t-side-fg:#FFFFFF; --t-side-muted:#A9B3C6; --t-side-line:#1E2A40; --t-input-bg:#16213A;
-    --t-card:#FFFFFF; --t-fg:#0B1220; --t-muted:#4A5468; --t-line:#E1E4EA; --t-field-bg:#FFFFFF;
-    --accent:#0B7A6E; --t-on-accent:#FFFFFF; --accent-soft:#E2F3F1; --t-active-meta:#E2F3F1; --t-focus:#5EEAD4;
-    --t-logo-bg:#14B8A6; --t-logo-fg:#0B1220; --t-ghost-bg:#FFFFFF; --t-ghost-line:#C3C9D4;
-    --t-mic:#0B1220; --t-mic-fg:#FFFFFF; --t-mic-ring:#CDEFEA; --t-mic-busy:#5F6F69; --t-mic-busy-ring:#E6EBE8;
-    --t-paper:#0B7A6E; --t-paper-soft:#E2F3F1; --t-cue-lead:#4A5468; --t-cue:#5B6476; --t-divider:#E6E9EF; --t-ok:#17703A; --t-warn:#7D5200;
-    --t-chip-bg:#16213A; --t-chip-line:#1E2A40; --t-chip-fg:#A9B3C6; --t-chip-rec-bg:#3B1418; --t-chip-rec-line:#7A2A30; --t-chip-rec-fg:#FCA5A5;
-    --t-chip-work-bg:#3A2D0F; --t-chip-work-line:#6B5418; --t-chip-work-fg:#FCD34D; --t-chip-ok-bg:#0F3A33; --t-chip-ok-line:#1B6B5E; --t-chip-ok-fg:#5EEAD4;
+  /* Day. #sheet takes the Day set in every theme: the document is white paper, and its controls are drawn for paper. */
+  :root, :root[data-theme="day"], #sheet {
+    --paper:#FAF7F0; --surface:#FFFFFF; --surface-sunk:#F2EDE3; --line:#E6DFD2; --line-control:#8A806E;
+    --ink:#1C1A17; --ink-muted:#5F584C; --sun:#F2A93B; --sun-soft:#FCEBCB; --sun-text:#8A4F00; --on-sun:#1C1A17;
+    --action:var(--ink); --on-action:var(--surface); --sky:#2350C2; --sky-soft:#E7EDFB;
+    --record:#C42B1C; --record-soft:#FBE3DF; --on-record:#FFFFFF; --leaf:#1D7445; --leaf-soft:#E1F2E7;
+    --sheet:#FFFFFF; --sheet-ink:#1C1A17; --sheet-muted:#5F584C; --sheet-line:#E2DDD3; --sheet-active:#FFF8EA; --sheet-accent:#8A4F00;
+    --shadow-sheet:0 1px 3px rgba(28,26,23,0.12), 0 8px 24px rgba(28,26,23,0.06); --halo-sun:0 0 0 8px #FCEBCB;
+    --halo-record:0 0 0 8px rgba(196,43,28,0.18); --focus-ring:0 0 0 2px #FAF7F0, 0 0 0 4px #2350C2;
   }
-  :root[data-theme="ink"] {
-    --t-bg:#F3F4F6; --t-top-bg:#FFFFFF; --t-top-fg:#0B0D12; --t-top-sub:#4B5160; --t-top-line:#D5D8DE; --t-top-ghost-line:#C3C7D0;
-    --t-side-bg:#FFFFFF; --t-side-fg:#0B0D12; --t-side-muted:#4B5160; --t-side-line:#E2E4E9; --t-input-bg:#F3F4F6;
-    --t-card:#FFFFFF; --t-fg:#0B0D12; --t-muted:#4B5160; --t-line:#E2E4E9; --t-field-bg:#FFFFFF;
-    --accent:#1F4FD8; --t-on-accent:#FFFFFF; --accent-soft:#E8EEFC; --t-active-meta:#E8EEFC; --t-focus:#1F4FD8;
-    --t-logo-bg:#0B0D12; --t-logo-fg:#FFFFFF; --t-ghost-bg:#FFFFFF; --t-ghost-line:#C3C7D0;
-    --t-mic:#0B0D12; --t-mic-fg:#FFFFFF; --t-mic-ring:#E8EEFC; --t-mic-busy:#5F6F69; --t-mic-busy-ring:#E6EBE8;
-    --t-paper:#1F4FD8; --t-paper-soft:#E8EEFC; --t-cue-lead:#2E333D; --t-cue:#4B5160; --t-divider:#E6E9EF; --t-ok:#17703A; --t-warn:#7D5200;
-    --t-chip-bg:#F3F4F6; --t-chip-line:#D5D8DE; --t-chip-fg:#4B5160; --t-chip-rec-bg:#FDECEA; --t-chip-rec-line:#F3B6B0; --t-chip-rec-fg:#A8261D;
-    --t-chip-work-bg:#FFF8E1; --t-chip-work-line:#E8CF9A; --t-chip-work-fg:#7D5200; --t-chip-ok-bg:#E6F4EA; --t-chip-ok-line:#A9D9B8; --t-chip-ok-fg:#17703A;
+  :root[data-theme="dusk"] {
+    --paper:#14120E; --surface:#1E1B16; --surface-sunk:#0E0C09; --line:#302B23; --line-control:#807664;
+    --ink:#F4EEE3; --ink-muted:#B4AA98; --sun:#F5B54A; --sun-soft:#3A2C14; --sun-text:#F5B54A; --on-sun:#1C1A17;
+    --action:var(--ink); --on-action:var(--surface); --sky:#86A6FF; --sky-soft:#1C2540;
+    --record:#FF6B5B; --record-soft:#3D1814; --on-record:#14120E; --leaf:#5BC98B; --leaf-soft:#14301F;
+    --sheet:#FFFFFF; --sheet-ink:#1C1A17; --sheet-muted:#5F584C; --sheet-line:#E2DDD3; --sheet-active:#FFF8EA; --sheet-accent:#8A4F00;
+    --shadow-sheet:0 1px 3px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.4); --halo-sun:0 0 0 8px #3A2C14;
+    --halo-record:0 0 0 8px rgba(255,107,91,0.22); --focus-ring:0 0 0 2px #14120E, 0 0 0 4px #86A6FF;
   }
-  :root[data-theme="graphite"] {
-    --t-bg:#0D0F13; --t-top-bg:#0D0F13; --t-top-fg:#F4F5F7; --t-top-sub:#A1A7B3; --t-top-line:#232831; --t-top-ghost-line:#3A414D;
-    --t-side-bg:#161A21; --t-side-fg:#F4F5F7; --t-side-muted:#A1A7B3; --t-side-line:#262C36; --t-input-bg:#0D0F13;
-    --t-card:#161A21; --t-fg:#F4F5F7; --t-muted:#A1A7B3; --t-line:#262C36; --t-field-bg:#0D0F13;
-    --accent:#5B8CFF; --t-on-accent:#0D0F13; --accent-soft:#1B2740; --t-active-meta:#0D0F13; --t-focus:#5B8CFF;
-    --t-logo-bg:#5B8CFF; --t-logo-fg:#0D0F13; --t-ghost-bg:#161A21; --t-ghost-line:#3A414D;
-    --t-mic:#F4F5F7; --t-mic-fg:#0D0F13; --t-mic-ring:#2B3A5C; --t-mic-busy:#5F6F69; --t-mic-busy-ring:#262C36;
-    --t-paper:#2F5FD0; --t-paper-soft:#E6EDFB; --t-cue-lead:#D5D9E0; --t-cue:#A1A7B3; --t-divider:#262C36; --t-ok:#4ADE80; --t-warn:#FBBF24;
-    --t-chip-bg:#161A21; --t-chip-line:#262C36; --t-chip-fg:#A1A7B3; --t-chip-rec-bg:#3B1418; --t-chip-rec-line:#7A2A30; --t-chip-rec-fg:#FCA5A5;
-    --t-chip-work-bg:#3A2D0F; --t-chip-work-line:#6B5418; --t-chip-work-fg:#FCD34D; --t-chip-ok-bg:#0F3A33; --t-chip-ok-line:#1B6B5E; --t-chip-ok-fg:#5EEAD4;
+  /* type, space, shape and size are the same in both themes; the swatches show each theme's own paper and sun */
+  :root {
+    --font-sans:"Figtree", "Noto Sans Tamil", "Noto Sans Telugu", system-ui, sans-serif;
+    --font-serif:"Source Serif 4", Georgia, "Noto Serif Tamil", serif;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-9:36px; --space-12:48px;
+    --radius-sm:8px; --radius-md:10px; --radius-lg:12px; --radius-xl:16px; --radius-full:999px;
+    --touch-min:44px; --control-h:46px; --row-h:56px; --mic:96px;
+    --sw-day-paper:#FAF7F0; --sw-day-sun:#F2A93B; --sw-dusk-paper:#14120E; --sw-dusk-sun:#F5B54A;
   }
-  /* the shared tokens of the older stylesheets follow the theme, so their rules just work */
-  body { background:var(--t-bg); color:var(--t-fg); --ink:var(--t-fg); --muted:var(--t-muted); --soft:var(--t-line); --card:var(--t-card); --bg:var(--t-bg);
-    --st-muted:var(--t-muted); --st-line:var(--t-ghost-line); --st-ring:var(--accent-soft); }
-  /* the sheet and the dialogs are white paper in every theme: dark ink, the accent that reads on white */
-  #sheet, dialog.panel { --ink:#0B0D12; --muted:#5B6170; --soft:#E2E4E9; --card:#fff; --t-fg:#0B0D12; --t-muted:#5B6170; --t-line:#E2E4E9; --t-card:#fff;
-    --t-ghost-bg:#fff; --t-ghost-line:#C3C7D0; --t-field-bg:#fff; --accent:var(--t-paper); --accent-soft:var(--t-paper-soft); --t-on-accent:#fff;
-    --st-muted:#5B6170; --st-line:#C3C7D0; --st-ring:var(--t-paper-soft); }
-  dialog.panel { background:#fff; color:#0B0D12; }
+  /* the older stylesheets' names follow the tokens, so their rules just work; set again on #sheet so it reads Day values */
+  :root, #sheet {
+    --muted:var(--ink-muted); --soft:var(--line); --card:var(--surface); --bg:var(--paper); --accent:var(--sky); --accent-soft:var(--sky-soft);
+    --ok:var(--leaf); --warn:var(--sun-text); --bad:var(--record); --radius:var(--radius-lg); --font-ui:var(--font-sans);
+    --st-ok:var(--leaf); --st-bad:var(--record); --st-line:var(--line-control); --st-muted:var(--ink-muted); --st-ring:var(--sky-soft);
+    --rx-muted:var(--ink-muted);
+  }
+  body { background:var(--paper); color:var(--ink); font-family:var(--font-sans); -webkit-font-smoothing:antialiased; }
 
-  /* --- buttons on the page follow the theme ---------------------------------------------------------------------- */
-  button { background:var(--t-ghost-bg); color:var(--t-fg); border-color:var(--t-ghost-line); }
-  button.primary, .save { background:var(--accent); border-color:var(--accent); color:var(--t-on-accent); }
-  .save.print { background:var(--t-ghost-bg); color:var(--accent); }
+  /* --- Button: ghost by default, one primary (action) per view; one focus ring everywhere --------------------------- */
+  button { border-radius:var(--radius-md); background:var(--surface); color:var(--ink); border-color:var(--line-control);
+    font-weight:700; }
+  button:hover:not(:disabled) { background:var(--surface-sunk); }
+  button > svg { flex:none; vertical-align:-4px; }
+  button.primary, .save, .rx-act.primary, #spellMic[aria-pressed="true"] { background:var(--action); border-color:var(--action); color:var(--on-action); }
+  button.primary:hover:not(:disabled), .save:hover:not(:disabled) { background:var(--action); opacity:.9; }
+  .save.print { background:var(--surface); border-color:var(--line-control); color:var(--ink); }
+  .save.print:hover:not(:disabled) { background:var(--surface-sunk); opacity:1; }
+  .retry { background:var(--surface); border-color:var(--record); color:var(--record); }
+  button:focus-visible, [role="button"]:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible,
+  .mic:focus-visible, [contenteditable]:focus-visible, .rx-act:focus, .stp-text:focus-visible { outline:2px solid transparent; outline-offset:0; box-shadow:var(--focus-ring); }
 
-  /* --- frame: top bar and Today rail -------------------------------------------------------------------------------- */
-  .topbar { --ink:var(--t-top-fg); --muted:var(--t-top-sub); --soft:var(--t-top-line); background:var(--t-top-bg); color:var(--t-top-fg);
-    border-bottom:1px solid var(--t-top-line); box-shadow:none; }
-  .sidebar { --ink:var(--t-side-fg); --muted:var(--t-side-muted); --soft:var(--t-side-line); background:var(--t-side-bg); color:var(--t-side-fg);
-    border-color:var(--t-side-line); box-shadow:none; }
-  .brand-mark { background:var(--t-logo-bg); color:var(--t-logo-fg); }
-  .brand-clinic { color:var(--t-top-fg); } .brand-doctor { color:var(--t-top-sub); }
-  .topbar button { background:var(--t-input-bg); border-color:var(--t-top-ghost-line); color:var(--t-top-fg); }
-  .sidebar button { background:var(--t-input-bg); border-color:var(--t-side-line); color:var(--t-side-fg); }
-  .topbar button:hover:not(:disabled), .sidebar button:hover:not(:disabled) { border-color:var(--t-focus); }
-  .topbar button:focus-visible, .sidebar button:focus-visible, .sidebar input:focus-visible { outline-color:var(--t-focus); }
-  .badge, .agent-chip { background:var(--t-chip-bg); border-color:var(--t-chip-line); color:var(--t-chip-fg); }
-  .agent-chip.listening { background:var(--t-chip-rec-bg); border-color:var(--t-chip-rec-line); color:var(--t-chip-rec-fg); }
-  .agent-chip.working { background:var(--t-chip-work-bg); border-color:var(--t-chip-work-line); color:var(--t-chip-work-fg); }
-  .agent-chip.ready { background:var(--t-chip-ok-bg); border-color:var(--t-chip-ok-line); color:var(--t-chip-ok-fg); }
+  /* --- AppBar: surface, line under it, the mark on a sun-soft tile, "lightday · Clinic" ----------------------------- */
+  .topbar { background:var(--surface); color:var(--ink); border-bottom:1px solid var(--line); box-shadow:none; padding:var(--space-3) var(--space-6); }
+  .brand { gap:var(--space-3); }
+  .brand-mark { width:40px; height:40px; border-radius:var(--radius-md); background:var(--sun-soft); }
+  .ld-mark-sun { fill:var(--sun); }
+  .ld-mark-horizon { fill:var(--ink); }
+  .brand-text { line-height:1.25; }
+  .brand-title { font-size:17px; color:var(--ink); white-space:nowrap; }
+  .ld-wordmark { font-weight:800; letter-spacing:-0.02em; }
+  .brand-app { font-weight:700; }
+  .brand-sub { font-size:13px; color:var(--ink-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .brand-clinic, .brand-doctor { font-size:13px; font-weight:400; color:var(--ink-muted); }
+  .topbar-actions { gap:var(--space-3); }
+  /* AppBar on a phone: the actions drop under the name */
+  @media (max-width:600px) {
+    .topbar { flex-wrap:wrap; padding:var(--space-3) var(--space-4); }
+    .brand { flex:1 1 100%; }
+    .topbar-actions { justify-content:flex-start; }
+  }
+  .topbar button:not([hidden]) { display:inline-flex; align-items:center; gap:var(--space-2); }
+  /* StatusPill: one word, a dot, its tone's soft tint */
+  .agent-chip, .badge { align-items:center; gap:var(--space-2); padding:5px 12px; border:0; border-radius:var(--radius-full);
+    font-size:13px; line-height:18px; font-weight:700; background:var(--surface-sunk); color:var(--ink); white-space:nowrap; }
+  .agent-chip:not([hidden]), .badge:not([hidden]) { display:inline-flex; }
+  .agent-chip::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; flex:none; }
+  .agent-chip.idle::before { background:var(--ink-muted); }
+  .agent-chip.ready { background:var(--leaf-soft); color:var(--leaf); }
+  .agent-chip.listening { background:var(--record-soft); color:var(--record); }
+  .agent-chip.working { background:var(--sun-soft); color:var(--sun-text); }
+  .agent-chip.failed { background:var(--record-soft); color:var(--record); }
+  .badge { background:var(--sky-soft); color:var(--sky); }
 
-  .pane-title { color:var(--t-side-muted); }
-  .day-btn, .day-today { background:var(--t-input-bg); border-color:var(--t-side-line); color:var(--t-side-fg); }
-  .day-today { color:var(--t-focus); }
-  .today-scope { background:var(--t-input-bg); }
-  .today-scope button { background:transparent; border:0; color:var(--t-side-muted); }
-  .today-scope button[aria-pressed="true"] { background:var(--accent); color:var(--t-on-accent); box-shadow:none; }
-  .today-item { background:transparent; border-color:transparent; color:var(--t-side-fg); }
-  .today-item:hover { background:var(--t-input-bg); border-color:var(--t-side-line); }
-  .today-item.active, .today-item.active:hover { background:var(--accent); border-color:var(--accent); color:var(--t-on-accent); }
-  .today-meta, .today-empty { color:var(--t-side-muted); }
-  .today-item.active .today-meta { color:var(--t-active-meta); }
-  .sidebar input { background:var(--t-input-bg); color:var(--t-side-fg); border-color:var(--t-side-line); }
-  /* M4: on a wide screen the rail is a full-height frame under the top bar; its list scrolls inside it */
+  /* --- the list panel: surface, a line on its right, ListRows ------------------------------------------------------- */
+  .sidebar { background:var(--surface); color:var(--ink); border-color:var(--line); box-shadow:none; }
+  .pane-title { color:var(--ink); font-size:13px; font-weight:800; letter-spacing:.8px; }
+  .day-btn, .day-today { min-height:var(--touch-min); min-width:var(--touch-min); background:var(--surface); border-color:var(--line-control); color:var(--ink); }
+  .day-today { color:var(--sky); }
+  .today-scope { background:var(--surface-sunk); }
+  .today-scope button { background:transparent; border:0; color:var(--ink-muted); min-height:var(--touch-min); }
+  .today-scope button[aria-pressed="true"] { background:var(--surface); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line-control); }
+  .today-list { gap:0; }
+  .today-item { min-height:var(--row-h); justify-content:center; padding:var(--space-2) 10px; border:0; border-top:1px solid var(--line);
+    border-radius:var(--radius-sm); background:transparent; color:var(--ink); font-weight:400; }
+  .today-item:first-child, .today-item.active, .today-item.active + .today-item { border-top-color:transparent; }
+  .today-item:hover { background:var(--surface-sunk); }
+  .today-item.active, .today-item.active:hover { background:var(--sun-soft); color:var(--ink); }
+  .today-name { font-size:14px; font-weight:700; }
+  .today-meta, .today-empty { font-size:12px; line-height:16px; font-weight:600; color:var(--ink-muted); }
+  .today-item.active .today-meta { color:var(--sun-text); }
+  .sidebar input { background:var(--surface-sunk); color:var(--ink); border-color:var(--line-control); }
+  /* M4: on a wide screen the panel is a full-height frame under the top bar; its list scrolls inside it */
   @media (min-width:1001px) {
-    .workspace { max-width:none; margin:0; padding:0 16px 16px 0; grid-template-columns:240px minmax(300px, 360px) minmax(420px, 1fr); }
+    .workspace { max-width:none; margin:0; padding:0 var(--space-5) var(--space-5) 0; gap:var(--space-5);
+      grid-template-columns:260px minmax(330px, 400px) minmax(420px, 1fr); }
     .sidebar { position:sticky; top:var(--topbar-h, 64px); height:calc(100vh - var(--topbar-h, 64px)); display:flex; flex-direction:column;
-      border-radius:0; border:0; border-right:1px solid var(--t-side-line); padding:16px; }
+      border-radius:0; border:0; border-right:1px solid var(--line); padding:var(--space-4); }
     .today-list { flex:1 1 auto; min-height:0; overflow-y:auto; }
-    .middle, .doc-pane { margin-top:16px; }
+    .middle, .doc-pane { margin-top:var(--space-5); }
   }
 
-  /* --- accent leftovers that were a hard-coded colour ------------------------------------------------------------ */
-  .correcting-cue, .resave-note { color:var(--accent); background:var(--accent-soft); border-color:var(--t-line); }
-  .field input, .field textarea { background:var(--t-field-bg); color:var(--t-fg); border-color:var(--t-ghost-line); }
-  .field input:focus, .field textarea:focus { box-shadow:0 0 0 3px var(--accent-soft); }
-  [contenteditable]:focus { background:var(--t-paper-soft); }
-  tr[data-rxstate]:has(.rx-act:focus) { background:var(--accent-soft); }
-  .rx-spin { border-color:var(--accent-soft); border-top-color:var(--accent); }
-  .grounding.ok { color:var(--t-ok); } .grounding.warn { color:var(--t-warn); }
-  .transcript { background:var(--t-field-bg); border-color:var(--t-line); }
-  .block-panel { color:#0B0D12; }
-  .stp-list .stp:not(:last-child)::before { background:var(--t-line); }
-  .dot { background:var(--t-card); }
+  /* --- the middle pane: one Card -------------------------------------------------------------------------------------- */
+  .middle { background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:none; padding:18px; }
+  .status, .empty-flags { color:var(--ink-muted); }
+  .correcting-cue, .resave-note { color:var(--sky); background:var(--sky-soft); border-color:var(--line); }
+  .grounding.ok { color:var(--leaf); } .grounding.warn { color:var(--sun-text); }
+  .transcript { background:var(--surface-sunk); border-color:var(--line); }
+  .transcript-title { color:var(--ink-muted); }
+  .block-panel { background:var(--sun-soft); border-color:var(--sun-text); color:var(--ink); }
+  .stp-list .stp:not(:last-child)::before { background:var(--line); }
+  .stp-list .stp.done:not(:last-child)::before { background:var(--leaf); }
+  .stepper .stp:not(:last-child)::after { background:var(--line); }
+  .stepper .stp.done:not(:last-child)::after { background:var(--leaf); }
+  .dot { background:var(--surface); }
+  .stp.done .dot { color:var(--surface); }
+  .stp.now .dot { border-color:var(--sky); color:var(--sky); }
+  .stp.failed .dot { box-shadow:0 0 0 4px var(--record-soft); }
 
-  /* --- middle pane: a quiet card --------------------------------------------------------------------------------- */
-  .middle { background:var(--t-card); border-color:var(--t-line); box-shadow:none; }
-
-  /* --- R1: the mic holds its icon only; its words and the timer sit beside it in fixed boxes, so no state moves anything */
-  .dictation { display:grid; grid-template-columns:88px 76px 100px; grid-template-rows:auto auto; column-gap:26px; row-gap:2px;
+  /* --- R1 + MicButton: the sun mic holds its icon only; its words and the timer sit beside it in fixed boxes -------- */
+  .dictation { display:grid; grid-template-columns:var(--mic) 76px 100px; grid-template-rows:auto auto; column-gap:26px; row-gap:2px;
     justify-content:center; align-items:center; padding:14px 0 18px; }
-  .mic { grid-row:1 / 3; width:88px; height:88px; gap:0; background:var(--t-mic); color:var(--t-mic-fg); box-shadow:0 0 0 8px var(--t-mic-ring); }
-  .mic.recording { background:#C81E1E; color:#fff; }
-  .mic.busy { background:var(--t-mic-busy); color:#fff; box-shadow:0 0 0 8px var(--t-mic-busy-ring); }
-  .mic-label { grid-column:2 / 4; grid-row:1; align-self:end; width:202px; height:20px; font-size:15px; font-weight:700; line-height:20px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--t-fg); }
+  .mic { grid-row:1 / 3; width:var(--mic); height:var(--mic); gap:0; border-radius:var(--radius-full); background:var(--sun); color:var(--on-sun);
+    box-shadow:var(--halo-sun); }
+  .mic.recording { background:var(--record); color:var(--on-record); box-shadow:var(--halo-record); animation:ld-pulse 1.6s ease-in-out infinite; }
+  .mic.busy { background:var(--ink-muted); color:var(--surface); box-shadow:0 0 0 8px var(--surface-sunk); }
+  .mic.busy::after { border-color:var(--line); border-top-color:var(--surface); }
+  .mic:focus-visible { box-shadow:var(--halo-sun), var(--focus-ring); }
+  @keyframes ld-pulse { 50% { box-shadow:0 0 0 14px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .mic.recording, .mic.busy::after { animation:none; } }
+  .mic-label { grid-column:2 / 4; grid-row:1; align-self:end; width:202px; height:26px; font-size:19px; font-weight:800; line-height:26px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink); }
   .timer { grid-column:2; grid-row:2; align-self:start; font-variant-numeric:tabular-nums; min-width:76px; height:32px; font-size:26px; font-weight:800;
-    line-height:32px; text-align:left; }
+    line-height:32px; letter-spacing:-0.3px; text-align:left; color:var(--ink); }
+  .timer.rec-warn { color:var(--sun-text); }
   .rec-dot, .rec-dot.on { grid-column:3; grid-row:2; align-self:start; display:flex; visibility:hidden; align-items:center; gap:4px; height:32px; animation:none; }
   .rec-dot.on { visibility:visible; }
+  .rec-dot i { background:var(--record); }
+  .rec-text { color:var(--record); }
 
-  /* --- R3: the prescription on screen follows the canvas; the strongest thing on the page --------------------------- */
-  #sheet { background:#fff; color:#0B0D12; border:1px solid var(--t-line); padding:28px 36px 32px;
-    box-shadow:0 1px 3px rgba(0,0,0,.12), 0 12px 32px rgba(11,18,32,.10); }
-  #sheet .profile-hint { font-size:12px; color:#5B6170; }
-  #sheet h2 { font-size:21px; letter-spacing:1px; margin:0 0 20px; padding-bottom:16px; border-bottom:2px solid #0B0D12; }
+  /* --- SpokenGuide: "What to say", numbered, quiet; R2: a very light rule before the steps ---------------------------- */
+  .cue-panel { counter-reset:cue; margin:4px 0 0; padding:4px 0 0; font-size:15px; color:var(--ink); background:none; border:0; }
+  .cue-title { margin:0 0 6px; font-size:13px; line-height:18px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--ink); }
+  .cue-panel ol { list-style:none; margin:0; padding:0; }
+  .cue-panel li { counter-increment:cue; position:relative; margin:0; padding:9px 10px 9px 40px; line-height:1.45;
+    border-top:1px solid var(--line); border-radius:var(--radius-sm); }
+  .cue-panel li:first-child { border-top-color:transparent; }
+  .cue-panel li::before { content:counter(cue); position:absolute; left:10px; top:10px; width:18px; font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--ink-muted); }
+  .cue-lead { font-weight:700; color:var(--ink); }
+  .cue-rest { font-size:14px; color:var(--ink-muted); }
+  .cue-panel li.on { background:var(--sun-soft); border-top-color:transparent; }
+  .cue-panel li.on::before { color:var(--sun-text); }
+  .cue-panel:not([hidden]) + .stp-list { margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+
+  /* --- PaperSheet: white paper in both themes, with its action bar above it ------------------------------------------ */
+  .rx-bar { background:var(--surface); color:var(--ink); border-color:var(--line); border-radius:var(--radius-lg); }
+  .save, .rx-bar .save { min-height:var(--control-h); border-radius:var(--radius-md); font-size:14px; font-weight:700; }
+  .save:not([hidden]) { display:inline-flex; align-items:center; gap:var(--space-2); }
+  .view-only-banner { background:var(--sun-soft); border-color:var(--sun-text); color:var(--ink); }
+  #sheet { background:var(--sheet); color:var(--sheet-ink); border:0; border-radius:var(--radius-lg); box-shadow:var(--shadow-sheet);
+    padding:28px var(--space-9) var(--space-8); }
+  #sheet .profile-hint { font-size:12px; color:var(--sheet-muted); }
+  #sheet .clinic-name { font-family:var(--font-serif); font-size:18px; line-height:24px; font-weight:600; }
+  #sheet .clinic-rule { border-top-color:var(--sheet-ink); }
+  #sheet .rx-name { font-family:var(--font-sans); }
+  #sheet h2 { font-family:var(--font-serif); font-size:22px; line-height:28px; font-weight:700; letter-spacing:1px; margin:0 0 20px; padding-bottom:var(--space-4);
+    border-bottom:2px solid var(--sheet-ink); }
+  [contenteditable]:focus { background:var(--sheet-active); }
+  tr[data-rxstate]:has(.rx-act:focus) { background:var(--sky-soft); }
+  .rx-spin { border-color:var(--sky-soft); border-top-color:var(--sky); }
   /* patient details left (name large; Age / Sex, OP / IP No and Date as labels over values), vitals right */
   #sheet .patient-block { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:16px 40px; align-items:start; margin:0 0 6px; }
-  #sheet .patient-row { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px 16px; text-align:left; margin:0; font-size:15px; color:#0B0D12; }
-  #sheet #pName { grid-column:1 / -1; order:1; font-size:20px; font-weight:700; min-width:0; padding:0 0 4px; border-bottom:1px solid #C3C7D0; }
+  #sheet .patient-row { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px 16px; text-align:left; margin:0; font-size:15px; color:var(--sheet-ink); }
+  #sheet #pName { grid-column:1 / -1; order:1; font-size:20px; font-weight:700; min-width:0; padding:0 0 4px; border-bottom:1px solid var(--sheet-line); }
   #sheet #pAge { order:2; } #sheet #pOp { order:3; } #sheet #pDate { order:4; }
-  #sheet .patient-row .pf:not(#pName) { display:block; min-width:0; padding:0 0 4px; border-bottom:1px solid #C3C7D0; }
-  #sheet .patient-row .pf:not(:empty) { border-bottom-color:#0B0D12; font-weight:700; }
+  #sheet .patient-row .pf:not(#pName) { display:block; min-width:0; padding:0 0 4px; border-bottom:1px solid var(--sheet-line); }
+  #sheet .patient-row .pf:not(:empty) { border-bottom-color:var(--sheet-ink); font-weight:700; }
   #sheet #pAge::before { content:"Age / Sex"; }
   #sheet #pOp::before { content:"OP / IP No"; }
   #sheet #pDate::before { content:"Date"; }
   #sheet #pAge::before, #sheet #pOp::before, #sheet #pDate::before { display:block; margin-bottom:4px; font-size:11px; font-weight:700;
-    letter-spacing:.7px; text-transform:uppercase; color:#5B6170; }
-  #sheet #pAge:empty:not(:focus)::after, #sheet #pOp:empty:not(:focus)::after { content:"\2014"; font-weight:400; color:#6B7180; }
-  #sheet [contenteditable]:empty:not(:focus)::before { color:#6B7180; }
+    letter-spacing:.7px; text-transform:uppercase; color:var(--sheet-muted); }
+  #sheet #pAge:empty:not(:focus)::after, #sheet #pOp:empty:not(:focus)::after { content:"\2014"; font-weight:400; color:var(--sheet-muted); }
+  #sheet [contenteditable]:empty:not(:focus)::before { color:var(--sheet-muted); }
   #sheet #pVitals { display:grid; grid-template-columns:auto minmax(76px, auto); gap:6px 14px; justify-content:end; align-items:baseline;
-    text-align:left; margin:0; font-size:14px; color:#0B0D12; }
-  #sheet #pVitals .vl { font-size:13px; font-weight:700; color:#0B0D12; }
-  #sheet #pVitals .pv { min-width:76px; padding:0 0 2px; border-bottom:1px solid #C3C7D0; }
+    text-align:left; margin:0; font-size:14px; color:var(--sheet-ink); }
+  #sheet #pVitals .vl { font-size:13px; font-weight:700; color:var(--sheet-ink); }
+  #sheet #pVitals .pv { min-width:76px; padding:0 0 2px; border-bottom:1px solid var(--sheet-line); }
   /* an empty vital shows a dash, never an example value that could pass for a real reading */
-  #sheet #pVitals .pv:empty:not(:focus)::before { content:"\2014"; color:#6B7180; }
+  #sheet #pVitals .pv:empty:not(:focus)::before { content:"\2014"; color:var(--sheet-muted); }
   #sheet #pVitals .vhint { grid-column:1 / -1; }
-  /* section headings: no bands, black uppercase sans, a thin rule between sections */
-  #sheet .sec-title { background:none; border:0; margin:0 0 6px; padding:0; font-family:var(--font-ui); font-size:13px; letter-spacing:.8px;
-    font-weight:800; color:#0B0D12; }
+  /* section headings in the label style: no bands, sans caps, a hairline between sections */
+  #sheet .sec-title { background:none; border:0; margin:0 0 6px; padding:0; font-family:var(--font-sans); font-size:13px; line-height:18px; letter-spacing:.8px;
+    font-weight:800; color:var(--sheet-ink); }
   #sheetBody > .sec { padding:12px 0; }
-  #sheetBody > .sec:not([hidden]) ~ .sec:not([hidden]) { border-top:1px solid #E2E4E9; }
-  #sheet .disclaimer { margin-top:16px; padding-top:10px; border-top:1px solid #E2E4E9; font-size:12px; color:#B42318; }
+  #sheetBody > .sec:not([hidden]) ~ .sec:not([hidden]) { border-top:1px solid var(--sheet-line); }
+  #sheet .disclaimer { margin-top:16px; padding-top:10px; border-top:1px solid var(--sheet-line); font-size:12px; color:var(--record); }
   @media (max-width:640px) {
     #sheet { padding:18px 16px 22px; }
     #sheet h2 { font-size:18px; }
@@ -156,28 +218,50 @@
     #sheet .patient-row { grid-template-columns:repeat(2, minmax(0, 1fr)); }
     #sheet #pVitals { justify-content:start; }
   }
-
-  /* --- an empty sheet previews every switched-on section; it is inert (app.js) so nobody types into it ------------- */
+  /* an empty sheet previews every switched-on section; it is inert (app.js) so nobody types into it */
   #sheet.empty .sec > :not(.sec-title) { display:none; }
-  #sheet.empty .sec::after { content:"Not dictated yet"; display:block; padding:2px 0 0; font-size:14px; color:#6B7180; }
+  #sheet.empty .sec::after { content:"Not dictated yet"; display:block; padding:2px 0 0; font-size:14px; color:var(--sheet-muted); }
 
-  /* --- "What to say": quiet grey reference; R2: a very light rule before the steps ------------------------------- */
-  .cue-panel { margin:4px 0 0; padding:4px 2px 0; font-size:13px; color:var(--t-cue); background:none; border:0; }
-  .cue-title { margin:0 0 6px; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--t-cue-lead); }
-  .cue-panel ol { list-style:none; padding:0; }
-  .cue-panel li { margin:0 0 6px; line-height:1.4; color:var(--t-cue); }
-  .cue-panel li:last-child { margin-bottom:0; }
-  .cue-lead { font-weight:600; color:var(--t-cue-lead); }
-  .cue-rest { color:var(--t-cue); }
-  .cue-panel:not([hidden]) + .stp-list { margin-top:14px; padding-top:14px; border-top:1px solid var(--t-divider); }
+  /* --- dialogs follow the theme (surface, ink, line); their tinted notes use the status tokens ----------------------- */
+  dialog.panel { background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius-lg); }
+  dialog.panel h2 { font-size:19px; font-weight:800; }
+  .panel-hint, .field, .lh-line-why, .team-panel .team-hint, .team-panel .team-count, .team-panel .team-copy-status { color:var(--ink-muted); }
+  .panel-status { color:var(--record); }
+  .prof-part, .dg-cell, .lh-choice, .lh-dupe, .prof-lh, .lh-head { border-color:var(--line); }
+  .prof-part legend, .lh-choice legend, .lh-dupe legend { color:var(--ink); font-weight:700; }
+  .field input, .field textarea, .spell-line input, #shareTel, .team-panel .team-filter input[type="search"] { min-height:var(--control-h); background:var(--surface-sunk);
+    color:var(--ink); border:1px solid var(--line-control); border-radius:var(--radius-md); }
+  .field textarea { min-height:0; padding-top:10px; }
+  .field input::placeholder, .field textarea::placeholder, #shareTel::placeholder, .spell-line input::placeholder { color:var(--ink-muted); }
+  .field input:focus, .field textarea:focus { border-color:var(--line-control); box-shadow:var(--focus-ring); }
+  .dg-remove, .dg-add { background:var(--surface); color:var(--ink); border-color:var(--line-control); }
+  .lh-warn { background:var(--sun-soft); border-color:var(--sun-text); color:var(--ink); }
+  .lh-error, .team-panel .team-error, .error { background:var(--record-soft); border-color:var(--record); color:var(--record); }
+  .lh-done, .team-panel .team-secret { background:var(--leaf-soft); border-color:var(--leaf); color:var(--ink); }
+  .lh-done { color:var(--leaf); }
+  .team-panel .team-secret-warn { color:var(--leaf); }
+  .team-panel .team-secret-value { background:var(--surface); color:var(--ink); border-color:var(--leaf); }
+  .lh-foot { background:var(--surface); border-color:var(--line); }
+  .lh-preview { background:var(--surface-sunk); border-color:var(--line); color:var(--ink-muted); }
+  .lh-line-warn { color:var(--record); }
+  .team-panel .team-tab { background:transparent; }
+  .team-panel .team-tab[aria-selected="true"] { border-bottom-color:var(--ink); }
+  .team-panel .team-list-box th { background:var(--surface); }
+  .team-panel .team-edit-form input[readonly] { background:var(--surface-sunk); }
+  .team-panel .team-chip[aria-pressed="true"] { background:var(--action); border-color:var(--action); color:var(--on-action); }
+  .team-panel .team-tag-learned { color:var(--sky); border-color:var(--sky); }
+  .rx-msg { color:var(--record); }
+  .spell-dlg .rx-act { background:var(--surface); color:var(--ink); border-color:var(--line-control); }
+  .spell-dlg .rx-act.solid { background:var(--action); color:var(--on-action); border-color:var(--action); }
+  .spell-dlg .rx-chip, .spell-dlg .rx-act.sug { border-color:var(--line-control); }
+  .spell-dlg .rx-chip:hover:not(:disabled) { background:var(--surface-sunk); }
 
-  /* --- R4: the Appearance picker in Profile; each swatch shows its theme's own frame and accent ------------------- */
-  .theme-picks { display:flex; flex-wrap:wrap; gap:8px; }
-  .theme-pick { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 12px; border:1px solid #C3C7D0; border-radius:10px;
-    font-size:14px; color:#0B0D12; cursor:pointer; }
-  .theme-pick:has(input:checked) { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-  .theme-swatch { width:30px; height:18px; border-radius:5px; border:1px solid #C3C7D0; }
-  .theme-swatch[data-swatch="midnight"] { background:linear-gradient(90deg, #0B1220 55%, #0B7A6E 55%); }
-  .theme-swatch[data-swatch="ink"] { background:linear-gradient(90deg, #FFFFFF 55%, #1F4FD8 55%); }
-  .theme-swatch[data-swatch="graphite"] { background:linear-gradient(90deg, #161A21 55%, #5B8CFF 55%); }
+  /* --- the Appearance picker in Profile: Day and Dusk, each with its paper and sun ------------------------------------ */
+  .theme-picks { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+  .theme-pick { display:inline-flex; align-items:center; gap:var(--space-2); min-height:var(--touch-min); padding:0 12px; border:1px solid var(--line-control);
+    border-radius:var(--radius-md); font-size:14px; font-weight:700; color:var(--ink); cursor:pointer; }
+  .theme-pick:has(input:checked) { background:var(--sun-soft); border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink); }
+  .theme-swatch { width:30px; height:18px; border-radius:5px; border:1px solid var(--line-control); }
+  .theme-swatch[data-swatch="day"] { background:linear-gradient(90deg, var(--sw-day-paper) 55%, var(--sw-day-sun) 55%); }
+  .theme-swatch[data-swatch="dusk"] { background:linear-gradient(90deg, var(--sw-dusk-paper) 55%, var(--sw-dusk-sun) 55%); }
 }

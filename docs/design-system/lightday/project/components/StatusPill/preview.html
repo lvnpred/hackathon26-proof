@@ -1,0 +1,13 @@
+<!-- @dsCard group="Status" height=80 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className:'ld-row-wrap'},
+  h(L.StatusPill,{tone:'ready'},'Ready'), h(L.StatusPill,{tone:'recording'},'Recording'), h(L.StatusPill,{tone:'info'},'Synced to calendar'), h(L.StatusPill,{tone:'sun'},'Listening'), h(L.StatusPill,null,'Draft')));
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!-- @dsCard group="Dictation" height=620 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style:{maxWidth:'720px'}}, h(L.PaperSheet, {
+  title:'Patient clinical summary & prescription',
+  fields:[{label:'Date', value:'27 Oct 2026'},{label:'OP / IP No', value:'OP-1042'},{label:'Patient name', value:'Ravi Kumar'},{label:'Age / Sex', value:''}],
+  sections:[{heading:'Chief complaints & brief history', text:'Fever with chills for 3 days. Known diabetic.'},
+            {heading:'Diagnosis / clinical impression', text:'Viral fever — likely dengue.'},
+            {heading:'Investigations advised', listening:true},
+            {heading:'Rx (medications)'}]})));
+</script>
+</body>
+</html>

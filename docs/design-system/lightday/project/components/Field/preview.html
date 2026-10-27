@@ -1,0 +1,14 @@
+<!-- @dsCard group="Inputs" height=210 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Preview</title></head>
+<body>
+<div id="root" class="ld-pad"></div>
+<script>
+var L = window.Lightday, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className:'ld-stack', style:{maxWidth:'360px'}},
+  h(L.Field, {label:'Find a patient', type:'search', placeholder:'Name or OP number'}),
+  h(L.Field, {label:'Clinic name', placeholder:'[Clinic name]', hint:'Prints on the letterhead.'})));
+</script>
+</body>
+</html>

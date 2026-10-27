@@ -1,0 +1,6 @@
+.adding-banner { margin:8px 0; padding:10px 14px; font-size:18px; font-weight:700; color:#fff; background:#14365d; border-radius:8px; }
+.name-check { margin:10px 0; padding:14px; border:2px solid #14365d; border-radius:8px; background:#fff8e1; color:#111; }
+.name-check p { margin:0 0 10px; font-size:17px; font-weight:600; }
+.name-check button { font-size:16px; min-height:44px; padding:6px 16px; margin-right:8px; }
+.undo-dict { margin:8px 0; }
+.undo-dict button { font-size:15px; min-height:40px; padding:4px 14px; }

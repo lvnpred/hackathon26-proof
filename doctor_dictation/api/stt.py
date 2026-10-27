@@ -17,6 +17,7 @@ from doctor_dictation.audio.trim import trim_silence
 from doctor_dictation.config import get_settings
 from doctor_dictation.core import spoken
 from doctor_dictation.core.hints import build_hints
+from doctor_dictation.core.sayname import clean_said_name
 from doctor_dictation.core.spoken import HintTerm
 from doctor_dictation.db import spoken as spoken_db
 from doctor_dictation.providers.stt.base import SttChainError
@@ -85,7 +86,7 @@ async def _prepare_audio(raw: bytes, filename: str, settings, context=None) -> t
 
 
 @router.post("/api/transcribe", dependencies=[Depends(use_clinic_layer)])
-async def transcribe(audio: UploadFile = File(...), context: Any = Form(None)):
+async def transcribe(audio: UploadFile = File(...), context: Any = Form(None), mode: str = Form("")):
     settings = get_settings()
     max_bytes = settings.max_audio_bytes
     raw = await audio.read(max_bytes + 1)
@@ -109,4 +110,7 @@ async def transcribe(audio: UploadFile = File(...), context: Any = Form(None)):
     except SttChainError as e:
         status, content = failure_response(e, stt.chain_names)
         return JSONResponse(status_code=status, content=content)
-    return success_body(transcript)
+    body = success_body(transcript)
+    if mode == "name":                                     # Say it: the transcript stays raw, the clean name rides beside it
+        body["name"] = clean_said_name(transcript.text)
+    return body

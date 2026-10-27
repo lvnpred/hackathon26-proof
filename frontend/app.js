@@ -115,7 +115,7 @@ function setWorking(on, msg) {
   $("profileLetterheadBtn").disabled = on;
   const rb = $("retryBtn");
   if (rb) rb.disabled = on;
-  document.querySelectorAll("#sheet .x-btn, #undoBtn").forEach(b => { b.disabled = on; });
+  document.querySelectorAll("#sheet .x-btn, #undoBtn, #undoDictBtn").forEach(b => { b.disabled = on; });
   recBtn.classList.toggle("busy", on);
   RxView.sync();                                     // after :128 Save follows the medicines, not just "busy"
   if (window.Authorship) Authorship.enforce();      // last word: view-only must not rest on CSS hiding the x/confirm buttons
@@ -318,6 +318,7 @@ async function openDocument(row) {
     state.visitDate = j.visit_date || "";
     state.savedPatientName = String((state.structured || {}).patientName || "");
     state.retry = null;
+    DictGuard.clear();
     state.confirmed.clear();
     state.lastBlock = [];
     hideBlockPanel();
@@ -389,6 +390,7 @@ async function beginRecording() {
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => { stopStream(stream); onRecordingStop(); };
   mr.start();
+  DictGuard.banner(state.pendingMode === "correct" ? { name: text($("pName")), op: text($("pOp")), saved: state.documentId != null } : null);
   refreshPrintButton();
   t0 = Date.now();
   timerEl.textContent = "00:00";
@@ -407,6 +409,7 @@ async function beginRecording() {
 
 function stopStream(stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
 function endRecordingUI() {
+  DictGuard.banner(null);
   if (tick) { clearInterval(tick); tick = null; }
   timerEl.classList.remove("rec-warn");
   recBtn.classList.remove("recording");
@@ -454,6 +457,7 @@ function refreshMicLabel() {
 async function onRecordingStop() {
   const mode = state.pendingMode;
   endRecordingUI();
+  const snap = DictGuard.capture();
   if (!chunks.length) { showError("No audio was captured — check your microphone and try again."); setStep("failed-listening", { reason: "No audio captured" }); return; }
   const blob = new Blob(chunks, { type: (mr && mr.mimeType) || "audio/webm" });
   chunks = [];
@@ -464,8 +468,8 @@ async function onRecordingStop() {
     // Transcription is one-shot: show it in the middle pane as soon as we have it.
     state.transcript = transcript;
     renderTranscript();
-    if (mode === "correct" && state.structured) await applyCorrection(transcript);
-    else await formatTranscript(transcript);
+    if (mode === "correct" && state.structured) await applyCorrection(transcript, snap);
+    else await formatTranscript(transcript, snap);
   } catch (e) {
     showError(errorMessage(e, "Dictation failed"));
     setStep(state.transcript ? "failed-structuring" : "failed-transcribing", { reason: "Dictation failed" });   // a throw after the transcript is a structuring failure
@@ -542,11 +546,12 @@ async function transcribe(blob) {
 // Spell it voice input (plan I2-c): the same route as dictation, a short timeout, no page-wide "working" state.
 async function transcribeName(blob) {
   const fd = new FormData(); fd.append("audio", blob, "name.webm");
+  fd.append("context", speechContext()); fd.append("mode", "name");
   const ctrl = new AbortController(), to = setTimeout(() => ctrl.abort(), 20000);
   try {
     const r = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal }), j = await safeJson(r);
     if (!r.ok) { const err = new Error(j.hint || j.error || ""); err.status = r.status; throw err; }
-    return String(j.transcript || "").trim();
+    return String(typeof j.name === "string" && j.name.trim() ? j.name : j.transcript || "").trim();
   } catch (e) { if (e && e.name === "AbortError") { const err = new Error("timed out"); err.aborted = true; throw err; } throw e; }
   finally { clearTimeout(to); }
 }
@@ -554,7 +559,7 @@ async function transcribeName(blob) {
 // The server's notes on a draft or a correction, appended to the status line.
 function warningNote(j) { return j.warnings && j.warnings.length ? " ⚠ " + j.warnings.join(" ") : ""; }
 
-async function formatTranscript(transcript) {
+async function formatTranscript(transcript, snap) {
   // Retain the transcript immediately, before the LLM call: a slow format must
   // never lose the visit (Finding 2).
   state.transcript = transcript;
@@ -572,6 +577,7 @@ async function formatTranscript(transcript) {
     state.structured = j.structured || {};
     state.dirty = false; // documentId is null here, so the sheet still counts as unsaved
     state.retry = null;
+    if (snap) DictGuard.keep(snap);
     state.confirmed.clear();
     state.lastBlock = [];
     hideBlockPanel();
@@ -584,7 +590,7 @@ async function formatTranscript(transcript) {
       " Edit, dictate a correction, or Save." + warningNote(j));
     RxView.focusFirst();
   } catch (e) {
-    state.retry = { mode: "dictate", transcript };
+    state.retry = { mode: "dictate", transcript, snap };
     showError(errorMessage(e, "Could not structure the dictation") +
       " Your dictation is kept — press Retry; there is no need to dictate again.", true);
     setStep("failed-structuring", { reason: "Could not structure it" });
@@ -593,7 +599,7 @@ async function formatTranscript(transcript) {
   }
 }
 
-async function applyCorrection(transcript) {
+async function applyCorrection(transcript, snap) {
   const before = serializeForm(), current = before.structured;
   state.transcript = transcript; // retained before the call (Finding 2)
   renderTranscript();
@@ -601,11 +607,20 @@ async function applyCorrection(transcript) {
   setStep("structuring", { words: wordCount(transcript), mode: "correct" });
   try {
     const j = await postJson("/api/v1/correct", { transcript, current_form: current, document_id: state.documentId }, CORRECT_TIMEOUT_MS);
+    if (j.other_patient && await DictGuard.ask(j.other_patient, text($("pName"))) === "new") {
+      // Nothing was applied; the snapshot is kept first so a failed follow-up format can still be undone. The finally re-enables the page.
+      if (snap) DictGuard.keep(snap);
+      resetSheet();
+      return await formatTranscript(transcript, snap);
+    }
+    const kept = j.other_patient ? DictGuard.keptNote(j.structured || current, current) : "";
+    if (j.other_patient) j.structured = DictGuard.keepIdentity(j.structured || current, current);   // "Apply": the sheet keeps its own patient
     state.structured = j.structured || current;
     const carry = RxState.carryRowids(before.indexToRowid, current.rx, (state.structured || {}).rx, j.changed_rows);
     markDirty();
     // A correction re-grounds the rows it changed; confirmations stay on the rest (changed_rows).
     state.retry = null;
+    if (snap) DictGuard.keep(snap);
     [...state.confirmed].forEach(id => { if (!carry.includes(id)) state.confirmed.delete(id); });
     state.lastBlock = [];
     hideBlockPanel();
@@ -617,10 +632,10 @@ async function applyCorrection(transcript) {
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
       (open ? open + (open > 1 ? " need you." : " needs you.") : "All medicines ready.") +
-      " Review, then Save." + warningNote(j));
+      " Review, then Save." + warningNote(j) + (kept && " " + kept));
     RxView.focusFirst();                           // owner: after a spoken correction, start on the first flagged row
   } catch (e) {
-    state.retry = { mode: "correct", transcript };
+    state.retry = { mode: "correct", transcript, snap };
     showError(errorMessage(e, "Could not apply the correction") +
       " Your form is unchanged and your correction is kept — press Retry, or edit the form directly.", true);
     setStep("failed-structuring", { reason: "Could not apply it" });
@@ -634,8 +649,8 @@ function retryLast() {
   const r = state.retry;
   if (!r || state.working) return;
   clearError();
-  if (r.mode === "correct" && state.structured) applyCorrection(r.transcript);
-  else formatTranscript(r.transcript);
+  if (r.mode === "correct" && state.structured) applyCorrection(r.transcript, r.snap);
+  else formatTranscript(r.transcript, r.snap);
 }
 
 // ---- transcript display ----------------------------------------------------
@@ -1267,6 +1282,12 @@ function newPatient() {
   if (state.printing) return; // a print is being prepared for the current sheet
   if (isUnsaved() && !window.confirm("Start a new patient? The current draft stays unsaved.")) return;
   // Only past the confirm may state change: a cancel must be a perfect no-op.
+  DictGuard.clear();
+  resetSheet();
+}
+
+// The sheet reset shared by New patient and the name check's "Start new patient" (which keeps the Undo snapshot).
+function resetSheet() {
   state.sheetSeq++;
   state.savedPatientName = null;
   clearUndo();
@@ -1330,6 +1351,11 @@ RxView.init({
   body: rxBody, saveBtn, confirmed: () => state.confirmed, working: () => state.working,
   transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo, notify: setStatus,
   changed: () => { markDirty(); updateGrounding(); if (!blockPanel.hidden) refreshBlockPanel(); }, hasSheet: () => !sheetEl.classList.contains("empty"),
+});
+DictGuard.init({
+  state: () => state, serialize: serializeForm, render: renderSheet, rows: () => rxBody.querySelectorAll("tr[data-rowid]"), renderCheck, notify: setStatus,
+  working: () => state.working || !!(mr && mr.state === "recording"),
+  restored: () => { markDirty(); hideBlockPanel(); updateResaveNote(); Sections.showProseCheck([]); updateGrounding(); refreshMicLabel(); },
 });
 SpellModal.init({ dialog: $("spellDlg"), working: () => state.working, recording: () => !!(mr && mr.state === "recording"),
   viewOnly: () => !!(window.Authorship && Authorship.isViewOnly()), transcribe: transcribeName, media: () => navigator.mediaDevices, Recorder: () => window.MediaRecorder });

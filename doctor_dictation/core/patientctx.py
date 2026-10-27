@@ -22,6 +22,9 @@ def _norm(v) -> str:
     return " ".join(_text(v).casefold().split())
 
 
+norm_name = _norm                                # public: one name spelling for every comparison
+
+
 def sex_letter(age_sex) -> str:
     """'M' or 'F' from '45 / M', '45Y/M', 'Female', '45 M'; '' when the text gives none."""
     s = _text(age_sex)

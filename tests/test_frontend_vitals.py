@@ -49,7 +49,7 @@ def test_page_wires_vitals():
     assert "warningNote(j)" in fmt and "warningNote(j)" in cor             # /api/format warnings shown like a correction's
     assert "base.vitals = Vitals.read();" in app and "Vitals.render(s.vitals);" in app and "Vitals.render({});" in app
     html = (FRONT / "index.html").read_text(encoding="utf-8")
-    assert html.index("vitals.js?v=2") < html.index("app.js?v=51") and 'id="pVitals"' in html and "styles.css?v=14" in html
+    assert html.index("vitals.js?v=2") < html.index("app.js?v=53") and 'id="pVitals"' in html and "styles.css?v=14" in html
     assert 'class="sub vitals-row"' in html
     for i in ("vBp", "vPulse", "vWeight", "vSpo2", "vTemp"):          # each input is labelled; order is BP, pulse, weight, SpO2, temp
         assert f'aria-labelledby="{i}L"' in html

@@ -347,7 +347,7 @@ def test_page_wiring_tokens_survive_comment_stripping():
     app = _strip_comments(_read("app.js"))
     grounding = app.split("function updateGrounding()")[1].split("\nfunction ")[0]
     assert grounding.count("RxView.sync()") == 2
-    assert "RxView.sync()" in app.split("function newPatient()")[1].split("\nfunction ")[0]
+    assert "RxView.sync()" in app.split("function resetSheet()")[1].split("\nfunction ")[0]
     body = app.split("function setWorking(")[1].split("\n}\n")[0]
     assert body.index("RxView.sync()") < body.index("Authorship.enforce()")
     handler = app.split('rxBody.addEventListener("click"')[1].split("function refreshBlockPanel()")[0]

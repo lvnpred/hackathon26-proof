@@ -181,7 +181,7 @@ def test_transcribe_name_posts_the_clip_to_the_existing_route_with_a_short_timeo
       globalThis.setTimeout = (f, ms) => { timers.push(ms); return 1; }; globalThis.clearTimeout = () => { timers.push("cleared"); };
       globalThis.fetch = (url, o) => { calls.push([url, o.method, o.body.f, !!o.signal]); if (mode === "abort") { const e = new Error("a"); e.name = "AbortError"; return Promise.reject(e); }
         return Promise.resolve({ ok: mode === "ok", status: mode === "ok" ? 200 : 500, json: async () => (mode === "ok" ? { transcript: "  Cetirizine " } : { error: "stt down" }) }); };
-      const safeJson = async (r) => { try { return await r.json(); } catch { return {}; } };
+      const safeJson = async (r) => { try { return await r.json(); } catch { return {}; } }, speechContext = () => "{}";
       """ + src + """
       (async () => {
         const out = { ok: await transcribeName("blob") };
@@ -193,7 +193,7 @@ def test_transcribe_name_posts_the_clip_to_the_existing_route_with_a_short_timeo
     assert out.returncode == 0, out.stderr
     r = json.loads(out.stdout)
     assert r["ok"] == "Cetirizine" and r["bad"] == ["stt down", 500] and r["abort"] == [True, "timed out"]
-    assert all(c == ["/api/transcribe", "POST", [["audio", "name.webm"]], True] for c in r["calls"]) and len(r["calls"]) == 3
+    assert all(c == ["/api/transcribe", "POST", [["audio", "name.webm"], ["context", None], ["mode", None]], True] for c in r["calls"]) and len(r["calls"]) == 3
     assert r["timers"].count(20000) == 3 and r["timers"].count("cleared") == 3          # a 20-second ceiling, always cleared
 
 

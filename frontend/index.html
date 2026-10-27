@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="polish.css?v=1" />
 <link rel="stylesheet" href="letterhead.css?v=9" />
 <link rel="stylesheet" href="team.css?v=6" />
+<link rel="stylesheet" href="dictguard.css?v=1" />
 </head>
 <body>
 <header class="topbar no-print">
@@ -59,11 +60,14 @@
       <span id="timer" class="timer">00:00</span>
       <span id="wave" class="rec-dot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="rec-text">REC</span></span>
     </div>
+    <p id="addingBanner" class="adding-banner no-print" role="status" hidden></p>
     <p id="correctingCue" class="correcting-cue no-print" role="status" hidden></p>
 
     <ol id="steps" class="stp-list" aria-label="Assistant progress"></ol>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div id="nameCheck" class="name-check no-print" role="alertdialog" aria-labelledby="nameCheckText" hidden><p id="nameCheckText"></p><button id="nameCheckNew" type="button"></button> <button id="nameCheckApply" type="button"></button></div>
+    <div id="undoDict" class="undo-dict no-print" hidden><button id="undoDictBtn" type="button">Undo last dictation</button></div>
     <div id="error" class="error" role="alert" hidden>
       <span id="errorText"></span>
       <button id="retryBtn" class="retry no-print" type="button" hidden>↻ Retry</button>
@@ -294,7 +298,8 @@
 <script src="vitals.js?v=2"></script>
 <script src="ixlist.js?v=3"></script>
 <script src="savepdf.js?v=2"></script>
-<script src="app.js?v=51"></script>
+<script src="dictguard.js?v=2"></script>
+<script src="app.js?v=53"></script>
 <script src="lhlines.js?v=3"></script>
 <script src="letterhead.js?v=13"></script>
 <script src="listedit.js?v=1"></script>

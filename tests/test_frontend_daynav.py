@@ -131,5 +131,5 @@ def test_app_js_lists_the_chosen_day_and_returns_to_today():
     assert "DayNav.emptyText(state.listDay)" in _function(js, "renderToday")
     save = _function(js, "saveDocument")
     assert save.index("const wasNew = state.documentId == null") < save.index("if (wasNew) state.listDay = \"\"") < save.index("loadToday();")
-    assert "backToToday()" in _function(js, "newPatient")
+    assert "backToToday()" in _function(js, "resetSheet")
     assert re.search(r"DayNav\.init\(\{ day: \(\) => state\.listDay, go: ", js)

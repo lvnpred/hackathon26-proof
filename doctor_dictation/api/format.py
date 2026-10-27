@@ -9,7 +9,9 @@ from doctor_dictation.api import authorship, visit
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.api.investigations import use_investigations
 from doctor_dictation.config import get_settings
-from doctor_dictation.core import doctor_generic, followup, formulary, investigations, promptrules, prose, spelled, tidy, vitals
+from doctor_dictation.core import (
+    doctor_generic, followup, formulary, investigations, patientswitch, promptrules, prose, spelled, tidy, vitals)
+from doctor_dictation.core.patientctx import patient_of
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     changed_rx_rows,
@@ -260,6 +262,7 @@ async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use
             engine = f"{llm.name}:{llm.model}+lexicon v{lexicon_version()}"
         except Exception as e:
             engine = f"rules-after-error v{lexicon_version()}: {e}".strip()[:300]
+    other = patientswitch.other_patient(text, patient_of(current), patch)   # raw text: the lexicon pass can turn a name into a drug
     patch, generic_notes = doctor_generic.patch_generics(current, patch, text, normalized)   # before apply_ops: only the whitelist is applied
     current2, patch2, ops_notes, touched = apply_ops(current, patch)
     patch2, merge_warnings = resolve_blank_names(current2, patch2)
@@ -282,4 +285,4 @@ async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use
     return {"structured": structured, "grounding": grounding, "engine": engine,
             "prose_check": _added_unheard(current2, structured, text, normalized),   # only the lines this correction added
             "warnings": generic_notes + ops_notes + merge_warnings + same_notes + vital_notes + tidy_notes,
-            "changed_rows": changed_rows}
+            "changed_rows": changed_rows, "other_patient": other}

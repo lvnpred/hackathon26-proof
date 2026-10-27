@@ -113,7 +113,7 @@ def test_page_wires_the_button_like_print():
     html = (FRONT / "index.html").read_text()
     app = (FRONT / "app.js").read_text()
     assert html.index('id="printBtn"') < html.index('id="savePdfBtn"') < html.index('id="printBtn"') + 700
-    assert html.index("savepdf.js?v=2") < html.index("app.js?v=55")
+    assert html.index("savepdf.js?v=2") < html.index("app.js?v=56")
     assert "savePdfBtn.disabled = printBtn.disabled" in app
     assert app.count("savePdfBtn.hidden = printBtn.hidden") == 2
     assert "SavePdf.fetchPdf" in app and "SavePdf.save" in app

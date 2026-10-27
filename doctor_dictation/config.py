@@ -14,11 +14,15 @@ purpose (monkeypatch-friendly, avoids churn); ``db_path`` is surfaced here for
 completeness.
 """
 import dataclasses
+import logging
 import os
 import sys
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from doctor_dictation.secret_loader import load_secret, secret_presence
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,9 @@ class Settings:
     # --- display (I3): one date locale for the page and the printed sheet; unknown values fall back in core/datefmt.py ---
     date_locale: str = "en-IN"
 
+    # --- private download links (FB-D): the origin printed in the QR; "" uses the request's own base URL ---
+    public_base_url: str = ""
+
 
 def _int_env(name: str, default: int) -> int:
     """Parse an int env var; absent/blank/invalid -> ``default``."""
@@ -99,6 +106,22 @@ def _bool_env(name: str, default: bool = False) -> bool:
 
 def _csv_env(name: str) -> tuple[str, ...]:
     return tuple(p.strip().lower() for p in os.getenv(name, "").split(",") if p.strip())
+
+
+def _base_url_env(name: str) -> str:
+    """A bare http(s) origin without a trailing slash, else ``""`` (a bad value is ignored, not guessed at)."""
+    raw = os.getenv(name, "").strip()
+    try:
+        parts = urlsplit(raw)
+    except ValueError:
+        log.warning("%s ignored: it is not a valid URL", name)
+        return ""
+    ok = (parts.scheme in ("http", "https") and parts.netloc and parts.path in ("", "/")
+          and not parts.query and not parts.fragment and not any(c.isspace() for c in raw))
+    if raw and not ok:
+        shown = f"{parts.scheme}://{parts.hostname}" if parts.scheme and parts.hostname else "(unparseable)"
+        log.warning("%s ignored: it must be a bare http(s) origin such as https://example.com (got %s)", name, shown)
+    return raw.rstrip("/") if ok else ""
 
 
 def build_settings() -> Settings:
@@ -143,6 +166,7 @@ def build_settings() -> Settings:
         template_max_image_bytes=_int_env("TEMPLATE_MAX_IMAGE_BYTES", 8 * 1024 * 1024),
         template_max_pixels=_int_env("TEMPLATE_MAX_PIXELS", 40_000_000),
         date_locale=os.getenv("DATE_LOCALE", "").strip() or "en-IN",
+        public_base_url=_base_url_env("PUBLIC_BASE_URL"),
     )
 
 

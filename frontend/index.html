@@ -97,7 +97,7 @@
         <span id="rxReady" class="rx-count" data-state="ok"></span>
         <span id="rxNeeds" class="rx-count" data-state="dose" role="status"></span>
       </div>
-      <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden aria-describedby="rxNeeds">Save prescription</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button><button id="savePdfBtn" class="save print no-print" type="button" hidden disabled title="Save this prescription as a PDF file">Save PDF</button></div>
+      <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden aria-describedby="rxNeeds">Save prescription</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button><button id="savePdfBtn" class="save print no-print" type="button" hidden disabled title="Save this prescription as a PDF file">Save PDF</button><button id="shareBtn" class="save print no-print" type="button" hidden disabled title="Share this prescription with the patient">Share</button></div>
     </div>
     <section id="sheet" class="empty">
       <div class="clinic-head" id="clinicHead">
@@ -289,6 +289,16 @@
   </div>
 </dialog>
 
+<dialog id="shareDlg" class="panel share-dlg no-print" aria-labelledby="shareTitle">
+  <div class="spell-wrap"><h2 id="shareTitle">Share this prescription</h2>
+    <img id="shareQr" alt="QR code for the prescription download" width="180" height="180" hidden>
+    <p id="shareUntil" class="panel-hint"></p>
+    <div class="spell-line"><input id="shareLink" type="text" readonly aria-label="Download link"><button id="shareCopy" type="button" class="rx-act">Copy link</button></div>
+    <input id="shareTel" type="tel" inputmode="tel" autocomplete="off" placeholder="Patient's mobile number" aria-label="Patient's mobile number">
+    <div class="panel-actions"><button id="shareWa" type="button" disabled>WhatsApp</button><button id="shareMail" type="button">Email</button></div>
+    <p id="shareMsg" class="rx-msg" role="status" aria-live="polite"></p>
+    <div class="panel-actions"><button id="shareRevoke" type="button" hidden>Turn off link</button><button id="shareClose" type="button" class="primary">Close</button></div></div>
+</dialog>
 <dialog id="spellDlg" class="panel spell-dlg no-print" role="dialog" aria-modal="true" aria-labelledby="spellTitle" aria-describedby="spellHint">
   <div class="spell-wrap"><h2 id="spellTitle">Spell the medicine</h2><p id="spellHint" class="panel-hint">Only this row changes. Pick a name, type it, or say it.</p>
     <div class="spell-line"><input id="spellInput" type="text" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Medicine name" placeholder="p r e d n i s o l o n e">
@@ -314,10 +324,11 @@
 <script src="vitals.js?v=2"></script>
 <script src="ixlist.js?v=3"></script>
 <script src="savepdf.js?v=2"></script>
+<script src="share.js?v=3"></script>
 <script src="dictguard.js?v=2"></script>
 <script src="sheetsecs.js?v=2"></script>
 <script src="cues.js?v=2"></script>
-<script src="app.js?v=55"></script>
+<script src="app.js?v=56"></script>
 <script src="lhlines.js?v=3"></script>
 <script src="letterhead.js?v=13"></script>
 <script src="listedit.js?v=1"></script>

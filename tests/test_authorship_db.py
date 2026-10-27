@@ -49,7 +49,7 @@ def test_migration_006_copies_the_saved_doctor_fields_to_the_first_user_only(tmp
         dbmod.save_profile(c, doctor_name="Dr. Rao", qualifications="MBBS", reg_no="R-111", clinic_name="Rao Clinic")
         first, second = dbmod.create_user(c, "dr.rao", "x"), dbmod.create_user(c, "dr.mehta", "x")
         assert dbmod.migrate(c) == ["006_doctor_details_to_users.sql", "007_templates_scope.sql",
-                                    "008_clinic_profile_prefix.sql", "009_clinic_formulary.sql", "010_clinic_overlay.sql", "011_spoken_terms.sql", "012_spoken_mishearings.sql", "013_term_links.sql"]
+                                    "008_clinic_profile_prefix.sql", "009_clinic_formulary.sql", "010_clinic_overlay.sql", "011_spoken_terms.sql", "012_spoken_mishearings.sql", "013_term_links.sql", "014_share_links.sql"]
         assert details.my_details(c, first) == {"doctor_name": "Dr. Rao", "qualifications": "MBBS", "reg_no": "R-111"}
         assert details.my_details(c, second) == {"doctor_name": "", "qualifications": "", "reg_no": ""}
         assert details.saved_doctor_details(c)["doctor_name"] == "Dr. Rao"     # the shared row keeps its copy

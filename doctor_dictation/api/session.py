@@ -7,6 +7,7 @@ task, inside ``use_scope``. In single mode (``MULTI_CLINIC`` off) everything pas
 from __future__ import annotations
 
 import asyncio
+import re
 
 from starlette.requests import cookie_parser
 from starlette.responses import JSONResponse, RedirectResponse
@@ -19,7 +20,12 @@ CSRF_HEADER = b"x-dd-client"
 UNSAFE_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
 PUBLIC_PATHS = frozenset({"/login", "/login.css", "/login.js", "/api/health", "/health",
                           "/api/v1/auth/login", "/favicon.ico"})
+PUBLIC_SHARE = re.compile(r"/s/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+")   # patient download link: exactly two segments, no dots
 GATE_PATHS = frozenset({"/api/v1/auth/change-password", "/api/v1/auth/logout", "/api/v1/auth/me"})
+
+
+def is_public(path: str) -> bool:
+    return path in PUBLIC_PATHS or PUBLIC_SHARE.fullmatch(path) is not None
 
 
 def _cookie_token(headers: dict) -> str | None:
@@ -40,7 +46,7 @@ class SessionMiddleware:
         headers = dict(scope["headers"])
         if method in UNSAFE_METHODS and headers.get(CSRF_HEADER) != b"1":
             return await JSONResponse({"error": "missing X-DD-Client header"}, status_code=403)(scope, receive, send)
-        if path in PUBLIC_PATHS:
+        if is_public(path):
             return await self.app(scope, receive, send)
 
         wants_json = path.startswith("/api") or method != "GET"

@@ -109,7 +109,7 @@ function setWorking(on, msg) {
   if (msg) setStatus(msg);
   recBtn.disabled = on;
   saveBtn.disabled = on;
-  if (on) { printBtn.disabled = true; savePdfBtn.disabled = true; } else refreshPrintButton();
+  if (on) { printBtn.disabled = true; savePdfBtn.disabled = true; if (window.Share) Share.sync(printBtn); } else refreshPrintButton();
   $("newPatientBtn").disabled = on;
   $("profileOpenBtn").disabled = on;
   $("profileLetterheadBtn").disabled = on;
@@ -439,6 +439,7 @@ function refreshPrintButton() {
     : state.dirty ? "Save your changes first"
     : "Print this prescription (letterhead PDF)";
   if (window.Authorship) Authorship.enforce();      // setWorking/setPrinting re-enable the mic and Save
+  if (window.Share) Share.sync(printBtn);
 }
 // Persistent cue next to the mic: which prescription a dictation would correct.
 function updateCue() {
@@ -1352,6 +1353,7 @@ $("profileCancelBtn").addEventListener("click", closeProfilePanel);
 $("profileForm").addEventListener("submit", saveProfile);
 
 // ---- init ------------------------------------------------------------------
+if (window.Share) Share.init({ documentId: () => state.documentId });
 Sections.init({ post: postJson });
 SheetSecs.init({ get: (u) => fetch(u).then(safeJson), renderList }); Cues.init({ list: () => SheetSecs.list() }); SheetSecs.load().then(() => SheetSecs.render(state.structured ? readForm() : {})).catch(() => {});
 IxList.init({ post: postJson, working: () => state.working, onChange: () => { markDirty(); updateCue(); },

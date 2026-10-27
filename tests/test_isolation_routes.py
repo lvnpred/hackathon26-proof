@@ -85,7 +85,7 @@ def test_every_id_route_answers_404_for_an_id_only_clinic_a_has(world):
         table.append(f"{method} {url} -> {r.status_code}")
         if r.status_code != 404 or leaks(r.text, A_MARKERS):
             wrong.append(f"{method} {url} -> {r.status_code} {r.text[:160]}")
-    assert len(routes) == 9, routes      # the live count of doctor-sweepable id operations (the 3 user actions and the formulary DELETE are admin only); a new one must be reviewed here
+    assert len(routes) == 11, routes      # the live count of doctor-sweepable id operations (the 3 user actions and the formulary DELETE are admin only); a new one must be reviewed here
     assert not wrong, wrong
     assert fingerprint(A) == before, table
 
@@ -174,6 +174,8 @@ CLASSIFIED = {
     "GET /api/v1/encounters/today": "list: test_no_list_or_page_shows_the_other_clinics_data (EXTRA_GETS)",
     "GET /api/v1/patients": "list: test_no_list_or_page_shows_the_other_clinics_data",
     "POST /api/v1/patients": "test_writes_land_in_the_callers_clinic_only[patients]",
+    "GET /api/v1/documents/{document_id}/share": "clinic-scoped connection and document.reprint: test_share_save.py",
+    "POST /api/v1/documents/{document_id}/share/revoke": "clinic-scoped connection; author or admin (share.revoke): test_share_save.py",
     "GET /api/v1/profile": "list-style GET: test_no_list_or_page_shows_the_other_clinics_data",
     "PUT /api/v1/profile": "test_writes_land_in_the_callers_clinic_only[profile]",
     "POST /api/v1/templates": "test_writes_land_in_the_callers_clinic_only[upload]",

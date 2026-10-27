@@ -9,6 +9,7 @@
 				request>headers>Authorization delete
 				request>headers>Cookie delete
 				resp_headers>Set-Cookie delete
+				request>uri regexp "^/s/([^/]+)/[^?]*" "/s/${1}/-"
 			}
 		}
 	}

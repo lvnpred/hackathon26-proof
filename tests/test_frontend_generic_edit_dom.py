@@ -253,7 +253,7 @@ def test_problem_mirrors_the_server_messages():                     # Review Foc
 
 def test_the_page_loads_genericedit_between_rxview_and_app():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
-    assert html.index("rxview.js?v=18") < html.index("genericedit.js?v=3") < html.index("app.js?v=55") and "rx.css?v=10" in html
+    assert html.index("rxview.js?v=18") < html.index("genericedit.js?v=3") < html.index("app.js?v=56") and "rx.css?v=10" in html
     js = (FRONT / "genericedit.js").read_text(encoding="utf-8")
     assert "innerHTML" not in js and "insertAdjacentHTML" not in js and len(js.splitlines()) < 200
     app = (FRONT / "app.js").read_text(encoding="utf-8")

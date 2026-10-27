@@ -4,7 +4,7 @@ import re
 from fastapi.testclient import TestClient
 
 from doctor_dictation.api.app import create_app
-from doctor_dictation.api.session import PUBLIC_PATHS
+from doctor_dictation.api.session import is_public
 
 H = {"X-DD-Client": "1"}
 PAGES = ["/", "/index.html", "/app.js", "/styles.css", "/auth.js", "/letterhead.js", "/login.html",
@@ -28,7 +28,7 @@ def test_every_route_is_closed_without_a_session(multi):
         for method, path in _targets(app):
             r = c.request(method, path, headers=H)
             checked += 1
-            if path in PUBLIC_PATHS:
+            if is_public(path):
                 if r.status_code in (401, 303):
                     leaks.append(f"public {method} {path} was gated: {r.status_code}")
                 continue

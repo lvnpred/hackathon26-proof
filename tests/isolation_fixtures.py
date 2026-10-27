@@ -10,6 +10,7 @@ import hashlib
 import json
 import sqlite3
 import threading
+from datetime import datetime, timezone
 from contextlib import ExitStack, closing, contextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,6 +23,7 @@ from doctor_dictation import db as dbmod
 from doctor_dictation.api import stt
 from doctor_dictation.api.app import create_app
 from doctor_dictation.config import override_settings
+from doctor_dictation.db import share as share_db
 from doctor_dictation.db import templates as tdb
 from doctor_dictation.pdf import renderer as R
 from doctor_dictation.scope import clinic_dir
@@ -41,7 +43,7 @@ UPLOAD_PAD = {"header": [{"type": "logo", "crop": [0.05, 0.02, 0.25, 0.10], "ali
 TABLES = ("patients", "encounters", "documents", "templates", "users", "clinic_profile", "audit_log",
           "schema_migrations", "clinic_formulary", "clinic_formulary_docs",
           "spoken_terms", "spoken_term_docs", "spoken_term_strengths", "spoken_mishearings", "spoken_mishearing_docs",
-          "term_links", "term_link_docs")
+          "term_links", "term_link_docs", "share_links")
 
 
 class _Page:
@@ -92,6 +94,10 @@ def world(multi, monkeypatch):
     seeded = admin_demo.seed_demo()
     with closing(dbmod.get_conn(clinic_dir(A) / "app.db")) as conn:
         tdb.create_template_draft(conn, admin_demo.rao_pad())   # template 2: an id only Clinic A has
+    for slug in (A, B):                                            # every seeded prescription has a live link, so the id sweep reaches the share routes' lookups
+        with closing(dbmod.get_conn(clinic_dir(slug) / "app.db")) as conn:
+            for (eid,) in conn.execute("SELECT DISTINCT encounter_id FROM documents").fetchall():
+                share_db.ensure_link(conn, eid, datetime.now(timezone.utc))
     app = create_app()
     try:
         with ExitStack() as stack:

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import authorship, visit
 from doctor_dictation.api import sections as sections_api
+from doctor_dictation.api import share
 from doctor_dictation.api.pastday import is_past, past_refusal, visit_day, visit_day_iso
 from doctor_dictation.api.formulary import learn_doctor_generics, learn_from_save, use_clinic_layer
 from doctor_dictation.api.investigations import remember_from_save, use_investigations
@@ -295,6 +296,7 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
         pdf_path = None
         out_path = dbmod.pdf_dir() / f"encounter_{encounter_id}.pdf"
         meta, layout = _pdf_inputs(conn, validated, day, encounter_id)  # the visit day: today for a first save, the stored day for a re-save
+        share.attach(conn, meta, encounter_id, request, issue=True)
         try:
             pdf_path = str(_render_with_fallback(validated, meta, layout, out_path))
         except Exception:
@@ -447,6 +449,7 @@ def get_document_pdf(document_id: int, request: Request):
             structured = json.loads(row["structured_json"]) if row["structured_json"] else {}
             encounter_id = row["encounter_id"]
             meta, layout = _pdf_inputs(conn, structured, visit_day(row) or visit.today(), encounter_id)
+            share.attach(conn, meta, encounter_id, request, issue=False)
         except Exception:
             log.warning("cannot prepare on-demand PDF", exc_info=True)
             return _pdf_unavailable()

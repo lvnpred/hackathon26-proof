@@ -457,3 +457,17 @@ rm -rf ~/dictdoc-restore
 | Data volume name | `docker-compose.yml:4` |
 | App user id 10001 | `Dockerfile:27` |
 | Generic container runbook (Podman) | `docs/deploy/runbook.md` |
+
+### Prescription share links
+
+Each saved prescription prints a QR code to a private download link. Deploy steps for the first update that brings it:
+
+1. Set `PUBLIC_BASE_URL=https://gsr.lightday.online` in `.env.production`. Blank falls back to the request's own host.
+2. Validate the Caddyfile before the rebuild: `docker run --rm -e SITE_ADDRESS=localhost -v ./Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy validate --config /etc/caddy/Caddyfile`.
+3. Rebuild (`docker compose --env-file .env.production up -d --build`), because the `segno` QR library is new.
+4. Restart Caddy (`docker compose --env-file .env.production restart caddy`). The Caddyfile is a read-only bind mount that Caddy does not watch, so the rebuild alone does not load it.
+5. Verify the token mask: open one share link, then run `docker compose --env-file .env.production logs caddy | grep '/s/'`. Each line must read `/s/<clinic>/-`, never a token.
+
+#### In logs
+
+Share links look like `/s/<clinic>/<token>`. The Caddy access log and the app's uvicorn access log mask the token. Caddy's separate error log (upstream failures, written to Caddy's default log) records the request URI and is not masked by the site `log` block: treat `docker compose logs caddy` as holding live tokens, and do not paste it into tickets. Tokens expire after 7 days.

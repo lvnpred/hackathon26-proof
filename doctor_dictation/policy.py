@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 
 ACTIONS = frozenset({"document.view", "document.reprint", "document.edit", "user.view", "user.create", "user.disable",
-                     "user.reset_password", "letterhead.manage", "formulary.manage"})
+                     "user.reset_password", "letterhead.manage", "formulary.manage", "share.revoke"})
 
 ADMIN_ONLY = frozenset({"formulary.manage", "user.create", "user.disable", "user.reset_password"})   # "enable" uses user.disable
 
@@ -25,6 +25,9 @@ def can(user, action: str, resource=None) -> bool:
             return False                              # an edit always names the document
         author = _author_id(resource)
         return author is None or author == user.user_id   # a pre-authorship document (no author) stays editable
+    if action == "share.revoke":
+        author = _author_id(resource)                 # the author, or a clinic admin (the link may have gone to the wrong person)
+        return author is None or author == user.user_id or getattr(user, "role", "") == "admin"
     if action in ADMIN_ONLY:
         return getattr(user, "role", "") == "admin"          # the clinic's medicine list and the team: admins only
     if action == "letterhead.manage" and resource is not None:

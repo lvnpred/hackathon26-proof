@@ -44,7 +44,7 @@ cd frontend && npm run build                     # exit 0
 
 ## Overnight loop summary (28 Oct 2026)
 
-Stopped because no item is left that the loop can do alone. 19 of 22 backlog items are done. B2 was finished after Q2 and Q3 were answered (a). Nothing is committed.
+Stopped because no item is left that the loop can do alone. 19 of 22 backlog items are done. B2 was finished after Q2 and Q3 were answered (a). Committed as e36cd87 and pushed to origin/count-guard.
 
 Gate at the end: 62 passed (41 at the start), `eval/run_eval.py` exit 0 with 3 of 3 caught, frontend build ok.
 

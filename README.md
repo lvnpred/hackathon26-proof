@@ -15,7 +15,7 @@ The running map is the guide. With the app open, start at [the guide](http://127
 | Camera count | [Video check](http://127.0.0.1:5173/count) | `backend/app/core/rules.py` | [2026-10-27](docs/new-work.md) |
 | This map | [Guide](http://127.0.0.1:5173/guide) | `backend/app/site.py` | [2026-10-27](docs/new-work.md) |
 
-Every module and its date is in [docs/new-work.md](docs/new-work.md). That list also names the changes made overnight on 27–28 Oct, which are not committed yet.
+Every module and its date is in [docs/new-work.md](docs/new-work.md). That list also names the changes made overnight on 27–28 Oct, committed as e36cd87.
 
 These six steps are for this patient only. The next patient starts a new morning. Records are not mixed.
 

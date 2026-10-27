@@ -140,7 +140,7 @@ Rules for the fixer: one item per sitting; do not edit `backend/app/core/rules.p
 - Files: `README.md`.
 
 ### B18 — "Built during the hackathon" list misses the morning modules
-- Status: done — new-work.md lists every 27 Oct module (one commit, eb76d59) and the uncommitted overnight work by backlog id
+- Status: done — new-work.md lists every 27 Oct module (one commit, eb76d59) and the overnight work by backlog id (e36cd87)
 - Priority: P3
 - Needs human: no
 - Gap: The spec wants the README to list every feature with its build date. `docs/new-work.md:5-17` lists only the camera-count pieces. It omits `backend/app/morning/*` (strips, drug log, vitals sim and card, discharge PDF/ICS, guide), `backend/app/site.py`, and the screens Home/Opd/Ot/Ward/Guide/Morning. The README feature table (`README.md:9-16`) has no date column.

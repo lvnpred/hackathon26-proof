@@ -28,12 +28,14 @@ Dates come from `git log --format=%ad --date=short -- <path>`. The first commit 
 | Product map (`GET /product`) | 2026-10-27 | `backend/app/site.py` |
 | Morning screens: Home, Opd, Ot, Ward, Guide, Morning | 2026-10-27 | `frontend/src/screens/Home.jsx`, `Opd.jsx`, `Ot.jsx`, `Ward.jsx`, `Guide.jsx`, `Morning.jsx` |
 
-## Changed overnight, 27–28 Oct 2026, not committed
+## Changed overnight, 27–28 Oct 2026, committed as e36cd87
 
-The overnight loop made these changes. They are in the working tree and have no commit, so git gives them no date. The item ids are in `docs/loop/backlog.md`.
+The overnight loop made these changes. They went in as one commit, e36cd87, on 28 Oct 2026. The item ids are in `docs/loop/backlog.md`.
 
 | Change | Backlog | Where |
 | --- | --- | --- |
+| PDF tests read the real page text | B1 | `backend/tests/conftest.py`, `backend/tests/test_e2e_uc1.py`, `backend/tests/test_e2e_uc4.py` |
+| Demo adds unannounced gauze (R4); the filed count sums only opened types | B2 | `backend/app/scenarios.py`, `backend/app/morning/camera_file.py` |
 | Live screen runs the scripted demo or uploads a file | B3 | `frontend/src/screens/Live.jsx` |
 | Upload refuses folder names in the file name and bad JSON | B5 | `backend/app/api/routes.py` |
 | Video failures give a one-line 400 or 502, not a 500 | B6 | `backend/app/api/routes.py`, `backend/app/media_pipeline.py` |

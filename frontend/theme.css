@@ -233,6 +233,11 @@
     color:var(--ink); border:1px solid var(--line-control); border-radius:var(--radius-md); }
   .field textarea { min-height:0; padding-top:10px; }
   .field input::placeholder, .field textarea::placeholder, #shareTel::placeholder, .spell-line input::placeholder { color:var(--ink-muted); }
+  .share-row { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .share-row input { flex:1; min-width:0; }
+  #shareEmail, #shareVia { min-height:var(--control-h); background:var(--surface-sunk); color:var(--ink); border:1px solid var(--line-control);
+    border-radius:var(--radius-md); padding:0 10px; }
+  #shareEmail::placeholder { color:var(--ink-muted); }
   .field input:focus, .field textarea:focus { border-color:var(--line-control); box-shadow:var(--focus-ring); }
   .dg-remove, .dg-add { background:var(--surface); color:var(--ink); border-color:var(--line-control); }
   .lh-warn { background:var(--sun-soft); border-color:var(--sun-text); color:var(--ink); }

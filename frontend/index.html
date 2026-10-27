@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="letterhead.css?v=9" />
 <link rel="stylesheet" href="team.css?v=6" />
 <link rel="stylesheet" href="dictguard.css?v=1" />
-<link rel="stylesheet" href="theme.css?v=4" />
+<link rel="stylesheet" href="theme.css?v=5" />
 </head>
 <body>
 <header class="topbar no-print">
@@ -308,8 +308,9 @@
     <img id="shareQr" alt="QR code for the prescription download" width="180" height="180" hidden>
     <p id="shareUntil" class="panel-hint"></p>
     <div class="spell-line"><input id="shareLink" type="text" readonly aria-label="Download link"><button id="shareCopy" type="button" class="rx-act">Copy link</button></div>
-    <input id="shareTel" type="tel" inputmode="tel" autocomplete="off" placeholder="Patient's mobile number" aria-label="Patient's mobile number">
-    <div class="panel-actions"><button id="shareWa" type="button" disabled>WhatsApp</button><button id="shareMail" type="button">Email</button></div>
+    <div class="share-row"><input id="shareTel" type="tel" inputmode="tel" autocomplete="off" placeholder="Patient's mobile number" aria-label="Patient's mobile number"><button id="shareWa" type="button" disabled>WhatsApp</button><button id="shareSms" type="button" disabled hidden>SMS</button></div>
+    <div class="share-row"><input id="shareEmail" type="email" inputmode="email" autocomplete="off" placeholder="Email (optional)" aria-label="Patient's email"><select id="shareVia" aria-label="Email with"><option value="gmail">Gmail</option><option value="outlook">Outlook</option><option value="app">Mail app</option></select><button id="shareMail" type="button">Email</button></div>
+    <div class="panel-actions"><button id="shareCopyMsg" type="button">Copy message</button><button id="shareMore" type="button" hidden>More apps</button></div>
     <p id="shareMsg" class="rx-msg" role="status" aria-live="polite"></p>
     <div class="panel-actions"><button id="shareRevoke" type="button" hidden>Turn off link</button><button id="shareClose" type="button" class="primary">Close</button></div></div>
 </dialog>
@@ -338,7 +339,7 @@
 <script src="vitals.js?v=2"></script>
 <script src="ixlist.js?v=3"></script>
 <script src="savepdf.js?v=2"></script>
-<script src="share.js?v=3"></script>
+<script src="share.js?v=4"></script>
 <script src="dictguard.js?v=3"></script>
 <script src="sheetsecs.js?v=2"></script>
 <script src="cues.js?v=4"></script>

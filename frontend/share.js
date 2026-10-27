@@ -1,7 +1,8 @@
 "use strict";
-// Share dialog (owner feedback C2): shows the private download link of a saved prescription as a QR and a link, opens WhatsApp
-// or the mail app with the server's fixed text, and lets the author or a clinic admin turn the link off.
-// The patient's phone number stays in the input; it is never stored or sent to the server. Loaded BEFORE app.js; also loads under node.
+// Share dialog (owner feedback C2): shows the private download link of a saved prescription as a QR and a link, opens WhatsApp,
+// SMS, a Gmail or Outlook compose tab or the mail app with the server's fixed text, and lets the author or a clinic admin turn
+// the link off. The patient's phone number and email stay in their inputs; they are never stored or sent to the server. Only the
+// "Email with" choice is remembered, per browser. Loaded BEFORE app.js; also loads under node.
 (function (root) {
   const $ = (id) => root.document.getElementById(id);
   const MSG = {
@@ -13,6 +14,8 @@
   };
   const NO_LINK = "no share link for this prescription";     // the server's text for "saved, but no link yet"
   const PHONE_HINT = "Enter the patient's 10-digit mobile number";
+  const EMAIL_HINT = "Check the patient's email address";
+  const VIA_KEY = "dd.mailVia", VIAS = ["gmail", "outlook", "app"];
   let docId = () => null;
   let info = null;
 
@@ -27,7 +30,26 @@
   }
 
   const whatsappUrl = (phone, message) => "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
-  const mailtoUrl = (subject, body) => "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  const mailtoUrl = (subject, body, to) => "mailto:" + encodeURIComponent(to || "") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  const smsUrl = (phone, message) => "sms:+" + phone + "?&body=" + encodeURIComponent(message);   // "?&" reads on both iOS and Android
+
+  function mailUrl(via, to, subject, body) {             // via: gmail | outlook (a compose page in a new tab) | app (mailto)
+    const e = encodeURIComponent;
+    if (via === "gmail") return "https://mail.google.com/mail/?view=cm&fs=1&to=" + e(to || "") + "&su=" + e(subject) + "&body=" + e(body);
+    if (via === "outlook") return "https://outlook.live.com/mail/0/deeplink/compose?to=" + e(to || "") + "&subject=" + e(subject) + "&body=" + e(body);
+    return mailtoUrl(subject, body, to);
+  }
+
+  function normalizeEmail(raw) {                         // "" is fine (the doctor types it in the mail tab); a bad address is null
+    const s = String(raw == null ? "" : raw).trim();
+    if (!s) return "";
+    return /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(s) && s.length <= 254 ? s : null;
+  }
+
+  function savedVia() {
+    try { const v = root.localStorage.getItem(VIA_KEY); return VIAS.includes(v) ? v : "gmail"; } catch (e) { return "gmail"; }
+  }
+  function keepVia(v) { try { root.localStorage.setItem(VIA_KEY, v); } catch (e) { /* private window: the choice is not kept */ } }
 
   function sync(printBtn) {                              // Share follows Print: saved, no unsaved change, not busy
     const b = $("shareBtn");
@@ -38,12 +60,15 @@
 
   function phoneState() {
     const ok = !!(info && info.active && normalizePhone($("shareTel").value));
-    $("shareWa").disabled = !ok;
-    $("shareWa").title = ok ? "" : PHONE_HINT;
+    ["shareWa", "shareSms"].forEach((id) => { $(id).disabled = !ok; $(id).title = ok ? "" : PHONE_HINT; });
+    const mailOk = !!(info && info.active) && normalizeEmail($("shareEmail").value) !== null;
+    $("shareMail").disabled = !mailOk;
+    $("shareMail").title = mailOk ? "" : EMAIL_HINT;
   }
 
-  function clearPhone() {
+  function clearPhone() {                                // also clears the email: neither outlives the dialog
     $("shareTel").value = "";
+    $("shareEmail").value = "";
     info = null;
     phoneState();
   }
@@ -56,11 +81,9 @@
     const qrOk = qr.startsWith("data:image/svg+xml");
     $("shareQr").hidden = !qrOk;
     $("shareQr").src = qrOk ? qr : "";
-    $("shareWa").hidden = !live;
-    $("shareMail").hidden = !live;
-    $("shareTel").hidden = !live;
-    $("shareLink").hidden = !live;
-    $("shareCopy").hidden = !live;
+    ["shareWa", "shareMail", "shareTel", "shareEmail", "shareVia", "shareLink", "shareCopy", "shareCopyMsg"].forEach((id) => { $(id).hidden = !live; });
+    $("shareSms").hidden = !(live && coarse());
+    $("shareMore").hidden = !(live && typeof root.navigator.share === "function");
     $("shareUntil").textContent = live ? "Valid until " + j.valid_until : "";
     $("shareRevoke").hidden = !(j && j.can_revoke && j.active);
     if (live) {
@@ -106,22 +129,56 @@
     catch (e) { $("shareLink").select && $("shareLink").select(); $("shareMsg").textContent = "Press Ctrl+C to copy the link."; }
   }
 
+  async function copyMessage() {
+    if (!(info && info.active)) return;
+    try { await root.navigator.clipboard.writeText(info.message); $("shareMsg").textContent = "Message copied."; }
+    catch (e) { $("shareMsg").textContent = "The message could not be copied. Use Copy link instead."; }
+  }
+
+  async function more() {                                // the phone's own share sheet: WhatsApp, Gmail, SMS and the rest
+    if (!(info && info.active)) return;
+    try { await root.navigator.share({ title: info.subject, text: info.message }); }
+    catch (e) { if (!e || e.name !== "AbortError") $("shareMsg").textContent = "Sharing is not available here. Use Copy message."; }
+  }
+
+  function coarse() {                                    // phones and tablets: SMS only makes sense there
+    try { return !!(root.matchMedia && root.matchMedia("(pointer: coarse)").matches); } catch (e) { return false; }
+  }
+
+  function mail() {
+    const to = normalizeEmail($("shareEmail").value);
+    if (!(info && info.active) || to === null) return;
+    const via = VIAS.includes($("shareVia").value) ? $("shareVia").value : "gmail";
+    const url = mailUrl(via, to, info.subject, info.message);
+    if (via === "app") root.location.href = url;
+    else root.open(url, "_blank", "noopener");
+  }
+
   function init(opts) {
     docId = opts.documentId;
     $("shareBtn").addEventListener("click", open);
     $("shareTel").addEventListener("input", phoneState);
+    $("shareEmail").addEventListener("input", phoneState);
+    $("shareVia").value = savedVia();
+    $("shareVia").addEventListener("change", () => keepVia($("shareVia").value));
     $("shareWa").addEventListener("click", () => {
       const phone = normalizePhone($("shareTel").value);
       if (phone && info && info.active) root.open(whatsappUrl(phone, info.message), "_blank", "noopener");
     });
-    $("shareMail").addEventListener("click", () => { if (info && info.active) root.location.href = mailtoUrl(info.subject, info.message); });
+    $("shareSms").addEventListener("click", () => {
+      const phone = normalizePhone($("shareTel").value);
+      if (phone && info && info.active) root.location.href = smsUrl(phone, info.message);
+    });
+    $("shareMail").addEventListener("click", mail);
+    $("shareMore").addEventListener("click", more);
     $("shareRevoke").addEventListener("click", revoke);
     $("shareCopy").addEventListener("click", copy);
+    $("shareCopyMsg").addEventListener("click", copyMessage);
     $("shareClose").addEventListener("click", () => $("shareDlg").close());
     $("shareDlg").addEventListener("close", clearPhone);
   }
 
-  const api = { init, sync, open, normalizePhone, whatsappUrl, mailtoUrl };
+  const api = { init, sync, open, normalizePhone, normalizeEmail, whatsappUrl, mailtoUrl, mailUrl, smsUrl };
   root.Share = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

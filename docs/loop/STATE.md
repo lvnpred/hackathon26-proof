@@ -1,7 +1,7 @@
 # Loop state
 
 Dev complete means UC1–UC5 pass on 31 Oct 2026. UC6 stays blocked.
-No commits until a git name and email are provided.
+Committed as lvnpred <lvnpred@gmail.com>. Pushed to origin/count-guard on lighterday/hackathon26. GitHub main was not changed.
 Questions go in this chat. The hackathon bot is the requested second channel. Its address is not known yet.
 
 | ID | Status | Proof |
@@ -13,4 +13,4 @@ Questions go in this chat. The hackathon bot is the requested second channel. It
 | UC5 | done | 41 tests passed. `eval/run_eval.py` exited 0. 3 of 3 planted discrepancies caught. SAM was not called. |
 | UC6 | blocked | Real SAM clip and a key. Not part of 31 Oct. |
 
-Updated: UC4 and UC5 passed. UC1–UC5 are done. UC6 stays blocked. No commit.
+Updated: UC1–UC5 are done. First commit is eb76d59, then this ledger note. UC6 stays blocked.

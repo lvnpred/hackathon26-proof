@@ -36,6 +36,20 @@ def _spelled(name: str) -> str:
 _NAME = r"(?:[A-Za-z](?:[A-Za-z\- ]|(?<=[A-Za-z0-9\-])\d){2,30}?|[A-Za-z]\d)"
 
 
+def _own_words_start(m: re.Match, raw_form: str | None, name: str) -> int:
+    """Where a medicine match's own words begin.
+
+    Unpunctuated speech makes the lazy name swallow the previous medicine's instructions
+    ("twice daily and Pan 40 mg"), so the medicine starts at its form word, else at its kept name.
+    """
+    if raw_form:
+        return m.start(1)
+    offset = m.group(2).lower().rfind(name.split()[0].lower()) if name else -1
+    if offset < 0:
+        return m.start()
+    return m.start(2) + offset
+
+
 # The seeded demo note (ureteric stone) applies only to the whole demo dictation: every one of these phrases, not one keyword.
 _DEMO_PHRASES = ("ureteric", "calculus", "tamsulosin", "deflazacort", "citrate")
 
@@ -171,7 +185,9 @@ def fallback_format(transcript: str) -> dict:
         (r"every \d+ hours|q\d+h", "SOS"),
     ]
     # find drug mentions: optional form + capitalized word + strength
-    for m in re.finditer(r"(?:\b(tab(?:let)?|cap(?:sule)?|syr(?:up)?|inj(?:ection)?)\.?\s+)?\b(" + _NAME + r")\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|iu))\b", text, re.I):
+    rx_matches = list(re.finditer(r"(?:\b(tab(?:let)?|cap(?:sule)?|syr(?:up)?|inj(?:ection)?)\.?\s+)?\b(" + _NAME + r")\s+(\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|iu))\b", text, re.I))
+    kept = []   # (match, form word, name, strength, where its own words begin), non-drugs left out
+    for m in rx_matches:
         raw_form, name, strength = m.groups()
         name = name.strip().strip(".").title()
         # strip filler words browser STT often adds ("please have/take X") — repeat, they stack
@@ -186,7 +202,15 @@ def fallback_format(transcript: str) -> dict:
         # skip non-drugs
         if name.lower() in {"have", "take", "please", "with", "since", "daily", "twice", "after", "before"}:
             continue
-        window = text[max(0, m.start() - 10):m.end() + 80].lower()
+        kept.append((m, raw_form, name, strength, _own_words_start(m, raw_form, name)))
+    for i, (m, raw_form, name, strength, own_start) in enumerate(kept):
+        # each medicine reads only its own stretch: from its own words (the first may also read just before)
+        # to where the next kept medicine's own words begin, so "once daily" never leaks across
+        prev_end = kept[i - 1][0].end() if i else 0
+        next_start = kept[i + 1][4] if i + 1 < len(kept) else len(text)
+        w_start = max(0, (m.start() if i == 0 else own_start) - 10, prev_end)
+        w_end = min(m.end() + 80, next_start)
+        window = text[w_start:w_end].lower()
         dose = ""
         for pat, code in freq_map:
             if re.search(pat, window):

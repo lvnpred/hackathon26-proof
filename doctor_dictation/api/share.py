@@ -5,6 +5,7 @@ The public route that serves the stored PDF is separate. A link or QR problem ne
 import logging
 from contextlib import closing
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -105,3 +106,24 @@ def revoke_share(document_id: int, request: Request):
         dbmod.set_document_pdf_path(conn, document_id, None)
         dbmod.log_audit(conn, action="share.revoke", entity="share_link", entity_id=str(author["encounter_id"]))
         return {"revoked": True}
+
+
+def stored_pdf_ok(conn, document_id, encounter_id, stored: Path) -> bool:
+    """False when the stored PDF carries a QR whose link has expired or been revoked; its path is then cleared.
+
+    No link row (saved before share links), a file written at or after the link died (the QR-free
+    reprint), or a failed lookup or stat keeps the stored PDF.
+    """
+    try:
+        row = sdb.link_for_encounter(conn, encounter_id)
+        if row is None or sdb.is_live(row, _now()):
+            return True
+        dead_since = sdb.parse(row["revoked_at"] or row["expires_at"])
+        written = datetime.fromtimestamp(stored.stat().st_mtime, timezone.utc)
+        if written >= dead_since:
+            return True
+        dbmod.set_document_pdf_path(conn, document_id, None)
+        return False
+    except Exception as exc:    # never block a reprint; the type only, no token or name
+        log.warning("share link check failed before reprint: %s", type(exc).__name__)
+        return True

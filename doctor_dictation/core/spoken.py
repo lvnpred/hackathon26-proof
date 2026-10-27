@@ -13,8 +13,9 @@ from .drugnames import _exact_lookup
 from .formulary import MAX_NAME, has_letters, person_like
 
 USUAL_SHARE, USUAL_MIN = 60, 2     # the usual strength: at least 60% of a term's uses, and at least 2 uses
-# a strength as hints.py accepts one: 1-4 digits, 2 decimals at most, so a phone number is never a strength
-_STRENGTH = re.compile(r"\d{1,4}(?:\.\d{1,2})?\s*(?:mg|mcg|g|gm|ml|iu|units?|%)?(?:\s*/\s*\d{0,4}(?:\.\d{1,2})?\s*(?:ml|g|gm|tab))?", re.I)
+# a strength as hints.py accepts one: 1-4 digits with 3 decimals at most, or 5-6 digits only with IU/units
+# ("60000 IU"), so a phone number, PIN code or OP number is never a strength
+_STRENGTH = re.compile(r"(?:\d{5,6}\s*(?:iu|units?)|\d{1,4}(?:\.\d{1,3})?\s*(?:mg|mcg|g|gm|ml|iu|units?|%)?)(?:\s*/\s*\d{0,6}(?:\.\d{1,3})?\s*(?:ml|g|gm|tab))?", re.I)
 _TRAILING_MG = re.compile(r"\s*mg$", re.I)
 LINK_MIN = 2                       # a diagnosis-term link is used once this many documents counted it (H3)
 CONTEXT_BYTES, CONTEXT_LINES, CONTEXT_CHARS = 4096, 10, 200   # the correction context: bytes in all, lines, chars per line

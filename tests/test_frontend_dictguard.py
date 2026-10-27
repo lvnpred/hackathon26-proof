@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 FRONT = Path(__file__).resolve().parents[1] / "frontend"
-FAKE = """const els = {}; let adds = 0;
-["addingBanner", "nameCheck", "nameCheckText", "nameCheckNew", "nameCheckApply", "undoDict", "undoDictBtn"].forEach((id) => {
-  const l = {};
-  els[id] = { id, textContent: "", hidden: true, disabled: false, focus() { document.activeElement = els[id]; },
+FAKE = """const els = {}; let adds = 0, releases = 0;
+["addingBanner", "nameCheck", "nameCheckText", "nameCheckNew", "nameCheckApply", "undoDict", "undoDictBtn", "sheet"].forEach((id) => {
+  const l = {}, attrs = {};
+  els[id] = { id, attrs, setAttribute(k, v) { attrs[k] = String(v); }, removeAttribute(k) { if (k === "inert") releases++; delete attrs[k]; }, hasAttribute: (k) => k in attrs, textContent: "", hidden: true, disabled: false, focus() { document.activeElement = els[id]; },
     addEventListener(t, f) { adds++; (l[t] = l[t] || []).push(f); }, fire(t, ev) { (l[t] || []).forEach((f) => f(ev || {})); } };
 });
 globalThis.document = { getElementById: (id) => els[id] || null, activeElement: null }; globalThis.window = globalThis;
@@ -212,3 +212,30 @@ def test_app_wires_the_guard_and_index_loads_it_first():
         assert needle in app, needle
     assert app.count("DictGuard.clear()") == 2
     assert html.index("dictguard.js?v=") < html.index("app.js?v=")
+
+
+def test_the_sheet_is_inert_while_the_prompt_waits_and_released_once():
+    r = _run("""const sh = els.sheet; const idle = [sh.hasAttribute("inert"), sh.hasAttribute("aria-busy")];
+      DictGuard.ask({ name: "Ravi", op_no: "" }, "Suresh"); DictGuard.ask({ name: "Ravi", op_no: "" }, "Suresh");
+      const waiting = [sh.hasAttribute("inert"), sh.attrs["aria-busy"]]; const promptOpen = els.nameCheck.hidden;
+      els.nameCheckNew.fire("click"); await tick();
+      const afterNew = [sh.hasAttribute("inert"), sh.hasAttribute("aria-busy")]; const releasedOnce = releases;
+      DictGuard.ask({ name: "Ravi", op_no: "" }, "Suresh"); const again = sh.hasAttribute("inert");
+      els.nameCheckApply.fire("click"); await tick(); const afterApply = sh.hasAttribute("inert");
+      DictGuard.ask({ name: "Ravi", op_no: "" }, "Suresh"); els.nameCheck.fire("keydown", { key: "Enter" }); await tick();
+      const afterEnter = sh.hasAttribute("inert");
+      delete els.sheet; DictGuard.ask({ name: "Ravi", op_no: "" }, "Suresh"); els.nameCheckNew.fire("click"); await tick();
+      console.log(JSON.stringify({ idle, waiting, promptOpen, afterNew, releasedOnce, again, afterApply, afterEnter, ok: els.nameCheck.hidden }));""")
+    assert r["idle"] == [False, False]
+    assert r["waiting"] == [True, "true"] and r["promptOpen"] is False   # the prompt itself stays usable
+    assert r["afterNew"] == [False, False] and r["again"] is True
+    assert r["releasedOnce"] == 1                                        # two overlapping asks, one release
+    assert r["afterApply"] is False and r["afterEnter"] is False
+    assert r["ok"] is True                                               # a missing sheet never throws
+
+
+def test_a_notify_that_throws_never_leaves_the_sheet_inert():
+    r = _run("""DictGuard.init({ notify: () => { throw new Error("status bar gone"); } });
+      let threw = false; try { DictGuard.ask({ name: "Ravi", op_no: "" }, "Suresh"); } catch (e) { threw = true; }
+      console.log(JSON.stringify({ threw, inert: els.sheet.hasAttribute("inert") }));""")
+    assert r == {"threw": True, "inert": False}

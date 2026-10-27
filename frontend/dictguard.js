@@ -20,9 +20,16 @@ function promptText(other, sheetName) {
   return { line: "This sounds like " + (other.name || other.op_no) + ", not " + sheet + ".", fresh: "Start new patient (Enter)", apply: "Apply to " + sheet };
 }
 let pending = null, bound = false;   // one prompt at a time; handlers are bound once and settle the pending promise
+function lockSheet(on) {   // the sheet cannot be edited while the prompt waits, so Apply and Undo never race a typed edit
+  const el = $("sheet");
+  if (!el) return;
+  if (on) { el.setAttribute("inert", ""); el.setAttribute("aria-busy", "true"); }
+  else { el.removeAttribute("inert"); el.removeAttribute("aria-busy"); }
+}
 function settle(v) {
   if (!pending) return;
   const p = pending; pending = null;
+  lockSheet(false);
   $("nameCheck").hidden = true;
   p.resolve(v);
 }
@@ -47,10 +54,11 @@ function ask(other, sheetName) {
   $("nameCheckNew").textContent = t.fresh;
   $("nameCheckApply").textContent = t.apply;
   $("nameCheck").hidden = false;
-  if (hooks) hooks.notify("Choose: start a new patient, or apply to " + (sheetName || THIS) + ".");
   pending = {};
   pending.promise = new Promise((resolve) => { pending.resolve = resolve; });
+  if (hooks) hooks.notify("Choose: start a new patient, or apply to " + (sheetName || THIS) + ".");
   $("nameCheckNew").focus();
+  lockSheet(true);                                      // last: a throw above never leaves the sheet inert with no prompt to settle
   return pending.promise;
 }
 function keepIdentity(structured, current) {

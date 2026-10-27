@@ -466,8 +466,8 @@ Each saved prescription prints a QR code to a private download link. Deploy step
 2. Validate the Caddyfile before the rebuild: `docker run --rm -e SITE_ADDRESS=localhost -v ./Caddyfile:/etc/caddy/Caddyfile:ro caddy:2 caddy validate --config /etc/caddy/Caddyfile`.
 3. Rebuild (`docker compose --env-file .env.production up -d --build`), because the `segno` QR library is new.
 4. Restart Caddy (`docker compose --env-file .env.production restart caddy`). The Caddyfile is a read-only bind mount that Caddy does not watch, so the rebuild alone does not load it.
-5. Verify the token mask: open one share link, then run `docker compose --env-file .env.production logs caddy | grep '/s/'`. Each line must read `/s/<clinic>/-`, never a token.
+5. Verify the token mask: open one share link, then run `docker compose --env-file .env.production logs caddy | grep '/s/'`. Each line must read `/s/<clinic>/-`, never a token. Then check the error log the same way, outside clinic hours, because this stops the app for a minute: stop the app (`docker compose --env-file .env.production stop app`), open a share link (Caddy logs a 502 error), run `docker compose --env-file .env.production logs caddy | grep '"level":"error"' | grep '/s/'` (each line must end `/s/<clinic>/-`), and start the app again (`docker compose --env-file .env.production start app`).
 
 #### In logs
 
-Share links look like `/s/<clinic>/<token>`. The Caddy access log and the app's uvicorn access log mask the token. Caddy's separate error log (upstream failures, written to Caddy's default log) records the request URI and is not masked by the site `log` block: treat `docker compose logs caddy` as holding live tokens, and do not paste it into tickets. Tokens expire after 7 days.
+Share links look like `/s/<clinic>/<token>`. The Caddy access log and the app's uvicorn access log mask the token. Caddy's separate error log (upstream failures) is masked by the global `log default` block in the Caddyfile; the check is in the deploy steps above. Run that check after every Caddy upgrade. Tokens expire after 7 days.

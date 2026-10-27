@@ -8,7 +8,7 @@ from doctor_dictation.api.format import PROMPT_SHA, SYSTEM_PROMPT
 from doctor_dictation.core.correction import CORRECTION_INSTRUCTION, LIST_FIELDS, build_correction_messages, merge_form
 from doctor_dictation.core.determinism import _FORMAT_CACHE, transcript_sha
 from doctor_dictation.core.ops import apply_ops
-from doctor_dictation.core.sections import BUILT_INS, coerce_extra, correction_rule, format_rule, parse
+from doctor_dictation.core.sections import BUILT_INS, signature as sections_signature, coerce_extra, correction_rule, format_rule, parse
 from test_determinism import _stub_llm
 
 
@@ -146,7 +146,11 @@ def test_switching_advice_off_changes_the_cache_key_and_blanks_advice(monkeypatc
     _stub_llm(monkeypatch, [{"rx": [], "advice": ["Rest"]}, {"rx": [], "advice": ["Rest"]}])
     c = TestClient(M.app)
     seen = []
-    for secs in (BUILT_INS, _list()):                  # _list() switches advice off
+    advice_off = parse({"version": 1, "sections": [        # same keys and order as BUILT_INS; only advice's flag differs
+        {"key": b.key, "heading": b.heading, "cue": "", "kind": b.kind, "order": b.order, "on": b.key != "advice"}
+        for b in BUILT_INS]})
+    assert sections_signature(advice_off) != sections_signature(BUILT_INS)
+    for secs in (BUILT_INS, advice_off):
         monkeypatch.setattr("doctor_dictation.api.sections.sections_for", lambda clinic, doctor_id=None, s=secs: s)
         seen.append(c.post("/api/format", json={"transcript": "fever three days rest"}).json())
     assert [j["cached"] for j in seen] == [False, False]

@@ -443,7 +443,7 @@ def get_document_pdf(document_id: int, request: Request):
         if denied is not None:
             return denied
         stored = _stored_pdf(row)
-        if stored is not None:
+        if stored is not None and share.stored_pdf_ok(conn, document_id, row["encounter_id"], stored):
             return _pdf_response(stored, document_id)
         try:
             structured = json.loads(row["structured_json"]) if row["structured_json"] else {}

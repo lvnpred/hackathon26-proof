@@ -18,8 +18,9 @@ from .spoken import HintTerm
 MAX_HINT_CHARS = 500
 _MAX_DOCTOR_NAME = 60  # longer is never a medicine name (equals formulary.MAX_NAME)
 _UNIT = r"\s*(?:mg|mcg|g|ml|iu|%)?"
-# a plausible strength ("650", "0.4 mg", "40 12.5"), never a phone number: 2 decimals at most, a second number of 1-3 digits
-_TRAILING_STRENGTH = re.compile(rf"\s+\d{{1,4}}(?:\.\d{{1,2}})?{_UNIT}(?:\s+\d{{1,3}}(?:\.\d{{1,2}})?{_UNIT})?$", re.I)
+# a plausible strength ("650", "0.4 mg", "40 12.5", "60000 IU"), never a phone number: 1-4 digits with 3 decimals
+# at most, or 5-6 digits only with IU; a second number of 1-3 digits
+_TRAILING_STRENGTH = re.compile(rf"\s+(?:\d{{5,6}}\s*iu|\d{{1,4}}(?:\.\d{{1,3}})?{_UNIT})(?:\s+\d{{1,3}}(?:\.\d{{1,3}})?{_UNIT})?$", re.I)
 
 
 def common_lexicon_names() -> list[str]:

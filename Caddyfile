@@ -1,3 +1,17 @@
+# Global options: must be the first block. Caddy's own error log (e.g. upstream failures while the app is down)
+# goes to the default logger and would print the full request URI, so mask share tokens there like the access log.
+{
+	log default {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "^/s/([^/]+)/[^?]*" "/s/${1}/-"
+			}
+		}
+	}
+}
+
 # HTTPS reverse proxy. SITE_ADDRESS comes from the env file; "localhost" gives a local self-signed cert.
 {$SITE_ADDRESS} {
 	encode zstd gzip

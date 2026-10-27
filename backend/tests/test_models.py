@@ -165,3 +165,68 @@ def json_sentence(sentence: dict) -> str:
     import json
 
     return json.dumps({"sentences": [sentence]})
+
+
+def test_r5_triggers_one_second_look_with_a_fake_adapter(tmp_path, monkeypatch):
+    from app.adapters.spark import SparkAdapter
+
+    calls = []
+
+    def fake_second_look(self, image_data_url, tracked_label):
+        calls.append((image_data_url, tracked_label))
+        return "gauze swab"
+
+    monkeypatch.setattr(SparkAdapter, "second_look", fake_second_look)
+
+    def run(key: str, folder: str) -> tuple[Store, dict]:
+        settings = _settings(tmp_path / folder, meta_api_key=key)
+        store = Store(tmp_path / folder / "db.sqlite")
+        app = Engine(store, settings)
+        scenario = _low_score_scenario()
+        case = app.create_case("r5", scenario["item_types"])
+        return store, app.replay(case["id"], scenario)
+
+    store, keyed = run("fake-key", "keyed")
+    looks = [row for row in keyed["discrepancies"] if row["rule_id"] == "R5"]
+    assert len(looks) == 2
+    assert len(calls) == len(looks)
+    assert all(url.startswith("data:image/png;base64,") for url, _ in calls)
+    assert {label for _, label in calls} == {"lap sponge"}
+    events = store.events(keyed["case"]["id"])
+    second = [event for event in events if event["event_type"] == "second_look"]
+    assert len(second) == len(looks)
+    assert {event["payload"]["discrepancy_id"] for event in second} == {row["id"] for row in looks}
+    assert all(event["payload"]["name"] == "gauze swab" for event in second)
+    assert [call["model"] for call in keyed["model_calls"]] == ["muse-spark-1.3"] * len(looks)
+
+    calls.clear()
+    store, plain = run("", "plain")
+    assert calls == []
+    assert plain["ledger"] == keyed["ledger"]
+    assert plain["model_calls"] == []
+    assert not [event for event in store.events(plain["case"]["id"]) if event["event_type"] == "second_look"]
+
+
+def _low_score_scenario() -> dict:
+    scenario = get_scenario("clip1")
+    for detection in scenario["steps"][1]["detections"][:2]:
+        detection["score"] = 0.3
+    return scenario
+
+
+def _settings(data_dir, meta_api_key: str = "") -> Settings:
+    return Settings(
+        data_dir=data_dir,
+        meta_api_key=meta_api_key,
+        meta_base="https://api.meta.ai/v1",
+        sam_model="sam-3.1",
+        voice_model="muse-voice-transcribe-1.0",
+        spark_model="muse-spark-1.3",
+        baseten_api_key="",
+        spark_open_base="https://inference.baseten.co/v1",
+        spark_open_model="meta-models/muse-spark-open-1026",
+        low_confidence=0.45,
+        unannounced_window_ms=30_000,
+        lost_after_frames=4,
+        sam_fps=2,
+    )

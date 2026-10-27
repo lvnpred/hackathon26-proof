@@ -28,9 +28,13 @@ export default function Close() {
 
   async function resolve(id) {
     setError("");
-    await resolveDiscrepancy(id, reason, by);
-    setResult(null);
-    await load();
+    try {
+      await resolveDiscrepancy(id, reason, by);
+      setResult(null);
+      await load();
+    } catch (exc) {
+      setError(exc.message);
+    }
   }
 
   async function fileOnPatient() {
@@ -72,6 +76,9 @@ export default function Close() {
             <article className="alert" key={row.id}>
               <b>{row.status}</b> · {row.rule_id} · {row.kind} · {row.item_type}
               <small>{row.detail}</small>
+              {row.resolution && (
+                <small>Resolved by {row.resolution.by}: {row.resolution.reason}</small>
+              )}
               {row.status === "open" && row.blocks_closing !== false && row.rule_id !== "R5" && (
                 <button onClick={() => resolve(row.id)}>Record resolution</button>
               )}

@@ -8,6 +8,19 @@ from fpdf import FPDF
 
 from app.config import BANNER
 
+# Helvetica in fpdf2 only draws Latin-1. Typed reasons and model sentences
+# carry dashes, curly quotes and emoji, so fold the common ones and mark the rest.
+_LATIN1 = str.maketrans({
+    "\u2013": "-", "\u2014": "-", "\u2212": "-",
+    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+    "\u2026": "...",
+})
+
+
+def latin1(text: str) -> str:
+    """Return text the built-in PDF font can draw: common marks folded, the rest "?"."""
+    return str(text).translate(_LATIN1).encode("latin-1", "replace").decode("latin-1")
+
 
 def write_count_sheet(
     path: Path,
@@ -25,7 +38,7 @@ def write_count_sheet(
     pdf.add_page()
     def line(text: str, size: int = 11, bold: bool = False, height: int = 7) -> None:
         pdf.set_font("Helvetica", "B" if bold else "", size)
-        pdf.multi_cell(0, height, text, new_x="LMARGIN", new_y="NEXT")
+        pdf.multi_cell(0, height, latin1(text), new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_text_color(127, 29, 29)
     line(BANNER, size=12, bold=True, height=8)
@@ -53,6 +66,9 @@ def write_count_sheet(
         )
         if row.get("evidence"):
             line("Evidence: " + ", ".join(row["evidence"]))
+        resolution = row.get("resolution")
+        if resolution:
+            line(f"Resolved by {resolution['by']}: {resolution['reason']}")
     pdf.ln(2)
     line("Narrative", size=13, bold=True, height=8)
     line(narrative or "No narrative.")

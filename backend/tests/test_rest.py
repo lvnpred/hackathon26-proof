@@ -161,3 +161,24 @@ def test_photo_without_a_key_stays_on_the_machine(tmp_path):
     meds = grounded.json()["sheet"]["opd"]
     assert meds[0]["generic"] == "metoprolol"
     assert meds[0]["drug_class"] == "beta-blocker"
+
+
+def test_strip_photo_filename_is_sanitised(tmp_path):
+    data = tmp_path / "data"
+    api = _client(data)
+    episode = api.post("/morning/episodes", json={}).json()
+    photo = api.post(
+        f"/morning/episodes/{episode['id']}/brownbag/photo",
+        files={"file": ("../../evil.jpg", b"\xff\xd8\xff\xd9", "image/jpeg")},
+    )
+    assert photo.status_code == 200
+    assert photo.json()["saved"] == "evil.jpg"
+    folder = data / "strips" / episode["id"]
+    assert (folder / "evil.jpg").exists()
+    escaped = [path for path in tmp_path.rglob("evil.jpg") if path.parent != folder]
+    assert escaped == []
+    bare = api.post(
+        f"/morning/episodes/{episode['id']}/brownbag/photo",
+        files={"file": ("..", b"\xff\xd8\xff\xd9", "image/jpeg")},
+    )
+    assert bare.json()["saved"] == "strip.jpg"

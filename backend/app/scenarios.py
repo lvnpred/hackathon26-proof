@@ -199,16 +199,33 @@ def clip_swap() -> dict:
 
 
 def demo_missing() -> dict:
-    """The 3-minute demo beat: spoken ten, nine in the bucket, one last seen in the field."""
+    """The 3-minute demo beat: spoken ten, nine in the bucket, one last seen in the field.
+
+    Five gauze swabs land on the tray at 25 s with no spoken add (R4) and stay there.
+    """
     scenario = clip_missing_sponge()
     scenario["name"] = "demo"
-    for step in scenario["steps"]:
+    gauze = _placed(
+        [
+            (f"gauze-{index}", "gauze swab", [0.06 + (index - 1) * 0.06, 0.75, 0.05, 0.05])
+            for index in range(1, 6)
+        ]
+    )
+    steps = scenario["steps"]
+    later = next(index for index, step in enumerate(steps) if step["media_ts_ms"] > 25000)
+    steps.insert(later, {"media_ts_ms": 25000, "detections": _sponges(0.44)})
+    for step in steps:
+        if step["media_ts_ms"] >= 25000:
+            step["detections"] = step["detections"] + gauze
         if step.get("say", "").startswith("Closing"):
             step["say"] = "Closing count, ten."
     scenario["expect"] = {
         "headline": "Missing sponge at the closing count",
-        "rules": [("R1", "lap sponge"), ("R2", "lap sponge"), ("R3", "lap sponge")],
-        "ledger": {"lap sponge": {"opened": 10, "bucket": 9, "tray": 0, "unaccounted": 1}},
+        "rules": [("R1", "lap sponge"), ("R2", "lap sponge"), ("R3", "lap sponge"), ("R4", "gauze swab")],
+        "ledger": {
+            "lap sponge": {"opened": 10, "bucket": 9, "tray": 0, "unaccounted": 1},
+            "gauze swab": {"opened": 0, "bucket": 0, "tray": 5, "unaccounted": 0},
+        },
         "id_switches": 0,
         "gate": "blocked",
     }

@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import base64
+from io import BytesIO
 from pathlib import Path
 
+from PIL import Image
+
+from app.adapters.spark import SparkAdapter
 from app.config import Settings
 from app.core.frames import render_frame
-from app.core.ledger import ledger_rows, open_discrepancies
+from app.core.ledger import ledger_rows, open_discrepancies, project
 from app.core.parser import parse_utterance
 from app.core.rules import closing_gate, new_discrepancies
 from app.core.tracker import Tracker
@@ -29,6 +34,12 @@ class Engine:
 
     def replay(self, case_id: str, scenario: dict) -> dict:
         self._require_case(case_id)
+        if not (
+            isinstance(scenario, dict)
+            and isinstance(scenario.get("zones"), dict)
+            and isinstance(scenario.get("steps"), list)
+        ):
+            raise ValueError('Scenario JSON needs a "zones" object and a "steps" list.')
         zone_rows = [{"name": name, "polygon": polygon} for name, polygon in scenario["zones"].items()]
         self.store.save_zones(case_id, zone_rows)
         zones = self.store.zones(case_id)
@@ -147,6 +158,10 @@ class Engine:
                     source="rules",
                 )
             )
+        if self.settings.spark_configured:
+            for row in written:
+                if row["payload"].get("rule_id") == "R5":
+                    self._second_look(case_id, row)
         return written
 
     def resolve(self, discrepancy_id: str, reason: str, by: str) -> dict:
@@ -258,6 +273,41 @@ class Engine:
         }
         return self.store.append_event(event)
 
+    def _second_look(self, case_id: str, discrepancy: dict) -> None:
+        """R5 only. Spark names the crop. The label is noted; the count is unchanged."""
+        payload = discrepancy["payload"]
+        frame = self.store.get_frame(payload.get("last_frame_id") or "")
+        if frame is None:
+            return
+        track = project(self.store.events(case_id)).tracks.get(payload.get("track_id") or "")
+        image_url = _crop_data_url(Path(frame["path"]), track.bbox if track else None)
+        try:
+            name = SparkAdapter(self.settings).second_look(image_url, payload.get("item_type") or "unknown")
+        except Exception as exc:
+            self.store.log_model_call(
+                self.settings.spark_model, "app/adapters/spark.py", f"second look failed: {type(exc).__name__}", case_id
+            )
+            return
+        self.store.log_model_call(
+            self.settings.spark_model, "app/adapters/spark.py", f"second look on {payload.get('track_id')}", case_id
+        )
+        self._append(
+            case_id,
+            {
+                "event_type": "second_look",
+                "media_ts_ms": discrepancy["media_ts_ms"],
+                "confidence": None,
+                "evidence": [discrepancy["id"], f"frame:{frame['id']}"],
+                "payload": {
+                    "discrepancy_id": discrepancy["id"],
+                    "track_id": payload.get("track_id"),
+                    "tracked_label": payload.get("item_type"),
+                    "name": name,
+                },
+            },
+            source=self.settings.spark_model,
+        )
+
     def _cache_tracks(self, case_id: str, tracker: Tracker) -> None:
         rows = []
         for track in tracker.tracks.values():
@@ -304,6 +354,24 @@ class Engine:
             (discrepancy_id,),
         ).fetchall()
         return [row["case_id"] for row in rows]
+
+
+def _crop_data_url(path: Path, bbox: list[float] | None) -> str:
+    """Crop the normalized x, y, w, h box with a small margin. No box sends the whole frame."""
+    with Image.open(path) as image:
+        crop = image.convert("RGB")
+        if bbox:
+            x, y, w, h = bbox
+            margin = 0.02
+            left = max(0, int((x - margin) * crop.width))
+            top = max(0, int((y - margin) * crop.height))
+            right = min(crop.width, int((x + w + margin) * crop.width))
+            bottom = min(crop.height, int((y + h + margin) * crop.height))
+            if right > left and bottom > top:
+                crop = crop.crop((left, top, right, bottom))
+        buffer = BytesIO()
+        crop.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def track_path(events: list[dict], track_id: str) -> list[dict]:

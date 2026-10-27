@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+from conftest import pdf_text
 
 BANNED = ("should", "recommend", "x-ray", "re-explore")
 
@@ -101,7 +102,10 @@ def test_one_labelled_patient_records_all_six_guide_steps(tmp_path):
     assert guide["patient"] == "Synthetic, UC1"
     assert all(step["current"] is False for step in guide["steps"])
 
-    pdf_text = pdf.content.decode("latin-1").lower()
+    text = pdf_text(pdf.content).lower()
+    assert "metoprolol 25 mg" in text
+    assert "ondansetron" in text
+    assert "opened 20. returned 19. unaccounted 1." in text
     for word in BANNED:
-        assert word not in pdf_text
+        assert word not in text
         assert word not in narrative.lower()

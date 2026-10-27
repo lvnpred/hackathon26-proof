@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import time
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,6 +21,9 @@ from app.morning.script import play
 from app.morning.vitals import collect_facts, demo_readings, evaluate, template_card
 
 router = APIRouter()
+
+FOLLOW_POLL_S = 0.25
+FOLLOW_MAX_S = 30.0
 
 
 class Strict(BaseModel):
@@ -100,18 +105,44 @@ def get_episode(episode_id: str, request: Request) -> dict:
 
 
 @router.get("/morning/episodes/{episode_id}/stream")
-def stream_episode(episode_id: str, request: Request):
+def stream_episode(
+    episode_id: str,
+    request: Request,
+    follow: bool = False,
+    timeout_s: float = Query(default=FOLLOW_MAX_S, gt=0),
+):
     _require(request, episode_id)
+    store = _store(request)
     after = request.headers.get("last-event-id")
-    rows = _store(request).events(episode_id, after_id=after)
+    rows = store.events(episode_id, after_id=after)
+
+    def frame(event: dict) -> str:
+        return f"id: {event['id']}\ndata: {json.dumps(event)}\n\n"
 
     def generate():
         for event in rows:
-            yield f"id: {event['id']}\ndata: {json.dumps(event)}\n\n"
+            yield frame(event)
         if not rows:
             yield ": idle\n\n"
 
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    async def follow_events():
+        # Poll the store and send new rows until the timeout or a disconnect.
+        last = rows[-1]["id"] if rows else after
+        for event in rows:
+            yield frame(event)
+        if not rows:
+            yield ": idle\n\n"
+        deadline = time.monotonic() + min(timeout_s, FOLLOW_MAX_S)
+        while time.monotonic() < deadline:
+            await asyncio.sleep(FOLLOW_POLL_S)
+            if await request.is_disconnected():
+                return
+            for event in store.events(episode_id, after_id=last):
+                last = event["id"]
+                yield frame(event)
+
+    body = follow_events() if follow else generate()
+    return StreamingResponse(body, media_type="text/event-stream")
 
 
 @router.post("/morning/episodes/{episode_id}/play")

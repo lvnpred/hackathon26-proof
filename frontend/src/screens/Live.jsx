@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { health, track } from "../api";
+import { health, track, uploadFile, uploadScenario } from "../api";
 import { Models, Shell } from "../App";
 
+// A null time is not the start of the clip: R1 and R2 come from the spoken
+// count and have no camera time.
 function clock(ms) {
-  const total = Math.max(0, Math.floor((ms || 0) / 1000));
+  if (ms == null) return "No camera time (spoken count)";
+  const total = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(total / 60)} min ${total % 60} sec`;
 }
 
 export default function Live() {
   const { caseId } = useParams();
-  const stored = sessionStorage.getItem(`cg:${caseId}`);
-  const snapshot = stored ? JSON.parse(stored) : null;
+  const [snapshot, setSnapshot] = useState(() => {
+    const stored = sessionStorage.getItem(`cg:${caseId}`);
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [status, setStatus] = useState(null);
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -57,15 +64,65 @@ export default function Live() {
     }
   }
 
+  async function load(request) {
+    setBusy(true);
+    setError("");
+    try {
+      const next = await request();
+      sessionStorage.setItem(`cg:${caseId}`, JSON.stringify(next));
+      setSnapshot(next);
+    } catch (exc) {
+      setError(exc.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!snapshot) {
     return (
       <Shell>
-        <p>This session has no playback yet. <Link to="/count">Start from the camera count.</Link></p>
+        <section className="sheet">
+          <h2>2. Live</h2>
+          <p>This session has no playback yet. Upload a recorded clip, or run the scripted demo on this case.</p>
+          <div className="row">
+            <button disabled={busy} onClick={() => load(() => uploadScenario(caseId, "demo"))}>
+              Run the scripted demo on this case
+            </button>
+            <span className="clock">Scripted perception. SAM 3.1 is not called. The demo replaces the drawn zones with its own zones.</span>
+          </div>
+          <label style={{ marginTop: 12 }}>
+            Upload a clip (.mp4) or a scenario file (.json)
+            <input
+              type="file"
+              accept=".mp4,.json,video/mp4,application/json"
+              disabled={busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) load(() => uploadFile(caseId, file));
+              }}
+            />
+          </label>
+          {error && <p className="error">{error}</p>}
+          <p><Link to="/count">Back to the camera count.</Link></p>
+        </section>
       </Shell>
     );
   }
 
   const evidenceFrame = selected?.last_frame_id;
+  // The spoken lines around the alert: within 10 s of the last sighting, or the
+  // transcript ids the rule cited when it has no time (R1, R2).
+  const evidenceIds = (selected?.evidence || [])
+    .filter((ref) => ref.startsWith("transcript:"))
+    .map((ref) => ref.slice("transcript:".length));
+  const evidenceLines = !selected
+    ? []
+    : (snapshot.transcript || []).filter((line) =>
+        selected.last_media_ts_ms != null
+          ? Math.abs(line.t0_ms - selected.last_media_ts_ms) <= 10000
+          : evidenceIds.includes(line.id),
+      );
 
   return (
     <Shell>
@@ -128,7 +185,10 @@ export default function Live() {
           <h2>3. Evidence</h2>
           <p>{selected.detail}</p>
           <p className="clock">
-            Rule {selected.rule_id}. Last seen {clock(selected.last_media_ts_ms)} in {selected.last_zone || "the recorded zone"}.
+            Rule {selected.rule_id}.{" "}
+            {selected.last_media_ts_ms != null
+              ? `Last seen ${clock(selected.last_media_ts_ms)} in ${selected.last_zone || "the recorded zone"}.`
+              : `${clock(null)}.`}
           </p>
           {evidenceFrame && <img src={`/frames/${evidenceFrame}`} alt="Last frame for this alert" style={{ maxWidth: "100%" }} />}
           {path && (
@@ -140,6 +200,15 @@ export default function Live() {
               ))}
             </ol>
           )}
+          <div className="transcript">
+            {evidenceLines.map((line) => (
+              <p key={line.id}>
+                <span className="clock">{clock(line.t0_ms)} </span>
+                {line.text}
+              </p>
+            ))}
+            {evidenceLines.length === 0 && <p>No spoken line near this alert.</p>}
+          </div>
           <p className="clock">Evidence ids: {(selected.evidence || []).join(", ") || "none"}</p>
         </section>
       )}

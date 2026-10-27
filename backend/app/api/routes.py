@@ -12,7 +12,7 @@ from app.agent.reconciler import explain_case
 from app.config import BANNER
 from app.core.ledger import ledger_rows, open_discrepancies
 from app.engine import track_path
-from app.media_pipeline import run_recorded_video
+from app.media_pipeline import SamCallFailed, check_video_ready, run_recorded_video
 from app.models import CaseIn, ResolveIn, ZonesIn
 from app.report.count_sheet import write_count_sheet
 from app.scenarios import get_scenario
@@ -107,14 +107,29 @@ async def upload_case(
             payload = json.loads(raw)
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail="Scenario JSON could not be read.") from exc
-        return engine.replay(case_id, payload)
+        try:
+            return engine.replay(case_id, payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    try:
+        check_video_ready(engine, case_id)
+    except RuntimeError as exc:
+        # A refused clip (no key, no zones) is never written to disk.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     settings = request.app.state.settings
-    dest = settings.data_dir / "uploads" / case_id / (file.filename or "clip.mp4")
+    # Path(...).name drops any folder part, so "../../x.mp4" stays in this case's folder.
+    name = Path(file.filename or "").name
+    dest = settings.data_dir / "uploads" / case_id / (name if name not in ("", "..") else "clip.mp4")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(raw)
     try:
         return run_recorded_video(engine, case_id, dest)
+    except SamCallFailed as exc:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except RuntimeError as exc:
+        # A clip ffmpeg cannot read, or a missing ffmpeg, is not kept on disk.
+        dest.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

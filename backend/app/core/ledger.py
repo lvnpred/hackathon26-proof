@@ -213,17 +213,24 @@ def _last_ts(events: list[dict]) -> int:
 
 
 def open_discrepancies(events: list[dict]) -> list[dict]:
-    resolved = {
-        _payload(event)["discrepancy_id"]
-        for event in events
-        if event["event_type"] == "resolution"
-    }
+    # The latest human resolution per discrepancy: who, why, and when.
+    resolved: dict[str, dict] = {}
+    for event in events:
+        if event["event_type"] != "resolution":
+            continue
+        payload = _payload(event)
+        resolved[payload["discrepancy_id"]] = {
+            "reason": payload.get("reason") or "",
+            "by": payload.get("by") or "",
+            "wall_clock": event.get("wall_clock") or "",
+        }
     rows = []
     for event in events:
         if event["event_type"] != "discrepancy":
             continue
         payload = dict(_payload(event))
-        status = "resolved" if event["id"] in resolved else "open"
+        resolution = resolved.get(event["id"])
+        status = "resolved" if resolution else "open"
         payload["status"] = status
         rows.append(
             {
@@ -233,6 +240,7 @@ def open_discrepancies(events: list[dict]) -> list[dict]:
                 **payload,
                 "evidence": event.get("evidence") or payload.get("evidence") or [],
                 "status": status,
+                "resolution": resolution,
             }
         )
     return rows

@@ -1,6 +1,10 @@
 # Built during the hackathon
 
-Every feature below was written on 27 Oct 2026 in this repository. Nothing was copied from Doctor Dictation or OPD Companion.
+Every feature below was written in this repository. Nothing was copied from Doctor Dictation or OPD Companion.
+
+Dates come from `git log --format=%ad --date=short -- <path>`. The first commit (`eb76d59`, 27 Oct 2026) holds the whole build, so git cannot date the pieces more finely than that day.
+
+## Committed on 27 Oct 2026
 
 | Feature | Date | Where |
 | --- | --- | --- |
@@ -12,6 +16,39 @@ Every feature below was written on 27 Oct 2026 in this repository. Nothing was c
 | FastAPI routes and websocket | 2026-10-27 | `backend/app/api/` |
 | PDF count sheet | 2026-10-27 | `backend/app/report/count_sheet.py` |
 | Five scripted eval clips and `make eval` | 2026-10-27 | `backend/app/scenarios.py`, `eval/run_eval.py` |
-| Setup, live, evidence drawer, close screens | 2026-10-27 | `frontend/src/` |
+| Camera screens: setup, live, evidence drawer, close | 2026-10-27 | `frontend/src/screens/Setup.jsx`, `Live.jsx`, `Close.jsx` |
+| Morning timeline, append-only; a correction hides the old line | 2026-10-27 | `backend/app/morning/store.py` |
+| Medicine strips: strip text to grounded names, demo drug map | 2026-10-27 | `backend/app/morning/strips.py`, `brownbag.py`, `lexicon.py` |
+| Drug log and spoken pack lines | 2026-10-27 | `backend/app/morning/druglog.py`, `intents.py` |
+| Swab count: bucket dwell, closing reconcile, copy from a camera case | 2026-10-27 | `backend/app/morning/count_rules.py`, `camera_file.py` |
+| Vitals sim and fact card | 2026-10-27 | `backend/app/morning/vitals.py`, `sim.py`, `script.py` |
+| Discharge sheet, discharge PDF, follow-up ICS | 2026-10-27 | `backend/app/morning/discharge.py`, `pdf.py`, `ics.py` |
+| Plain-language guide for one morning | 2026-10-27 | `backend/app/morning/guide.py` |
+| Morning routes | 2026-10-27 | `backend/app/morning/api.py`, `routes_extra.py` |
+| Product map (`GET /product`) | 2026-10-27 | `backend/app/site.py` |
+| Morning screens: Home, Opd, Ot, Ward, Guide, Morning | 2026-10-27 | `frontend/src/screens/Home.jsx`, `Opd.jsx`, `Ot.jsx`, `Ward.jsx`, `Guide.jsx`, `Morning.jsx` |
 
-Not built on this date: a recorded prop-tray video, a paid SAM measurement, a public GitHub push, the 3-minute video, the X post. Covasant IP check: not applicable.
+## Changed overnight, 27–28 Oct 2026, not committed
+
+The overnight loop made these changes. They are in the working tree and have no commit, so git gives them no date. The item ids are in `docs/loop/backlog.md`.
+
+| Change | Backlog | Where |
+| --- | --- | --- |
+| Live screen runs the scripted demo or uploads a file | B3 | `frontend/src/screens/Live.jsx` |
+| Upload refuses folder names in the file name and bad JSON | B5 | `backend/app/api/routes.py` |
+| Video failures give a one-line 400 or 502, not a 500 | B6 | `backend/app/api/routes.py`, `backend/app/media_pipeline.py` |
+| Close screen shows a failed resolution | B7 | `frontend/src/screens/Close.jsx` |
+| Count sheet and Close print "Resolved by X: reason" | B8 | `backend/app/report/count_sheet.py`, `frontend/src/screens/Close.jsx` |
+| Evidence drawer shows the spoken line around an alert | B9 | `frontend/src/screens/Live.jsx` |
+| Spark 1.3 second look on R5, only with a key | B10 | `backend/app/engine.py` |
+| Fact-card toggle on the OT screen | B11 | `frontend/src/screens/Ot.jsx` |
+| Morning stream follows new events with `?follow=1` | B12 | `backend/app/morning/api.py` |
+| Websocket tests | B13 | `backend/tests/test_ws.py` |
+| Case and zone input checks | B16 | `backend/app/models.py` |
+| README run section, submission notes, and this list | B17, B18 | `README.md`, `docs/new-work.md` |
+| Eval goes through the upload route, with ground-truth files | B19 | `eval/run_eval.py`, `eval/ground_truth/` |
+| Test that `.env`, keys and media stay out of git | B20 | `backend/tests/test_repo_hygiene.py` |
+| PDFs survive em dashes and smart quotes | B21 | `backend/app/report/count_sheet.py`, `backend/app/morning/pdf.py` |
+| R1 and R2 alerts say "No camera time (spoken count)" | B22 | `frontend/src/screens/Live.jsx` |
+
+Not built yet: a recorded prop-tray video, a paid SAM measurement, a public GitHub push, the 3-minute video, the X post. Covasant IP check: not applicable.

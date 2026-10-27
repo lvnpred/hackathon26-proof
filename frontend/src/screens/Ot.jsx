@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { loadEpisode, send } from "../episode";
 import { PageLead, Shell } from "../App";
 
+const BANNER = "Research demo. Not for clinical use.";
+
 function Sparkline({ readings }) {
   if (readings.length < 2) return <p className="clock">No readings yet.</p>;
   const width = 280;
@@ -27,12 +29,39 @@ export default function Ot() {
   const [heard, setHeard] = useState(null);
   const [cursor, setCursor] = useState(0);
   const [error, setError] = useState("");
+  const [tier, setTier] = useState(0);
+  const [card, setCard] = useState(null);
 
   useEffect(() => {
     loadEpisode().then(setView).catch((exc) => setError(exc.message));
+    send("/morning/tier").then((body) => setTier(body.decision_tier)).catch(() => setTier(0));
   }, []);
 
   const id = view?.episode?.id;
+
+  useEffect(() => {
+    if (id && tier === 1) refreshCard(id);
+  }, [id, tier]);
+
+  // The card route is 404 while the tier is off or before the drop, so a miss just hides the panel.
+  async function refreshCard(episodeId) {
+    try {
+      const found = await send(`/morning/episodes/${episodeId}/card`);
+      setCard(found.card);
+    } catch {
+      setCard(null);
+    }
+  }
+
+  async function toggleTier() {
+    const next = await send("/morning/tier", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: tier !== 1 }),
+    });
+    setTier(next.decision_tier);
+    setCard(null);
+  }
 
   async function say() {
     const result = await send(`/morning/episodes/${id}/hear`, {
@@ -78,6 +107,7 @@ export default function Ot() {
     });
     setView(next);
     setCursor(next.sim.cursor_ms);
+    if (tier === 1) await refreshCard(id);
   }
 
   const events = view?.events || [];
@@ -130,6 +160,16 @@ export default function Ot() {
           <h2>Vitals</h2>
           <Sparkline readings={readings} />
           <div className="row">
+            <button className="secondary" onClick={toggleTier}>
+              Fact card {tier === 1 ? "on" : "off"}
+            </button>
+            <span className="clock">
+              {tier === 1
+                ? "The card only repeats recorded facts."
+                : "Decision-tier card is off. Recorded readings still show."}
+            </span>
+          </div>
+          <div className="row">
             <button className="secondary" onClick={() => sim("start")} disabled={!id}>Start</button>
             <button className="secondary" onClick={() => sim("pause")} disabled={!id}>Pause</button>
             <button className="secondary" onClick={() => sim("tick")} disabled={!id}>Step</button>
@@ -145,6 +185,13 @@ export default function Ot() {
               onChange={(event) => sim("seek", Number(event.target.value))}
             />
           </label>
+          {tier === 1 && card && (
+            <section className="sheet">
+              <h2>Fact card</h2>
+              <p className="clock">{BANNER}</p>
+              <p>{card.payload.text}</p>
+            </section>
+          )}
         </section>
       </div>
     </Shell>

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import threading
+import time
+
 from fastapi.testclient import TestClient
 
 from app.config import Settings
@@ -9,6 +12,7 @@ from app.main import create_app
 from app.morning.druglog import parse_drug_phrase
 from app.morning.vitals import choose_wording, demo_readings, evaluate, wording_ok
 from app.morning.discharge import fold
+from conftest import pdf_text
 
 
 PHRASES = [
@@ -158,3 +162,56 @@ def test_stream_resumes_after_the_last_id(tmp_path):
     )
     assert event_id not in resumed.text.split("data:", 1)[0]
     assert "id: " in resumed.text
+
+
+def test_stream_follows_a_new_event_within_one_second(tmp_path):
+    api = _client(tmp_path)
+    episode = api.post("/morning/episodes", json={}).json()
+    store = api.app.state.morning
+    written: dict = {}
+
+    def write_later():
+        time.sleep(0.2)
+        written["at"] = time.monotonic()
+        written["event"] = store.append(episode["id"], "druglog.parsed", {"text": "late"}, ts_ms=0)
+
+    url = f"/morning/episodes/{episode['id']}/stream?follow=1&timeout_s=2"
+    received = None
+    with api.stream("GET", url) as response:
+        assert response.status_code == 200
+        threading.Thread(target=write_later, daemon=True).start()
+        for line in response.iter_lines():
+            if line.startswith("id: ") and line[4:] == written.get("event", {}).get("id"):
+                received = time.monotonic()
+                break
+    assert received is not None, "the followed stream never sent the new event"
+    assert received - written["at"] < 1.0
+
+def test_discharge_pdf_survives_non_latin1_text(tmp_path):
+    api = _client(tmp_path)
+    label = "Synthetic demo \u2014 \u201cR. Kumar\u201d \u2026 \u2713"
+    episode = api.post("/morning/episodes", json={"label": label}).json()
+    api.post(f"/morning/episodes/{episode['id']}/play")
+    drafted = api.post(f"/morning/episodes/{episode['id']}/discharge")
+    assert drafted.status_code == 200, drafted.text
+    text = pdf_text(api.get(drafted.json()["pdf_url"]).content)
+    assert 'Session: Synthetic demo - "R. Kumar" ... ?' in text
+
+
+def test_card_is_written_within_500ms_of_the_drop_reading(tmp_path):
+    api = _client(tmp_path)
+    api.post("/morning/tier", json={"enabled": True})
+    episode = api.post("/morning/episodes", json={"label": "Synthetic demo"}).json()
+    started = time.perf_counter()
+    seeked = api.post(
+        f"/morning/episodes/{episode['id']}/vitals/sim",
+        json={"action": "seek", "t_ms": 240_000, "step_ms": 60_000},
+    )
+    elapsed = time.perf_counter() - started
+    assert seeked.status_code == 200
+    cards = [event for event in seeked.json()["events"] if event["event_type"] == "vitals.card"]
+    assert len(cards) == 1
+    assert cards[0]["ts_ms"] == 240_000
+    assert elapsed < 0.5
+    card = api.get(f"/morning/episodes/{episode['id']}/card")
+    assert card.json()["banner"] == "Research demo. Not for clinical use."

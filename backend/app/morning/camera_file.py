@@ -4,9 +4,11 @@ from __future__ import annotations
 
 
 def camera_count_events(rows: list[dict], discrepancies: list[dict], case_id: str) -> list[dict]:
-    opened = sum(int(row.get("opened") or 0) for row in rows)
-    returned = sum(int(row.get("bucket") or 0) + int(row.get("tray") or 0) for row in rows)
-    unaccounted = sum(int(row.get("unaccounted") or 0) for row in rows)
+    # Totals carry only the counted types (opened > 0). An unannounced add stays in detail and items.
+    counted = [row for row in rows if int(row.get("opened") or 0) > 0]
+    opened = sum(int(row.get("opened") or 0) for row in counted)
+    returned = sum(int(row.get("bucket") or 0) + int(row.get("tray") or 0) for row in counted)
+    unaccounted = sum(int(row.get("unaccounted") or 0) for row in counted)
     missing = next(
         (
             row

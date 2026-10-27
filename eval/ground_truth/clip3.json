@@ -1,0 +1,29 @@
+{
+  "clip": "clip3",
+  "scenario": "clip3",
+  "item_types": [
+    "lap sponge",
+    "gauze swab",
+    "surgical forceps",
+    "scissors",
+    "needle holder"
+  ],
+  "duration_ms": 60000,
+  "headline": "1 spoken_vs_camera",
+  "rules": [
+    [
+      "R2",
+      "lap sponge"
+    ]
+  ],
+  "ledger": {
+    "lap sponge": {
+      "opened": 10,
+      "bucket": 9,
+      "tray": 1,
+      "unaccounted": 0
+    }
+  },
+  "id_switches": 0,
+  "gate": "blocked"
+}

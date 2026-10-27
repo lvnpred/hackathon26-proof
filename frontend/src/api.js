@@ -1,9 +1,22 @@
+// FastAPI sends a 422 detail as a list of {loc, msg}; name the field, not "[object Object]".
+export function detailMessage(detail) {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = (item.loc || []).filter((part) => part !== "body").join(".");
+        return field ? `${field}: ${item.msg}` : item.msg;
+      })
+      .join("; ");
+  }
+  return detail?.message || detail;
+}
+
 async function send(path, options) {
   const response = await fetch(path, options);
   const text = await response.text();
   const body = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    const error = new Error(body?.detail?.message || body?.detail || response.statusText);
+    const error = new Error(detailMessage(body?.detail) || response.statusText);
     error.status = response.status;
     error.body = body;
     throw error;
@@ -29,6 +42,12 @@ export function saveZones(caseId, zones) {
 
 export function uploadScenario(caseId, scenario) {
   return send(`/cases/${caseId}/upload?scenario=${encodeURIComponent(scenario)}`, { method: "POST" });
+}
+
+export function uploadFile(caseId, file) {
+  const form = new FormData();
+  form.append("file", file);
+  return send(`/cases/${caseId}/upload`, { method: "POST", body: form });
 }
 
 export function ledger(caseId) {

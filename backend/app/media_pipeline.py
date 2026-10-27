@@ -12,9 +12,13 @@ from app.core.tracker import Tracker
 from app.engine import Engine
 
 
-def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: list[str] | None = None) -> dict:
-    settings = engine.settings
-    if not settings.sam_configured:
+class SamCallFailed(RuntimeError):
+    """The SAM 3.1 service failed or could not be reached. The route maps this to 502."""
+
+
+def check_video_ready(engine: Engine, case_id: str) -> dict:
+    """Refuse a clip before it is written: no key, or zones not saved."""
+    if not engine.settings.sam_configured:
         raise RuntimeError(
             "SAM 3.1 needs MODEL_API_KEY. Upload ?scenario=demo to run the count rules "
             "on scripted perception. A live frame socket is not part of the SAM 3.1 API."
@@ -22,6 +26,12 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     zones = engine.store.zones(case_id)
     if set(zones) != {"tray", "field", "bucket"}:
         raise RuntimeError("Save tray, field, and bucket zones before uploading video.")
+    return zones
+
+
+def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: list[str] | None = None) -> dict:
+    settings = engine.settings
+    zones = check_video_ready(engine, case_id)
     work = settings.data_dir / "video" / case_id
     work.mkdir(parents=True, exist_ok=True)
     clip = work / "clip-2fps.mp4"
@@ -31,7 +41,10 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     )
     _ffmpeg(["-y", "-i", str(source), "-vn", "-ac", "1", "-ar", "16000", str(audio)])
     names = concepts or list(SAM_CONCEPTS)
-    records = SamAdapter(settings).segment_video(clip, names)
+    try:
+        records = SamAdapter(settings).segment_video(clip, names)
+    except Exception as exc:
+        raise SamCallFailed(f"SAM 3.1 call failed: {_one_line(str(exc)) or type(exc).__name__}") from exc
     engine.store.log_model_call(
         settings.sam_model,
         "app/adapters/sam.py",
@@ -99,14 +112,32 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     return engine.snapshot(case_id, perception="sam-3.1")
 
 
-def _ffmpeg(args: list[str]) -> None:
-    completed = subprocess.run(["ffmpeg", *args], capture_output=True, text=True)
+def _one_line(text: str | None) -> str:
+    """Last non-empty line of tool output, so the HTTP detail stays one line."""
+    lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    return lines[-1][:300] if lines else ""
+
+
+def _run_tool(cmd: list[str]) -> subprocess.CompletedProcess:
+    """Run ffmpeg or ffprobe; a missing binary or a bad clip becomes a one-line RuntimeError."""
+    try:
+        completed = subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"{cmd[0]} is not installed on this server; install ffmpeg to upload video.") from exc
+    except subprocess.CalledProcessError as exc:
+        completed = subprocess.CompletedProcess(cmd, exc.returncode, exc.output, exc.stderr)
     if completed.returncode != 0:
-        raise RuntimeError(completed.stderr[-500:] or "ffmpeg failed")
+        reason = _one_line(completed.stderr) or f"exit code {completed.returncode}"
+        raise RuntimeError(f"{cmd[0]} could not read the clip: {reason}")
+    return completed
+
+
+def _ffmpeg(args: list[str]) -> None:
+    _run_tool(["ffmpeg", *args])
 
 
 def _video_size(path: Path) -> tuple[int, int]:
-    completed = subprocess.run(
+    completed = _run_tool(
         [
             "ffprobe",
             "-v",
@@ -119,9 +150,9 @@ def _video_size(path: Path) -> tuple[int, int]:
             "csv=p=0:s=x",
             str(path),
         ],
-        capture_output=True,
-        text=True,
-        check=True,
     )
-    width, height = completed.stdout.strip().split("x")
-    return int(width), int(height)
+    try:
+        width, height = completed.stdout.strip().split("x")
+        return int(width), int(height)
+    except ValueError as exc:
+        raise RuntimeError("ffprobe could not read the clip size.") from exc

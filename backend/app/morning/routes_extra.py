@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -236,7 +238,8 @@ async def brownbag_photo(
     raw = await file.read()
     folder = request.app.state.settings.data_dir / "strips" / episode_id
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / (file.filename or "strip.jpg")
+    name = Path(file.filename or "").name
+    path = folder / (name if name not in ("", "..") else "strip.jpg")
     path.write_bytes(raw)
     if not request.app.state.settings.spark_configured:
         return {

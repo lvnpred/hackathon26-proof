@@ -1,0 +1,183 @@
+/* Screen themes (owner-approved canvas B and its palettes): a frame (top bar + Today rail), a work area, an accent, a mic
+   that is not the accent colour, and the prescription as the one strong white sheet. Loaded last. Screen only: nothing
+   here reaches print or the browser-print fallback, so the printed sheet is exactly what styles.css prints.
+   Three token sets switch everything; <html data-theme> is set before first paint by themepick.js (per device).
+   midnight = Regular (default), ink = light frame and deep blue, graphite = dark app with the sheet still white paper. */
+@media screen {
+  :root, :root[data-theme="midnight"] {
+    --t-bg:#EEF0F3; --t-top-bg:#0B1220; --t-top-fg:#FFFFFF; --t-top-sub:#A9B3C6; --t-top-line:#1E2A40; --t-top-ghost-line:#33415C;
+    --t-side-bg:#0B1220; --t-side-fg:#FFFFFF; --t-side-muted:#A9B3C6; --t-side-line:#1E2A40; --t-input-bg:#16213A;
+    --t-card:#FFFFFF; --t-fg:#0B1220; --t-muted:#4A5468; --t-line:#E1E4EA; --t-field-bg:#FFFFFF;
+    --accent:#0B7A6E; --t-on-accent:#FFFFFF; --accent-soft:#E2F3F1; --t-active-meta:#E2F3F1; --t-focus:#5EEAD4;
+    --t-logo-bg:#14B8A6; --t-logo-fg:#0B1220; --t-ghost-bg:#FFFFFF; --t-ghost-line:#C3C9D4;
+    --t-mic:#0B1220; --t-mic-fg:#FFFFFF; --t-mic-ring:#CDEFEA; --t-mic-busy:#5F6F69; --t-mic-busy-ring:#E6EBE8;
+    --t-paper:#0B7A6E; --t-paper-soft:#E2F3F1; --t-cue-lead:#4A5468; --t-cue:#5B6476; --t-divider:#E6E9EF; --t-ok:#17703A; --t-warn:#7D5200;
+    --t-chip-bg:#16213A; --t-chip-line:#1E2A40; --t-chip-fg:#A9B3C6; --t-chip-rec-bg:#3B1418; --t-chip-rec-line:#7A2A30; --t-chip-rec-fg:#FCA5A5;
+    --t-chip-work-bg:#3A2D0F; --t-chip-work-line:#6B5418; --t-chip-work-fg:#FCD34D; --t-chip-ok-bg:#0F3A33; --t-chip-ok-line:#1B6B5E; --t-chip-ok-fg:#5EEAD4;
+  }
+  :root[data-theme="ink"] {
+    --t-bg:#F3F4F6; --t-top-bg:#FFFFFF; --t-top-fg:#0B0D12; --t-top-sub:#4B5160; --t-top-line:#D5D8DE; --t-top-ghost-line:#C3C7D0;
+    --t-side-bg:#FFFFFF; --t-side-fg:#0B0D12; --t-side-muted:#4B5160; --t-side-line:#E2E4E9; --t-input-bg:#F3F4F6;
+    --t-card:#FFFFFF; --t-fg:#0B0D12; --t-muted:#4B5160; --t-line:#E2E4E9; --t-field-bg:#FFFFFF;
+    --accent:#1F4FD8; --t-on-accent:#FFFFFF; --accent-soft:#E8EEFC; --t-active-meta:#E8EEFC; --t-focus:#1F4FD8;
+    --t-logo-bg:#0B0D12; --t-logo-fg:#FFFFFF; --t-ghost-bg:#FFFFFF; --t-ghost-line:#C3C7D0;
+    --t-mic:#0B0D12; --t-mic-fg:#FFFFFF; --t-mic-ring:#E8EEFC; --t-mic-busy:#5F6F69; --t-mic-busy-ring:#E6EBE8;
+    --t-paper:#1F4FD8; --t-paper-soft:#E8EEFC; --t-cue-lead:#2E333D; --t-cue:#4B5160; --t-divider:#E6E9EF; --t-ok:#17703A; --t-warn:#7D5200;
+    --t-chip-bg:#F3F4F6; --t-chip-line:#D5D8DE; --t-chip-fg:#4B5160; --t-chip-rec-bg:#FDECEA; --t-chip-rec-line:#F3B6B0; --t-chip-rec-fg:#A8261D;
+    --t-chip-work-bg:#FFF8E1; --t-chip-work-line:#E8CF9A; --t-chip-work-fg:#7D5200; --t-chip-ok-bg:#E6F4EA; --t-chip-ok-line:#A9D9B8; --t-chip-ok-fg:#17703A;
+  }
+  :root[data-theme="graphite"] {
+    --t-bg:#0D0F13; --t-top-bg:#0D0F13; --t-top-fg:#F4F5F7; --t-top-sub:#A1A7B3; --t-top-line:#232831; --t-top-ghost-line:#3A414D;
+    --t-side-bg:#161A21; --t-side-fg:#F4F5F7; --t-side-muted:#A1A7B3; --t-side-line:#262C36; --t-input-bg:#0D0F13;
+    --t-card:#161A21; --t-fg:#F4F5F7; --t-muted:#A1A7B3; --t-line:#262C36; --t-field-bg:#0D0F13;
+    --accent:#5B8CFF; --t-on-accent:#0D0F13; --accent-soft:#1B2740; --t-active-meta:#0D0F13; --t-focus:#5B8CFF;
+    --t-logo-bg:#5B8CFF; --t-logo-fg:#0D0F13; --t-ghost-bg:#161A21; --t-ghost-line:#3A414D;
+    --t-mic:#F4F5F7; --t-mic-fg:#0D0F13; --t-mic-ring:#2B3A5C; --t-mic-busy:#5F6F69; --t-mic-busy-ring:#262C36;
+    --t-paper:#2F5FD0; --t-paper-soft:#E6EDFB; --t-cue-lead:#D5D9E0; --t-cue:#A1A7B3; --t-divider:#262C36; --t-ok:#4ADE80; --t-warn:#FBBF24;
+    --t-chip-bg:#161A21; --t-chip-line:#262C36; --t-chip-fg:#A1A7B3; --t-chip-rec-bg:#3B1418; --t-chip-rec-line:#7A2A30; --t-chip-rec-fg:#FCA5A5;
+    --t-chip-work-bg:#3A2D0F; --t-chip-work-line:#6B5418; --t-chip-work-fg:#FCD34D; --t-chip-ok-bg:#0F3A33; --t-chip-ok-line:#1B6B5E; --t-chip-ok-fg:#5EEAD4;
+  }
+  /* the shared tokens of the older stylesheets follow the theme, so their rules just work */
+  body { background:var(--t-bg); color:var(--t-fg); --ink:var(--t-fg); --muted:var(--t-muted); --soft:var(--t-line); --card:var(--t-card); --bg:var(--t-bg);
+    --st-muted:var(--t-muted); --st-line:var(--t-ghost-line); --st-ring:var(--accent-soft); }
+  /* the sheet and the dialogs are white paper in every theme: dark ink, the accent that reads on white */
+  #sheet, dialog.panel { --ink:#0B0D12; --muted:#5B6170; --soft:#E2E4E9; --card:#fff; --t-fg:#0B0D12; --t-muted:#5B6170; --t-line:#E2E4E9; --t-card:#fff;
+    --t-ghost-bg:#fff; --t-ghost-line:#C3C7D0; --t-field-bg:#fff; --accent:var(--t-paper); --accent-soft:var(--t-paper-soft); --t-on-accent:#fff;
+    --st-muted:#5B6170; --st-line:#C3C7D0; --st-ring:var(--t-paper-soft); }
+  dialog.panel { background:#fff; color:#0B0D12; }
+
+  /* --- buttons on the page follow the theme ---------------------------------------------------------------------- */
+  button { background:var(--t-ghost-bg); color:var(--t-fg); border-color:var(--t-ghost-line); }
+  button.primary, .save { background:var(--accent); border-color:var(--accent); color:var(--t-on-accent); }
+  .save.print { background:var(--t-ghost-bg); color:var(--accent); }
+
+  /* --- frame: top bar and Today rail -------------------------------------------------------------------------------- */
+  .topbar { --ink:var(--t-top-fg); --muted:var(--t-top-sub); --soft:var(--t-top-line); background:var(--t-top-bg); color:var(--t-top-fg);
+    border-bottom:1px solid var(--t-top-line); box-shadow:none; }
+  .sidebar { --ink:var(--t-side-fg); --muted:var(--t-side-muted); --soft:var(--t-side-line); background:var(--t-side-bg); color:var(--t-side-fg);
+    border-color:var(--t-side-line); box-shadow:none; }
+  .brand-mark { background:var(--t-logo-bg); color:var(--t-logo-fg); }
+  .brand-clinic { color:var(--t-top-fg); } .brand-doctor { color:var(--t-top-sub); }
+  .topbar button { background:var(--t-input-bg); border-color:var(--t-top-ghost-line); color:var(--t-top-fg); }
+  .sidebar button { background:var(--t-input-bg); border-color:var(--t-side-line); color:var(--t-side-fg); }
+  .topbar button:hover:not(:disabled), .sidebar button:hover:not(:disabled) { border-color:var(--t-focus); }
+  .topbar button:focus-visible, .sidebar button:focus-visible, .sidebar input:focus-visible { outline-color:var(--t-focus); }
+  .badge, .agent-chip { background:var(--t-chip-bg); border-color:var(--t-chip-line); color:var(--t-chip-fg); }
+  .agent-chip.listening { background:var(--t-chip-rec-bg); border-color:var(--t-chip-rec-line); color:var(--t-chip-rec-fg); }
+  .agent-chip.working { background:var(--t-chip-work-bg); border-color:var(--t-chip-work-line); color:var(--t-chip-work-fg); }
+  .agent-chip.ready { background:var(--t-chip-ok-bg); border-color:var(--t-chip-ok-line); color:var(--t-chip-ok-fg); }
+
+  .pane-title { color:var(--t-side-muted); }
+  .day-btn, .day-today { background:var(--t-input-bg); border-color:var(--t-side-line); color:var(--t-side-fg); }
+  .day-today { color:var(--t-focus); }
+  .today-scope { background:var(--t-input-bg); }
+  .today-scope button { background:transparent; border:0; color:var(--t-side-muted); }
+  .today-scope button[aria-pressed="true"] { background:var(--accent); color:var(--t-on-accent); box-shadow:none; }
+  .today-item { background:transparent; border-color:transparent; color:var(--t-side-fg); }
+  .today-item:hover { background:var(--t-input-bg); border-color:var(--t-side-line); }
+  .today-item.active, .today-item.active:hover { background:var(--accent); border-color:var(--accent); color:var(--t-on-accent); }
+  .today-meta, .today-empty { color:var(--t-side-muted); }
+  .today-item.active .today-meta { color:var(--t-active-meta); }
+  .sidebar input { background:var(--t-input-bg); color:var(--t-side-fg); border-color:var(--t-side-line); }
+  /* M4: on a wide screen the rail is a full-height frame under the top bar; its list scrolls inside it */
+  @media (min-width:1001px) {
+    .workspace { max-width:none; margin:0; padding:0 16px 16px 0; grid-template-columns:240px minmax(300px, 360px) minmax(420px, 1fr); }
+    .sidebar { position:sticky; top:var(--topbar-h, 64px); height:calc(100vh - var(--topbar-h, 64px)); display:flex; flex-direction:column;
+      border-radius:0; border:0; border-right:1px solid var(--t-side-line); padding:16px; }
+    .today-list { flex:1 1 auto; min-height:0; overflow-y:auto; }
+    .middle, .doc-pane { margin-top:16px; }
+  }
+
+  /* --- accent leftovers that were a hard-coded colour ------------------------------------------------------------ */
+  .correcting-cue, .resave-note { color:var(--accent); background:var(--accent-soft); border-color:var(--t-line); }
+  .field input, .field textarea { background:var(--t-field-bg); color:var(--t-fg); border-color:var(--t-ghost-line); }
+  .field input:focus, .field textarea:focus { box-shadow:0 0 0 3px var(--accent-soft); }
+  [contenteditable]:focus { background:var(--t-paper-soft); }
+  tr[data-rxstate]:has(.rx-act:focus) { background:var(--accent-soft); }
+  .rx-spin { border-color:var(--accent-soft); border-top-color:var(--accent); }
+  .grounding.ok { color:var(--t-ok); } .grounding.warn { color:var(--t-warn); }
+  .transcript { background:var(--t-field-bg); border-color:var(--t-line); }
+  .block-panel { color:#0B0D12; }
+  .stp-list .stp:not(:last-child)::before { background:var(--t-line); }
+  .dot { background:var(--t-card); }
+
+  /* --- middle pane: a quiet card --------------------------------------------------------------------------------- */
+  .middle { background:var(--t-card); border-color:var(--t-line); box-shadow:none; }
+
+  /* --- R1: the mic holds its icon only; its words and the timer sit beside it in fixed boxes, so no state moves anything */
+  .dictation { display:grid; grid-template-columns:88px 76px 100px; grid-template-rows:auto auto; column-gap:26px; row-gap:2px;
+    justify-content:center; align-items:center; padding:14px 0 18px; }
+  .mic { grid-row:1 / 3; width:88px; height:88px; gap:0; background:var(--t-mic); color:var(--t-mic-fg); box-shadow:0 0 0 8px var(--t-mic-ring); }
+  .mic.recording { background:#C81E1E; color:#fff; }
+  .mic.busy { background:var(--t-mic-busy); color:#fff; box-shadow:0 0 0 8px var(--t-mic-busy-ring); }
+  .mic-label { grid-column:2 / 4; grid-row:1; align-self:end; width:202px; height:20px; font-size:15px; font-weight:700; line-height:20px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--t-fg); }
+  .timer { grid-column:2; grid-row:2; align-self:start; font-variant-numeric:tabular-nums; min-width:76px; height:32px; font-size:26px; font-weight:800;
+    line-height:32px; text-align:left; }
+  .rec-dot, .rec-dot.on { grid-column:3; grid-row:2; align-self:start; display:flex; visibility:hidden; align-items:center; gap:4px; height:32px; animation:none; }
+  .rec-dot.on { visibility:visible; }
+
+  /* --- R3: the prescription on screen follows the canvas; the strongest thing on the page --------------------------- */
+  #sheet { background:#fff; color:#0B0D12; border:1px solid var(--t-line); padding:28px 36px 32px;
+    box-shadow:0 1px 3px rgba(0,0,0,.12), 0 12px 32px rgba(11,18,32,.10); }
+  #sheet .profile-hint { font-size:12px; color:#5B6170; }
+  #sheet h2 { font-size:21px; letter-spacing:1px; margin:0 0 20px; padding-bottom:16px; border-bottom:2px solid #0B0D12; }
+  /* patient details left (name large; Age / Sex, OP / IP No and Date as labels over values), vitals right */
+  #sheet .patient-block { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:16px 40px; align-items:start; margin:0 0 6px; }
+  #sheet .patient-row { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px 16px; text-align:left; margin:0; font-size:15px; color:#0B0D12; }
+  #sheet #pName { grid-column:1 / -1; order:1; font-size:20px; font-weight:700; min-width:0; padding:0 0 4px; border-bottom:1px solid #C3C7D0; }
+  #sheet #pAge { order:2; } #sheet #pOp { order:3; } #sheet #pDate { order:4; }
+  #sheet .patient-row .pf:not(#pName) { display:block; min-width:0; padding:0 0 4px; border-bottom:1px solid #C3C7D0; }
+  #sheet .patient-row .pf:not(:empty) { border-bottom-color:#0B0D12; font-weight:700; }
+  #sheet #pAge::before { content:"Age / Sex"; }
+  #sheet #pOp::before { content:"OP / IP No"; }
+  #sheet #pDate::before { content:"Date"; }
+  #sheet #pAge::before, #sheet #pOp::before, #sheet #pDate::before { display:block; margin-bottom:4px; font-size:11px; font-weight:700;
+    letter-spacing:.7px; text-transform:uppercase; color:#5B6170; }
+  #sheet #pAge:empty:not(:focus)::after, #sheet #pOp:empty:not(:focus)::after { content:"\2014"; font-weight:400; color:#6B7180; }
+  #sheet [contenteditable]:empty:not(:focus)::before { color:#6B7180; }
+  #sheet #pVitals { display:grid; grid-template-columns:auto minmax(76px, auto); gap:6px 14px; justify-content:end; align-items:baseline;
+    text-align:left; margin:0; font-size:14px; color:#0B0D12; }
+  #sheet #pVitals .vl { font-size:13px; font-weight:700; color:#0B0D12; }
+  #sheet #pVitals .pv { min-width:76px; padding:0 0 2px; border-bottom:1px solid #C3C7D0; }
+  /* an empty vital shows a dash, never an example value that could pass for a real reading */
+  #sheet #pVitals .pv:empty:not(:focus)::before { content:"\2014"; color:#6B7180; }
+  #sheet #pVitals .vhint { grid-column:1 / -1; }
+  /* section headings: no bands, black uppercase sans, a thin rule between sections */
+  #sheet .sec-title { background:none; border:0; margin:0 0 6px; padding:0; font-family:var(--font-ui); font-size:13px; letter-spacing:.8px;
+    font-weight:800; color:#0B0D12; }
+  #sheetBody > .sec { padding:12px 0; }
+  #sheetBody > .sec:not([hidden]) ~ .sec:not([hidden]) { border-top:1px solid #E2E4E9; }
+  #sheet .disclaimer { margin-top:16px; padding-top:10px; border-top:1px solid #E2E4E9; font-size:12px; color:#B42318; }
+  @media (max-width:640px) {
+    #sheet { padding:18px 16px 22px; }
+    #sheet h2 { font-size:18px; }
+    #sheet .patient-block { grid-template-columns:1fr; }
+    #sheet .patient-row { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    #sheet #pVitals { justify-content:start; }
+  }
+
+  /* --- an empty sheet previews every switched-on section; it is inert (app.js) so nobody types into it ------------- */
+  #sheet.empty .sec > :not(.sec-title) { display:none; }
+  #sheet.empty .sec::after { content:"Not dictated yet"; display:block; padding:2px 0 0; font-size:14px; color:#6B7180; }
+
+  /* --- "What to say": quiet grey reference; R2: a very light rule before the steps ------------------------------- */
+  .cue-panel { margin:4px 0 0; padding:4px 2px 0; font-size:13px; color:var(--t-cue); background:none; border:0; }
+  .cue-title { margin:0 0 6px; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--t-cue-lead); }
+  .cue-panel ol { list-style:none; padding:0; }
+  .cue-panel li { margin:0 0 6px; line-height:1.4; color:var(--t-cue); }
+  .cue-panel li:last-child { margin-bottom:0; }
+  .cue-lead { font-weight:600; color:var(--t-cue-lead); }
+  .cue-rest { color:var(--t-cue); }
+  .cue-panel:not([hidden]) + .stp-list { margin-top:14px; padding-top:14px; border-top:1px solid var(--t-divider); }
+
+  /* --- R4: the Appearance picker in Profile; each swatch shows its theme's own frame and accent ------------------- */
+  .theme-picks { display:flex; flex-wrap:wrap; gap:8px; }
+  .theme-pick { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 12px; border:1px solid #C3C7D0; border-radius:10px;
+    font-size:14px; color:#0B0D12; cursor:pointer; }
+  .theme-pick:has(input:checked) { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .theme-swatch { width:30px; height:18px; border-radius:5px; border:1px solid #C3C7D0; }
+  .theme-swatch[data-swatch="midnight"] { background:linear-gradient(90deg, #0B1220 55%, #0B7A6E 55%); }
+  .theme-swatch[data-swatch="ink"] { background:linear-gradient(90deg, #FFFFFF 55%, #1F4FD8 55%); }
+  .theme-swatch[data-swatch="graphite"] { background:linear-gradient(90deg, #161A21 55%, #5B8CFF 55%); }
+}

@@ -64,7 +64,7 @@ def test_no_page_loads_anything_from_a_third_party_and_the_fonts_are_tokens():
 def test_the_brand_mark_and_orb_are_inline_svg_and_the_recording_hooks_are_unchanged():
     html, login, app = _read("index.html"), _read("login.html"), _read("app.js")
     assert "✚" not in html and "🎤" not in html and "● REC" not in html and "⚕" not in login and "&#9877;" not in login
-    assert html.count('<path d="M12 5v14M5 12h14"/>') == 1 and login.count('<path d="M12 5v14M5 12h14"/>') == 1
+    assert html.count('<path d="M12 5v14M5 12h14"/>') == 0 and 'M18 3v5M15.5 5.5h5' in html and login.count('<path d="M12 5v14M5 12h14"/>') == 1
     assert 'id="wave" class="rec-dot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="rec-text">REC</span>' in html
     assert 'wave.classList.add("on")' in app and 'wave.classList.remove("on")' in app and 'class="mic-label"' in html
 

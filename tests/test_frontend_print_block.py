@@ -14,7 +14,7 @@ def _print_block():
 
 
 def test_block_wraps_patient_row_and_vitals_and_vitals_print():
-    m = re.search(r'<div class="patient-block">(.*?)<div id="sheetBody">', HTML, re.S)
+    m = re.search(r'<div class="patient-block">(.*?)<div id="sheetBody" inert>', HTML, re.S)
     assert m and 'class="sub patient-row"' in m.group(1) and 'id="pVitals"' in m.group(1)
     tag = re.search(r'<div[^>]*id="pVitals"[^>]*>', HTML).group(0)
     assert "no-print" not in tag

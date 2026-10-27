@@ -4,7 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=16" />
+<script src="themepick.js?v=1"></script>
+<link rel="stylesheet" href="styles.css?v=17" />
 <link rel="stylesheet" href="rx.css?v=10" />
 <link rel="stylesheet" href="ixlist.css?v=3" />
 <link rel="stylesheet" href="steps.css?v=2" />
@@ -12,11 +13,12 @@
 <link rel="stylesheet" href="letterhead.css?v=9" />
 <link rel="stylesheet" href="team.css?v=6" />
 <link rel="stylesheet" href="dictguard.css?v=1" />
+<link rel="stylesheet" href="theme.css?v=3" />
 </head>
 <body>
 <header class="topbar no-print">
   <div class="brand">
-    <div class="brand-mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></div>
+    <div class="brand-mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3a2.5 2.5 0 00-2.5 2.5v5a2.5 2.5 0 005 0v-5A2.5 2.5 0 0010 3z"/><path d="M4.5 10a5.5 5.5 0 0011 0M10 15.5V19"/><path d="M18 3v5M15.5 5.5h5"/></svg></div>
     <div class="brand-text">
       <span id="topClinic" class="brand-clinic">Clinic</span>
       <span id="topDoctor" class="brand-doctor">Doctor</span>
@@ -53,16 +55,16 @@
   <!-- Middle: the dictation orb, the assistant's coarse steps and the transcript. -->
   <section id="middle" class="middle no-print" aria-label="Dictation">
     <div class="dictation">
-      <button id="recBtn" class="mic" type="button" aria-label="Start dictation">
+      <button id="recBtn" class="mic" type="button" aria-label="Tap to dictate">
         <span class="mic-icon" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span>
-        <span class="mic-label">Start dictation</span>
       </button>
+      <span id="micLabel" class="mic-label" aria-hidden="true">Tap to dictate</span>
       <span id="timer" class="timer">00:00</span>
       <span id="wave" class="rec-dot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="rec-text">REC</span></span>
     </div>
     <p id="addingBanner" class="adding-banner no-print" role="status" hidden></p>
     <p id="correctingCue" class="correcting-cue no-print" role="status" hidden></p>
-    <div id="cuePanel" class="cue-panel no-print" aria-label="What to dictate" hidden><ol id="cueList"></ol></div>
+    <div id="cuePanel" class="cue-panel no-print" aria-label="What to say" hidden><div class="cue-title">What to say</div><ol id="cueList"></ol></div>
 
     <ol id="steps" class="stp-list" aria-label="Assistant progress"></ol>
 
@@ -125,7 +127,7 @@
         <span class="vhint" id="vHint" role="status" hidden></span>
       </div>
       </div>
-      <div id="sheetBody">
+      <div id="sheetBody" inert>
         <div class="sec" data-sec="complaints">
           <div class="sec-title">CHIEF COMPLAINTS &amp; BRIEF HISTORY</div>
           <ul id="pCc" class="editable-list prose-list"></ul>
@@ -205,6 +207,15 @@
       <button id="profileLetterheadBtn" type="button" aria-describedby="profLhHint">Upload or manage letterhead…</button>
       <p id="profLhHint" class="panel-hint" hidden>Save your profile changes first, then upload a letterhead.</p>
     </section>
+    <fieldset id="profAppearance" class="prof-part prof-look">
+      <legend>Appearance</legend>
+      <p class="panel-hint">This device only. It changes the screen, never the printed prescription.</p>
+      <div class="theme-picks">
+        <label class="theme-pick"><input type="radio" name="ddTheme" value="midnight" /><span class="theme-swatch" data-swatch="midnight" aria-hidden="true"></span> Regular</label>
+        <label class="theme-pick"><input type="radio" name="ddTheme" value="ink" /><span class="theme-swatch" data-swatch="ink" aria-hidden="true"></span> Ink</label>
+        <label class="theme-pick"><input type="radio" name="ddTheme" value="graphite" /><span class="theme-swatch" data-swatch="graphite" aria-hidden="true"></span> Graphite</label>
+      </div>
+    </fieldset>
     <div id="profileStatus" class="panel-status" role="status" aria-live="polite"></div>
     <div class="panel-actions">
       <button id="profileCancelBtn" type="button">Cancel</button>
@@ -327,8 +338,8 @@
 <script src="share.js?v=3"></script>
 <script src="dictguard.js?v=3"></script>
 <script src="sheetsecs.js?v=2"></script>
-<script src="cues.js?v=2"></script>
-<script src="app.js?v=56"></script>
+<script src="cues.js?v=4"></script>
+<script src="app.js?v=58"></script>
 <script src="lhlines.js?v=3"></script>
 <script src="letterhead.js?v=13"></script>
 <script src="listedit.js?v=1"></script>

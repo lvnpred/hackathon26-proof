@@ -97,12 +97,12 @@ def test_page_wiring_and_versions():
     app = (FRONT / "app.js").read_text(encoding="utf-8")
     html = (FRONT / "index.html").read_text(encoding="utf-8")
     for line in ("SheetSecs.init({ get: (u) => fetch(u).then(safeJson), renderList });",
-                 "SheetSecs.load().then(() => SheetSecs.render(state.structured ? readForm() : {})).catch(() => {});",
+                 "SheetSecs.load().then(() => SheetSecs.render(state.structured ? readForm() : {})).catch(() => {}).finally(() => Cues.show());",
                  "SheetSecs.render(s);", "SheetSecs.render({});",
                  "SheetSecs.readBack(base);"):
         assert line in app
     assert re.findall(r'<div class="sec" data-sec="(\w+)">', html) == BUILT
-    assert html.index("sheetsecs.js?v=2") < html.index("app.js?v=56") and "styles.css?v=16" in html
+    assert html.index("sheetsecs.js?v=2") < html.index("app.js?v=58") and "styles.css?v=17" in html
     assert "#sheet .sec-title { text-transform:uppercase; }" in (FRONT / "styles.css").read_text(encoding="utf-8")
 
 

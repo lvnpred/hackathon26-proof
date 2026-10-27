@@ -117,6 +117,7 @@ function setWorking(on, msg) {
   if (rb) rb.disabled = on;
   document.querySelectorAll("#sheet .x-btn, #undoBtn, #undoDictBtn").forEach(b => { b.disabled = on; });
   recBtn.classList.toggle("busy", on);
+  if (!(mr && mr.state === "recording")) { if (on) setMicLabel("Working…"); else refreshMicLabel(); }   // the words beside the mic follow
   RxView.sync();                                     // after :128 Save follows the medicines, not just "busy"
   if (window.Authorship) Authorship.enforce();      // last word: view-only must not rest on CSS hiding the x/confirm buttons
 }
@@ -390,7 +391,7 @@ async function beginRecording() {
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => { stopStream(stream); onRecordingStop(); };
   mr.start();
-  Cues.clearFlags(); if (state.pendingMode !== "correct") Cues.show();
+  Cues.clearFlags();
   DictGuard.banner(state.pendingMode === "correct" ? { name: text($("pName")), op: text($("pOp")), saved: state.documentId != null } : null);
   refreshPrintButton();
   t0 = Date.now();
@@ -398,7 +399,7 @@ async function beginRecording() {
   recCap.reset();
   tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); timerEl.textContent = fmtTime(s); recCap.tick(s); }, 500);
   recBtn.classList.add("recording");
-  setMicLabel("■ Stop");
+  setMicLabel("Tap to stop");
   wave.classList.add("on");
   state.transcript = "";
   renderTranscript();
@@ -410,7 +411,6 @@ async function beginRecording() {
 
 function stopStream(stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
 function endRecordingUI() {
-  Cues.hide();
   DictGuard.banner(null);
   if (tick) { clearInterval(tick); tick = null; }
   timerEl.classList.remove("rec-warn");
@@ -419,7 +419,7 @@ function endRecordingUI() {
   refreshMicLabel();
   refreshPrintButton();
 }
-function setMicLabel(t) { const l = recBtn.querySelector(".mic-label"); if (l) l.textContent = t; }
+function setMicLabel(t) { const l = $("micLabel"); if (l) l.textContent = t; recBtn.setAttribute("aria-label", t); }
 // The mic follows the visible sheet: any sheet on screen takes corrections (a
 // saved document re-saves in place). Only "New patient" makes a dictation a fresh visit.
 function canCorrect() { return !!state.structured; }
@@ -453,7 +453,7 @@ function updateCue() {
 }
 function refreshMicLabel() {
   const off = !!(window.Authorship && Authorship.isViewOnly());   // a colleague's prescription: the mic is off
-  setMicLabel(off ? "Dictation off" : canCorrect() ? "Dictate correction" : "Start dictation");
+  setMicLabel(off ? "Dictation off" : canCorrect() ? "Dictate correction" : "Tap to dictate");
   updateCue();
 }
 
@@ -994,7 +994,7 @@ function renderSheet(s, rowids) {
   renderRx(s.rx, rowids);
   SheetSecs.render(s);
   clearUndo(); // any new/reloaded sheet invalidates the one-level undo
-  sheetEl.classList.remove("empty");
+  sheetEl.classList.remove("empty"); $("sheetBody").inert = false;
   saveBtn.hidden = false;
   printBtn.hidden = false;
   savePdfBtn.hidden = printBtn.hidden;
@@ -1316,7 +1316,7 @@ function resetSheet() {
   updateResaveNote();
   backToToday();
   if (window.Authorship) Authorship.clear();
-  sheetEl.classList.add("empty");
+  sheetEl.classList.add("empty"); $("sheetBody").inert = true;
   saveBtn.hidden = true;
   printBtn.hidden = true;
   savePdfBtn.hidden = printBtn.hidden;
@@ -1355,7 +1355,7 @@ $("profileForm").addEventListener("submit", saveProfile);
 // ---- init ------------------------------------------------------------------
 if (window.Share) Share.init({ documentId: () => state.documentId });
 Sections.init({ post: postJson });
-SheetSecs.init({ get: (u) => fetch(u).then(safeJson), renderList }); Cues.init({ list: () => SheetSecs.list() }); SheetSecs.load().then(() => SheetSecs.render(state.structured ? readForm() : {})).catch(() => {});
+SheetSecs.init({ get: (u) => fetch(u).then(safeJson), renderList }); Cues.init({ list: () => SheetSecs.list() }); SheetSecs.load().then(() => SheetSecs.render(state.structured ? readForm() : {})).catch(() => {}).finally(() => Cues.show());
 IxList.init({ post: postJson, working: () => state.working, onChange: () => { markDirty(); updateCue(); },
   onRemove: (item, pos) => setUndo({ type: "ix", item, pos }, "Deleted test.") });
 RxView.init({

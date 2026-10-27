@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=13" />
+<link rel="stylesheet" href="styles.css?v=14" />
 <link rel="stylesheet" href="rx.css?v=10" />
 <link rel="stylesheet" href="ixlist.css?v=3" />
 <link rel="stylesheet" href="steps.css?v=2" />
@@ -91,7 +91,7 @@
         <span id="rxReady" class="rx-count" data-state="ok"></span>
         <span id="rxNeeds" class="rx-count" data-state="dose" role="status"></span>
       </div>
-      <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden aria-describedby="rxNeeds">Save prescription</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button></div>
+      <div class="save-row no-print"><button id="saveBtn" class="save no-print" type="button" hidden aria-describedby="rxNeeds">Save prescription</button><button id="printBtn" class="save print no-print" type="button" hidden disabled title="Save first, then print">🖨 Print</button><button id="savePdfBtn" class="save print no-print" type="button" hidden disabled title="Save this prescription as a PDF file">Save PDF</button></div>
     </div>
     <section id="sheet" class="empty">
       <div class="clinic-head" id="clinicHead">
@@ -103,19 +103,21 @@
       </div>
       <div id="profileHint" class="profile-hint no-print">Add your clinic details in ⚙ Profile so they print on every prescription.</div>
       <h2>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h2>
+      <div class="patient-block">
       <div class="sub patient-row">
         <span class="pf" id="pDate" role="textbox" aria-readonly="true" aria-label="Visit date"></span>
         <span class="pf" id="pOp" contenteditable="true" data-field="opNo" data-placeholder="OP / IP No"></span>
         <span class="pf pf-name" id="pName" contenteditable="true" data-field="patientName" data-placeholder="Patient name"></span>
         <span class="pf" id="pAge" contenteditable="true" data-field="ageSex" data-placeholder="Age / Sex"></span>
       </div>
-      <div class="sub vitals-row no-print" id="pVitals" role="group" aria-label="Vitals">
+      <div class="sub vitals-row" id="pVitals" role="group" aria-label="Vitals">
         <span class="vl" id="vBpL">BP</span><span class="pf pv" id="vBp" contenteditable="true" role="textbox" aria-labelledby="vBpL" data-placeholder="140/90"></span>
         <span class="vl" id="vPulseL">Pulse</span><span class="pf pv" id="vPulse" contenteditable="true" role="textbox" aria-labelledby="vPulseL" data-placeholder="88/min"></span>
         <span class="vl" id="vWeightL">Weight</span><span class="pf pv" id="vWeight" contenteditable="true" role="textbox" aria-labelledby="vWeightL" data-placeholder="72 kg"></span>
         <span class="vl" id="vSpo2L">SpO2</span><span class="pf pv" id="vSpo2" contenteditable="true" role="textbox" aria-labelledby="vSpo2L" data-placeholder="98%"></span>
         <span class="vl" id="vTempL">Temp</span><span class="pf pv" id="vTemp" contenteditable="true" role="textbox" aria-labelledby="vTempL" data-placeholder="101 F"></span>
         <span class="vhint" id="vHint" role="status" hidden></span>
+      </div>
       </div>
       <div id="sheetBody">
         <div class="sec-title">CHIEF COMPLAINTS &amp; BRIEF HISTORY</div>
@@ -232,7 +234,7 @@
             <div id="lhPreview" class="lh-preview" aria-live="polite"></div>
           </div>
           <div class="lh-form-col">
-            <div id="lhLinesBox"><h3>Text lines on the pad</h3><p id="lhSkipped" class="panel-hint" hidden></p><div id="lhLines"></div><div id="lhDupes"></div></div>
+            <div id="lhLinesBox"><h3>Text lines on the pad</h3><p id="lhSkipped" class="panel-hint" hidden></p><div id="lhLeftOut" hidden></div><div id="lhLines"></div><div id="lhDupes"></div></div>
             <div id="lhDetailsPart">
             <fieldset id="lhDoctorsBox" class="lh-choice" hidden>
               <legend>Doctors this letterhead lists</legend>
@@ -279,9 +281,9 @@
 <script src="auth.js?v=4"></script>
 <script src="authorship.js?v=5"></script>
 <script src="doctorgrid.js?v=1"></script>
-<script src="rxstate.js?v=12"></script>
+<script src="rxstate.js?v=13"></script>
 <script src="suglist.js?v=4"></script>
-<script src="rxview.js?v=15"></script>
+<script src="rxview.js?v=18"></script>
 <script src="genericedit.js?v=3"></script>
 <script src="spellmodal.js?v=2"></script>
 <script src="steps.js?v=1"></script>
@@ -291,9 +293,10 @@
 <script src="sections.js?v=4"></script>
 <script src="vitals.js?v=2"></script>
 <script src="ixlist.js?v=3"></script>
-<script src="app.js?v=50"></script>
-<script src="lhlines.js?v=1"></script>
-<script src="letterhead.js?v=12"></script>
+<script src="savepdf.js?v=2"></script>
+<script src="app.js?v=51"></script>
+<script src="lhlines.js?v=3"></script>
+<script src="letterhead.js?v=13"></script>
 <script src="listedit.js?v=1"></script>
 <script src="clinlists.js?v=4"></script>
 <script src="mishear.js?v=2"></script>

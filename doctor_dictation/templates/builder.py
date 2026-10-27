@@ -8,7 +8,7 @@ from doctor_dictation.pdf.layout import MAX_PROFILE, credit_text
 from doctor_dictation.providers.llm.factory import make_llm
 from doctor_dictation.templates import TemplateError
 from doctor_dictation.templates.images import crop_fraction, to_data_uri
-from doctor_dictation.templates.lines import drop_fill_in_lines
+from doctor_dictation.templates.lines import drop_fill_in_lines, left_out_entries
 
 PROFILE_FIELDS = ("doctor_name", "qualifications", "reg_no", "clinic_name", "address", "phone")
 _KEEP = ("header", "footer", "body", "profile")
@@ -119,9 +119,12 @@ async def build_draft(jpeg: bytes, settings) -> Draft:
         validate_layout(layout)
     except LayoutError as exc:
         raise TemplateError(502, f"the model returned an invalid layout: {exc}") from None
+    entries = left_out_entries(layout)
     skipped = drop_fill_in_lines(layout)      # removing blocks cannot break the vocabulary: no re-validation
     if skipped:
         layout["skipped_labels"] = skipped
+    if entries:
+        layout["left_out"] = entries
     logo = None
     for block in list(layout["header"]) + list(layout["footer"]):
         if block.get("type") == "text" and "text" in block:

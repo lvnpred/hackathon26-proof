@@ -129,7 +129,6 @@ def test_vitals_strip_accepts_only_text_and_numbers():
 
 def test_spacing_rules_are_the_compact_values():
     html = build_sheet_html({}, META)
-    assert ".sub { text-align: center; font-size: 12px; margin-bottom: 8px; }" in html
     assert "margin: 10px 0 4px;" in html and "padding: 3px 6px;" in html and ".disclaimer { margin-top: 12px;" in html
     assert ".vitals { text-align: center; font-size: 12px; margin: -4px 0 8px; }" in html
 
@@ -159,20 +158,15 @@ def test_typical_prescription_with_vitals_renders_on_one_page(tmp_path):
     s = {"patientName": "Rajinikanth", "ageSex": "78 / M", "vitals": {"bp": "130/80", "pulse": 82, "weight": "64 kg"},
          "complaints": ["C/o fever with chills, 3 days."], "diagnosis": ["Viral fever"], "investigations": ["CBC", "RFT"],
          "rx": [{"name": f"Drug {i}", "dose": "1-0-1", "duration": "5 days"} for i in range(5)], "advice": ["Rest"], "review": "1 week"}
-    def gap(edit=None):
-        ys = {}
-        def visit(text, cm, tm, font_dict, font_size):
-            for key in ("Rajinikanth", "BP 130/80"):
-                if key in text: ys[key] = tm[5] * cm[3] + cm[5]      # page-space y in points, up is larger
-        pages = _render_pages(tmp_path, s, name="g.pdf", visitor=visit, edit=edit)
-        assert len(pages) == 1 and "BP 130/80" in pages[0]
-        return ys["Rajinikanth"] - ys["BP 130/80"]
-    # The vitals line is 12px = 9pt tall, so a gap under 9pt means it overlaps the patient line.
-    MIN_GAP = 12 * 0.75
-    assert gap() >= MIN_GAP
-    overlapping = lambda h: h.replace("margin: -4px 0 8px;", "margin: -12px 0 8px;")
-    assert "margin: -12px 0 8px;" in overlapping(build_sheet_html(s, META))
-    assert gap(overlapping) < MIN_GAP                         # shows the guard catches the overlap
+    xs = {}
+    def visit(text, cm, tm, font_dict, font_size):
+        for key in ("Rajinikanth", "BP 130/80"):
+            if key in text: xs[key] = (tm[4] * cm[0] + cm[4], len(text))   # page-space x in points
+    pages = _render_pages(tmp_path, s, name="g.pdf", visitor=visit)
+    assert len(pages) == 1 and "BP 130/80" in pages[0]
+    # The vitals now sit right of the patient line (E5), so the guard is horizontal: the line must end before they start.
+    name_x, name_len = xs["Rajinikanth"]
+    assert name_x + name_len * 6.5 < xs["BP 130/80"][0]
 
 
 # ---- final fix wave: page-break behaviour (real renders, letterhead) ----
@@ -191,7 +185,7 @@ def _letterhead_pages(tmp_path, n, advice=True):
 
 
 def test_a_section_heading_is_never_the_last_line_of_a_page(tmp_path):
-    for n in range(24, 31):                                   # the sweep crosses the page break
+    for n in range(28, 35):                                   # the sweep crosses the page break
         pages = _letterhead_pages(tmp_path, n)
         for text in pages[:-1]:
             body = [l.strip() for l in text.splitlines() if l.strip() and not l.startswith("Page ")]
@@ -200,7 +194,7 @@ def test_a_section_heading_is_never_the_last_line_of_a_page(tmp_path):
 
 def test_the_disclaimer_stays_with_the_last_section_text(tmp_path):
     seen_two_pages = False
-    for n in range(28, 33):
+    for n in range(33, 39):
         pages = _letterhead_pages(tmp_path, n, advice=False)
         if len(pages) < 2: continue
         seen_two_pages = True

@@ -149,7 +149,7 @@ def test_confirming_a_row_from_outside_closes_its_spell_panel():
       const still = panels();
       confirmed.add("2"); RxView.renderRow(tr);                      // the Confirm button
       console.log(JSON.stringify({ open, still, after: panels(), spell: !!spellBtn(tr), held: SpellModal.isOpenFor("2") }));""")
-    assert r == {"open": [1, "true"], "still": 1, "after": 0, "spell": False, "held": False}
+    assert r == {"open": [1, "true"], "still": 1, "after": 0, "spell": True, "held": False}
 
 
 def test_buttons_are_disabled_for_view_only_and_for_a_checking_row_and_dose_check_chips_do_not_confirm():

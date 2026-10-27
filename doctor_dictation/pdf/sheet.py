@@ -3,7 +3,7 @@ import re
 
 from .doctors_text import block, doctor_groups, group_lines
 from .layout import ALIGNS, MAX_DOCTORS, POWERED_BY, PROFILE_KEYS, Layout, credit_text, has_credit
-from .sections import inline_section, list_section, prose_section, review_section, rx_section, vitals_strip
+from .sections import inline_section, list_section, patient_block, prose_section, review_section, rx_section
 from .sections import esc as _esc
 
 DISCLAIMER = (
@@ -213,14 +213,9 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
     s = structured if isinstance(structured, dict) else {}
     m = meta if isinstance(meta, dict) else {}
     credit = "" if layout is not None and has_credit(layout.footer) else f'<div class="credit">{POWERED_BY}</div>'   # the pad's own line carries it
-    date = _esc(m.get("date"))
-    op_no = _esc(m.get("opNo") or s.get("opNo"))
-    name = _esc(s.get("patientName"))
-    age_sex = _esc(s.get("ageSex"))
     values = _resolved(layout, m.get("profile"), m.get("authored") is True) if layout is not None else {}
     entries = _doctor_entries(m.get("doctors"), values) if layout is not None else []
     header = _profile_header(m.get("profile")) if layout is None else _layout_header(layout, m.get("logo"), values, entries)
-    lh_mm = 0 if layout is None else max(0, round(layout.body_top * 297) - 8)    # the header fills down to body.top
     page_css = _page_css(layout, m.get("patientName") or s.get("patientName"), m.get("opNo") or s.get("opNo"),
                          m.get("date"), values, entries)
 
@@ -232,10 +227,15 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 <style>
   {page_css}
   body {{ font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; }}
-  .lh {{ min-height: {lh_mm}mm; margin-bottom: 4mm; }}
+  .lh {{ margin-bottom: 4mm; }}
   tr {{ break-inside: avoid; }}
   h1 {{ font-size: 18px; text-align: center; text-transform: uppercase; margin: 0 0 6px; }}
-  .sub {{ text-align: center; font-size: 12px; margin-bottom: 8px; }}
+  .pt {{ display: flex; justify-content: space-between; gap: 8mm; margin-bottom: 8px; }}
+  .pt-l {{ flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }}
+  .pt-name {{ font-size: 15px; font-weight: bold; }}
+  .pt-op {{ font-size: 11px; }}
+  .pt-r {{ flex: 0 1 38%; text-align: right; }}
+  .pt-r .vitals {{ text-align: right; margin: 0; }}
   .sec-title {{ font-size: 12px; font-weight: bold; text-transform: uppercase;
                 border-bottom: 1px solid #999; margin: 10px 0 4px; padding-bottom: 2px; break-after: avoid; }}
   ul {{ margin: 0 0 6px; padding-left: 20px; }}
@@ -266,8 +266,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 <body>
 {header}
 <h1>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h1>
-<div class="sub">{date} &nbsp;|&nbsp; OP/IP No: {op_no} &nbsp;|&nbsp; {name} &nbsp; {age_sex}</div>
-{vitals_strip(s.get("vitals"))}
+{patient_block(s.get("patientName"), s.get("ageSex"), m.get("date"), m.get("opNo") or s.get("opNo"), s.get("vitals"))}
 {prose_section("Chief Complaints &amp; Brief History", s.get("complaints"))}
 {prose_section("Diagnosis / Clinical Impression", s.get("diagnosis"))}
 {inline_section("Investigations Advised", s.get("investigations"))}

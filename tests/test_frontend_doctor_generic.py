@@ -34,7 +34,7 @@ def _view_node(expr):
 
 def test_pending_doctor_generic_turns_a_matched_row_into_confirm_generic():
     r = _state("""RxState.rowState({status: "verified", generic_pending: true, generic: "A + B"}, {})""")
-    assert (r["state"], r["label"], r["canSpell"], r["needsYou"]) == ("confirm", "Confirm generic", False, True)
+    assert (r["state"], r["label"], r["canSpell"], r["needsYou"]) == ("confirm", "Confirm generic", True, True)
     assert r["reason"] == "You entered the generic A + B. Confirm the row before saving."
     assert _state("""RxState.rowState({status: "verified", source: "clinic", generic_pending: true}, {}).state""") == "confirm"
     assert _state("""RxState.rowState({status: "verified", generic_pending: true}, {confirmed: true}).state""") == "you"
@@ -111,4 +111,4 @@ def test_open_rows_and_the_block_panel_use_the_same_predicate_as_the_bar():
 
 def test_pins_are_bumped():
     html = _read("index.html")
-    assert re.search(r"rxstate\.js\?v=12\b", html) and re.search(r"rxview\.js\?v=15\b", html) and re.search(r"app\.js\?v=50\b", html)
+    assert re.search(r"rxstate\.js\?v=13\b", html) and re.search(r"rxview\.js\?v=18\b", html) and re.search(r"app\.js\?v=51\b", html)

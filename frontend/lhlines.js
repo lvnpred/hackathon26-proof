@@ -21,14 +21,27 @@
     return { rows: rows, dupes: dupes, skipped: ((layout.skipped_labels) || []).slice() };
   }
 
-  // Screen state -> request body. A ticked or emptied line is removed; one keep entry per answered field.
-  function payload(rows, answers) {
+  // View -> the patient lines the import left out, restorable by position in layout.left_out. Old letterheads have none.
+  function leftOut(view) {
+    const list = ((view || {}).layout || {}).left_out;
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    list.forEach((e, n) => {
+      const b = e && e.block;
+      if (b && b.type === "text" && typeof b.text === "string") out.push({ n: n, section: e.section, text: b.text });
+    });
+    return out;
+  }
+
+  // Screen state -> request body. A ticked or emptied line is removed; one keep entry per answered field;
+  // include lists the ticked left-out positions.
+  function payload(rows, answers, included) {
     const lines = (rows || []).map((r) => (r.remove || !String(r.text).trim()
       ? (r.orig === undefined ? { section: r.section, index: r.index, remove: true }
         : { section: r.section, index: r.index, remove: true, text: String(r.orig) })
       : { section: r.section, index: r.index, text: String(r.text).trim() }));
     const keep = Object.keys(answers || {}).map((f) => ({ field: f, where: answers[f] }));
-    return { lines: lines, keep: keep };
+    return { lines: lines, keep: keep, include: (included || []).slice() };
   }
 
   const make = (tag, cls, text) => {
@@ -63,6 +76,16 @@
     return row;
   }
 
+  function renderLeft(e, ctl) {
+    const row = make("div", "lh-line-row"), l = make("label", "lh-line-rm"), box = make("input");
+    box.type = "checkbox";
+    box.setAttribute("aria-label", "Include on the print: " + e.text);
+    l.appendChild(box); l.appendChild(document.createTextNode(" Include on the print"));
+    row.appendChild(make("span", "lh-line-text", e.text)); row.appendChild(l);
+    ctl.left.push({ n: e.n, text: e.text, box: box });
+    return row;
+  }
+
   function renderDupe(d, ctl, opts) {
     const fs = make("fieldset", "lh-dupe"), name = (opts.labels || {})[d.field] || d.field;
     fs.appendChild(make("legend", "", name + " prints at the top and at the bottom. Keep it:"));
@@ -81,30 +104,44 @@
   function render(box, view, opts) {
     opts = opts || {};
     const p = plan(view), lines = byId("lhLines"), dupes = byId("lhDupes"), skipped = byId("lhSkipped");
-    const ctl = { rows: [], dupes: [], seen: { header: 0, footer: 0 } };
+    const left = leftOut(view), group = byId("lhLeftOut");
+    const ctl = { rows: [], dupes: [], left: [], seen: { header: 0, footer: 0 } };
     lines.textContent = ""; dupes.textContent = "";
     p.rows.forEach((r, n) => { ctl.seen[r.section] += 1; lines.appendChild(renderRow(r, n, ctl, opts)); });
     p.dupes.forEach((d) => dupes.appendChild(renderDupe(d, ctl, opts)));
-    skipped.textContent = p.skipped.length ? "Left out as blank labels from the paper pad: " + p.skipped.join("; ") : "";
-    skipped.hidden = !p.skipped.length;
-    box.hidden = !(p.rows.length || p.dupes.length || p.skipped.length);
+    const old = left.length ? [] : p.skipped;   // a restorable list replaces the old sentence
+    skipped.textContent = old.length ? "Left out as blank labels from the paper pad: " + old.join("; ") : "";
+    skipped.hidden = !old.length;
+    if (group) {
+      group.textContent = "";
+      if (left.length) {
+        group.appendChild(make("h4", "", "Left out \u2013 the prescription fills these in"));
+        left.forEach((e) => group.appendChild(renderLeft(e, ctl)));
+      }
+      group.hidden = !left.length;
+    }
+    box.hidden = !(p.rows.length || p.dupes.length || p.skipped.length || left.length);
     box._lh = ctl;
   }
 
   function collect(box) {
     const ctl = box._lh || { rows: [], dupes: [] }, answers = {};
+    const included = (ctl.left || []).filter((e) => e.box.checked).map((e) => e.n);
     ctl.dupes.forEach((d) => {
       const on = d.radios.filter((r) => r.checked)[0];
       answers[d.field] = on ? on.value : "both";
     });
-    return payload(ctl.rows.map((r) => ({ section: r.section, index: r.index, text: r.text.value, orig: r.orig, remove: r.remove.checked })), answers);
+    return payload(ctl.rows.map((r) => ({ section: r.section, index: r.index, text: r.text.value, orig: r.orig, remove: r.remove.checked })), answers, included);
   }
 
-  // Texts of pre-ticked labels the doctor unticked: a re-render after a save keeps them unticked.
+  // Texts of pre-ticked labels the doctor unticked, plus left-out lines just ticked "Include": a re-render after a save
+  // keeps them unticked, so the next save does not remove a line the doctor asked to print.
   function unticked(box) {
-    return ((box._lh || {}).rows || []).filter((r) => r.label && !r.remove.checked).map((r) => r.orig);
+    const ctl = box._lh || {};
+    return (ctl.rows || []).filter((r) => r.label && !r.remove.checked).map((r) => r.orig)
+      .concat((ctl.left || []).filter((e) => e.box.checked).map((e) => e.text));
   }
 
-  root.LhLines = { plan, payload, render, collect, unticked };
+  root.LhLines = { plan, leftOut, payload, render, collect, unticked };
   if (typeof module !== "undefined" && module.exports) module.exports = root.LhLines;
 })(typeof window !== "undefined" ? window : globalThis);

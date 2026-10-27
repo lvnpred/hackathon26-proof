@@ -23,6 +23,7 @@ const sheetEl = $("sheet");
 const rxBody = $("pRx");
 const saveBtn = $("saveBtn");
 const printBtn = $("printBtn");
+const savePdfBtn = $("savePdfBtn");
 const blockPanel = $("blockPanel");
 const todayList = $("todayList");
 const transcriptBox = $("transcriptBox");
@@ -108,7 +109,7 @@ function setWorking(on, msg) {
   if (msg) setStatus(msg);
   recBtn.disabled = on;
   saveBtn.disabled = on;
-  if (on) printBtn.disabled = true; else refreshPrintButton();
+  if (on) { printBtn.disabled = true; savePdfBtn.disabled = true; } else refreshPrintButton();
   $("newPatientBtn").disabled = on;
   $("profileOpenBtn").disabled = on;
   $("profileLetterheadBtn").disabled = on;
@@ -428,6 +429,7 @@ function refreshPrintButton() {
   const recording = !!(mr && mr.state === "recording");
   const saved = state.documentId != null;
   printBtn.disabled = !(saved && !state.dirty && !state.working && !recording) || state.printing;
+  savePdfBtn.disabled = printBtn.disabled;
   printBtn.title = !saved ? "Save first, then print"
     : state.dirty ? "Save your changes first"
     : "Print this prescription (letterhead PDF)";
@@ -973,6 +975,7 @@ function renderSheet(s, rowids) {
   sheetEl.classList.remove("empty");
   saveBtn.hidden = false;
   printBtn.hidden = false;
+  savePdfBtn.hidden = printBtn.hidden;
   refreshMicLabel();
   refreshPrintButton();
   updateGrounding();
@@ -1242,6 +1245,21 @@ async function printDocument() {
   }
 }
 printBtn.addEventListener("click", printDocument);
+async function savePdf() {
+  if (state.printing || savePdfBtn.disabled || state.documentId == null) return;
+  const id = state.documentId, gen = state.editGen, seq = state.sheetSeq;
+  const unchanged = () => state.documentId === id && !state.dirty && state.editGen === gen && state.sheetSeq === seq;
+  setPrinting(true);
+  clearError();
+  try {
+    const blob = await SavePdf.fetchPdf(id);
+    if (!unchanged()) { setStatus("The sheet changed while preparing the PDF; press Save PDF again."); return; }
+    const how = await SavePdf.save(blob, SavePdf.fileName({ name: text($("pName")), day: state.visitDate || (window.Dates ? Dates.todayIso() : ""), op: text($("pOp")) }));
+    if (how !== "cancelled") setStatus(how === "picked" ? "Saved PDF." : "Downloaded PDF.");
+  } catch (e) { setStatus("The PDF could not be saved (" + shortReason(e) + ")."); }
+  finally { setPrinting(false); }
+}
+savePdfBtn.addEventListener("click", savePdf);
 $("retryBtn").addEventListener("click", retryLast);
 
 // ---- New patient -----------------------------------------------------------
@@ -1271,6 +1289,7 @@ function newPatient() {
   sheetEl.classList.add("empty");
   saveBtn.hidden = true;
   printBtn.hidden = true;
+  savePdfBtn.hidden = printBtn.hidden;
   refreshPrintButton();
   setText($("pName"), "");
   setText($("pAge"), "");

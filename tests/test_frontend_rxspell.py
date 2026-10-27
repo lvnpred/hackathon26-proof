@@ -70,7 +70,7 @@ def test_the_row_follows_the_spell_it_contract_through_the_modal():
                   "The row is unchanged.", "r.req !== tok", 'H.pushUndo({ type: "respell"', "H.transcript()", "H.ageSex()", 'setAttribute("aria-haspopup", "dialog")'):
         assert token in js, token
     assert "innerHTML" not in raw and "Sounds like" not in raw and "rx-spell" not in raw and "paneWidth" not in raw and "r.panel" not in js   # the inline panel is gone
-    assert "bound !== H.body" in js and js.count('H.body.addEventListener("click", onClick)') == 1 and "keydown" not in js   # keys belong to the dialog now
+    assert "bound !== H.body" in js and js.count('H.body.addEventListener("click", onClick)') == 1 and js.count("keydown") == 1   # the dialog owns its keys; the row only has the arrow keys (E2)
     assert "return { init, attach, renderRow, sync, onEdit, meta, wire, needsYou, blockReason, blockStands, reasonFor, restore, isBlank, stripMarker, afterConfirm, focusFirst };" in js
 
 

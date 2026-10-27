@@ -34,6 +34,7 @@ window.RxView = (function () {
   const EMPTY = "Empty row: removed when you save";
   const reasonFor = (tr) => isBlank(tr) ? EMPTY : RxState.rowState(rowOf(tr), ctxOf(tr)).reason;     // the reason the row itself shows (the 409 panel uses it)
   const focusState = (tr) => { const s = tr.querySelector(".rx-state"); if (s) s.focus(); };
+  const focusAfterSpell = (tr) => { const c = tr.querySelector('button[data-action="confirm"].solid'); if (c) c.focus(); else focusState(tr); };   // a row still awaiting a decision: Enter confirms it
   const ctxOf = (tr) => ({ confirmed: H.confirmed().has(tr.dataset.rowid), strength: val(tr, "strength"), how: rx(tr).how });
   function renderRow(tr) {
     if (!H) return;
@@ -44,7 +45,7 @@ window.RxView = (function () {
     const blank = isBlank(tr);                                                           // nothing typed: neutral line, no pill, no buttons
     const st = blank ? { state: "", icon: "", label: "", reason: EMPTY, chips: [], canConfirm: false, canReopen: false } : RxState.rowState(rowOf(tr), ctxOf(tr));
     const name = val(tr, "name") || "this row";
-    if (SpellModal.isOpenFor(tr.dataset.rowid) && !r.checking && !st.canSpell) SpellModal.closeFor(tr.dataset.rowid, false);   // confirmed (or otherwise settled) from outside: no dialog for a row with no Spell button
+    if (SpellModal.isOpenFor(tr.dataset.rowid) && !r.checking && st.state === "you" && !r.spellFromConfirmed) SpellModal.closeFor(tr.dataset.rowid, false);   // confirmed from outside while open: the dialog goes (one opened on an already confirmed row stays)
     if (blank) delete tr.dataset.rxstate; else tr.dataset.rxstate = st.state;
     med.querySelectorAll(".rx-extra").forEach((n) => n.remove());                       // generic line and chips: screen only
     const gen = r.meta.generic, nm = val(tr, "name");
@@ -99,8 +100,8 @@ window.RxView = (function () {
       }
       if (st.canConfirm) { const b = btn("mini solid confirm-btn", "confirm", "Confirm as is"); b.disabled = vo; b.title = "Accept this medicine exactly as written"; b.setAttribute("aria-label", "Confirm as is: " + name); acts.appendChild(b); }
       if (st.canSpell) {
-        const b = btn("mini", "spell"); b.disabled = vo; b.append(icon("pencil", 14), el("span", null, "Spell it"));
-        b.title = "Pick or type the right name. Only this row changes."; b.setAttribute("aria-label", "Spell it: " + name);
+        const b = btn("mini", "spell"); b.disabled = vo; b.append(icon("pencil", 14), el("span", null, st.spellLabel));
+        b.title = "Pick or type the right name. Only this row changes."; b.setAttribute("aria-label", st.spellLabel + ": " + name);
         b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-controls", "spellDlg"); b.setAttribute("aria-expanded", String(SpellModal.isOpenFor(tr.dataset.rowid)));
         acts.appendChild(b);
       }
@@ -137,6 +138,7 @@ window.RxView = (function () {
     if (H.working()) { if (H.notify) H.notify("Wait for the page to finish."); return; }
     if (viewOnly()) return;
     const rowid = tr.dataset.rowid, dictated = val(tr, "name");
+    rx(tr).spellFromConfirmed = H.confirmed().has(rowid);
     SpellModal.open({ rowid, title: "Spell " + (dictated || "medicine"), opener: () => tr.querySelector('[data-action="spell"]'), alive: () => tr.isConnected,
       problem: tooBig(dictated) ? RxState.typedProblem(dictated) + " You can still type the name." : "",
       load: () => H.post(URL_CHECK, bodyFor(tr), CHECK_MS), search: (name, signal) => H.post(URL_CHECK, bodyFor(tr, name), CHECK_MS, signal), use: (name) => useName(tr, name),
@@ -170,7 +172,7 @@ window.RxView = (function () {
       else { H.confirmed().delete(rowid); r.note = 'Name changed to "' + val(tr, "name") + '". It still needs your decision.'; }
       H.pushUndo({ type: "respell", rowid, data: before, wasConfirmed: was }, "Changed " + (before.name || "medicine") + " to " + val(tr, "name") + ".");
       const keep = !!mtok && SpellModal.tokenFor(rowid) === mtok, ae = document.activeElement;      // focus moves only if the dialog that asked is still the one open, or nothing has focus
-      SpellModal.closeFor(rowid, false); renderRow(tr); H.changed(); if (keep || !ae || ae === document.body) focusState(tr);
+      SpellModal.closeFor(rowid, false); renderRow(tr); H.changed(); if (keep || !ae || ae === document.body) focusAfterSpell(tr);
     } catch (e) { if (tr.isConnected && tr._rx === r && r.req === tok) fail(RxState.errorText(e)); }
   }
 
@@ -199,9 +201,19 @@ window.RxView = (function () {
     else if (a === "spell") openSpell(tr);
     else if (a === "dym" || a === "spelled-undo") useName(tr, b.dataset.value);   // Undo of a spelling: the heard words, checked like any typed name
   }
+  function onKey(e) {                              // ArrowLeft / ArrowRight step between a row's buttons; Tab and Shift+Tab stay native
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;   // Alt+Left is the browser's Back
+    const b = e.target && e.target.closest ? e.target.closest("button") : null;
+    if (!b || !b.parentNode || !b.parentNode.classList.contains("rx-acts")) return;   // a medicine cell (contenteditable) keeps its caret keys
+    const btns = [...b.parentNode.children].filter((n) => n.tagName === "BUTTON" && !n.disabled), i = btns.indexOf(b);
+    const to = btns[i + (e.key === "ArrowRight" ? 1 : -1)];
+    e.preventDefault();
+    if (to) to.focus();
+  }
   function init(hooks) {
     H = hooks;
-    if (bound !== H.body) { H.body.addEventListener("click", onClick); bound = H.body; }   // a second init() must not bind twice
+    if (bound !== H.body) { H.body.addEventListener("click", onClick); H.body.addEventListener("keydown", onKey); bound = H.body; }   // a second init() must not bind twice
     [["rxReady", "check-circle"], ["rxNeeds", "triangle"]].forEach((p) => { const n = $(p[0]); if (!n.children.length) n.append(icon(p[1], 14), el("span")); });
     topbarHeight();
     const tb = document.querySelector(".topbar");

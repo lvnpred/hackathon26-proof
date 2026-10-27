@@ -141,7 +141,7 @@ def test_the_pdf_header_prints_the_new_format_not_iso(monkeypatch):
     meta, _ = persistence._pdf_inputs(conn, {"opNo": "OP-1", "patientName": "A"}, date(2026, 10, 17), eid)
     assert meta["date"] == "17 Oct 2026"
     html = build_sheet_html({"patientName": "A", "opNo": "OP-1", "rx": []}, meta)
-    assert "17 Oct 2026 &nbsp;|&nbsp; OP/IP No: OP-1" in html and "2026-10-17" not in html
+    assert "A · 17 Oct 2026</div>" in html and "OP/IP No: OP-1" in html and "2026-10-17" not in html
 
 
 def _conn():

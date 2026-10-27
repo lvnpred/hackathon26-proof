@@ -132,4 +132,4 @@ def test_a_combination_row_shows_a_screen_only_add_generic_button_and_never_a_ge
 
 def test_the_script_pins_for_the_add_generic_tag():
     html = open("frontend/index.html").read()
-    assert "rxstate.js?v=12" in html and "rxview.js?v=15" in html and "genericedit.js?v=3" in html
+    assert "rxstate.js?v=13" in html and "rxview.js?v=18" in html and "genericedit.js?v=3" in html

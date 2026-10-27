@@ -118,16 +118,16 @@ def _draft(conn, template_id, user=None):
     return row
 
 
-def _checked(lay: dict, lines, keep) -> None:
+def _checked(lay: dict, lines, keep, include=None) -> None:
     """Apply line edits, removals and ``keep`` to ``lay``, then validate; TemplateError(400) on any failure."""
     try:
-        letterhead_lines.apply_line_changes(lay, lines, keep)
+        letterhead_lines.apply_line_changes(lay, lines, keep, include)
         validate_layout(lay)
     except LayoutError as exc:
         raise TemplateError(400, f"edit rejected: {exc}") from None
 
 
-def edit(conn, template_id: int, profile: dict, lines: list, keep=None, actor=None, user=None) -> dict:
+def edit(conn, template_id: int, profile: dict, lines: list, keep=None, actor=None, user=None, include=None) -> dict:
     row = _draft(conn, template_id, user)
     lay = json.loads(row["layout_json"])
     profile = {} if profile is None else profile
@@ -138,12 +138,12 @@ def edit(conn, template_id: int, profile: dict, lines: list, keep=None, actor=No
         if key not in FIELDS or not isinstance(value, str):
             raise TemplateError(400, f"unknown or non-text profile field: {key}")
         lay["profile"][key] = value.strip()
-    _checked(lay, lines, [] if keep is None else keep)
+    _checked(lay, lines, [] if keep is None else keep, include)
     tdb.update_template_layout(conn, template_id, lay)
     return view(tdb.get_template(conn, template_id))
 
 
-def tidy(conn, template_id: int, lines, keep, actor=None, user=None) -> dict:
+def tidy(conn, template_id: int, lines, keep, actor=None, user=None, include=None) -> dict:
     """Remove or edit literal lines and choose where a duplicated field prints, on a draft or an ACTIVE letterhead.
     Same visibility and archived rules as ``set_doctors``. The audit row carries counts and field names, no line text."""
     row = tdb.get_template(conn, template_id)
@@ -153,18 +153,20 @@ def tidy(conn, template_id: int, lines, keep, actor=None, user=None) -> dict:
         raise TemplateError(409, "this letterhead is no longer in use")
     lines = [] if lines is None else lines
     keep = [] if keep is None else keep
-    if lines == [] and keep == []:
+    include = [] if include is None else include
+    if lines == [] and keep == [] and include == []:
         return view(row)          # nothing to change: no write, no audit row
     lay = json.loads(row["layout_json"])
     stored = json.loads(json.dumps(lay))
-    _checked(lay, lines, keep)
+    _checked(lay, lines, keep, include)
     removed = len({(ln["section"], ln["index"]) for ln in lines if ln.get("remove") is True})
     edited = sum(1 for ln in lines if ln.get("remove") is not True
                  and not letterhead_lines.same_text(ln["text"], stored[ln["section"]][ln["index"]].get("text", "")))
     tdb.update_template_layout(conn, template_id, lay)
+    extra = {"included": len(include)} if include else {}      # only when lines were put back: older audit rows stay as they are
     dbmod.log_audit(conn, actor=actor, action="template_tidy", entity="template", entity_id=str(template_id),
                     detail={"clinic": row["clinic"], "removed": removed, "edited": edited,
-                            "keep": letterhead_lines.check_keep(keep)})
+                            "keep": letterhead_lines.check_keep(keep), **extra})
     return view(tdb.get_template(conn, template_id))
 
 

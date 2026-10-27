@@ -103,7 +103,8 @@
         : reasonFor(Object.assign({}, row, { status }), state, ctx) + pendingNote(row, state, ctx),
       needsYou: NEEDS.indexOf(state) >= 0,
       canConfirm: NEEDS.indexOf(state) >= 0,
-      canSpell: state === "confirm" && !pendingGeneric,
+      canSpell: true,                               // every row that reaches here: a matched name can be changed too
+      spellLabel: state === "confirm" && !pendingGeneric ? "Spell it" : "Change name",
       canReopen: state === "you",
       chips: state === "dose" ? chipsFor(row) : [],
       didYouMean: state === "confirm" && status === "unknown-medicine" && str(row.did_you_mean).trim() && !same(row.did_you_mean, row.name)

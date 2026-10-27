@@ -114,6 +114,18 @@ def vitals_strip(vitals) -> str:
     return f'<div class="vitals">{SEP.join(parts)}</div>' if parts else ""
 
 
+def patient_block(name, age_sex, date, op_no, vitals) -> str:
+    """The patient header as two sides: name, age/sex and date (with the OP/IP number under them) on the left, the
+    vitals line on the right when any is filled in. Raw values in; escaped here; ``""`` when there is nothing."""
+    line = SEP.join(esc(v).strip() for v in (name, age_sex, date) if esc(v).strip())
+    op = f'<div class="pt-op">OP/IP No: {esc(op_no)}</div>' if esc(op_no).strip() else ""
+    right = vitals_strip(vitals)
+    if not (line or op or right):
+        return ""
+    left = f'<div class="pt-l"><div class="pt-name">{line}</div>{op}</div>' if line else f'<div class="pt-l">{op}</div>'
+    return f'<div class="pt">{left}' + (f'<div class="pt-r">{right}</div>' if right else "") + "</div>"
+
+
 def review_section(title: str, review, review_date) -> str:
     """The follow-up under its screen heading, with the computed date in brackets; nothing when empty."""
     text = str(review or "").strip()

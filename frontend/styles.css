@@ -206,6 +206,19 @@ dialog.panel h2 { margin:0; font-size:18px; }
   [contenteditable]:empty:not(:focus)::before { content:""; }
   ul.editable-list li.blank:not(:focus)::before { content:""; }
   ul.editable-list li { padding-right:3px; }
+  /* E5: name, age and date bold on the left with OP under them; vitals on the right (the PDF's .pt block). */
+  .patient-block { display:flex; justify-content:space-between; align-items:flex-start; gap:8mm; }
+  #sheet .patient-row { flex:1 1 auto; min-width:0; justify-content:flex-start; text-align:left; font-size:15px; font-weight:700; color:#111; }
+  #pName { order:1; }
+  #pAge { order:2; }
+  #pDate { order:3; }
+  #pOp { order:4; flex-basis:100%; font-size:11px; font-weight:400; }
+  #pAge:not(:empty)::before, #pDate:not(:empty)::before { content:"\00b7"; margin-right:8px; }
+  .patient-block .pf { border:0; }
+  .patient-block .pf-name { min-width:0; }
+  #sheet #pVitals { flex:0 1 38%; justify-content:flex-end; text-align:right; color:#111; }
+  #pVitals .pv:empty, #pVitals .vl:has(+ .pv:empty), #pVitals .vhint { display:none !important; }
+  #sheet #pVitals:not(:has(.pv:not(:empty))) { display:none !important; }
 }
 
 /* Authorship (M3): Today scope toggle, view-only banner, Profile split into two parts. */

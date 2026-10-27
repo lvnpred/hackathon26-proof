@@ -5,7 +5,7 @@ from pathlib import Path
 
 FRONT = Path(__file__).resolve().parents[1] / "frontend"
 # the print rules of styles.css as they were before this plan (from /* --- print: only the sheet to /* Authorship (M3)
-PRINT_BLOCK_SHA256 = "a3adba36f9bd592924443aa52a2a3b2e1abb6e00b3057c8a75d2c5ca7f79916b"
+PRINT_BLOCK_SHA256 = "8693328ac60e9c0eca84d4fc66dc385abcbfdba8c43fece96316c65f3f299c36"
 
 
 def _read(name):

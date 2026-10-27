@@ -63,6 +63,43 @@ def drop_fill_in_lines(layout) -> list:
     return [f["text"] for f in found]
 
 
+def left_out_entries(layout) -> list:
+    """The fill-in text blocks as restorable entries: ``[{"section", "index", "block"}]`` (original index, a copy)."""
+    return [{"section": f["section"], "index": f["index"], "block": dict(layout[f["section"]][f["index"]])}
+            for f in fill_in_lines(layout)]
+
+
+def restore_left_out(layout: dict, include) -> None:
+    """Put the ``left_out`` entries at these positions back into header or footer, in place.
+
+    Raises TemplateError(400) unless ``include`` is a list of distinct ints that are positions in ``left_out``.
+    Entries go back in ascending original index, each at ``index - k`` (k: entries of its section still left out with a
+    smaller index), clamped to the section; ``left_out`` is deleted when it empties; restored texts also leave ``skipped_labels``.
+    """
+    entries = layout.get("left_out")
+    entries = entries if isinstance(entries, list) else []
+    if (not isinstance(include, list) or any(type(i) is not int or not 0 <= i < len(entries) for i in include)
+            or len(set(include)) != len(include)):
+        raise TemplateError(400, "include must list distinct left-out lines")
+    chosen = sorted((entries[i] for i in include), key=lambda e: e["index"])
+    rest = [e for n, e in enumerate(entries) if n not in include]
+    for e in chosen:
+        blocks = layout[e["section"]]
+        k = sum(1 for r in rest if r["section"] == e["section"] and r["index"] < e["index"])
+        blocks.insert(max(0, min(len(blocks), e["index"] - k)), dict(e["block"]))
+    skipped = layout.get("skipped_labels")
+    if isinstance(skipped, list):       # a line that prints again is no longer "left out" in the old sentence
+        for e in chosen:
+            if e["block"].get("text") in skipped:
+                skipped.remove(e["block"]["text"])
+        if not skipped:
+            layout.pop("skipped_labels")
+    if rest:
+        layout["left_out"] = rest
+    else:
+        layout.pop("left_out", None)
+
+
 def _digits(s: str) -> str:
     return "".join(c for c in s if c.isdigit())
 
@@ -155,11 +192,12 @@ def _holds_only_value(field: str, profile: dict, text: str) -> bool:
     return all(w in _VALUE_LABELS for w in words)
 
 
-def apply_line_changes(layout: dict, line_edits: list, keep: list) -> None:
+def apply_line_changes(layout: dict, line_edits: list, keep: list, include=None) -> None:
     """Edit and remove literal lines, and drop one copy of a duplicated field, in ``layout`` in place.
 
     Every index refers to the layout as stored: all entries are checked first, text edits apply next, then every
     removal (a line's own ``remove`` plus the unwanted copies from ``keep``) is deleted highest index first.
+    ``include`` (positions in ``layout["left_out"]``) restores left-out lines last, after the removals.
     Raises TemplateError(400) on a bad entry; ``layout`` may be half-changed then, so callers work on a copy.
     """
     if not isinstance(line_edits, list):
@@ -210,3 +248,5 @@ def apply_line_changes(layout: dict, line_edits: list, keep: list) -> None:
     for section, idx in removals.items():
         for i in sorted(idx, reverse=True):
             del layout[section][i]
+    if include is not None and include != []:
+        restore_left_out(layout, include)

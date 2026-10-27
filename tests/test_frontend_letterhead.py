@@ -37,8 +37,8 @@ def test_letterhead_js_never_builds_markup_from_server_text():
 
 def test_letterhead_assets_are_cache_busted():
     html = _read("index.html")
-    assert "letterhead.js?v=12" in html and "letterhead.css?v=9" in html
-    assert html.index("lhlines.js?v=1") < html.index("letterhead.js?v=")
+    assert "letterhead.js?v=13" in html and "letterhead.css?v=9" in html
+    assert html.index("lhlines.js?v=3") < html.index("letterhead.js?v=")
 
 
 def test_review_screen_has_the_remove_and_duplicate_controls():

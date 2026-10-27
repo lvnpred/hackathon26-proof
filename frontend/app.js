@@ -318,7 +318,7 @@ async function openDocument(row) {
     state.visitDate = j.visit_date || "";
     state.savedPatientName = String((state.structured || {}).patientName || "");
     state.retry = null;
-    DictGuard.clear();
+    DictGuard.clear(); Cues.clearFlags();          // flags named the previous sheet's empty sections
     state.confirmed.clear();
     state.lastBlock = [];
     hideBlockPanel();
@@ -390,6 +390,7 @@ async function beginRecording() {
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => { stopStream(stream); onRecordingStop(); };
   mr.start();
+  Cues.clearFlags(); if (state.pendingMode !== "correct") Cues.show();
   DictGuard.banner(state.pendingMode === "correct" ? { name: text($("pName")), op: text($("pOp")), saved: state.documentId != null } : null);
   refreshPrintButton();
   t0 = Date.now();
@@ -409,6 +410,7 @@ async function beginRecording() {
 
 function stopStream(stream) { try { stream.getTracks().forEach(t => t.stop()); } catch {} }
 function endRecordingUI() {
+  Cues.hide();
   DictGuard.banner(null);
   if (tick) { clearInterval(tick); tick = null; }
   timerEl.classList.remove("rec-warn");
@@ -583,6 +585,7 @@ async function formatTranscript(transcript, snap) {
     hideBlockPanel();
     renderSheet(state.structured);
     Sections.showProseCheck(j.prose_check);
+    Cues.flagEmpty(state.structured);
     setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Draft ready via " + (j.engine || "engine") + (j.cached ? " (cached)" : "") + ". " +
@@ -628,6 +631,7 @@ async function applyCorrection(transcript, snap) {
     renderSheet(state.structured, carry);
     rxBody.querySelectorAll("tr[data-rowid]").forEach(tr => { if (how[tr.dataset.rowid]) { tr._rx.how = how[tr.dataset.rowid]; renderCheck(tr); } });   // a kept row keeps "You chose..."; a changed row got a fresh id and has none
     Sections.showProseCheck(j.prose_check);
+    Cues.flagEmpty(state.structured);
     setStep("ready", stepCounts());
     const open = openRows().length;
     setStatus("Correction merged via " + (j.engine || "engine") + ". " +
@@ -706,6 +710,7 @@ function serializeForm() {
   base.findings = readList("pFx");
   base.investigations = IxList.read($("pIx"));      // items {text, canonical, status, source}; blanks dropped as the server does
   base.advice = readList("pAdv");
+  SheetSecs.readBack(base);
   base.review = text($("pRev"));
   const kept = readRx();
   base.rx = kept.map(k => k.rec);
@@ -986,6 +991,7 @@ function renderSheet(s, rowids) {
   setText($("pRev"), s.review || "");
   Sections.showDate(s.review_date || "");
   renderRx(s.rx, rowids);
+  SheetSecs.render(s);
   clearUndo(); // any new/reloaded sheet invalidates the one-level undo
   sheetEl.classList.remove("empty");
   saveBtn.hidden = false;
@@ -1289,6 +1295,8 @@ function newPatient() {
 // The sheet reset shared by New patient and the name check's "Start new patient" (which keeps the Undo snapshot).
 function resetSheet() {
   state.sheetSeq++;
+  Cues.clearFlags();
+  SheetSecs.render({});
   state.savedPatientName = null;
   clearUndo();
   state.structured = null;
@@ -1345,6 +1353,7 @@ $("profileForm").addEventListener("submit", saveProfile);
 
 // ---- init ------------------------------------------------------------------
 Sections.init({ post: postJson });
+SheetSecs.init({ get: (u) => fetch(u).then(safeJson), renderList }); Cues.init({ list: () => SheetSecs.list() }); SheetSecs.load().then(() => SheetSecs.render(state.structured ? readForm() : {})).catch(() => {});
 IxList.init({ post: postJson, working: () => state.working, onChange: () => { markDirty(); updateCue(); },
   onRemove: (item, pos) => setUndo({ type: "ix", item, pos }, "Deleted test.") });
 RxView.init({
@@ -1355,7 +1364,7 @@ RxView.init({
 DictGuard.init({
   state: () => state, serialize: serializeForm, render: renderSheet, rows: () => rxBody.querySelectorAll("tr[data-rowid]"), renderCheck, notify: setStatus,
   working: () => state.working || !!(mr && mr.state === "recording"),
-  restored: () => { markDirty(); hideBlockPanel(); updateResaveNote(); Sections.showProseCheck([]); updateGrounding(); refreshMicLabel(); },
+  restored: () => { Cues.clearFlags(); markDirty(); hideBlockPanel(); updateResaveNote(); Sections.showProseCheck([]); updateGrounding(); refreshMicLabel(); },
 });
 SpellModal.init({ dialog: $("spellDlg"), working: () => state.working, recording: () => !!(mr && mr.state === "recording"),
   viewOnly: () => !!(window.Authorship && Authorship.isViewOnly()), transcribe: transcribeName, media: () => navigator.mediaDevices, Recorder: () => window.MediaRecorder });

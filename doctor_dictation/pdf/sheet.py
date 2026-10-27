@@ -1,9 +1,10 @@
 """Print HTML for the prescription sheet. Pure and deterministic; every value is escaped."""
 import re
 
+from doctor_dictation.core.sections import BUILT_INS
 from .doctors_text import block, doctor_groups, group_lines
 from .layout import ALIGNS, MAX_DOCTORS, POWERED_BY, PROFILE_KEYS, Layout, credit_text, has_credit
-from .sections import inline_section, list_section, patient_block, prose_section, review_section, rx_section
+from .sections import patient_block, sections_html
 from .sections import esc as _esc
 
 DISCLAIMER = (
@@ -267,13 +268,7 @@ def build_sheet_html(structured: dict, meta: dict, layout: Layout | None = None)
 {header}
 <h1>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h1>
 {patient_block(s.get("patientName"), s.get("ageSex"), m.get("date"), m.get("opNo") or s.get("opNo"), s.get("vitals"))}
-{prose_section("Chief Complaints &amp; Brief History", s.get("complaints"))}
-{prose_section("Diagnosis / Clinical Impression", s.get("diagnosis"))}
-{inline_section("Investigations Advised", s.get("investigations"))}
-{prose_section("Findings", s.get("findings"))}
-{rx_section(s.get("rx"))}
-{list_section("Dietary &amp; General Advice", s.get("advice"))}
-{review_section("Review / Follow-up", s.get("review"), s.get("review_date"))}
+{sections_html(s, m.get("sections") or BUILT_INS)}
 <div class="disclaimer">{DISCLAIMER}</div>
 {credit}
 </body>

@@ -161,7 +161,7 @@ def _do_replace(form, field, old, new, notes, touched):
         notes.append(f"Changed {was} to {new}.")
 
 
-def apply_ops(current: dict, patch: dict):
+def apply_ops(current: dict, patch: dict, fields=_FIELDS):
     """Apply `patch["remove"]` then `patch["replace"]` to `current`.
 
     Returns `(new_current, patch_without_ops, notes, touched)`; `touched` is the
@@ -176,10 +176,10 @@ def apply_ops(current: dict, patch: dict):
     removes = patch.get("remove") if isinstance(patch, dict) else None
     replaces = patch.get("replace") if isinstance(patch, dict) else None
     if isinstance(removes, dict):
-        for field in _FIELDS:
+        for field in fields:
             _do_removes(form, field, _refs(removes.get(field)), notes)
     if isinstance(replaces, dict):
-        for field in _FIELDS:
+        for field in fields:
             for old, new in _pairs(replaces.get(field)):
                 _do_replace(form, field, old, new, notes, touched)
     return form, rest, notes, touched

@@ -13,7 +13,7 @@ from .repair import (  # noqa: F401  (api/format.py and tests import these from 
     FORMAT_LLM_CAP, MAX_CANDIDATE_ROWS, RX_VERIFIED, UNKNOWN_MEDICINE_TEXT, _UNKNOWN_ISSUE_RE,
     build_repair_message, loop_should_continue, open_issues,
 )
-from . import formulary, investigations, overlay, rowcheck, spelled, vitals
+from . import formulary, investigations, overlay, rowcheck, sections, spelled, vitals
 from .commonwords import WORDS as COMMON_WORDS  # noqa: F401
 from .lasa import lasa_row
 from .combo import combo_suffix
@@ -282,6 +282,9 @@ def validate_structured(data: dict, transcript: str, raw_transcript: str = "", a
     }
     out["vitals"], notes = vitals.coerce_vitals(d.get("vitals"), vitals_typed)
     warnings += notes
+    extra = sections.coerce_extra(d.get("extra"), limit=LIST_ITEM_LIMIT)
+    if extra:
+        out["extra"] = extra
     rx = d.get("rx") or []
     if isinstance(rx, list) and len(rx) > RX_ROW_LIMIT:
         warnings.append(

@@ -6,17 +6,19 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from doctor_dictation.api import authorship, visit
+from doctor_dictation.api import sections as sections_api
 from doctor_dictation.api.formulary import use_clinic_layer
 from doctor_dictation.api.investigations import use_investigations
 from doctor_dictation.config import get_settings
 from doctor_dictation.core import (
-    doctor_generic, followup, formulary, investigations, patientswitch, promptrules, prose, spelled, tidy, vitals)
+    doctor_generic, followup, formulary, investigations, patientswitch, promptrules, prose, sections, spelled, tidy, vitals)
 from doctor_dictation.core.patientctx import patient_of
 from doctor_dictation.core.ops import apply_ops
 from doctor_dictation.core.correction import (
     changed_rx_rows,
     extract_correction,
     flag_unsure_rows,
+    LIST_FIELDS,
     item_key,
     match_by_generic,
     merge_form,
@@ -85,9 +87,14 @@ async def _validate(data, transcript, raw="", vitals_typed=False):
     return await asyncio.to_thread(validate_structured, data, transcript, raw, "", vitals_typed)
 
 
-async def _validate_draft(data, transcript, raw=""):
-    """_validate, then the cross-section cleanup and the length cap (never run on Save)."""
+async def _validate_draft(data, transcript, raw="", secs=sections.BUILT_INS):
+    """_validate, then the cross-section cleanup and the length cap (never run on Save). Added sections are filed
+    under ``extra`` first; switched-off built-ins are blanked."""
+    if isinstance(data, dict):
+        heads = sections.text_headings(secs)
+        data = sections.fold({k: v for k, v in data.items() if k != "extra"}, heads)   # the model answers in flat keys; its extra is never trusted
     structured, warnings = await _validate(data, transcript, raw)
+    sections.drop_off(structured, secs)
     warnings += tidy.tidy_sections(structured)
     structured["vitals"], ungrounded = vitals.ground(structured.get("vitals"), raw, transcript)   # never invented
     structured["investigations"] = [{**i, "canonical": "", "status": "", "source": "dictated"}   # a draft is never the
@@ -125,8 +132,10 @@ async def format_transcript(req: FormatRequest, _ix: None = Depends(use_investig
     normalized = await _normalize(raw)
     key = transcript_sha(normalized)
     sc = current_scope()
+    secs = sections_api.active()
+    prompt = SYSTEM_PROMPT + sections.format_rule(secs)
     ckey = (f"{sc.clinic_slug if sc else ''}:{formulary.active_layer().version}:{lexicon_identity()}:{key}:"
-            f"{transcript_sha(raw)[:16]}:{PROMPT_SHA}")   # per clinic, learned list, clinic list (shipped + overlay), raw wording
+            f"{transcript_sha(raw)[:16]}:{sections.signature(secs)}:{transcript_sha(prompt)[:12]}")   # per clinic, learned list, clinic list (shipped + overlay), raw wording
     hit = cache_get(ckey)
     if hit is not None:
         return _answer(hit["structured"], normalized, raw, engine=hit["engine"], warnings=hit.get("warnings", []),
@@ -135,7 +144,7 @@ async def format_transcript(req: FormatRequest, _ix: None = Depends(use_investig
     llm = make_llm(get_settings())
     if llm is None:
         drafted = fallback_format(normalized)
-        structured, warnings = await _validate_draft(drafted, normalized, raw)
+        structured, warnings = await _validate_draft(drafted, normalized, raw, secs)
         warnings += unparsed_notes(normalized, drafted["rx"]) + ([DEMO_WARNING] if is_demo(normalized.lower()) else [])
         engine = (f"fallback-rules+lexicon v{lexicon_version()} "
                   f"(set OPENAI_API_KEY for default LLM, or DEEPSEEK_API_KEY with LLM_PROVIDER=deepseek)")
@@ -146,7 +155,7 @@ async def format_transcript(req: FormatRequest, _ix: None = Depends(use_investig
         return _answer(structured, normalized, raw, engine=engine, warnings=warnings, grounding=grounding,
                        cached=False, transcript_sha256=key)
     base_messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": prompt},
         {"role": "user", "content": f"Raw Dictated Audio Transcript:\n\"\"\"\n{normalized}\n\"\"\""},
     ]
 
@@ -183,7 +192,7 @@ async def format_transcript(req: FormatRequest, _ix: None = Depends(use_investig
     except Exception as e:
         last_err = str(e)
     if best is not None:
-        structured, warnings = await _validate_draft(best[1], normalized, raw)
+        structured, warnings = await _validate_draft(best[1], normalized, raw, secs)
         repairs = max(0, llm_calls - 1)
         engine = (f"{llm.name}:{llm.model}+lexicon v{lexicon_version()}"
                   f"+loop{repairs}")
@@ -195,7 +204,7 @@ async def format_transcript(req: FormatRequest, _ix: None = Depends(use_investig
                        cached=False, transcript_sha256=key)
     # Graceful fallback so demo never blocks (still validated + cached)
     drafted = fallback_format(normalized)
-    structured, warnings = await _validate_draft(drafted, normalized, raw)
+    structured, warnings = await _validate_draft(drafted, normalized, raw, secs)
     warnings += unparsed_notes(normalized, drafted["rx"]) + ([DEMO_WARNING] if is_demo(normalized.lower()) else [])
     engine = f"fallback-after-error v{lexicon_version()}: {last_err}".strip()[:300]
     grounding = {"rounds": 0, "open_issues": open_issues(structured), "llm_calls": llm_calls}
@@ -249,6 +258,9 @@ async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use
             return denied
     previous = req.current_form if isinstance(req.current_form, dict) else {}
     current = investigations.flatten(previous)   # the model and apply_ops see test names, not items
+    secs = sections_api.active()
+    current, doc_heads = sections.unfold(current)   # added sections as flat keys, like findings
+    heads = {**sections.text_headings(secs), **doc_heads}
     text = (req.transcript or "").strip()
     normalized = await _normalize(text) if text else ""
     llm = make_llm(get_settings())
@@ -257,19 +269,20 @@ async def correct(req: CorrectRequest, request: Request, _ix: None = Depends(use
     engine = f"rules+lexicon v{lexicon_version()}"
     if llm is not None and normalized:
         try:
-            patch = await extract_correction(normalized, current, llm.complete_json)
+            patch = await extract_correction(normalized, current, llm.complete_json, sections.correction_rule(heads))
             llm_calls = 1
             engine = f"{llm.name}:{llm.model}+lexicon v{lexicon_version()}"
         except Exception as e:
             engine = f"rules-after-error v{lexicon_version()}: {e}".strip()[:300]
+    patch = {k: v for k, v in patch.items() if k != "extra"} if isinstance(patch, dict) else patch   # the model edits added sections by flat key only
     other = patientswitch.other_patient(text, patient_of(current), patch)   # raw text: the lexicon pass can turn a name into a drug
     patch, generic_notes = doctor_generic.patch_generics(current, patch, text, normalized)   # before apply_ops: only the whitelist is applied
-    current2, patch2, ops_notes, touched = apply_ops(current, patch)
+    current2, patch2, ops_notes, touched = apply_ops(current, patch, ("rx",) + LIST_FIELDS + tuple(heads))
     patch2, merge_warnings = resolve_blank_names(current2, patch2)
     patch2, same_notes, unsure = await asyncio.to_thread(match_by_generic, current2, patch2)  # brand <-> generic
     patch2, vital_notes = _ground_patch_vitals(patch2, text, normalized)
     structured, _warnings = await _validate(
-        strip_grounding_markers(merge_form(current2, patch2)), normalized, text,
+        sections.fold(strip_grounding_markers(merge_form(current2, patch2, LIST_FIELDS + tuple(heads))), heads), normalized, text,
         vitals_typed=True)  # vitals are on the sheet already, or patch values merge_vitals validated
     structured["investigations"] = investigations.reconcile(   # kept items keep status; new or changed are checked
         investigations.coerce_items(previous.get("investigations")), structured.get("investigations"), text, normalized)

@@ -220,7 +220,7 @@ def _merged_keys(current: dict, patch: dict):
     return keys
 
 
-def merge_form(current: dict, patch: dict) -> dict:
+def merge_form(current: dict, patch: dict, list_fields=LIST_FIELDS) -> dict:
     """Return a new form with `patch` applied on top of `current`."""
     cur = current if isinstance(current, dict) else {}
     pat = patch if isinstance(patch, dict) else {}
@@ -234,7 +234,7 @@ def merge_form(current: dict, patch: dict) -> dict:
             out["rx"] = _merge_rx(cur_val, pat_val)
         elif key == "vitals":
             out[key] = merge_vitals(cur_val, pat_val)  # field by field, never wholesale
-        elif key in LIST_FIELDS:
+        elif key in list_fields:
             out[key] = _upsert_list(cur_val, pat_val)
         elif key in SCALAR_FIELDS:
             out[key] = pat_val if pat_val else cur_val
@@ -448,7 +448,7 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
     return structured
 
 
-async def extract_correction(correction_text: str, current_form: dict, complete=None) -> dict:
+async def extract_correction(correction_text: str, current_form: dict, complete=None, extra_rule: str = "") -> dict:
     """Return a *patch* form extracted from a spoken correction.
 
     The LLM path is dependency-injected: the caller must pass an async
@@ -463,5 +463,5 @@ async def extract_correction(correction_text: str, current_form: dict, complete=
     """
     if complete is None or not (correction_text or "").strip():
         return {}
-    patch, _err = await complete(build_correction_messages(correction_text, current_form))
+    patch, _err = await complete(build_correction_messages(correction_text, current_form, extra_rule))
     return patch if isinstance(patch, dict) else {}

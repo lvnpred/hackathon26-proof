@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Clinic Workspace</title>
-<link rel="stylesheet" href="styles.css?v=14" />
+<link rel="stylesheet" href="styles.css?v=16" />
 <link rel="stylesheet" href="rx.css?v=10" />
 <link rel="stylesheet" href="ixlist.css?v=3" />
 <link rel="stylesheet" href="steps.css?v=2" />
@@ -62,10 +62,12 @@
     </div>
     <p id="addingBanner" class="adding-banner no-print" role="status" hidden></p>
     <p id="correctingCue" class="correcting-cue no-print" role="status" hidden></p>
+    <div id="cuePanel" class="cue-panel no-print" aria-label="What to dictate" hidden><ol id="cueList"></ol></div>
 
     <ol id="steps" class="stp-list" aria-label="Assistant progress"></ol>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
+    <ul id="emptyFlags" class="empty-flags no-print" role="status" hidden></ul>
     <div id="nameCheck" class="name-check no-print" role="alertdialog" aria-labelledby="nameCheckText" hidden><p id="nameCheckText"></p><button id="nameCheckNew" type="button"></button> <button id="nameCheckApply" type="button"></button></div>
     <div id="undoDict" class="undo-dict no-print" hidden><button id="undoDictBtn" type="button">Undo last dictation</button></div>
     <div id="error" class="error" role="alert" hidden>
@@ -124,26 +126,40 @@
       </div>
       </div>
       <div id="sheetBody">
-        <div class="sec-title">CHIEF COMPLAINTS &amp; BRIEF HISTORY</div>
-        <ul id="pCc" class="editable-list prose-list"></ul>
-        <p id="pCcNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
-        <div class="sec-title">DIAGNOSIS / CLINICAL IMPRESSION</div>
-        <ul id="pDx" class="editable-list prose-list"></ul>
-        <p id="pDxNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
-        <div class="sec-title">INVESTIGATIONS ADVISED</div>
-        <ul id="pIx" class="ix-list"></ul>
-        <div class="sec-title">FINDINGS</div>
-        <ul id="pFx" class="editable-list prose-list"></ul>
-        <p id="pFxNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
-        <div class="sec-title">Rx (MEDICATIONS)</div>
-        <table class="rx">
-          <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th class="check">Check</th><th></th></tr></thead>
-          <tbody id="pRx"></tbody>
-        </table>
-        <div class="sec-title">DIETARY &amp; GENERAL ADVICE</div>
-        <ul id="pAdv" class="editable-list"></ul>
-        <div class="sec-title">REVIEW / FOLLOW-UP</div>
-        <div class="rev-line"><div id="pRev" class="editable" contenteditable="true"></div><span id="pRevDate" class="rev-date" aria-live="polite"></span></div>
+        <div class="sec" data-sec="complaints">
+          <div class="sec-title">CHIEF COMPLAINTS &amp; BRIEF HISTORY</div>
+          <ul id="pCc" class="editable-list prose-list"></ul>
+          <p id="pCcNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
+        </div>
+        <div class="sec" data-sec="diagnosis">
+          <div class="sec-title">DIAGNOSIS / CLINICAL IMPRESSION</div>
+          <ul id="pDx" class="editable-list prose-list"></ul>
+          <p id="pDxNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
+        </div>
+        <div class="sec" data-sec="investigations">
+          <div class="sec-title">INVESTIGATIONS ADVISED</div>
+          <ul id="pIx" class="ix-list"></ul>
+        </div>
+        <div class="sec" data-sec="findings">
+          <div class="sec-title">FINDINGS</div>
+          <ul id="pFx" class="editable-list prose-list"></ul>
+          <p id="pFxNote" class="prose-note no-print" role="status" aria-live="polite" hidden></p>
+        </div>
+        <div class="sec" data-sec="rx">
+          <div class="sec-title">Rx (MEDICATIONS)</div>
+          <table class="rx">
+            <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Timing</th><th>Duration</th><th>Instructions</th><th class="check">Check</th><th></th></tr></thead>
+            <tbody id="pRx"></tbody>
+          </table>
+        </div>
+        <div class="sec" data-sec="advice">
+          <div class="sec-title">DIETARY &amp; GENERAL ADVICE</div>
+          <ul id="pAdv" class="editable-list"></ul>
+        </div>
+        <div class="sec" data-sec="review">
+          <div class="sec-title">REVIEW / FOLLOW-UP</div>
+          <div class="rev-line"><div id="pRev" class="editable" contenteditable="true"></div><span id="pRevDate" class="rev-date" aria-live="polite"></span></div>
+        </div>
         <div class="disclaimer">AI draft — doctor must verify before signing. STT + LLM may mishear drug names.</div>
       </div>
     </section>
@@ -299,7 +315,9 @@
 <script src="ixlist.js?v=3"></script>
 <script src="savepdf.js?v=2"></script>
 <script src="dictguard.js?v=2"></script>
-<script src="app.js?v=53"></script>
+<script src="sheetsecs.js?v=2"></script>
+<script src="cues.js?v=2"></script>
+<script src="app.js?v=55"></script>
 <script src="lhlines.js?v=3"></script>
 <script src="letterhead.js?v=13"></script>
 <script src="listedit.js?v=1"></script>

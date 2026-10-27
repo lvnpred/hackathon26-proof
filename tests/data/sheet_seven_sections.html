@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Patient Clinical Summary &amp; Prescription</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm 16mm;
+    @top-left { content: "Anita Rao | OP/IP No: OP 9 | 26 Oct 2026"; font-size: 9px; color: #444; }
+    @top-right { content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #444; } }
+  @page :first { margin: 18mm 14mm 16mm; @top-left { content: none; } @top-right { content: none; }
+     }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; }
+  .lh { margin-bottom: 4mm; }
+  tr { break-inside: avoid; }
+  h1 { font-size: 18px; text-align: center; text-transform: uppercase; margin: 0 0 6px; }
+  .pt { display: flex; justify-content: space-between; gap: 8mm; margin-bottom: 8px; }
+  .pt-l { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .pt-name { font-size: 15px; font-weight: bold; }
+  .pt-op { font-size: 11px; }
+  .pt-r { flex: 0 1 38%; text-align: right; }
+  .pt-r .vitals { text-align: right; margin: 0; }
+  .sec-title { font-size: 12px; font-weight: bold; text-transform: uppercase;
+                border-bottom: 1px solid #999; margin: 10px 0 4px; padding-bottom: 2px; break-after: avoid; }
+  ul { margin: 0 0 6px; padding-left: 20px; }
+  .prose p { margin: 0 0 4px; }
+  .inline-list { margin: 0 0 6px; line-height: 1.6; }
+  .inline-list .item { display: inline-block; }
+  .inline-list .sep { display: inline-block; width: 0; height: 0; border: 3px solid #111; transform: rotate(45deg);
+                       vertical-align: middle; margin: 0 8px; }
+  .vitals { text-align: center; font-size: 12px; margin: -4px 0 8px; }
+  .rev-date { color: #333; }
+  table.rx { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.rx th, table.rx td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
+  .dir { white-space: nowrap; }
+  .gen { font-size: 10px; color: #444; margin-top: 1px; }
+  .disclaimer { margin-top: 12px; font-size: 11px; color: #555; font-style: italic; break-before: avoid; }
+  .credit { margin-top: 4px; font-size: 10px; color: #697586; text-align: right; break-before: avoid; }
+  .clinic-head { text-align: center; margin-bottom: 12px; }
+  .clinic-rule { border: 0; border-top: 1px solid #999; margin: 6px 0; }
+  table.clinic-doctors, table.lh-doctors { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.clinic-doctors td, table.lh-doctors td { width: 50%; vertical-align: top; text-align: left; padding: 0 6px 6px 0; }
+  .clinic-doctor { font-size: 13px; font-weight: bold; }
+  .clinic-qual { font-size: 11px; color: #555; }
+  .clinic-reg { font-size: 11px; color: #333; }
+  .clinic-name { font-size: 18px; font-weight: bold; }
+  .clinic-meta, .clinic-addr { font-size: 11px; color: #333; }
+</style>
+</head>
+<body>
+
+<h1>PATIENT CLINICAL SUMMARY &amp; PRESCRIPTION</h1>
+<div class="pt"><div class="pt-l"><div class="pt-name">Anita Rao · 34 F · 26 Oct 2026</div><div class="pt-op">OP/IP No: OP 9</div></div><div class="pt-r"><div class="vitals">BP 120/80</div></div></div>
+<div class="sec-title">Chief Complaints &amp; Brief History</div><div class="prose"><p>Fever for two days</p><p>Body ache</p></div>
+<div class="sec-title">Diagnosis / Clinical Impression</div><div class="prose"><p>Viral fever</p></div>
+<div class="sec-title">Investigations Advised</div><div class="inline-list"><span class="item">CBC</span> <span class="sep"></span> <span class="item">CRP</span></div>
+<div class="sec-title">Findings</div><div class="prose"><p>Throat congested</p></div>
+<div class="sec-title">Rx (MEDICATIONS)</div><table class="rx">
+<thead><tr><th>#</th><th>Medicine</th><th>Directions</th><th>Instructions</th></tr></thead>
+<tbody><tr><td>1</td><td>Tab PARACETAMOL 500 mg</td><td><span class="dir">1-0-1</span> · <span class="dir">after food</span> · <span class="dir">3 days</span></td><td>With water</td></tr><tr><td>2</td><td>Tab CETIRIZINE 10 mg</td><td><span class="dir">0-0-1</span> · <span class="dir">5 days</span></td><td></td></tr></tbody>
+</table>
+<div class="sec-title">Dietary &amp; General Advice</div><ul><li>Rest</li></ul>
+<div class="sec-title">Review / Follow-up</div><div class="prose"><p>After 1 week <span class="rev-date">(Mon 2 Nov 2026)</span></p></div>
+<div class="disclaimer">AI draft — doctor must verify before signing. STT + LLM may mishear drug names.</div>
+<div class="credit">Powered By Lightday</div>
+</body>
+</html>

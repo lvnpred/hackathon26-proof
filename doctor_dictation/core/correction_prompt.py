@@ -64,13 +64,13 @@ CORRECTION_INSTRUCTION = (
 )
 
 
-def build_correction_messages(correction_text: str, current_form: dict) -> list:
+def build_correction_messages(correction_text: str, current_form: dict, extra_rule: str = "") -> list:
     """LLM messages: the current form plus the new dictation to apply."""
     form = dict(current_form) if isinstance(current_form, dict) else {}
     if isinstance(form.get("rx"), list):          # the model never sees suggestions or the pending flag
         form["rx"] = [{k: v for k, v in r.items() if k not in _HIDDEN} if isinstance(r, dict) else r for r in form["rx"]]
     return [
-        {"role": "system", "content": CORRECTION_INSTRUCTION},
+        {"role": "system", "content": CORRECTION_INSTRUCTION + extra_rule},
         {"role": "user", "content": json.dumps(
             {"current_form": form,
              "correction": correction_text or ""},

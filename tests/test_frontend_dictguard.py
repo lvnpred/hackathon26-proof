@@ -160,7 +160,7 @@ def _correct(answer, pick="apply"):
       const noop = () => {}, wordCount = () => 3, stepCounts = () => ({}), openRows = () => [], warningNote = () => "", errorMessage = (e) => e.message;
       const renderTranscript = noop, setWorking = noop, setStep = noop, markDirty = noop, hideBlockPanel = noop, renderCheck = noop, showError = noop;
       const setStatus = (m) => { log.status = m; };
-      const CORRECT_TIMEOUT_MS = 1, RxState = { carryRowids: () => ["r1"] }, RxView = { focusFirst: noop }, Sections = { showProseCheck: noop };
+      const CORRECT_TIMEOUT_MS = 1, RxState = { carryRowids: () => ["r1"] }, RxView = { focusFirst: noop }, Sections = { showProseCheck: noop }, Cues = { flagEmpty: noop };
       const rxBody = { querySelectorAll: () => [] }, $ = (id) => ({ id }), text = () => "Suresh Babu";
       const renderSheet = (s) => log.render.push(s);
       const postJson = async () => { if (!answer) throw new Error("boom"); return answer; };

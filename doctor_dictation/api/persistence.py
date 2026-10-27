@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from doctor_dictation import db as dbmod
 from doctor_dictation.api import authorship, visit
+from doctor_dictation.api import sections as sections_api
 from doctor_dictation.api.pastday import is_past, past_refusal, visit_day, visit_day_iso
 from doctor_dictation.api.formulary import learn_doctor_generics, learn_from_save, use_clinic_layer
 from doctor_dictation.api.investigations import remember_from_save, use_investigations
@@ -157,6 +158,7 @@ def _pdf_inputs(conn, structured, day, encounter_id):
         "opNo": structured.get("opNo") or "",
         "patientName": structured.get("patientName") or "",
         "profile": adb.print_profile(conn, encounter_id),
+        "sections": sections_api.active(),
     }
     layout = None
     try:

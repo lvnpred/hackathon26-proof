@@ -3,6 +3,7 @@
 from html import escape
 
 from doctor_dictation.core.followup import date_label
+from doctor_dictation.core.sections import layout
 
 
 def esc(value) -> str:
@@ -81,7 +82,7 @@ def _rx_row(index: int, row: dict, with_instructions: bool) -> str:
     return f"<tr><td>{index}</td><td>{esc(medicine)}{gen}</td><td>{directions}</td>{last}</tr>"
 
 
-def rx_section(rx) -> str:
+def rx_section(rx, title: str = "Rx (MEDICATIONS)") -> str:
     """The medicines table; a row prints only when it is a dict with a name or strength. The Instructions column
     prints only when some printed row has instructions."""
     rows = [r for r in (rx if isinstance(rx, list) else [])
@@ -90,7 +91,7 @@ def rx_section(rx) -> str:
         return ""
     with_instructions = any(str(r.get("instructions") or "").strip() for r in rows)
     extra = "<th>Instructions</th>" if with_instructions else ""
-    return ('<div class="sec-title">Rx (MEDICATIONS)</div><table class="rx">\n'
+    return (f'<div class="sec-title">{title}</div><table class="rx">\n'
             f"<thead><tr><th>#</th><th>Medicine</th><th>Directions</th>{extra}</tr></thead>\n"
             "<tbody>" + "".join(_rx_row(i, r, with_instructions) for i, r in enumerate(rows, 1)) + "</tbody>\n</table>")
 
@@ -134,3 +135,25 @@ def review_section(title: str, review, review_date) -> str:
     label = date_label(review_date)
     when = f' <span class="rev-date">({esc(label)})</span>' if label else ""
     return f'<div class="sec-title">{title}</div><div class="prose"><p>{esc(review)}{when}</p></div>'
+
+
+def sections_html(structured: dict, secs) -> str:
+    """Every section the sheet shows, in list order, one string per section joined by newlines. Headings are text."""
+    s = structured
+    extra = s.get("extra") if isinstance(s.get("extra"), dict) else {}
+    out = []
+    for key, heading, kind in layout(secs, s):
+        title = esc(heading)
+        if kind == "prose":
+            out.append(prose_section(title, s.get(key)))
+        elif kind == "investigations":
+            out.append(inline_section(title, s.get(key)))
+        elif kind == "medication":
+            out.append(rx_section(s.get(key), title))
+        elif kind == "list":
+            out.append(list_section(title, s.get(key)))
+        elif kind == "review":
+            out.append(review_section(title, s.get(key), s.get("review_date")))
+        else:
+            out.append(prose_section(title, (extra.get(key) or {}).get("lines")))
+    return "\n".join(out)

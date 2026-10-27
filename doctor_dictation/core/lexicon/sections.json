@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "sections": [
+    {"key": "complaints", "heading": "Chief Complaints & Brief History", "cue": "Complaints: fever with chills for 3 days. History: known diabetic", "kind": "prose", "order": 10, "on": true},
+    {"key": "diagnosis", "heading": "Diagnosis / Clinical Impression", "cue": "Diagnosis: viral fever. Impression: likely dengue", "kind": "prose", "order": 20, "on": true},
+    {"key": "investigations", "heading": "Investigations Advised", "cue": "Investigations: CBC, serum creatinine, USG abdomen", "kind": "investigations", "order": 30, "on": true},
+    {"key": "findings", "heading": "Findings", "cue": "Findings: pedal oedema present", "kind": "prose", "order": 40, "on": true},
+    {"key": "rx", "heading": "Rx (MEDICATIONS)", "cue": "Medication: Tab. Dolo 650, 1-0-1, after food, 5 days", "kind": "medication", "order": 50, "on": true},
+    {"key": "advice", "heading": "Dietary & General Advice", "cue": "Advice: plenty of fluids, low salt diet", "kind": "list", "order": 60, "on": true},
+    {"key": "review", "heading": "Review / Follow-up", "cue": "Review: after 1 week with reports", "kind": "review", "order": 70, "on": true}
+  ]
+}

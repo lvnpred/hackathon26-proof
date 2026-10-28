@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from app.journey.handover import draft as draft_handover
 from app.journey.rx import DEMO_DOCUMENT, from_document, key_of
 from app.journey.schedule import build as build_schedule
 from app.journey.stories import CARE_TEMPLATES
@@ -20,6 +21,7 @@ DOCTOR = "Dr. A. Rao (synthetic)"
 SCRUB = "Nurse Priya (synthetic)"
 WARD = "Nurse Meena (synthetic)"
 RELIEF = "Nurse Joseph (synthetic)"
+NIGHT = "Nurse Kavya (synthetic)"
 
 ORDERS = {
     "doses": [
@@ -96,6 +98,18 @@ def play_journey(store, episode_id: str, raise_nudges: Callable) -> None:
     answer("dose_overdue", WARD, "Dose given and logged at 18:35.", 33 * H + 35 * M)
     obs(124, 78, 82, 98, 37.2, 33 * H + 36 * M)
     answer("obs_overdue", WARD, "Set taken at 18:36.", 33 * H + 36 * M)
+
+    # 19:00 shift change: the day nurse hands over; the template is used so the demo runs offline.
+    label = store.get_episode(episode_id)["label"]
+    drafted = put(
+        "handover.drafted",
+        draft_handover(
+            store.events(episode_id), patient=label, since_ms=22 * H, at_ms=34 * H,
+            from_nurse=WARD, to_nurse=NIGHT, settings=None, use_model=False,
+        ),
+        34 * H,
+    )
+    put("handover.accepted", {"handover_id": drafted["id"], "by": NIGHT}, 34 * H + 5 * M)
 
     # Act 3, Day 1 evening to Day 3: the discharge card, then home (post-op day 2).
     template = CARE_TEMPLATES["hernia-repair"]

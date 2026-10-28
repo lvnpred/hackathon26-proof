@@ -181,7 +181,7 @@ def test_the_demo_completes_all_three_stories_with_corrections_kept(tmp_path):
     eid = _episode(api)
     view = api.post(f"/journey/episodes/{eid}/play").json()
     assert [(s["who"], s["done"], s["total"]) for s in view["stories"]] == [
-        ("Doctor", 4, 4), ("Nurse", 4, 4), ("Patient", 4, 4),
+        ("Doctor", 4, 4), ("Nurse", 5, 5), ("Patient", 4, 4),
     ]
     assert sorted(_kinds(view)) == ["help_requested", "warning_sign_ticked"]
     assert view["ics_url"] == f"/journey/episodes/{eid}/reminders.ics"  # kept after a reload
@@ -290,3 +290,93 @@ def test_rule_functions_are_pure_over_events():
     ]
     assert rules.evaluate(events, 6 * H) == []
     assert [n["kind"] for n in rules.evaluate(events, 7 * H)] == ["dose_overdue"]
+
+
+# --- shift handover (Muse Spark Open may reword, never add) -------------------
+
+def _ward(api) -> tuple[str, str]:
+    eid = _episode(api)
+    base = f"/journey/episodes/{eid}"
+    api.post(f"{base}/orders", json={**ORDERS, "at_ms": 0})
+    api.post(f"{base}/dose", json={"name": "Paracetamol", "amount": "1 g", "by": "Nurse A", "at_ms": H})
+    api.post(f"{base}/obs", json={"sbp": 86, "dbp": 50, "hr": 80, "by": "Nurse A", "at_ms": 2 * H})
+    return eid, base
+
+
+def _handover(api, base, **extra):
+    body = {"from_nurse": "Nurse A", "to_nurse": "Nurse B", "at_ms": 3 * H, **extra}
+    return api.post(f"{base}/handover", json=body).json()["handover"]
+
+
+def test_handover_template_lists_recorded_facts_with_their_events(tmp_path):
+    api = _client(tmp_path)
+    _, base = _ward(api)
+    handover = _handover(api, base)
+    texts = [line["text"] for line in handover["lines"]]
+    assert "Day 0 10:00: Paracetamol 1 g logged by Nurse A." in texts
+    assert "Paracetamol is ordered every 6 h; by that order the next is due Day 0 16:00." in texts
+    assert "Still open: Systolic BP 86 is below the limit of 90 set by Dr. Test." in texts
+    assert all(line["evidence"] for line in handover["lines"])
+    assert handover["wording"] == "template" and handover["model_note"] == "no Spark Open key"
+
+
+def test_handover_keeps_a_spark_open_rewording_that_adds_nothing(tmp_path):
+    api = _client(tmp_path)
+    _, base = _ward(api)
+    seen = {}
+
+    def complete(messages, tools):
+        seen["prompt"] = messages[0]["content"]
+        return {"content": "Paracetamol 1 g was logged at Day 0 10:00 by Nurse A. Systolic BP 86 is below the limit of 90."}
+
+    api.app.state.spark_open_complete = complete
+    handover = _handover(api, base)
+    assert "Do not add any fact" in seen["prompt"] and "Paracetamol 1 g logged" in seen["prompt"]
+    assert handover["wording"] == "muse-spark-open" and handover["text"].startswith("Paracetamol 1 g")
+
+
+def test_handover_rejects_a_rewording_with_a_new_number_or_advice(tmp_path):
+    api = _client(tmp_path)
+    _, base = _ward(api)
+    for reply, why in [
+        ("Paracetamol 2 g was logged by Nurse A.", "added a number, a medicine or an instruction"),
+        ("We recommend a fluid bolus for the BP of 86.", "advice wording"),
+        ("Ondansetron was logged by Nurse A.", "added a number, a medicine or an instruction"),
+    ]:
+        api.app.state.spark_open_complete = lambda messages, tools, reply=reply: {"content": reply}
+        handover = _handover(api, base)
+        assert handover["wording"] == "template" and handover["text"] is None
+        assert handover["model_note"] == why, reply
+
+
+def test_handover_falls_back_when_the_model_call_fails(tmp_path):
+    api = _client(tmp_path)
+    _, base = _ward(api)
+
+    def broken(messages, tools):
+        raise RuntimeError("down")
+
+    api.app.state.spark_open_complete = broken
+    handover = _handover(api, base)
+    assert handover["wording"] == "template" and handover["model_note"] == "model call failed (RuntimeError)"
+
+
+def test_accepting_a_handover_completes_the_nurse_story(tmp_path):
+    api = _client(tmp_path)
+    eid, base = _ward(api)
+    handover = _handover(api, base)
+    view = api.post(f"{base}/handover/{handover['id']}/accept", json={"by": "Nurse B"}).json()
+    assert view["handover"]["accepted_by"] == "Nurse B"
+    nurse = next(story for story in view["stories"] if story["id"] == "nurse")
+    assert next(step for step in nurse["steps"] if step["id"] == "handover")["done"] is True
+    assert api.post(f"{base}/handover/nope/accept", json={"by": "x"}).status_code == 404
+    second = _handover(api, base, at_ms=5 * H)
+    assert second["since"] == "Day 0 12:00"  # starts where the last handover ended
+
+
+def test_handover_after_discharge_drops_ward_due_times(tmp_path):
+    api = _client(tmp_path)
+    _, base = _ward(api)
+    api.post(f"{base}/discharge-card", json={"by": "Dr. Test", "at_ms": 2 * H + 1})
+    texts = [line["text"] for line in _handover(api, base)["lines"]]
+    assert not any("next is due" in text for text in texts)

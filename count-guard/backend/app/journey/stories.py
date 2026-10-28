@@ -28,6 +28,7 @@ STORIES = (
             ("doses", "Log each dose given", "dose.given", "/nurse"),
             ("obs", "Log observations", "obs.recorded", "/nurse"),
             ("nudges", "Answer the nudges", "nudge.seen", "/nurse"),
+            ("handover", "Hand over the shift", "handover.accepted", "/nurse"),
         ),
     },
     {
@@ -84,6 +85,10 @@ def plain(event: dict) -> str:
         return f"Nudge to {p.get('to')}: {p.get('says')}"
     if kind == "nudge.seen":
         return f"{p.get('by')} answered a nudge: {(p.get('note') or 'seen').rstrip('.')}."
+    if kind == "handover.drafted":
+        return f"Handover drafted by {p.get('from')} for {p.get('to')} ({p.get('wording')}, {len(p.get('lines') or [])} lines)."
+    if kind == "handover.accepted":
+        return f"{p.get('by')} accepted the handover."
     if kind == "reminders.added":
         return f"Dose reminders added for {p.get('count')} medicines."
     if kind == "discharge.card":

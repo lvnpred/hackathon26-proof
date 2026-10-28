@@ -65,6 +65,7 @@ The doctor's, nurse's and patient's stories on one timeline. The plan is `docs/h
 | Three stories, clinic discharge template, audit rows | 2026-10-28 | `backend/app/journey/stories.py` |
 | Journey routes and the three-act play | 2026-10-28 | `backend/app/journey/api.py`, `play.py` |
 | Strip photo read by Muse Spark 1.3 | 2026-10-28 | `backend/app/adapters/spark.py` |
+| Shift handover: timeline template, Muse Spark Open rewording behind the wording check | 2026-10-28 | `backend/app/journey/handover.py`, `frontend/src/screens/NurseHandover.jsx` |
 | Journey tests | 2026-10-28 | `backend/tests/test_journey.py` |
 
 Not built yet: a recorded prop-tray video, a paid SAM measurement, a public GitHub push, the 3-minute video, the X post. Covasant IP check: not applicable.

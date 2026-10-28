@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PageLead, Pill, Shell } from "../App";
 import { num, subtitle, useJourney } from "../journey";
 import { OrdersSummary } from "./DoctorOrders";
+import NurseHandover from "./NurseHandover";
 
 const NURSE = "Nurse Meena (synthetic)";
 const OBS = [
@@ -82,6 +83,7 @@ export default function Nurse() {
             {view && inbox.length === 0 && <p className="empty">No open nudges for the nurse.</p>}
             {inbox.map((nudge) => <Nudge key={nudge.id} nudge={nudge} busy={!ready} act={act} />)}
           </section>
+          <NurseHandover handover={view?.handover} busy={!ready} act={act} />
           <section className="card">
             <p className="label">Last entries</p>
             {recent.length === 0 && <p className="empty small">Nothing recorded yet.</p>}

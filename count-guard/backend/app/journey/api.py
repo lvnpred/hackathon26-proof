@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.adapters.spark import SparkAdapter
 from app.config import BANNER
 from app.journey import nudges as rules
+from app.journey.handover import draft as draft_handover
 from app.journey.play import play_journey
 from app.journey.rx import DEMO_DOCUMENT, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
@@ -98,6 +99,17 @@ class HelpIn(At):
     says: str = Field(min_length=1, max_length=300)
 
 
+class HandoverIn(At):
+    from_nurse: str = Field(min_length=1, max_length=80)
+    to_nurse: str = Field(min_length=1, max_length=80)
+    since_ms: int | None = Field(default=None, ge=0)
+    use_model: bool = True
+
+
+class AcceptIn(Strict):
+    by: str = Field(min_length=1, max_length=80)
+
+
 class CheckinIn(At):
     day: int = Field(ge=1, le=60)
     feels: str = Field(min_length=1, max_length=80)
@@ -142,6 +154,11 @@ def view(request: Request, episode_id: str) -> dict:
     rx = _latest(events, "rx.ordered")
     card = _latest(events, "discharge.card")
     orders = _latest(events, "ward.orders_set")
+    handover = _latest(events, "handover.drafted")
+    accepted = [e for e in events if e["event_type"] == "handover.accepted"]
+    if handover:
+        took = next((e for e in accepted if e["payload"]["handover_id"] == handover["id"]), None)
+        handover = {**handover["payload"], "id": handover["id"], "accepted_by": took["payload"]["by"] if took else None}
     return {
         "episode": episode,
         "banner": BANNER,
@@ -150,6 +167,7 @@ def view(request: Request, episode_id: str) -> dict:
         "schedule": build_schedule(rx["payload"]) if rx else [],
         "orders": orders["payload"] if orders else None,
         "card": card["payload"] if card else None,
+        "handover": handover,
         "strips": [e["payload"] for e in visible_events(events) if e["event_type"] == "brownbag.med_found"],
         "nudges": [
             {**e["payload"], "id": e["id"], "when": clock(e["ts_ms"])} for e in rules.open_nudges(events)
@@ -314,6 +332,41 @@ def nudge_seen(episode_id: str, nudge_id: str, body: SeenIn, request: Request) -
         raise HTTPException(status_code=404, detail="Nudge not found")
     payload = {"nudge_id": nudge_id, "by": body.by, "note": body.note}
     return _act(request, episode_id, "nudge.seen", payload, None)
+
+
+@router.post("/handover")
+def handover(episode_id: str, body: HandoverIn, request: Request) -> dict:
+    """Draft the shift handover. Muse Spark Open rewords it only when the wording check passes."""
+    episode = _require(request, episode_id)
+    store = _store(request)
+    at = _at(store, episode_id, body.at_ms)
+    events = store.events(episode_id)
+    since = body.since_ms
+    if since is None:  # from the last handover, else from the ward orders
+        earlier = [e for e in events if e["event_type"] == "handover.drafted"]
+        orders = _latest(events, "ward.orders_set")
+        since = earlier[-1]["ts_ms"] if earlier else (orders["ts_ms"] if orders else 0)
+    payload = draft_handover(
+        events,
+        patient=episode["label"],
+        since_ms=since,
+        at_ms=at,
+        from_nurse=body.from_nurse,
+        to_nurse=body.to_nurse,
+        settings=request.app.state.settings,
+        use_model=body.use_model,
+        complete=getattr(request.app.state, "spark_open_complete", None),
+    )
+    return _act(request, episode_id, "handover.drafted", payload, at)
+
+
+@router.post("/handover/{handover_id}/accept")
+def accept_handover(episode_id: str, handover_id: str, body: AcceptIn, request: Request) -> dict:
+    _require(request, episode_id)
+    drafted = _store(request).get_event(handover_id)
+    if drafted is None or drafted["episode_id"] != episode_id or drafted["event_type"] != "handover.drafted":
+        raise HTTPException(status_code=404, detail="Handover not found")
+    return _act(request, episode_id, "handover.accepted", {"handover_id": handover_id, "by": body.by}, None)
 
 
 @router.post("/discharge-card")

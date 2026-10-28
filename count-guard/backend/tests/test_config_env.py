@@ -1,4 +1,4 @@
-"""The shared .env reads the same in both apps: within one file the last line wins."""
+"""The shared .env reads the same in both apps: both use python-dotenv, so the last line wins."""
 
 from __future__ import annotations
 

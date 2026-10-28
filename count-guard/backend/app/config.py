@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import dotenv
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 # The hackathon26 workspace holds the .env shared with Doctor Dictation.
 WORKSPACE_ROOT = REPO_ROOT.parent
@@ -21,23 +23,10 @@ SAM_CONCEPTS = (
 
 
 def load_dotenv(path: Path | None = None) -> None:
-    """Load KEY=VALUE lines. Does not override variables already set.
-
-    Within one file the last line for a key wins, as python-dotenv does for Doctor Dictation,
-    so the shared .env means the same thing to both apps.
-    """
+    """Load a .env file with python-dotenv, as Doctor Dictation does. Variables already set are kept."""
     env_path = path or REPO_ROOT / ".env"
-    if not env_path.is_file():
-        return
-    found: dict[str, str] = {}
-    for raw in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        found[key.strip()] = value.strip().strip("'\"")
-    for key, value in found.items():
-        os.environ.setdefault(key, value)
+    if env_path.is_file():
+        dotenv.load_dotenv(env_path, override=False)
 
 
 @dataclass(frozen=True)

@@ -1,2 +1,3 @@
 # Test and development tools (pip install -e ".[dev]").
 pytest>=8
+pypdf>=6       # tests/test_letterhead_pdf.py reads and writes PDFs

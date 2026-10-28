@@ -6,7 +6,7 @@ import json
 
 from .promptrules import SPELLED_RULE, rules_text
 
-_HIDDEN = ("generic_suggestion", "generic_suggestion_unknown", "generic_pending")
+_HIDDEN = ("generic_suggestion", "generic_suggestion_unknown", "generic_pending", "typed_heard")
 
 CORRECTION_INSTRUCTION = (
     "You are applying a spoken correction to an existing prescription form. "

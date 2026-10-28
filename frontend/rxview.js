@@ -145,11 +145,12 @@ window.RxView = (function () {
       onClose: () => { const t = tr.querySelector('[data-action="spell"]') || tr.querySelector(".rx-state"); if (t) t.focus(); } });
   }
 
-  async function useName(tr, raw) {
+  async function useName(tr, raw, undo) {
     const r = rx(tr), rowid = tr.dataset.rowid;
     if (r.checking || H.working() || viewOnly()) return;
     const name = RxState.cleanTyped(raw), problem = RxState.typedProblem(name);
     if (problem) { if (SpellModal.isOpenFor(rowid)) SpellModal.say(rowid, problem, true); else { r.note = problem; renderRow(tr); } return; }
+    const carry = undo ? "" : RxState.typedFrom(r.meta, val(tr, "name"));   // the words this answer replaces; Undo of a spelling means they were right
     const tok = ++seq, before = H.snapshot(tr), was = H.confirmed().has(rowid), mtok = SpellModal.tokenFor(rowid);
     r.req = tok; r.checking = true; r.note = ""; SpellModal.say(rowid, ""); SpellModal.setChecking(rowid, true); renderRow(tr); sync();
     const fail = (m) => {
@@ -166,7 +167,7 @@ window.RxView = (function () {
       if (typeof row.instructions === "string") setCell(tr, "instructions", row.instructions);         // form, strength, dose, timing, duration stay as dictated
       tr.dataset.status = typeof row.status === "string" ? row.status : "";
       tr.dataset.lexicon = typeof row.lexicon_match === "string" ? row.lexicon_match : "";
-      r.meta = RxState.metaOf(row); r.checking = false; r.how = ""; r.note = "";
+      r.meta = RxState.metaOf(row); r.meta.typed_heard = carry; r.checking = false; r.how = ""; r.note = "";
       if (RxState.afterSpell(row.status) === "you") { H.confirmed().add(rowid); r.how = "spell"; stripMarker(tr); }   // the doctor chose the name: the check-row marker goes
       // (confirmed is updated BEFORE the render, or "you chose" is reset)
       else { H.confirmed().delete(rowid); r.note = 'Name changed to "' + val(tr, "name") + '". It still needs your decision.'; }
@@ -199,7 +200,7 @@ window.RxView = (function () {
     const a = b.dataset.action;
     if (a === "chip") pickChip(tr, b.dataset.value);
     else if (a === "spell") openSpell(tr);
-    else if (a === "dym" || a === "spelled-undo") useName(tr, b.dataset.value);   // Undo of a spelling: the heard words, checked like any typed name
+    else if (a === "dym" || a === "spelled-undo") useName(tr, b.dataset.value, a === "spelled-undo");   // Undo of a spelling: the heard words, checked like any typed name
   }
   function onKey(e) {                              // ArrowLeft / ArrowRight step between a row's buttons; Tab and Shift+Tab stay native
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
@@ -252,6 +253,7 @@ window.RxView = (function () {
     const w = { heard: s(m.heard), lookalike: s(m.lookalike) };
     if (m.generic_source === "doctor") { w.generic = s(m.generic); w.generic_source = "doctor"; w.generic_pending = m.generic_pending === true; }
     if (s(m.generic_suggestion)) w.generic_suggestion = m.generic_suggestion;
+    if (s(m.typed_heard).trim()) w.typed_heard = m.typed_heard;         // what a hand edit replaced: the save may learn the pair
     if (s(m.spelled_heard)) w.spelled_heard = m.spelled_heard;          // a correction keeps the Undo on rows it leaves alone
     return w;
   };

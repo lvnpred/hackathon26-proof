@@ -281,3 +281,32 @@ def test_a_chip_tap_on_a_view_only_row_changes_nothing():
       click(s.querySelector('[data-action="chip"]'));
       console.log(JSON.stringify([cell(s, "strength").textContent, confirmed.has("16"), RxView.meta(s).how]));""")
     assert r == ["15 mg", False, ""]
+
+
+def test_a_typed_name_sends_the_dictated_name_as_typed_heard():
+    r = _run("""
+      const tr = mkRow("1", "unknown-medicine", { name: "Urimacks" }, { name: "Urimacks" });
+      cell(tr, "name").textContent = "Urimax"; RxView.onEdit(tr, cell(tr, "name"));
+      console.log(JSON.stringify({ wire: RxView.wire(tr) }));""")
+    assert r["wire"] == {"heard": "", "lookalike": "", "typed_heard": "Urimacks"}
+
+
+def test_use_this_in_spell_it_keeps_the_heard_words_and_its_undo_clears_them():
+    r = _run("""
+      const tr = mkRow("1", "unknown-medicine", { name: "Urimacks" }, { name: "Urimacks" });
+      await openPanel(tr); await useTyped("Urimax");
+      await reply({ name: "Urimax", status: "unknown-medicine", heard: "" });
+      const afterUse = RxView.meta(tr).typed_heard, wire = RxView.wire(tr);
+      const sp = mkRow("2", "unknown-medicine", { name: "Silodal" }, { name: "Silodal", spelled_heard: "Cello dial" });
+      click(sp.querySelector('[data-action="spelled-undo"]'));
+      await reply({ name: "Cello dial", status: "unknown-medicine" });
+      console.log(JSON.stringify({ after_use: afterUse, wire, after_undo: RxView.meta(sp).typed_heard }));""")
+    assert r["after_use"] == "Urimacks" and r["wire"]["typed_heard"] == "Urimacks"
+    assert r["after_undo"] == ""
+
+
+def test_an_unedited_row_sends_no_typed_heard():
+    r = _run("""
+      const tr = mkRow("1", "unknown-medicine", { name: "Urimacks" }, { name: "Urimacks" });
+      console.log(JSON.stringify({ wire: RxView.wire(tr) }));""")
+    assert "typed_heard" not in r["wire"]

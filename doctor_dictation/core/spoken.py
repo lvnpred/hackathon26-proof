@@ -8,7 +8,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from . import investigations
+from . import investigations, spelled
 from .drugnames import _exact_lookup
 from .formulary import MAX_NAME, has_letters, person_like
 
@@ -21,6 +21,7 @@ LINK_MIN = 2                       # a diagnosis-term link is used once this man
 CONTEXT_BYTES, CONTEXT_LINES, CONTEXT_CHARS = 4096, 10, 200   # the correction context: bytes in all, lines, chars per line
 PATIENT_FIELDS = ("name", "age_sex", "op_no")
 MAX_HEARD_CHARS, MAX_HEARD_WORDS = 60, 9   # check-row's name caps (api/rx.py), plus the one word heard_as may add
+TYPED_SIMILAR = 0.6                # a typed fix is a pair when the heard words are this alike to the typed name (SH-B5)
 
 
 @dataclass(frozen=True)
@@ -88,10 +89,18 @@ def terms_from_save(structured, known_patient_words) -> list[Term]:
     return out
 
 
-def mishearings_from_save(structured, known_patient_words) -> list[tuple[str, str]]:
+def typed_fix(heard: str, name: str, listed=None) -> bool:
+    """Whether words a doctor typed over (``heard``) were a mishearing of ``name`` (SH-B5): alike, and not a known medicine.
+
+    ``listed(heard)`` says whether the clinic list knows a name (None: the lexicon only)."""
+    return spelled.similarity(heard, name) >= TYPED_SIMILAR and not (_exact_lookup(heard) or (listed and listed(heard)))
+
+
+def mishearings_from_save(structured, known_patient_words, listed=None) -> list[tuple[str, str]]:
     """[(term key, heard)] of a saved form (plan SH-H2): medicine rows whose heard is another word than the name.
 
-    The heard text is the words a spelled name replaced (``spelled_heard``) when the row has them, else ``heard``.
+    The heard text is the words a spelled name replaced (``spelled_heard``) when the row has them, else ``heard``,
+    else ``typed_heard`` (SH-B5, stricter: ``typed_fix``).
     """
     rows = structured.get("rx") if isinstance(structured, dict) else None
     if not isinstance(rows, list):
@@ -102,9 +111,12 @@ def mishearings_from_save(structured, known_patient_words) -> list[tuple[str, st
     for row in rows:
         if not isinstance(row, dict):
             continue
+        typed = False
         heard = row.get("spelled_heard")
         if not isinstance(heard, str) or not heard.strip():
             heard = row.get("heard")
+        if not isinstance(heard, str) or not heard.strip():
+            heard, typed = row.get("typed_heard"), True
         if not isinstance(heard, str):
             continue
         heard = _clean(heard)
@@ -115,6 +127,8 @@ def mishearings_from_save(structured, known_patient_words) -> list[tuple[str, st
         if known and known == _exact_lookup(_clean(row.get("name"))):
             continue
         if person_like(heard) or any(len(w) >= 3 and w in patient_words for w in heard_key.split()):
+            continue
+        if typed and not typed_fix(heard, _clean(row.get("name")), listed):
             continue
         terms = terms_from_save({"rx": [row], "patientName": patient}, known_patient_words)
         term = next((t for t in terms if t.kind == "medicine"), None)

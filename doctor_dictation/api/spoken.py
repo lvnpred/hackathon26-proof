@@ -10,8 +10,8 @@ from fastapi.responses import JSONResponse
 from doctor_dictation import db as dbmod
 from doctor_dictation import policy
 from doctor_dictation.api import authorship
-from doctor_dictation.api.formulary import DENIED, EntryId, _busy
-from doctor_dictation.core import spoken
+from doctor_dictation.api.formulary import DENIED, EntryId, _busy, _today
+from doctor_dictation.core import formulary, spoken
 from doctor_dictation.db import formulary as fdb
 from doctor_dictation.db import spoken as sdb
 from doctor_dictation.scope import multi_clinic_enabled
@@ -30,12 +30,13 @@ def _form(raw):
     return raw if isinstance(raw, dict) else None
 
 
-def record_from_save(conn, structured, document_id, doctor_id, patient_words=None, previous=None) -> int:
+def record_from_save(conn, structured, document_id, doctor_id, patient_words=None, previous=None, listed=None) -> int:
     """What one saved form teaches, counted once per document for ``doctor_id``. Returns the terms counted now.
 
     The one place a save teaches spoken terms (contract 5.5): the save hook and the backfill both call it, and H2/H3
     add theirs here (a pair or link failure is logged, never raised: the terms are already counted). H3 learns the
     diagnosis-term links of the document (``_learn_links``). ``previous`` (a re-save: the form saved before, a dict or its JSON) is taken back first.
+    ``listed(name)`` says whether the clinic list knows a name (R1); None reads the active layer, as a save has loaded it.
     ``patient_words`` is read from the clinic's patients when not given, and only when a form has a term at all.
     COMMITS (``record_terms`` does) and RAISES on a database error, after rolling its own writes back."""
     previous = _form(previous)
@@ -45,7 +46,8 @@ def record_from_save(conn, structured, document_id, doctor_id, patient_words=Non
     terms = spoken.terms_from_save(structured, words)
     counted = sdb.record_terms(conn, doctor_id, terms, document_id, previous=spoken.terms_from_save(previous, words))
     try:                                          # a pair failure never blocks the terms already counted
-        sdb.record_mishearings(conn, doctor_id, spoken.mishearings_from_save(structured, words), document_id)
+        listed = listed or (lambda n: formulary.active_layer().get(n) is not None)
+        sdb.record_mishearings(conn, doctor_id, spoken.mishearings_from_save(structured, words, listed=listed), document_id)
     except Exception:  # noqa: BLE001 - learning is a convenience, the prescription is already saved
         log.warning("spoken mishearings: could not record pairs", exc_info=True)
     _learn_links(conn, structured, terms, document_id, doctor_id)
@@ -82,6 +84,7 @@ def replay_saved(conn, by_doctor: bool) -> tuple[int, int]:
     A document with unreadable JSON is skipped. The ledger makes a second run count nothing. Unlike the save hook
     this RAISES on a database error (``record_from_save`` rolls its own document back), so the operator sees it."""
     words = fdb.patient_words(conn)
+    layer = formulary.ranked_layer(fdb.list_active(conn), _today())    # this database's clinic list: no request loaded one
     uses = "SELECT COALESCE(SUM(uses), 0) FROM spoken_terms"
     before = conn.execute(uses).fetchone()[0]
     rows = conn.execute("SELECT d.id, d.structured_json, e.doctor_id FROM documents d JOIN encounters e ON e.id = d.encounter_id"
@@ -92,7 +95,8 @@ def replay_saved(conn, by_doctor: bool) -> tuple[int, int]:
         if structured is None:
             continue
         read += 1
-        record_from_save(conn, structured, doc_id, (doctor_id if by_doctor else None) or 0, patient_words=words)
+        record_from_save(conn, structured, doc_id, (doctor_id if by_doctor else None) or 0, patient_words=words,
+                         listed=lambda n: layer.get(n) is not None)
     return read, conn.execute(uses).fetchone()[0] - before
 
 

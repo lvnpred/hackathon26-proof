@@ -12,13 +12,14 @@
   const NEEDS = ["dose", "confirm"];
   const ICON = { ok: "check-circle", dose: "capsule", confirm: "triangle", you: "shield-check", known: "book" };
   const LABEL = { ok: "Matched", dose: "Check dose", confirm: "Confirm medicine", you: "Confirmed by you", known: "Known to your clinic" };
-  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule", "generic_source", "combo_base", "generic_suggestion", "generic_listed", "spelled_heard"];
+  const META_KEYS = ["heard", "lookalike", "generic", "usual_strength", "dose_note", "source", "did_you_mean", "did_you_mean_generic", "schedule", "generic_source", "combo_base", "generic_suggestion", "generic_listed", "spelled_heard", "typed_heard"];
   const MAX_CHIPS = 8;
   // The extra row fields the server sends (contract 4.1), with safe defaults.
   function metaOf(r) {
     r = r || {};
     const m = {};
     META_KEYS.forEach((k) => { m[k] = str(r[k]); });
+    m.said = str(r.said) || str(r.name);                              // the name the server last gave: page only, never sent
     m.strength_options = optsOf(r.strength_options);
     m.generic_pending = r.generic_pending === true;                  // older cached results lack these keys: default them
     m.generic_suggestion_unknown = optsOf(r.generic_suggestion_unknown);
@@ -114,8 +115,15 @@
     };
   }
   // After an edit by hand the old reasons are stale: drop them (a name edit also drops what belonged to the old name).
+  // typedFrom: the words a hand edit replaces, for the save to learn from (first non-blank wins, so the first keystroke decides).
+  const typedFrom = (meta, priorName) => {
+    meta = meta || {};
+    const hit = [meta.typed_heard, meta.spelled_heard, meta.heard, priorName].map((v) => str(v).trim()).find(Boolean);
+    return hit || "";
+  };
   function afterEdit(meta, col) {
     const m = Object.assign({}, meta);
+    m.typed_heard = typedFrom(meta, col === "name" ? (meta || {}).said : "");   // BEFORE heard and spelled_heard are cleared
     m.heard = ""; m.lookalike = ""; m.dose_note = "";
     if (col === "name") { m.generic = ""; m.source = ""; m.usual_strength = ""; m.strength_options = []; m.did_you_mean = ""; m.did_you_mean_generic = ""; m.schedule = ""; m.generic_source = ""; m.combo_base = ""; m.generic_suggestion = ""; m.generic_suggestion_unknown = []; m.generic_pending = false; m.generic_listed = ""; m.remember_generic = false; m.spelled_heard = ""; }
     return m;
@@ -216,5 +224,5 @@
     return str(text).replace(/ ?\[unverified(?: strength)?: confirm with doctor\]/g, "").trim();
   }
 
-  root.RxState = { scheduleOf, rowState, metaOf, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, voiceError, stripMarker, carryRowids, sameName: same, NEEDS };
+  root.RxState = { scheduleOf, rowState, metaOf, typedFrom, chipsFor, afterEdit, afterSpell, cleanTyped, typedProblem, summary, errorText, voiceError, stripMarker, carryRowids, sameName: same, NEEDS };
 })(typeof window !== "undefined" ? window : globalThis);

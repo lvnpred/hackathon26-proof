@@ -34,6 +34,7 @@ from .dosing import DOSE_CHECK, check_dose
 from .formulary import active_layer, source_of
 from .generics import schedule_of
 from .rowcheck import did_you_mean
+from .spoken import MAX_HEARD_CHARS
 from .surface import _generic_of
 
 SCALAR_FIELDS = ("patientName", "ageSex", "opNo", "review")
@@ -248,7 +249,7 @@ def merge_form(current: dict, patch: dict, list_fields=LIST_FIELDS) -> dict:
 
 # Row fields validate_structured derives from the name and the grounding (screen only).
 DERIVED_ROW_FIELDS = ("generic", "schedule", "heard", "lookalike", "dose_note", "source", "did_you_mean", "did_you_mean_generic",
-                      "generic_source", "combo_base", "spelled_heard")
+                      "generic_source", "combo_base", "spelled_heard", "typed_heard")
 
 
 DID_YOU_MEAN_FIELDS = ("did_you_mean", "did_you_mean_generic")
@@ -443,8 +444,8 @@ def preserve_untouched_rx_status(current: dict, patch: dict, structured: dict,
                 row[field] = RECOMPUTED_ROW_FIELDS[field](row)
             elif field == "dose_note" and row.get("status") == DOSE_CHECK:  # the page never sends it back
                 row[field] = _dose_note(row, prev, structured.get("ageSex"))
-            else:
-                row[field] = prev.get(field, "")
+            else:                         # typed_heard (SH-B5) is kept only as a string of at most MAX_HEARD_CHARS
+                row[field] = "" if field == "typed_heard" and not (isinstance(prev.get(field), str) and len(prev[field]) <= MAX_HEARD_CHARS) else prev.get(field, "")
     return structured
 
 

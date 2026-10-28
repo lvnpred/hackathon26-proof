@@ -51,7 +51,7 @@ def test_the_heard_words_are_kept_as_row_meta_and_a_name_edit_drops_them():
 def test_the_undo_button_checks_the_heard_words_like_a_typed_name():
     js = _read("rxview.js")
     assert '"spelled-undo", \'Heard "\' + h + \'" · Undo\'' in js and "b.dataset.value = h" in js
-    assert 'a === "dym" || a === "spelled-undo") useName(tr, b.dataset.value)' in js
+    assert 'a === "dym" || a === "spelled-undo") useName(tr, b.dataset.value, a === "spelled-undo")' in js
     assert '[data-action="spelled-undo"]' in js.split("function sync()")[1].split("function bodyFor")[0]   # dead while busy
     assert js.index("st.spelledUndo") < js.index('"Confirm as is"')
 
@@ -63,4 +63,4 @@ def test_the_page_sends_the_heard_words_back_so_a_correction_keeps_the_undo():
 
 def test_the_changed_scripts_are_re_fetched():
     html = _read("index.html")
-    assert "rxstate.js?v=13" in html and "rxview.js?v=18" in html
+    assert "rxstate.js?v=14" in html and "rxview.js?v=19" in html

@@ -30,5 +30,32 @@ window.SugList = (function () {
     items.forEach((s) => box.appendChild(item(s, Object.assign({ action: "pick", reason: true, cls: "spell-item" }, o))));
     return box;
   }
-  return { item, reasonText, same, PAGE, page, list };
+  // ---- the context group below the list (SH-B2): what the server found for the diagnosis and this patient; never the first button ----
+  const CTX_KINDS = ["diagnosis", "patient"];
+  function groupsOf(res) {                          // keep known kinds, string names only, at most 2 groups of 3
+    const raw = res && Array.isArray(res.context) ? res.context : [];
+    return raw.filter((g) => g && CTX_KINDS.includes(g.kind) && Array.isArray(g.items)).slice(0, 2).map((g) => ({
+      kind: g.kind, for: typeof g.for === "string" ? g.for : "",
+      items: g.items.filter((i) => i && typeof i.name === "string" && i.name).slice(0, 3).map((i) => ({ name: i.name, generic: typeof i.generic === "string" ? i.generic : "" })),
+    })).filter((g) => g.items.length);
+  }
+  function groupLabel(g) {
+    if (g.kind === "patient") return "This patient's earlier medicines";
+    const f = String(g.for || "").trim();
+    return f ? "Used for " + (f.length > 40 ? f.slice(0, 40) + "\u2026" : f) : "Used for this diagnosis";
+  }
+  function groups(box, gs, shown) {                 // shown: the names already in the list; they are not repeated here
+    box.textContent = ""; const btns = [];
+    (gs || []).forEach((g, n) => {
+      const items = g.items.filter((i) => !(shown || []).some((s) => same(s.name, i.name)));
+      if (!items.length) return;
+      const wrap = el("div", "spell-ctx-group"), id = "spellCtxL" + n; wrap.setAttribute("role", "group"); wrap.setAttribute("aria-labelledby", id);
+      const lab = el("p", "spell-ctx-label", groupLabel(g)); lab.id = id; wrap.appendChild(lab);
+      items.forEach((i) => { const b = item(i, { action: "pick", reason: false, cls: "spell-item" }); wrap.appendChild(b); btns.push(b); });
+      box.appendChild(wrap);
+    });
+    box.hidden = !btns.length;
+    return btns;
+  }
+  return { item, reasonText, same, PAGE, page, list, groupsOf, groupLabel, groups };
 })();

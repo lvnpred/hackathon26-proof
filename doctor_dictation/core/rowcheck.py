@@ -139,11 +139,12 @@ def _blocked(name) -> bool:
     return is_blocked(name)
 
 
-def _sound_options(name, k, clinic=True, prefix_first=True):
+def _sound_options(name, k, clinic=True, prefix_first=True, preferred=None):
     """[(name, generic, score, reason)]: lexicon spellings ("sounds") and, when ``clinic``, this clinic's single-word
     names ("clinic") by one score, then the I1-r1 near-tie rule (usage moves clinic names only).
     ``prefix_first``: a name that starts with the typed letters ("paracet" -> Paracetamol) comes before the others.
-    [] for a name the clinic's overlay took off the list (blocked): it is never steered to a look-alike."""
+    ``preferred``: Spell it context, passed to the near-tie rule. [] for a name the clinic's overlay took off the
+    list (blocked): it is never steered to a look-alike."""
     if _blocked(name):
         return []
     layer = formulary.active_layer()
@@ -152,16 +153,21 @@ def _sound_options(name, k, clinic=True, prefix_first=True):
     typed = _letters(name)
     merged = sorted(lex + mine, key=lambda o: (not (prefix_first and _letters(o[0]).startswith(typed)), -round(o[2], 6), o[0].lower(), o[0]))
     by_name = {o[0]: o for o in merged}
-    return [by_name[n] for n in formulary.tie_break([(o[0], o[2], o[3] == "clinic") for o in merged], layer.usage_of)][:k]
+    return [by_name[n] for n in formulary.tie_break([(o[0], o[2], o[3] == "clinic") for o in merged], layer.usage_of, preferred)][:k]
 
 
-def options(row: dict, cap: int = MAX_OPTIONS):
+def options(row: dict, cap: int = MAX_OPTIONS, prefer: frozenset = frozenset()):
     """([{"name", "generic", "reason"}], total): the one list behind Spell it and the inline Did you mean (I2-a, I2-c).
 
     Order as ``suggestions``: the lexicon match ("matched"), else the row's own clinic name ("clinic"); sound-alikes;
     the match's look-alike twins. A twin keeps the reason "lookalike" wherever it appears. One entry per name
-    (case-insensitive); ``total`` counts entries before the cap."""
+    (case-insensitive); ``total`` counts entries before the cap.
+    ``prefer``: Spell it context keys; they break near-ties among clinic names only (S1)."""
     from . import lasa
+    preferred = None
+    if prefer:
+        from .spoken import key                 # lazy, like the determinism imports
+        preferred = lambda n: key(n) in prefer  # noqa: E731
     match, name = row.get("lexicon_match") or "", row.get("name", "")
     twins = {t.casefold() for t in (lasa.twins(match) if match else [])}
     out, seen = [], set()
@@ -174,7 +180,7 @@ def options(row: dict, cap: int = MAX_OPTIONS):
         add(match, match, "matched")
     elif (hit := formulary.active_layer().get(name)):
         add(hit[0], hit[1], "clinic")
-    for n, generic, _score, reason in _sound_options(name, POOL_ALL, clinic=not match):
+    for n, generic, _score, reason in _sound_options(name, POOL_ALL, clinic=not match, preferred=preferred):
         add(n, generic, reason)
     for t in (lasa.twins(match) if match else []):
         add(t, t, "lookalike")

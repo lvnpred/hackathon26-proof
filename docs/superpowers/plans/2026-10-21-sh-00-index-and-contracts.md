@@ -224,7 +224,7 @@ candidate or nothing. Candidates: in multi-clinic mode only patients with an enc
 ## 6. Open decisions for the owner (defaults apply until answered)
 
 - **D-SH1** A separate, labelled "You used before / For this diagnosis / This patient's earlier medicines" group in
-  Spell it, below the sound-alikes and never the first button. Default: **not built** (backlog SH-B2).
+  Spell it, below the sound-alikes and never the first button. Status: **built (SH-B2, plan 2026-10-27)**.
 - **D-SH2** Usual strength rule: >= 60% of uses and >= 2 uses. Default as stated.
 - **D-SH3** H2 admin view lives on the Team screen's "Clinic medicines" tab. Default as stated.
 
@@ -235,12 +235,12 @@ candidate or nothing. Candidates: in multi-clinic mode only patients with an enc
   emit chunks (`mr.start()` with no timeslice today, `frontend/app.js:377`). Cost: ~10 s extra audio per visit; no
   extra wait. Size M (~3 days). Pick up only if the per-save settings data shows first dictations still miss names a
   patient regularly takes.
-- **SH-B2 Labelled context group in Spell it** (D-SH1). Size S–M. Needs an owner yes; must keep S1.
+- **SH-B2 Labelled context group in Spell it** (D-SH1). Size S–M. Needs an owner yes; must keep S1. Status: planned: `2026-10-27-sh-b2-b4-spell-it-context.md`.
 - **SH-B4 Near-tie context in Spell it** (cut from H3 and H4, 2026-10-21). `/api/format`'s cache key
   (`api/format.py:125-126`) has no doctor id and is built before the diagnosis exists, and Did you mean is computed
   inside the cached draft (`_DYM_CACHE`, `core/rowcheck.py:239`), so context there would leak between doctors or
   go stale. Safer route: send the diagnosis and patient fields on `POST /api/v1/rx/check-row` and apply the 0.03
-  near-tie rule in Spell it only. Size M. Must keep S1.
+  near-tie rule in Spell it only. Size M. Must keep S1. Status: planned: `2026-10-27-sh-b2-b4-spell-it-context.md`.
 - **SH-B5 Learn from typed fixes.** Typing a name clears the row's `heard` (`frontend/rxstate.js:116`), so H2 learns
   nothing from it. Keep the last heard text when the doctor types over a misheard name. Size S. Must keep S1.
 - **SH-B6 "Your usual" medicines for a diagnosis** (owner yes, 2026-10-22). Once the draft has a diagnosis, show

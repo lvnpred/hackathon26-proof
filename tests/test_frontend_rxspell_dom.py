@@ -71,13 +71,13 @@ function mkRow(id, status, cols, meta) {
   tbody.appendChild(tr); RxView.attach(tr, Object.assign({ status }, meta || {})); RxView.renderRow(tr); return tr;
 }
 RxView.init({ body: tbody, saveBtn: { textContent: "", disabled: false }, confirmed: () => confirmed, working: () => flags.working, changed() {}, hasSheet: () => true,
-  transcript: () => flags.transcript, ageSex: () => flags.ageSex,
+  transcript: () => flags.transcript, ageSex: () => flags.ageSex, spellContext: () => ({ context: { diagnosis: ["BPH"], patient: {} }, document_id: 7 }),
   post: (url, body, ms, signal) => new Promise((res, rej) => { posts.push({ url, body, res, rej, signal }); }), notify: (m) => notes.push(m),
   snapshot: (tr) => { const rec = { status: tr.dataset.status || "", lexicon_match: tr.dataset.lexicon || "" }; COLS.forEach((c) => { rec[c] = cell(tr, c).textContent; }); return Object.assign(rec, RxView.meta(tr)); },
   pushUndo: (rec, msg) => undos.push({ rec, msg }) });
 const dlg = new El("dialog"); dlg.open = false; dlg.showModal = function () { if (this.open) throw new Error("InvalidStateError"); this.open = true; }; dlg.close = function () { this.open = false; };
 ROOT_EL.appendChild(dlg); ids.spellDlg = dlg;
-[["spellTitle", "h2"], ["spellHint", "p"], ["spellInput", "input"], ["spellMic", "button"], ["spellMsg", "p"], ["spellInfo", "p"], ["spellList", "div"],
+[["spellTitle", "h2"], ["spellHint", "p"], ["spellInput", "input"], ["spellMic", "button"], ["spellMsg", "p"], ["spellInfo", "p"], ["spellList", "div"], ["spellCtx", "div"],
  ["spellPrev", "button"], ["spellPage", "p"], ["spellNext", "button"], ["spellClose", "button"], ["spellUse", "button"]]
   .forEach(([id, tag]) => { const n = new El(tag); n.id = id; n.value = ""; ids[id] = n; dlg.appendChild(n); });
 const dkey = (k, target, shift) => (dlg.handlers.keydown || []).forEach((f) => f({ target: target || document.activeElement, key: k, shiftKey: !!shift, preventDefault() {} }));

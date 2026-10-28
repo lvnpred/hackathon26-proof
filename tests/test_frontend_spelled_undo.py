@@ -63,4 +63,4 @@ def test_the_page_sends_the_heard_words_back_so_a_correction_keeps_the_undo():
 
 def test_the_changed_scripts_are_re_fetched():
     html = _read("index.html")
-    assert "rxstate.js?v=14" in html and "rxview.js?v=19" in html
+    assert "rxstate.js?v=14" in html and "rxview.js?v=20" in html

@@ -126,11 +126,12 @@ window.RxView = (function () {
     H.saveBtn.disabled = H.working() || s.saveDisabled || vo;
   }
   // ---- Spell it: a dialog (spellmodal.js) for one row; the answer from check-row replaces that row's name only ----------------
-  function bodyFor(tr, name) {                      // the request: this row, plus the page's grounding text (dropped when over the server's caps)
+  function bodyFor(tr, name, withContext) {                      // the request: this row, plus the page's grounding text (dropped when over the server's caps)
     const row = {}; COLS.forEach((c) => { row[c] = val(tr, c); });
     if (name) row.name = name;
     const t = H.transcript(), a = H.ageSex();
-    return { row, transcript: typeof t === "string" && t.length <= 20000 ? t : "", age_sex: typeof a === "string" && a.length <= 40 ? a : "" };
+    const body = { row, transcript: typeof t === "string" && t.length <= 20000 ? t : "", age_sex: typeof a === "string" && a.length <= 40 ? a : "" };
+    return withContext && H.spellContext ? Object.assign(body, H.spellContext()) : body;       // only the Spell it load carries the sheet's context (SH-B2)
   }
   const tooBig = (s) => s.length > 60 || s.split(" ").length > 8;      // the server would answer 400 for these: do not ask it
 
@@ -141,7 +142,7 @@ window.RxView = (function () {
     rx(tr).spellFromConfirmed = H.confirmed().has(rowid);
     SpellModal.open({ rowid, title: "Spell " + (dictated || "medicine"), opener: () => tr.querySelector('[data-action="spell"]'), alive: () => tr.isConnected,
       problem: tooBig(dictated) ? RxState.typedProblem(dictated) + " You can still type the name." : "",
-      load: () => H.post(URL_CHECK, bodyFor(tr), CHECK_MS), search: (name, signal) => H.post(URL_CHECK, bodyFor(tr, name), CHECK_MS, signal), use: (name) => useName(tr, name),
+      load: () => H.post(URL_CHECK, bodyFor(tr, "", true), CHECK_MS), search: (name, signal) => H.post(URL_CHECK, bodyFor(tr, name), CHECK_MS, signal), use: (name) => useName(tr, name),
       onClose: () => { const t = tr.querySelector('[data-action="spell"]') || tr.querySelector(".rx-state"); if (t) t.focus(); } });
   }
 

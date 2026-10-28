@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 
+from doctor_dictation.core.spellctx import CtxName
 from doctor_dictation.core.formulary import THRESHOLD, usage_score
 from doctor_dictation.core.spoken import CONTEXT_LINES, LINK_MIN, HintTerm, Term, key, phrase, terms_from_save, usual_strength
 from doctor_dictation.db import _utcnow
@@ -199,14 +200,29 @@ def record_links(conn, doctor_id, diagnosis_keys: Sequence[str], term_refs: Sequ
 
 def linked_term_ids(conn, doctor_id, diagnosis_keys: Sequence[str]) -> set[int]:
     """The ids of this doctor's live terms (a use left, not removed) linked to any of the keys by LINK_MIN documents."""
+    return set().union(*linked_ids_by_key(conn, doctor_id, diagnosis_keys).values())
+
+
+def linked_ids_by_key(conn, doctor_id, diagnosis_keys: Sequence[str]) -> dict[str, set[int]]:
+    """``linked_term_ids`` per diagnosis key: {key: ids}, one entry for each key that has links."""
     keys = list(dict.fromkeys(diagnosis_keys))[:CONTEXT_LINES]
     if not keys:
-        return set()
+        return {}
     marks = ", ".join("?" * len(keys))
-    return {r[0] for r in conn.execute(
-        "SELECT DISTINCT l.term_id FROM term_links l JOIN spoken_terms t ON t.id = l.term_id"
-        f" WHERE l.doctor_id = ? AND l.count >= ? AND t.removed_at IS NULL AND t.uses > 0 AND l.diagnosis_key IN ({marks})",
-        (doctor_id, LINK_MIN, *keys))}
+    out: dict[str, set[int]] = {}
+    for k, term_id in conn.execute(
+            "SELECT DISTINCT l.diagnosis_key, l.term_id FROM term_links l JOIN spoken_terms t ON t.id = l.term_id"
+            f" WHERE l.doctor_id = ? AND l.count >= ? AND t.removed_at IS NULL AND t.uses > 0 AND l.diagnosis_key IN ({marks})",
+            (doctor_id, LINK_MIN, *keys)):
+        out.setdefault(k, set()).add(term_id)
+    return out
+
+
+def doctor_medicine_names(conn, doctor_id, today: date) -> list[CtxName]:
+    """This doctor's live medicine terms (not removed, a use left) for the Spell it context."""
+    return [CtxName(r[0], r[1], r[2], r[3] or "", usage_score(r[4], r[5], today)) for r in conn.execute(
+        "SELECT id, term_key, spoken, generic, uses, last_used_at FROM spoken_terms"
+        " WHERE doctor_id = ? AND kind = 'medicine' AND removed_at IS NULL AND uses > 0", (doctor_id,))]
 
 
 def diagnosis_medicine_links(conn, doctor_id: int, diagnosis_key: str, limit: int) -> list:
@@ -248,11 +264,11 @@ def patient_candidates(conn, doctor_id: int) -> list:
     return conn.execute("SELECT id, name, age_sex, op_no FROM patients ORDER BY id").fetchall()
 
 
-def patient_term_keys(conn, patient_ids, doctor_id: int, visits: int = 3) -> set[str]:
+def patient_term_keys(conn, patient_ids, doctor_id: int, visits: int = 3, exclude_document: int | None = None) -> set[str]:
     """Keys of the terms in a patient's last ``visits`` finalized documents (``patient_ids``: one id or a person's rows).
 
     Only this doctor's visits count; ``doctor_id`` 0 (single-database mode) has no doctor filter. A document whose JSON
-    does not parse to a dict adds nothing."""
+    does not parse to a dict adds nothing. ``exclude_document``: a document left out (the sheet being edited)."""
     ids = (patient_ids,) if isinstance(patient_ids, int) else tuple(patient_ids)
     if not ids:
         return set()
@@ -262,6 +278,9 @@ def patient_term_keys(conn, patient_ids, doctor_id: int, visits: int = 3) -> set
     if doctor_id > 0:
         sql += " AND e.doctor_id = ?"
         args.append(doctor_id)
+    if exclude_document is not None:
+        sql += " AND d.id != ?"
+        args.append(exclude_document)
     rows = conn.execute(sql + " ORDER BY d.created_at DESC, d.id DESC LIMIT ?", (*args, max(0, int(visits)))).fetchall()
     keys: set[str] = set()
     for (raw,) in rows:

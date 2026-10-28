@@ -1382,6 +1382,7 @@ RxView.init({
   body: rxBody, saveBtn, confirmed: () => state.confirmed, working: () => state.working,
   transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo, notify: setStatus,
   changed: () => { markDirty(); updateGrounding(); if (!blockPanel.hidden) refreshBlockPanel(); }, hasSheet: () => !sheetEl.classList.contains("empty"),
+  spellContext: () => ({ context: JSON.parse(speechContext()), document_id: state.documentId }),   // Spell it load only (SH-B2)
 });
 YourUsual.init({ post: postJson, diagnosis: () => readList("pDx"),
   onSheet: () => [...rxBody.querySelectorAll("tr[data-index]")].map(tr => ({ name: cellText(tr, "name"), generic: RxView.meta(tr).generic || "" })),

@@ -144,16 +144,18 @@ def ranked_layer(rows, today: date) -> ClinicLayer:
                        tuple((key(r["name"]), score[key(r["name"])]) for r in rows))
 
 
-def tie_break(scored, usage_of) -> list[str]:
+def tie_break(scored, usage_of, preferred=None) -> list[str]:
     """Names of ``scored`` ([(name, score, from_clinic)], best first) after the near-tie rule (plan I1-r1).
 
     Inside the band (within BAND of the TOP score) the clinic's names trade places by usage, more used first; a
-    lexicon name keeps its exact slot, and nothing enters or leaves the band. With no usage nothing moves."""
+    lexicon name keeps its exact slot, and nothing enters or leaves the band. With no usage nothing moves.
+    ``preferred`` (name -> bool, Spell it context, SH-B4) puts the clinic names it marks first inside those same slots."""
     if not scored:
         return []
     top = scored[0][1]
     slots = [i for i, (_n, s, clinic) in enumerate(scored) if clinic and round(top - s, 6) <= BAND]
-    moved = sorted((scored[i] for i in slots), key=lambda c: (-usage_of(c[0]), -round(c[1], 6), c[0].lower(), c[0]))
+    moved = sorted((scored[i] for i in slots), key=lambda c: (not (preferred and preferred(c[0])), -usage_of(c[0]),
+                                                              -round(c[1], 6), c[0].lower(), c[0]))
     out = list(scored)
     for i, cand in zip(slots, moved):
         out[i] = cand

@@ -214,7 +214,7 @@ def test_the_modal_markup_scripts_and_css_follow_the_contract():
     assert "innerHTML" not in (FRONT / "suglist.js").read_text(encoding="utf-8")
     assert HTML.index("rxview.js?v=") < HTML.index("spellmodal.js?v=") < HTML.index("app.js?v=") and HTML.index("<dialog id=\"spellDlg\"") < HTML.index("<script src=\"auth.js")
     tab = [m for m in re.findall(r'id="(spell\w+)"', HTML)]
-    assert tab == ["spellDlg", "spellTitle", "spellHint", "spellInput", "spellMic", "spellInfo", "spellMsg", "spellList", "spellPrev", "spellPage", "spellNext", "spellClose", "spellUse"]
+    assert tab == ["spellDlg", "spellTitle", "spellHint", "spellInput", "spellMic", "spellInfo", "spellMsg", "spellList", "spellCtx", "spellPrev", "spellPage", "spellNext", "spellClose", "spellUse"]
     assert 'aria-label="Medicine name"' in HTML and 'role="alert"' in HTML[HTML.index('id="spellMsg"'):].split(">", 1)[0] and 'role="status"' in HTML[HTML.index('id="spellPage"'):].split(">", 1)[0]
     assert 'role="status"' in HTML[HTML.index('id="spellInfo"'):].split(">", 1)[0] and 'aria-live="polite"' in HTML[HTML.index('id="spellInfo"'):].split(">", 1)[0]
     css = re.sub(r"\s+", " ", re.sub(r"/\*.*?\*/", "", (FRONT / "rx.css").read_text(encoding="utf-8"), flags=re.S))

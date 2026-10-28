@@ -18,8 +18,9 @@ window.SpellModal = (function () {
     .filter((o) => o && typeof o.name === "string" && o.name);
   const stopTracks = (s) => { try { s.getTracks().forEach((t) => t.stop()); } catch (e) { /* already stopped */ } };
   const closeDialog = () => { if (typeof H.dialog.close === "function") H.dialog.close(); else H.dialog.removeAttribute("open"); };
+  const ctxButtons = () => [...($("spellCtx") ? $("spellCtx").querySelectorAll("button") : [])];
   function focusables() {
-    return [$("spellInput"), $("spellMic"), ...$("spellList").children, $("spellPrev"), $("spellNext"), $("spellClose"), $("spellUse")].filter((n) => !n.disabled && !n.hidden);
+    return [$("spellInput"), $("spellMic"), ...$("spellList").children, ...ctxButtons(), $("spellPrev"), $("spellNext"), $("spellClose"), $("spellUse")].filter((n) => !n.disabled && !n.hidden);
   }
   function micTitle() {
     if (blockedWhy()) return blockedWhy();
@@ -30,11 +31,12 @@ window.SpellModal = (function () {
   }
   function show() {                                   // draw the current page, the label and which controls work
     if (!cur) return;
-    const list = $("spellList"), at = document.activeElement, wasItem = [...list.children].includes(at);
+    const list = $("spellList"), at = document.activeElement, wasItem = [...list.children, ...ctxButtons()].includes(at);
     const p = SugList.page(cur.items, cur.page, cur.total); cur.page = p.index;
     SugList.list(list, p.items);
     const off = cur.checking, blocked = !!blockedWhy();   // Close stays usable: a check can be left running behind the row's own spinner
     [...list.children].forEach((b) => { b.disabled = off || blocked; });
+    if ($("spellCtx")) { SugList.groups($("spellCtx"), p.items.length && !cur.loading && !cur.searching ? cur.ctx || [] : [], p.items); ctxButtons().forEach((b) => { b.disabled = off || blocked; }); }
     $("spellInput").disabled = off; $("spellUse").disabled = off || blocked;
     $("spellPrev").disabled = off || !p.hasPrev; $("spellNext").disabled = off || !p.hasNext;
     $("spellPage").textContent = cur.searching ? "Searching..." : cur.loading ? "Looking for names..." : (cur.lead || "") + p.label;
@@ -57,7 +59,7 @@ window.SpellModal = (function () {
     spec.load().then((res) => {
       if (!cur || cur.tok !== mine) return;          // closed, or another row opened: drop it
       const items = optionsOf(res), total = +(res && res.total) || items.length;
-      cur.first = { items, total }; cur.loading = false;
+      cur.first = { items, total }; cur.ctx = SugList.groupsOf(res); cur.loading = false;
       if (!cur.searched) { cur.items = items; cur.total = total; }                  // a typed search that answered first keeps its list
       show();
     }).catch((e) => { if (cur && cur.tok === mine) { cur.loading = false; show(); say(RxState.errorText(e) + " You can still type the name."); } });
@@ -79,7 +81,7 @@ window.SpellModal = (function () {
   }
   function onKey(e) {
     if (!cur) return;
-    const items = [...$("spellList").children], i = items.indexOf(e.target);
+    const items = [...$("spellList").children, ...ctxButtons()], i = items.indexOf(e.target);
     if (e.key === "Escape") { e.preventDefault(); close(true); }
     else if (Object.prototype.hasOwnProperty.call(PAGE_KEYS, e.key)) { e.preventDefault(); cur.page += PAGE_KEYS[e.key]; cur.lead = ""; show(); }
     else if (e.key === "Tab") {

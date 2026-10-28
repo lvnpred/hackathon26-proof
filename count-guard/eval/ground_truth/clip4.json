@@ -1,0 +1,29 @@
+{
+  "clip": "clip4",
+  "scenario": "clip4",
+  "item_types": [
+    "lap sponge",
+    "gauze swab",
+    "surgical forceps",
+    "scissors",
+    "needle holder"
+  ],
+  "duration_ms": 40000,
+  "headline": "1 unannounced_add",
+  "rules": [
+    [
+      "R4",
+      "gauze swab"
+    ]
+  ],
+  "ledger": {
+    "gauze swab": {
+      "opened": 0,
+      "bucket": 0,
+      "tray": 5,
+      "unaccounted": 0
+    }
+  },
+  "id_switches": 0,
+  "gate": "blocked"
+}

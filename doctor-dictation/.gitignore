@@ -1,0 +1,48 @@
+# Virtual environments (never commit)
+.venv/
+.venv-*/
+venv/
+
+# Secrets — keys live in .env / secrets.json, never in git
+.env
+.env.*
+!.env.example
+!.env.production.example
+doctor_dictation/secrets.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Superpowers SDD scratch (ledger, briefs, review packages)
+.superpowers/
+
+# Tooling / editor
+.codegraph/
+.serena/
+.vscode/
+.idea/
+*.swp
+
+# STT model artifacts (large; re-downloadable)
+doctor_dictation/stt_models/
+doctor_dictation/core/lexicon/rxnav_cache.json
+
+# Local SQLite data (default DB dir; DB_PATH overrides at runtime)
+doctor_dictation/data/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# STT benchmark: real clips, the real manifest and reports stay local
+tests/stt_bench/audio/
+tests/stt_bench/manifest.json
+tests/stt_bench/reports/

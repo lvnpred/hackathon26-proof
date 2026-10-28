@@ -1,0 +1,30 @@
+{
+  "clip": "clip5",
+  "scenario": "clip5",
+  "item_types": [
+    "lap sponge",
+    "gauze swab",
+    "surgical forceps",
+    "scissors",
+    "needle holder"
+  ],
+  "duration_ms": 8000,
+  "headline": "No discrepancies, no ID switches",
+  "rules": [],
+  "ledger": {
+    "surgical forceps": {
+      "opened": 1,
+      "bucket": 0,
+      "tray": 1,
+      "unaccounted": 0
+    },
+    "scissors": {
+      "opened": 1,
+      "bucket": 0,
+      "tray": 1,
+      "unaccounted": 0
+    }
+  },
+  "id_switches": 0,
+  "gate": "reconciled"
+}

@@ -1,0 +1,24 @@
+{
+  "clip": "clip1",
+  "scenario": "clip1",
+  "item_types": [
+    "lap sponge",
+    "gauze swab",
+    "surgical forceps",
+    "scissors",
+    "needle holder"
+  ],
+  "duration_ms": 60000,
+  "headline": "No discrepancies",
+  "rules": [],
+  "ledger": {
+    "lap sponge": {
+      "opened": 10,
+      "bucket": 10,
+      "tray": 0,
+      "unaccounted": 0
+    }
+  },
+  "id_switches": 0,
+  "gate": "reconciled"
+}

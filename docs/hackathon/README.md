@@ -52,12 +52,14 @@ switch that is off by default and carry a "Research demo — not for clinical us
 
 ## Decisions needed before Day 1 (26 Oct)
 
+Closed on 27 Oct 2026 by Vignan: D1 and D4. The rest are still open.
+
 | # | Decision | Recommendation | Why it matters |
 |---|---|---|---|
-| D1 | Do the hackathon rules allow pre-existing code? | Read the rules; keep all new code under `hx/` so `git diff main...hackathon` is the "built here" proof | The brief assumed no code exists. The app is live, so this changes eligibility. |
+| D1 | Do the hackathon rules allow pre-existing code? | **Closed.** Count Guard is the new repo at `../count-guard`. Do not put it under `hx/` and do not reuse Doctor Dictation code. The 27 Oct build spec governs. | The submission history has to start in that repo. |
 | D2 | Is SAM 3.1 reachable through the Meta Model API, and at what frame rate? | Day 0 spike (`04` task S1). Fall back to a recorded-detections replay | Count Guard is the "Must" module and depends on it |
 | D3 | Whose screen is the OT view? | Anaesthetist for the vitals card; circulating nurse for Count Guard; one shared timeline screen for the demo | Sets what the card shows and how loud it is |
-| D4 | Commit the uncommitted provider work (Muse, Groq, AssemblyAI STT) first? | Yes, as its own commit on `hackathon` (or on `main` first) | The voice drug log uses the Muse adapter, which is not committed yet |
+| D4 | Commit the uncommitted provider work (Muse, Groq, AssemblyAI STT) first? | **Closed.** Do not commit or port that provider work into Count Guard. The new repo has its own adapters. | The old speech stack stays in Doctor Dictation. |
 | D5 | Hackathon solo or with teammates? | Plan assumes one human plus subagents | Changes lane count in `04` |
 | D6 | May agents commit on `hackathon` during the build week? | No (default): shared tree, disjoint files, you commit at each day gate | `CLAUDE.md` forbids unapproved commits; worktree-per-lane needs commits (`04` §8) |
 

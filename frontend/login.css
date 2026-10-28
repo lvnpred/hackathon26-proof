@@ -1,6 +1,6 @@
 /* Self-contained: styles.css and theme.css are not public paths (api/session.py), so the Lightday tokens this page needs are copied
    here under theme.css's own names (docs/design-system/lightday/project/tokens.json). Day by default; Dusk when themepick.js
-   sets <html data-theme="dusk"> from the device's dd.theme. System fonts only until fonts.css is linked. */
+   sets <html data-theme="dusk"> from the device's dd.theme. Figtree comes from fonts.css (login.html links it). */
 :root, :root[data-theme="day"] {
   --paper:#FAF7F0; --surface:#FFFFFF; --surface-sunk:#F2EDE3; --line:#E6DFD2; --line-control:#8A806E; --ink:#1C1A17; --ink-muted:#5F584C; --sun:#F2A93B; --sun-soft:#FCEBCB; --action:var(--ink); --on-action:var(--surface); --sky:#2350C2; --record:#C42B1C; --record-soft:#FBE3DF; --focus-ring:0 0 0 2px #FAF7F0, 0 0 0 4px #2350C2;
 }

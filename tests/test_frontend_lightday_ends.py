@@ -1,5 +1,6 @@
 """Lightday loose ends (2026-10-28): leftover Midnight symbols and off-rule copy are gone from the screen, and the
 Dusk leftovers outside theme.css follow the tokens."""
+import hashlib
 import re
 from pathlib import Path
 
@@ -77,7 +78,7 @@ def test_login_is_lightday_with_the_mark_and_wordmark():
 
 def test_login_loads_themepick_in_head_before_its_stylesheet():
     head = _read("login.html").split("</head>")[0]
-    assert head.index('<script src="themepick.js?v=') < head.index('login.css?v=3')
+    assert head.index('<script src="themepick.js?v=') < head.index('login.css?v=4')
 
 
 def test_login_tokens_match_theme_css_in_day_and_dusk():
@@ -118,3 +119,52 @@ def test_traversal_through_the_real_middleware_stays_closed(multi):
         for p in ("/app.js", "/fonts/../app.js", "/fonts/..%2fapp.js", "/fonts/%2e%2e/app.js", "/fonts/x.woff2/../../app.js", "/index.html"):
             r = c.get(p)
             assert r.status_code in (303, 401, 404) and "IIFE" not in r.text, (p, r.status_code)
+
+
+# ---- Task 4: screen fonts served from the clinic server --------------------------------------------------------------
+ROOT = FRONT.parent
+FONTS = FRONT / "fonts"
+
+
+def _sources():
+    rows = [l.split() for l in (FONTS / "SOURCES.txt").read_text().splitlines() if l and not l.startswith("#")]
+    return {name: digest for digest, name in rows}
+
+
+def test_every_font_file_matches_its_recorded_sha256():
+    src = _sources()
+    assert len(src) == 15 and set(src) == {p.name for p in FONTS.glob("*.woff2")}
+    for name, digest in src.items():
+        data = (FONTS / name).read_bytes()
+        assert data[:4] == b"wOF2", name
+        assert hashlib.sha256(data).hexdigest() == digest, name
+    for lic in ("OFL-Figtree.txt", "OFL-SourceSerif4.txt", "OFL-NotoSansTamil.txt"):
+        assert "SIL OPEN FONT LICENSE" in (FONTS / lic).read_text().upper(), lic
+
+
+def test_font_faces_cover_the_weights_in_use():
+    faces = re.findall(r"@font-face \{([^}]*)\}", _nocomment("fonts.css"))
+    got = {(re.search(r'font-family:"([^"]+)"', f).group(1), re.search(r"font-weight:([0-9 ]+);", f).group(1).strip(),
+            re.search(r'url\("fonts/([^"]+)"\)', f).group(1)) for f in faces}
+    assert {fam for fam, _, _ in got} == {"Figtree", "Source Serif 4", "Noto Sans Tamil"}
+    assert {w for fam, w, _ in got if fam == "Figtree"} == {"400", "500", "600", "700", "800"}
+    assert {w for fam, w, _ in got if fam == "Source Serif 4"} == {"600 700"}
+    assert {w for fam, w, _ in got if fam == "Noto Sans Tamil"} == {"400", "700", "800"}
+    assert {f for _, _, f in got} == set(_sources())                    # every file used, none missing
+    assert all("unicode-range:" in f and "font-display:swap" in f for f in faces)
+
+
+def test_no_page_calls_google_and_both_pages_link_fonts_css():
+    for name in ("index.html", "login.html", "fonts.css", "theme.css", "login.css"):
+        t = _read(name)
+        assert "googleapis" not in t and "gstatic" not in t and "@import" not in t and not re.search(r"(?:href|src)=\"https?://|url\(\s*['\"]?(?:https?:)?//", t), name
+    for name, before in (("index.html", "styles.css?v="), ("login.html", "login.css?v=")):
+        head = _read(name).split("</head>")[0]
+        assert head.index('href="fonts.css?v=1" media="screen"') < head.index(before), name
+
+
+def test_print_never_names_a_bundled_family():
+    assert "Figtree" not in _read("polish.css") and "Figtree" not in _read("styles.css")
+    assert '"Segoe UI", Arial' in _read("polish.css")[: _read("polish.css").index("@media screen")]
+    sheet = (ROOT / "doctor_dictation" / "pdf" / "sheet.py").read_text()
+    assert "font-family: Arial, Helvetica, sans-serif" in sheet and "Figtree" not in sheet and "Source Serif" not in sheet

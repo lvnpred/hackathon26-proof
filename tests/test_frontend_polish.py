@@ -46,10 +46,8 @@ def test_the_print_rules_are_byte_for_byte_what_they_were_and_polish_only_touche
 
 
 def test_no_page_loads_anything_from_a_third_party_and_the_fonts_are_tokens():
-    for name in ("index.html", "login.html", "styles.css", "polish.css", "login.css", "team.css", "steps.css", "rx.css", "letterhead.css"):
+    for name in ("index.html", "login.html", "styles.css", "polish.css", "login.css", "team.css", "steps.css", "rx.css", "letterhead.css", "fonts.css"):
         text = _read(name)
-        if name == "index.html":       # Lightday (2026-10-27): the one exception is its Google Fonts link (tests/test_frontend_lightday.py)
-            text = re.sub(r'<link rel="(?:preconnect|stylesheet)" href="https://fonts\.(?:googleapis|gstatic)\.com[^"]*"(?: crossorigin)? />', "", text)
         assert "googleapis" not in text and "gstatic" not in text and "@import" not in text and not re.search(r'(?:href|src)="https?://', text), name
         assert not re.search(r"url\(\s*['\"]?(?:https?:)?//", text), name
     css = _read("styles.css")

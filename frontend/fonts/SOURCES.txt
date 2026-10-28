@@ -1,0 +1,20 @@
+# Bundled screen fonts (OFL 1.1). Fetched with npm pack; tarball integrity checked against the registry.
+# @fontsource/figtree@5.3.0 sha512-/iTcTXL1eRBGhvD7NN9dnKzXzWqDLVZVEUFI9xIxAC1G/hXU8tCyYeXCAuPOuvSYPInFUP7H6KLGgygmDfy1SA==
+# @fontsource-variable/source-serif-4@5.3.1 sha512-4Rtay22SC4lMvw11r/+9kxANB6P3M0X8s1NudBC2v0J1KU2y3DcMoNcT3lBoZ/CqLirzf+StlO6UlJilyrvaUg==
+# @fontsource/noto-sans-tamil@5.3.0 sha512-webid7fyBljiIEJ1hXuey48vCUe2Oq3/EwYjo6XBtXItO9FoUmqy0bEnXA5iE++iC324BTI8QMy80SYtDheCzA==
+8f98dd642986f1fa39c45b89665a57372897c235b36028e0e4a136e43dc5f8ab  figtree-latin-400-normal.woff2
+953a6a4294b1205a1b4d4b9e5529478e8c9e1c5a67a9aa24a551414cd85b6f51  figtree-latin-500-normal.woff2
+367d713287918784702563518f59239989da815c80d3c7337686b9816635a08b  figtree-latin-600-normal.woff2
+7ec4f08d09f91d349917dd6592f6aaae66d8fe1bbd58fa24707961e79236616e  figtree-latin-700-normal.woff2
+90f6908a05e4dc417647be6d0637eb8ecb7977cab9e577ab284d02c2092111e3  figtree-latin-800-normal.woff2
+3f58126100ed4da09c54adcfb8fa9f642be69101d1e18dc4c0a5489ee9b904c5  figtree-latin-ext-400-normal.woff2
+65f0ca6dc939a76e0d63fd7b1fae1039d0a8963d2ce68a00ec20122a452e3b08  figtree-latin-ext-500-normal.woff2
+066f04a662a3b3f740f2e711548003e12c2475375e58a59477aa440c8fd03a17  figtree-latin-ext-600-normal.woff2
+b3252ef48dfbfc51b2e7eecb4de8414dec694c4c83a16ef7afd319796235ef72  figtree-latin-ext-700-normal.woff2
+75d2185f153a5b14aa7f380969a401de04cf554292a94a533386a6b49e8e322d  figtree-latin-ext-800-normal.woff2
+6b240e875a16a2e0c1c918f9927531c3bf27874768bdaef9f204da88270275c8  noto-sans-tamil-tamil-400-normal.woff2
+2ec87bed050fbedcb2a3c167d8fd961d37d9aceb8db5d6ca47bbff794115b967  noto-sans-tamil-tamil-700-normal.woff2
+3dc2650c9cbc8276a94241a28621e22ee012170044f6cee2c6d8038852de9604  noto-sans-tamil-tamil-800-normal.woff2
+155f6e701097cc269cf8d5d7ac86795f263f1afbeb47c14d1d747108c9335389  source-serif-4-latin-ext-opsz-normal.woff2
+f2ea9c12d2fe9bd3a9589b02ad2c0909da88f30938c91adc838c4f4098f9f9e0  source-serif-4-latin-opsz-normal.woff2
+# OFL-SourceSerif4.txt: upstream adobe-fonts/source-serif release/LICENSE.md (the npm package's LICENSE names the packager, not Adobe)

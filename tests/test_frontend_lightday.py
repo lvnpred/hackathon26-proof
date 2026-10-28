@@ -115,17 +115,7 @@ def test_no_raw_colour_outside_the_token_blocks_and_old_vars_follow_the_tokens()
     assert "--t-" not in css and "midnight" not in css and "graphite" not in css
 
 
-def test_fonts_come_from_google_fonts_in_a_link_and_nothing_else_is_third_party():
-    html = _read("index.html")
-    head = html[:html.index("</head>")]
-    href = ("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Source+Serif+4:opsz,wght@8..60,600;"
-            "8..60,700&amp;family=Noto+Sans+Tamil:wght@400;700;800&amp;display=swap")
-    assert '<link rel="stylesheet" href="%s" />' % href in head
-    assert head.index(href) < head.index("styles.css?v=")
-    assert '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />' in head
-    others = [u for u in re.findall(r'(?:href|src)="(https?://[^"]+)"', html) if not u.startswith("https://fonts.g")]
-    assert others == []
-    assert "@import" not in _read("theme.css")
+# Fonts are served from the clinic server: see tests/test_frontend_lightday_ends.py (font tests).
 
 
 # ---- Task 2: components -----------------------------------------------------------------------------------------------

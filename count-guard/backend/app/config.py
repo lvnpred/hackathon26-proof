@@ -21,16 +21,23 @@ SAM_CONCEPTS = (
 
 
 def load_dotenv(path: Path | None = None) -> None:
-    """Load KEY=VALUE lines. Does not override variables already set."""
+    """Load KEY=VALUE lines. Does not override variables already set.
+
+    Within one file the last line for a key wins, as python-dotenv does for Doctor Dictation,
+    so the shared .env means the same thing to both apps.
+    """
     env_path = path or REPO_ROOT / ".env"
     if not env_path.is_file():
         return
+    found: dict[str, str] = {}
     for raw in env_path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+        found[key.strip()] = value.strip().strip("'\"")
+    for key, value in found.items():
+        os.environ.setdefault(key, value)
 
 
 @dataclass(frozen=True)

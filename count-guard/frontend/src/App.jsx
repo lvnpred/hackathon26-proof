@@ -1,11 +1,16 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
+import Audit from "./screens/Audit";
 import Close from "./screens/Close";
+import Doctor from "./screens/Doctor";
 import Guide from "./screens/Guide";
 import Home from "./screens/Home";
+import Journey from "./screens/Journey";
 import Live from "./screens/Live";
 import Morning from "./screens/Morning";
+import Nurse from "./screens/Nurse";
 import Opd from "./screens/Opd";
 import Ot from "./screens/Ot";
+import Patient from "./screens/Patient";
 import Setup from "./screens/Setup";
 import Ward from "./screens/Ward";
 
@@ -133,6 +138,11 @@ export function Shell({ children, guide, subtitle, status }) {
           <NavLink to="/" end>Morning</NavLink>
           <NavLink to="/guide">Guide</NavLink>
           <NavLink to="/count">Camera count</NavLink>
+          <NavLink to="/journey">Journey</NavLink>
+          <NavLink to="/doctor">Doctor</NavLink>
+          <NavLink to="/nurse">Nurse</NavLink>
+          <NavLink to="/patient">Patient</NavLink>
+          <NavLink to="/audit">Audit</NavLink>
         </nav>
         <Banner />
       </div>
@@ -156,6 +166,11 @@ export default function App() {
       <Route path="/ward" element={<Ward />} />
       <Route path="/case/:caseId" element={<Live />} />
       <Route path="/case/:caseId/close" element={<Close />} />
+      <Route path="/journey" element={<Journey />} />
+      <Route path="/doctor" element={<Doctor />} />
+      <Route path="/nurse" element={<Nurse />} />
+      <Route path="/patient" element={<Patient />} />
+      <Route path="/audit" element={<Audit />} />
     </Routes>
   );
 }

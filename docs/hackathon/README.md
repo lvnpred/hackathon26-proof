@@ -49,6 +49,7 @@ switch that is off by default and carry a "Research demo — not for clinical us
 | `04-hackathon-build-plan.md` | Day-by-day plan, subagent lanes, task cards, agent prompt template | Hackathon |
 | `05-product-spec.md` | Product scope, phases, time to build, what to keep or rewrite from the hackathon | Product |
 | `06-engineering-standards.md` | Coding, testing, safety, security and review standards for the product build | Product |
+| `07-care-journey.md` | **Current demo.** Doctor, nurse and patient stories; the nudge rule; option A; build-now cut; three-act script | Hackathon |
 
 ## Decisions needed before Day 1 (26 Oct)
 

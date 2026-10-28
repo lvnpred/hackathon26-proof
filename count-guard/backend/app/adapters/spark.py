@@ -1,4 +1,4 @@
-"""Muse Spark 1.3 second look. It names a crop. It does not decide the count."""
+"""Muse Spark 1.3: names a crop (second look) or reads strip labels. It does not decide anything."""
 
 from __future__ import annotations
 
@@ -33,13 +33,27 @@ def normalize_second_look(text: str) -> str:
     return "unknown"
 
 
+STRIP_PROMPT = (
+    "Read the printed medicine name and strength on each strip in this photo. "
+    'Reply with JSON only: {"strips": [{"name": "...", "strength": "25 mg"}]}. '
+    "Copy what is printed. Leave strength empty if it cannot be read. Do not give medical advice."
+)
+
+
 class SparkAdapter:
-    """Called only when rule R5 fires."""
+    """Called when rule R5 fires, or when a patient photographs strips. Only with a key."""
 
     def __init__(self, settings: Settings):
         self.settings = settings
 
     def second_look(self, image_data_url: str, tracked_label: str) -> str:
+        return normalize_second_look(self._ask(image_data_url, second_look_prompt(tracked_label)))
+
+    def read_strips(self, image_data_url: str) -> str:
+        """Raw model text. app.morning.strips.parse_strip_text grounds it."""
+        return self._ask(image_data_url, STRIP_PROMPT)
+
+    def _ask(self, image_data_url: str, prompt: str) -> str:
         if not self.settings.spark_configured:
             raise RuntimeError("MODEL_API_KEY is not set")
         body = {
@@ -49,7 +63,7 @@ class SparkAdapter:
                     "type": "message",
                     "role": "user",
                     "content": [
-                        {"type": "input_text", "text": second_look_prompt(tracked_label)},
+                        {"type": "input_text", "text": prompt},
                         {"type": "input_image", "image_url": image_data_url},
                     ],
                 }
@@ -63,8 +77,7 @@ class SparkAdapter:
             )
             response.raise_for_status()
             payload = response.json()
-        text = _output_text(payload)
-        return normalize_second_look(text)
+        return _output_text(payload)
 
 
 def _output_text(payload: dict) -> str:

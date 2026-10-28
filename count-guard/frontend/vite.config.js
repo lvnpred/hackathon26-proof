@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
     },
   };
 
+  // "/journey" is also a screen; only the API paths under /journey/episodes go to the backend.
+  const journey = {
+    target: apiTarget,
+    bypass(req) {
+      if (!req.url.startsWith("/journey/episodes")) return "/index.html";
+    },
+  };
+
   return {
     plugins: [react()],
     server: {
@@ -27,6 +35,7 @@ export default defineConfig(({ mode }) => {
         "/health": api,
         "/product": api,
         "/morning": morning,
+        "/journey": journey,
       },
     },
   };

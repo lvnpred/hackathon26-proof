@@ -53,4 +53,18 @@ The overnight loop made these changes. They went in as one commit, e36cd87, on 2
 | PDFs survive em dashes and smart quotes | B21 | `backend/app/report/count_sheet.py`, `backend/app/morning/pdf.py` |
 | R1 and R2 alerts say "No camera time (spoken count)" | B22 | `frontend/src/screens/Live.jsx` |
 
+## Added on 28 Oct 2026: the care journey
+
+The doctor's, nurse's and patient's stories on one timeline. The plan is `docs/hackathon/07-care-journey.md` at the workspace root.
+
+| Feature | Date | Where |
+| --- | --- | --- |
+| Prescription read from Doctor Dictation over HTTP (option A), or the synthetic one | 2026-10-28 | `backend/app/journey/rx.py` |
+| Dose schedule and calendar reminders | 2026-10-28 | `backend/app/journey/schedule.py` |
+| Nudge rules: strips vs prescription, doses vs orders, observations vs limits, count, help, check-in | 2026-10-28 | `backend/app/journey/nudges.py` |
+| Three stories, clinic discharge template, audit rows | 2026-10-28 | `backend/app/journey/stories.py` |
+| Journey routes and the three-act play | 2026-10-28 | `backend/app/journey/api.py`, `play.py` |
+| Strip photo read by Muse Spark 1.3 | 2026-10-28 | `backend/app/adapters/spark.py` |
+| Journey tests | 2026-10-28 | `backend/tests/test_journey.py` |
+
 Not built yet: a recorded prop-tray video, a paid SAM measurement, a public GitHub push, the 3-minute video, the X post. Covasant IP check: not applicable.

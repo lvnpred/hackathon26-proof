@@ -48,6 +48,8 @@ class Settings:
     unannounced_window_ms: int
     lost_after_frames: int
     sam_fps: int
+    # Doctor Dictation, read over HTTP for the prescription (option A: no shared code).
+    dd_base: str = "http://127.0.0.1:8000"
 
     @property
     def db_path(self) -> Path:
@@ -99,4 +101,7 @@ def get_settings() -> Settings:
         unannounced_window_ms=int(os.environ.get("UNANNOUNCED_WINDOW_MS", "30000")),
         lost_after_frames=int(os.environ.get("LOST_AFTER_FRAMES", "4")),
         sam_fps=int(os.environ.get("SAM_FPS", "2")),
+        dd_base=os.environ.get(
+            "DD_BASE_URL", f"http://127.0.0.1:{os.environ.get('DD_PORT', '8000')}"
+        ).rstrip("/"),
     )

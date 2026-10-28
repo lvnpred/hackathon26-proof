@@ -13,6 +13,11 @@ The running map is the guide. With the app open, start at [the guide](http://127
 | Swab count and drug line | [In the room](http://127.0.0.1:5173/ot) | `backend/app/morning/count_rules.py` | [2026-10-27](docs/new-work.md) |
 | Discharge sheet | [After the room](http://127.0.0.1:5173/ward) | `backend/app/morning/discharge.py` | [2026-10-27](docs/new-work.md) |
 | Camera count | [Video check](http://127.0.0.1:5173/count) | `backend/app/core/rules.py` | [2026-10-27](docs/new-work.md) |
+| One patient, three people | [Journey](http://127.0.0.1:5173/journey) | `backend/app/journey/nudges.py` | [2026-10-28](docs/new-work.md) |
+| Prescription, orders, discharge card | [Doctor](http://127.0.0.1:5173/doctor) | `backend/app/journey/rx.py` | [2026-10-28](docs/new-work.md) |
+| Doses, observations, nudge inbox | [Nurse](http://127.0.0.1:5173/nurse) | `backend/app/journey/api.py` | [2026-10-28](docs/new-work.md) |
+| Schedule, strips, check-in | [Patient](http://127.0.0.1:5173/patient) | `backend/app/journey/schedule.py` | [2026-10-28](docs/new-work.md) |
+| Audit trail | [Audit](http://127.0.0.1:5173/audit) | `backend/app/journey/stories.py` | [2026-10-28](docs/new-work.md) |
 | This map | [Guide](http://127.0.0.1:5173/guide) | `backend/app/site.py` | [2026-10-27](docs/new-work.md) |
 
 Every module and its date is in [docs/new-work.md](docs/new-work.md). That list also names the changes made overnight on 27–28 Oct, committed as e36cd87.
@@ -20,6 +25,7 @@ Every module and its date is in [docs/new-work.md](docs/new-work.md). That list 
 These six steps are for this patient only. The next patient starts a new morning. Records are not mixed.
 
 This repository was started on 27 Oct 2026. It does not reuse Doctor Dictation or OPD Companion code.
+The prescription comes from a running Doctor Dictation over HTTP (`GET /api/v1/documents/{id}`), so the two apps stay separate. The plan is `docs/hackathon/07-care-journey.md` at the workspace root.
 
 ## Run
 

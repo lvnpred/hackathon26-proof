@@ -218,7 +218,10 @@ def test_text_is_never_markup():
     assert r["text"] == "<img src=x onerror=alert(1)>" and r["full"] == " (<b>x</b>)"
     assert "IMG" not in r["tags"] and "B" not in r["tags"]
     js = (FRONT / "ixlist.js").read_text(encoding="utf-8")
-    assert "innerHTML" not in js and "insertAdjacentHTML" not in js and "outerHTML" not in js
+    assert js.count("innerHTML") == 1 and len(re.findall(r"^\s*x\.innerHTML = X_ICON;\s*$", js, re.M)) == 1
+    assert "insertAdjacentHTML" not in js and "outerHTML" not in js
+    icon_decl = re.search(r"^\s*const X_ICON = (.*);$", js, re.M).group(1)
+    assert re.fullmatch(r"'[^']*'", icon_decl) and "${" not in icon_decl and "+" not in icon_decl and "`" not in icon_decl
 
 
 def test_the_text_takes_plain_text_only():
@@ -365,6 +368,6 @@ def test_app_js_hooks():
 def test_index_html_pins():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
     assert html.index("rx.css?v=10") < html.index("ixlist.css?v=3")
-    assert html.index("ixlist.js?v=3") < html.index("app.js?v=58")
+    assert html.index("ixlist.js?v=4") < html.index("app.js?v=59")
     assert '<ul id="pIx" class="ix-list"></ul>' in html and not re.search(r'id="pIx"[^>]*editable-list', html)
     assert len((FRONT / "ixlist.js").read_text(encoding="utf-8").splitlines()) < 300

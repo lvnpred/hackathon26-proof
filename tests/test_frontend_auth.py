@@ -33,10 +33,12 @@ def test_login_page_posts_to_the_auth_routes_and_never_names_the_wrong_field():
 
 
 def test_login_assets_are_the_public_ones_the_middleware_allows():
-    from doctor_dictation.api.session import PUBLIC_PATHS
+    from doctor_dictation.api.session import is_public
     html = _read("login.html")
-    for asset in ("login.css", "login.js"):
-        assert asset in html and "/" + asset in PUBLIC_PATHS
+    assets = [a for a in re.findall(r'(?:href|src)="([^"]+)"', html) if not a.startswith("data:")]
+    assert {"login.css", "login.js"} <= {a.split("?")[0] for a in assets}
+    for asset in assets:
+        assert is_public("/" + asset.split("?")[0]), asset
     assert "auth.js" not in html          # the login page must not redirect to itself
 
 
@@ -71,7 +73,7 @@ def test_forced_change_screen_has_a_way_out():
 
 def test_login_page_has_icon_and_a_hidden_username_for_password_managers():
     html, js = _read("login.html"), _read("login.js")
-    assert '<link rel="icon" href="data:,">' in html
+    assert '<link rel="icon" href="lightday-app-icon.svg" type="image/svg+xml">' in html
     assert 'id="changeUser"' in html and 'autocomplete="username"' in html and "readonly" in html
     assert 'aria-hidden="true"' in html.split('id="changeUser"')[1].split(">")[0] + ">" or "aria-hidden" in html
     assert "changeUser" in js

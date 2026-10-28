@@ -229,7 +229,7 @@
   .panel-status { color:var(--record); }
   .prof-part, .dg-cell, .lh-choice, .lh-dupe, .prof-lh, .lh-head { border-color:var(--line); }
   .prof-part legend, .lh-choice legend, .lh-dupe legend { color:var(--ink); font-weight:700; }
-  .field input, .field textarea, .spell-line input, #shareTel, .team-panel .team-filter input[type="search"] { min-height:var(--control-h); background:var(--surface-sunk);
+  .field input, .field textarea, .team-panel .field input, .spell-line input, #shareTel, .team-panel .team-filter input[type="search"] { min-height:var(--control-h); background:var(--surface-sunk);
     color:var(--ink); border:1px solid var(--line-control); border-radius:var(--radius-md); }
   .field textarea { min-height:0; padding-top:10px; }
   .field input::placeholder, .field textarea::placeholder, #shareTel::placeholder, .spell-line input::placeholder { color:var(--ink-muted); }
@@ -241,6 +241,8 @@
   .field input:focus, .field textarea:focus { border-color:var(--line-control); box-shadow:var(--focus-ring); }
   .dg-remove, .dg-add { background:var(--surface); color:var(--ink); border-color:var(--line-control); }
   .lh-warn { background:var(--sun-soft); border-color:var(--sun-text); color:var(--ink); }
+  .adding-banner { background:var(--action); color:var(--on-action); border-radius:var(--radius-md); }
+  .name-check { background:var(--sun-soft); border-color:var(--sun-text); color:var(--ink); border-radius:var(--radius-md); }
   .lh-error, .team-panel .team-error, .error { background:var(--record-soft); border-color:var(--record); color:var(--record); }
   .lh-done, .team-panel .team-secret { background:var(--leaf-soft); border-color:var(--leaf); color:var(--ink); }
   .lh-done { color:var(--leaf); }

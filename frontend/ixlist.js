@@ -3,8 +3,9 @@
 // this file draws one <li class="ix-item"> per test with its status chip, "Keep" (red only), "Remember for this clinic"
 // with a "Full name" box, and an x button; "+ Add test" sits after the list. app.js only calls in: render, read,
 // rememberIndexes, remove/insert (delete and Undo), showBlocked (the 409) and blockedMessage. DOM is built with
-// createElement and textContent only, never markup.
+// createElement and textContent only, never markup (the x button takes only the fixed X_ICON line icon).
 window.IxList = (function () {
+  const X_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
   const CHIPS = { verified: "In list", new: "New test", "not-dictated": "Not dictated" };
   const STATUSES = ["verified", "new", "not-dictated", ""], SOURCES = ["dictated", "doctor"];
   const TEXT_CHARS = 200, MAX_ITEMS = 12, LOOKUP_URL = "/api/v1/investigations/lookup", LOOKUP_MS = 8000;
@@ -163,8 +164,9 @@ window.IxList = (function () {
     li.appendChild(button("ix-keep ix-act no-print", "Keep", () => keep(li)));
     li.append(...rememberBox(li));
     // Not button(): its click handler stops propagation, and app.js routes the x from #sheet (IxList.remove).
-    const x = el("button", "x-btn no-print", "×"); x.type = "button"; x.contentEditable = "false";
-    x.dataset.action = "delete-ix"; x.title = "Delete this test";
+    const x = el("button", "x-btn no-print", ""); x.type = "button"; x.contentEditable = "false";
+    x.innerHTML = X_ICON;
+    x.dataset.action = "delete-ix"; x.title = "Delete this test"; x.setAttribute("aria-label", "Delete this test");
     li.appendChild(x);
     if (viewOnly()) { span.contentEditable = "false"; span.dataset.ro = "1"; x.disabled = true; }
     paint(li);

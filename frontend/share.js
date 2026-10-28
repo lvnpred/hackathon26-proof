@@ -10,7 +10,7 @@
     old: "This prescription was saved before sharing was added.",
     missing: "This prescription could not be found.",
     dead: "This link can no longer be used. Print a fresh copy for the patient.",
-    gone: "The share link could not be loaded. Please try again.",
+    gone: "The share link could not be loaded. Try again.",
   };
   const NO_LINK = "no share link for this prescription";     // the server's text for "saved, but no link yet"
   const PHONE_HINT = "Enter the patient's 10-digit mobile number";

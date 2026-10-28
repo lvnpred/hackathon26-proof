@@ -62,7 +62,7 @@ def test_theme_css_loads_last_and_has_no_rule_outside_media_screen():
     html = _read("index.html")
     sheets = re.findall(r'<link rel="stylesheet" href="([^"?]+)\?v=\d+"', html)
     assert sheets[-1] == "theme.css" and sheets.count("theme.css") == 1
-    assert '<link rel="stylesheet" href="theme.css?v=5" />' in html
+    assert '<link rel="stylesheet" href="theme.css?v=6" />' in html
     assert _outside_screen(_nocomment("theme.css")).strip() == ""
 
 
@@ -231,7 +231,7 @@ def test_dialogs_follow_the_theme_and_tinted_notes_use_status_tokens():
     theme = _nocomment("theme.css")
     dlg = _rule(theme, "dialog.panel")
     assert "background:var(--surface)" in dlg and "color:var(--ink)" in dlg
-    assert "background:var(--surface-sunk)" in _rule(theme, ".field input, .field textarea, .spell-line input, #shareTel, .team-panel .team-filter input[type=\"search\"]")
+    assert "background:var(--surface-sunk)" in _rule(theme, ".field input, .field textarea, .team-panel .field input, .spell-line input, #shareTel, .team-panel .team-filter input[type=\"search\"]")
     for sel, soft in ((".lh-warn", "--sun-soft"), (".lh-error, .team-panel .team-error, .error", "--record-soft"),
                       (".lh-done, .team-panel .team-secret", "--leaf-soft")):
         assert "background:var(%s)" % soft in _rule(theme, sel), sel

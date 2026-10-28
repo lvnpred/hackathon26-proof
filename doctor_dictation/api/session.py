@@ -19,13 +19,15 @@ from doctor_dictation.sessions import COOKIE_NAME
 CSRF_HEADER = b"x-dd-client"
 UNSAFE_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
 PUBLIC_PATHS = frozenset({"/login", "/login.css", "/login.js", "/api/health", "/health",
-                          "/api/v1/auth/login", "/favicon.ico"})
+                          "/api/v1/auth/login", "/favicon.ico",
+                          "/themepick.js", "/fonts.css", "/lightday-app-icon.svg"})   # the sign-in page's own assets (Lightday)
+PUBLIC_FONT = re.compile(r"/fonts/[a-z0-9-]+\.woff2")   # bundled fonts: one segment, no dots or slashes in the stem; .txt licences stay gated
 PUBLIC_SHARE = re.compile(r"/s/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+")   # patient download link: exactly two segments, no dots
 GATE_PATHS = frozenset({"/api/v1/auth/change-password", "/api/v1/auth/logout", "/api/v1/auth/me"})
 
 
 def is_public(path: str) -> bool:
-    return path in PUBLIC_PATHS or PUBLIC_SHARE.fullmatch(path) is not None
+    return path in PUBLIC_PATHS or PUBLIC_SHARE.fullmatch(path) is not None or PUBLIC_FONT.fullmatch(path) is not None
 
 
 def _cookie_token(headers: dict) -> str | None:

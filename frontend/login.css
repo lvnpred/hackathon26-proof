@@ -1,26 +1,35 @@
-/* Self-contained: styles.css is not a public path (api/session.py PUBLIC_PATHS), so the few values we need are copied here.
-   System fonts only: the sign-in page makes no third-party request. */
-:root { --ink:#16211d; --muted:#566660; --soft:#d6ded9; --accent:#1456d9; --bad:#a8261d; --bg:#eef2f0; --card:#fff;
-  --font-ui:"Public Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
-  --font-serif:"Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif; }
+/* Self-contained: styles.css and theme.css are not public paths (api/session.py), so the Lightday tokens this page needs are copied
+   here under theme.css's own names (docs/design-system/lightday/project/tokens.json). Day by default; Dusk when themepick.js
+   sets <html data-theme="dusk"> from the device's dd.theme. System fonts only until fonts.css is linked. */
+:root, :root[data-theme="day"] {
+  --paper:#FAF7F0; --surface:#FFFFFF; --surface-sunk:#F2EDE3; --line:#E6DFD2; --line-control:#8A806E; --ink:#1C1A17; --ink-muted:#5F584C; --sun:#F2A93B; --sun-soft:#FCEBCB; --action:var(--ink); --on-action:var(--surface); --sky:#2350C2; --record:#C42B1C; --record-soft:#FBE3DF; --focus-ring:0 0 0 2px #FAF7F0, 0 0 0 4px #2350C2;
+}
+:root[data-theme="dusk"] {
+  --paper:#14120E; --surface:#1E1B16; --surface-sunk:#0E0C09; --line:#302B23; --line-control:#807664; --ink:#F4EEE3; --ink-muted:#B4AA98; --sun:#F5B54A; --sun-soft:#3A2C14; --action:var(--ink); --on-action:var(--surface); --sky:#86A6FF; --record:#FF6B5B; --record-soft:#3D1814; --focus-ring:0 0 0 2px #14120E, 0 0 0 4px #86A6FF;
+}
+:root { --font-sans:"Figtree", "Noto Sans Tamil", "Noto Sans Telugu", system-ui, sans-serif; --radius-md:10px; --radius-lg:12px; --control-h:46px; }
 * { box-sizing: border-box; }
-body { font-family:var(--font-ui); font-size:14px; line-height:1.45; margin:0; color:var(--ink); background:linear-gradient(160deg,#e3ecff 0%,var(--bg) 55%);
+body { font-family:var(--font-sans); font-size:14px; line-height:1.45; margin:0; color:var(--ink); background:var(--paper);
   min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
-.card { width:100%; max-width:400px; background:var(--card); border:1px solid var(--soft); border-radius:18px;
-  padding:32px 30px 28px; box-shadow:0 18px 40px rgba(20,35,29,.1); }
+.card { width:100%; max-width:400px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg);
+  padding:32px 30px 28px; }
 .brand { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
-.brand-mark { width:42px; height:42px; flex:0 0 42px; border-radius:12px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; }
-h1 { font-family:var(--font-serif); font-size:24px; margin:0; }
-.tagline { margin:0 0 6px; color:var(--muted); }
-h2 { font-size:15px; margin:14px 0 6px; color:var(--muted); font-weight:600; }
+.brand-mark { width:40px; height:40px; flex:0 0 40px; border-radius:var(--radius-md); background:var(--sun-soft); display:flex; align-items:center; justify-content:center; }
+.ld-mark-sun { fill:var(--sun); }
+.ld-mark-horizon { fill:var(--ink); }
+.brand-title { font-size:19px; margin:0; color:var(--ink); }
+.ld-wordmark { font-weight:800; letter-spacing:-0.02em; }
+.brand-app { font-weight:700; }
+.tagline { margin:0 0 6px; color:var(--ink-muted); }
+h2 { font-size:15px; margin:14px 0 6px; color:var(--ink-muted); font-weight:600; }
 form { display:flex; flex-direction:column; gap:6px; }
 form[hidden] { display:none; }
-label { font-size:12px; font-weight:600; color:var(--muted); margin-top:10px; }
-input { font:inherit; min-height:46px; padding:0 12px; border:1px solid #9aa8a1; border-radius:10px; width:100%; color:var(--ink); }
-input:focus-visible, button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
-button { font:inherit; cursor:pointer; border-radius:10px; min-height:44px; padding:0 16px; margin-top:14px; border:1px solid #b5c0ba; background:#fff; }
-button.primary { min-height:48px; margin-top:20px; background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; font-size:15px; }
+label { font-size:12px; font-weight:600; color:var(--ink-muted); margin-top:10px; }
+input { font:inherit; min-height:var(--control-h); padding:0 12px; background:var(--surface-sunk); border:1px solid var(--line-control); border-radius:var(--radius-md); width:100%; color:var(--ink); }
+input:focus-visible, button:focus-visible { outline:2px solid transparent; box-shadow:var(--focus-ring); }
+button { font:inherit; font-weight:700; cursor:pointer; border-radius:var(--radius-md); min-height:var(--control-h); padding:0 16px; margin-top:14px; border:1px solid var(--line-control); background:var(--surface); color:var(--ink); }
+button.primary { margin-top:20px; background:var(--action); border-color:var(--action); color:var(--on-action); font-size:15px; }
 #changeUser { min-height:0; padding:0; border:0; }
-.hint { font-size:12px; color:var(--muted); margin:0; }
-#msg { min-height:1.2em; margin:14px 0 0; font-size:13px; color:var(--bad); }
-.foot { margin:6px 0 0; font-size:12px; color:var(--muted); text-align:center; }
+.hint { font-size:12px; color:var(--ink-muted); margin:0; }
+#msg { min-height:1.2em; margin:14px 0 0; font-size:13px; color:var(--record); }
+.foot { margin:6px 0 0; font-size:12px; color:var(--ink-muted); text-align:center; }

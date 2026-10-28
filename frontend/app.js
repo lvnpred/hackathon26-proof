@@ -98,7 +98,7 @@ fetch("/api/health").then(r => r.json()).then(h => {
   if (!DEBUG_BADGE) return;
   const llm = h.llm_configured ? `${h.llm_provider}:${h.llm_model}`
     : (h.deepseek_configured ? "DeepSeek" : "rules-fallback");
-  $("engineBadge").textContent = `${h.stt_engine || h.whisper_model} • ${llm}`;
+  $("engineBadge").textContent = `${h.stt_engine || h.whisper_model} · ${llm}`;
   $("engineBadge").hidden = false;
 }).catch(() => { $("engineBadge").textContent = "backend offline"; $("engineBadge").hidden = false; });
 
@@ -560,7 +560,7 @@ async function transcribeName(blob) {
 }
 
 // The server's notes on a draft or a correction, appended to the status line.
-function warningNote(j) { return j.warnings && j.warnings.length ? " ⚠ " + j.warnings.join(" ") : ""; }
+function warningNote(j) { return j.warnings && j.warnings.length ? " Check: " + j.warnings.join(" ") : ""; }
 
 async function formatTranscript(transcript, snap) {
   // Retain the transcript immediately, before the LLM call: a slow format must
@@ -733,7 +733,7 @@ function hasContent(s) {
   if ((s.diagnosis || []).length || (s.complaints || []).length || (s.findings || []).length) return true;
   return (s.rx || []).some(r => r && (r.name || r.strength));
 }
-
+const X_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 // ---- delete (x) buttons + one-level undo -----------------------------------
 function xBtn(action, label, title) {
   const b = document.createElement("button");
@@ -742,7 +742,7 @@ function xBtn(action, label, title) {
   b.dataset.action = action;
   b.setAttribute("aria-label", label);
   b.title = title;
-  b.textContent = "×";
+  b.innerHTML = X_ICON;
   b.disabled = state.working;
   if (action === "delete-item") b.contentEditable = "false";
   return b;

@@ -100,7 +100,7 @@ def test_the_dialog_shows_the_link_and_revokes_through_the_server():
 def test_the_page_wires_share_next_to_print():
     html = (FRONT / "index.html").read_text()
     app = (FRONT / "app.js").read_text()
-    assert "share.js?v=4" in html and html.index("share.js?v=") < html.index("app.js?v=")
+    assert "share.js?v=5" in html and html.index("share.js?v=") < html.index("app.js?v=")
     assert 'id="shareBtn"' in html and 'id="shareDlg"' in html
     assert "Share.init({ documentId: () => state.documentId })" in app
     body = app[app.index("function refreshPrintButton"):]
@@ -137,7 +137,7 @@ def test_failures_show_calm_messages_and_never_throw():
       answers.push({ status: 403, body: { error: "Only the author or an admin can turn this off" } }); els.shareRevoke.fire("click"); await tick();
       msgs.push(els.shareMsg.textContent);
       console.log(JSON.stringify({ msgs, qr }));""")
-    assert r["msgs"] == ["The share link could not be loaded. Please try again.", "This prescription could not be found.",
+    assert r["msgs"] == ["The share link could not be loaded. Try again.", "This prescription could not be found.",
                          "This link expired on 2 Nov 2026. Save the prescription again for a new one.", "Only the author or an admin can turn this off"]
     assert r["qr"] == {"hidden": True, "src": ""}
 

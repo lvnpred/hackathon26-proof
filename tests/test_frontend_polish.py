@@ -54,19 +54,19 @@ def test_no_page_loads_anything_from_a_third_party_and_the_fonts_are_tokens():
         assert not re.search(r"url\(\s*['\"]?(?:https?:)?//", text), name
     css = _read("styles.css")
     assert '--font-ui:"Public Sans", "Segoe UI"' in css and '--font-serif:"Source Serif 4"' in css and "font-family: var(--font-ui)" in css
-    assert "--font-serif" in _read("login.css") and "@font-face" not in css
+    assert "--font-sans" in _read("login.css") and "@font-face" not in css
     assert "@font-face" not in _read("polish.css") and "@font-face" not in _read("login.css")
     # the stylesheets are linked with a version, and the shared one moved past the pre-polish v=9
     html, login = _read("index.html"), _read("login.html")
     assert int(re.search(r"styles\.css\?v=(\d+)", html).group(1)) >= 10 and int(re.search(r"polish\.css\?v=(\d+)", html).group(1)) >= 1 and int(re.search(r"steps\.css\?v=(\d+)", html).group(1)) >= 2
     assert html.index("steps.css?v=") < html.index("polish.css?v=")      # polish loads after the sheets it refines
-    assert int(re.search(r"login\.css\?v=(\d+)", login).group(1)) >= 2
+    assert int(re.search(r"login\.css\?v=(\d+)", login).group(1)) >= 3
 
 
 def test_the_brand_mark_and_orb_are_inline_svg_and_the_recording_hooks_are_unchanged():
     html, login, app = _read("index.html"), _read("login.html"), _read("app.js")
     assert "✚" not in html and "🎤" not in html and "● REC" not in html and "⚕" not in login and "&#9877;" not in login
-    assert html.count('<path d="M12 5v14M5 12h14"/>') == 0 and 'class="ld-mark-sun" d="M6 19a10 10 0 0 1 20 0z"' in html and login.count('<path d="M12 5v14M5 12h14"/>') == 1
+    assert html.count('<path d="M12 5v14M5 12h14"/>') == 0 and 'class="ld-mark-sun" d="M6 19a10 10 0 0 1 20 0z"' in html and 'class="ld-mark-sun"' in login and 'M12 5v14M5 12h14' not in login
     assert 'id="wave" class="rec-dot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="rec-text">REC</span>' in html
     assert 'wave.classList.add("on")' in app and 'wave.classList.remove("on")' in app and 'class="mic-label"' in html
 
@@ -91,11 +91,11 @@ def test_login_and_team_keep_their_behaviour_and_leave_a_named_place_for_the_cli
 def test_new_controls_are_44px_high():
     polish, login, team = _read("polish.css"), _read("login.css"), _read("team.css")
     assert ".topbar-actions button, .panel-actions button, .save-row button, .lh-foot button, .retry, .lh-act, #lhCloseBtn { min-height:44px; }" in polish
-    assert "min-height:44px" in login and "min-height:48px" in login and ".team-panel .team-tab { min-height:44px;" in team
+    assert "min-height:var(--control-h)" in login and ".team-panel .team-tab { min-height:44px;" in team
 
 
 def test_focus_rings_are_3px_in_the_accent_colour_and_the_panes_follow_the_real_topbar_height():
-    for name in ("login.css", "team.css", "steps.css"):
+    for name in ("team.css", "steps.css"):
         css = _nocomment(name)
         rings = re.findall(r"outline:\s*3px solid ([^;}]+)", css)
         assert rings and all(r.strip() == "var(--accent)" for r in rings), name     # 2.10:1 pale blue is gone

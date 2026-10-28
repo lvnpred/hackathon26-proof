@@ -1,4 +1,4 @@
-"""Shift handover drafted from the timeline. Muse Spark Open may reword it; it may not add to it.
+"""Shift handover drafted from the timeline. Muse Spark 1.3 may reword it; it may not add to it.
 
 The template is built from recorded events only. A model rewording is kept only
 when it passes the wording check: no advice words, no number and no drug name
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.adapters.spark_open import SparkOpenAdapter
+from app.adapters.spark import SparkAdapter
 from app.agent.verifier import ADVICE
 from app.journey.nudges import HOUR_MS, hours, open_nudges
 from app.journey.stories import clock
@@ -17,10 +17,12 @@ from app.morning.discharge import visible_events
 from app.morning.vitals import wording_ok
 
 PROMPT = (
-    "You help a ward nurse hand over a shift. Rewrite the numbered facts below as one short, "
-    "plain paragraph for the incoming nurse. Keep every number, time and name exactly as written. "
-    "Do not add any fact, number, medicine, opinion or instruction. Do not say what to give or do. "
-    "Reply with the paragraph only.\n\n"
+    "You help a ward nurse hand over a shift. Regroup the numbered facts below for the incoming nurse "
+    "under these headings, in this order, leaving out a heading with no facts: Patient, Doses given, "
+    "Due by the orders, Observations, Nudges answered, Still open. Put each heading on its own line "
+    "followed by a colon, then one or two short plain sentences. Keep every number, time and name exactly "
+    "as written. Do not add any fact, number, medicine, opinion or instruction. Do not say what to give "
+    "or do. Reply with the grouped text only.\n\n"
 )
 
 
@@ -84,19 +86,21 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
     return lines
 
 
-def reword(lines: list[dict], settings, complete=None) -> tuple[str | None, str]:
-    """Ask Muse Spark Open for one paragraph. Returns (text or None, why it was not used)."""
-    if complete is None and not settings.spark_open_configured:
-        return None, "no Spark Open key"
+def reword(lines: list[dict], settings, write=None) -> tuple[str | None, str]:
+    """Ask Muse Spark 1.3 (Meta Model API key) for one paragraph. Returns (text or None, why not used).
+
+    No tools are needed here, so the handover runs on the same key as strips and the second look.
+    """
+    if write is None:
+        if not settings.spark_configured:
+            return None, "no Meta Model API key"
+        write = SparkAdapter(settings).write
     facts = "\n".join(f"{n}. {line['text']}" for n, line in enumerate(lines, 1))
     try:
-        message = SparkOpenAdapter(settings, complete).complete(
-            [{"role": "user", "content": PROMPT + facts}], []
-        )
+        text = (write(PROMPT + facts) or "").strip()
     except (httpx.HTTPError, RuntimeError, KeyError, ValueError) as exc:
         return None, f"model call failed ({type(exc).__name__})"
-    text = (message or {}).get("content") or ""
-    return text.strip() or None, "" if text.strip() else "empty reply"
+    return text or None, "" if text else "empty reply"
 
 
 def checked(text: str | None, lines: list[dict]) -> tuple[bool, str]:
@@ -110,11 +114,11 @@ def checked(text: str | None, lines: list[dict]) -> tuple[bool, str]:
     return True, ""
 
 
-def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, use_model=True, complete=None) -> dict:
+def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, use_model=True, write=None) -> dict:
     lines = template_lines(events, since_ms=since_ms, at_ms=at_ms, patient=patient)
     text, why = (None, "model not asked")
     if use_model:
-        text, why = reword(lines, settings, complete)
+        text, why = reword(lines, settings, write)
     ok, problem = checked(text, lines) if text else (False, why)
     return {
         "from": from_nurse,
@@ -123,7 +127,7 @@ def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, u
         "until": clock(at_ms),
         "lines": lines,
         "text": text if ok else None,
-        "wording": "muse-spark-open" if ok else "template",
+        "wording": "muse-spark-1.3" if ok else "template",
         "model_note": "" if ok else problem,
         "by": from_nurse,
     }

@@ -292,7 +292,7 @@ def test_rule_functions_are_pure_over_events():
     assert [n["kind"] for n in rules.evaluate(events, 7 * H)] == ["dose_overdue"]
 
 
-# --- shift handover (Muse Spark Open may reword, never add) -------------------
+# --- shift handover (Muse Spark 1.3 may reword, never add) --------------------
 
 def _ward(api) -> tuple[str, str]:
     eid = _episode(api)
@@ -317,22 +317,22 @@ def test_handover_template_lists_recorded_facts_with_their_events(tmp_path):
     assert "Paracetamol is ordered every 6 h; by that order the next is due Day 0 16:00." in texts
     assert "Still open: Systolic BP 86 is below the limit of 90 set by Dr. Test." in texts
     assert all(line["evidence"] for line in handover["lines"])
-    assert handover["wording"] == "template" and handover["model_note"] == "no Spark Open key"
+    assert handover["wording"] == "template" and handover["model_note"] == "no Meta Model API key"
 
 
-def test_handover_keeps_a_spark_open_rewording_that_adds_nothing(tmp_path):
+def test_handover_keeps_a_spark_rewording_that_adds_nothing(tmp_path):
     api = _client(tmp_path)
     _, base = _ward(api)
     seen = {}
 
-    def complete(messages, tools):
-        seen["prompt"] = messages[0]["content"]
-        return {"content": "Paracetamol 1 g was logged at Day 0 10:00 by Nurse A. Systolic BP 86 is below the limit of 90."}
+    def write(prompt):
+        seen["prompt"] = prompt
+        return "Paracetamol 1 g was logged at Day 0 10:00 by Nurse A. Systolic BP 86 is below the limit of 90."
 
-    api.app.state.spark_open_complete = complete
+    api.app.state.handover_write = write
     handover = _handover(api, base)
     assert "Do not add any fact" in seen["prompt"] and "Paracetamol 1 g logged" in seen["prompt"]
-    assert handover["wording"] == "muse-spark-open" and handover["text"].startswith("Paracetamol 1 g")
+    assert handover["wording"] == "muse-spark-1.3" and handover["text"].startswith("Paracetamol 1 g")
 
 
 def test_handover_rejects_a_rewording_with_a_new_number_or_advice(tmp_path):
@@ -343,7 +343,7 @@ def test_handover_rejects_a_rewording_with_a_new_number_or_advice(tmp_path):
         ("We recommend a fluid bolus for the BP of 86.", "advice wording"),
         ("Ondansetron was logged by Nurse A.", "added a number, a medicine or an instruction"),
     ]:
-        api.app.state.spark_open_complete = lambda messages, tools, reply=reply: {"content": reply}
+        api.app.state.handover_write = lambda prompt, reply=reply: reply
         handover = _handover(api, base)
         assert handover["wording"] == "template" and handover["text"] is None
         assert handover["model_note"] == why, reply
@@ -353,10 +353,10 @@ def test_handover_falls_back_when_the_model_call_fails(tmp_path):
     api = _client(tmp_path)
     _, base = _ward(api)
 
-    def broken(messages, tools):
+    def broken(prompt):
         raise RuntimeError("down")
 
-    api.app.state.spark_open_complete = broken
+    api.app.state.handover_write = broken
     handover = _handover(api, base)
     assert handover["wording"] == "template" and handover["model_note"] == "model call failed (RuntimeError)"
 

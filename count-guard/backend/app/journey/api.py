@@ -336,7 +336,7 @@ def nudge_seen(episode_id: str, nudge_id: str, body: SeenIn, request: Request) -
 
 @router.post("/handover")
 def handover(episode_id: str, body: HandoverIn, request: Request) -> dict:
-    """Draft the shift handover. Muse Spark Open rewords it only when the wording check passes."""
+    """Draft the shift handover. Muse Spark 1.3 rewords it only when the wording check passes."""
     episode = _require(request, episode_id)
     store = _store(request)
     at = _at(store, episode_id, body.at_ms)
@@ -355,7 +355,7 @@ def handover(episode_id: str, body: HandoverIn, request: Request) -> dict:
         to_nurse=body.to_nurse,
         settings=request.app.state.settings,
         use_model=body.use_model,
-        complete=getattr(request.app.state, "spark_open_complete", None),
+        write=getattr(request.app.state, "handover_write", None),
     )
     return _act(request, episode_id, "handover.drafted", payload, at)
 

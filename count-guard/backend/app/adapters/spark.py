@@ -1,4 +1,4 @@
-"""Muse Spark 1.3: names a crop (second look) or reads strip labels. It does not decide anything."""
+"""Muse Spark 1.3: names a crop (second look), reads strip labels, or rewords a handover. It decides nothing."""
 
 from __future__ import annotations
 
@@ -41,19 +41,23 @@ STRIP_PROMPT = (
 
 
 class SparkAdapter:
-    """Called when rule R5 fires, or when a patient photographs strips. Only with a key."""
+    """Called when rule R5 fires, a patient photographs strips, or a nurse drafts a handover. Only with a key."""
 
     def __init__(self, settings: Settings):
         self.settings = settings
 
     def second_look(self, image_data_url: str, tracked_label: str) -> str:
-        return normalize_second_look(self._ask(image_data_url, second_look_prompt(tracked_label)))
+        return normalize_second_look(self._ask(second_look_prompt(tracked_label), image_data_url))
 
     def read_strips(self, image_data_url: str) -> str:
         """Raw model text. app.morning.strips.parse_strip_text grounds it."""
-        return self._ask(image_data_url, STRIP_PROMPT)
+        return self._ask(STRIP_PROMPT, image_data_url)
 
-    def _ask(self, image_data_url: str, prompt: str) -> str:
+    def write(self, prompt: str) -> str:
+        """Text in, text out. The caller checks the wording before it is shown."""
+        return self._ask(prompt)
+
+    def _ask(self, prompt: str, image_data_url: str | None = None) -> str:
         if not self.settings.spark_configured:
             raise RuntimeError("MODEL_API_KEY is not set")
         body = {
@@ -62,10 +66,8 @@ class SparkAdapter:
                 {
                     "type": "message",
                     "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": prompt},
-                        {"type": "input_image", "image_url": image_data_url},
-                    ],
+                    "content": [{"type": "input_text", "text": prompt}]
+                    + ([{"type": "input_image", "image_url": image_data_url}] if image_data_url else []),
                 }
             ],
         }

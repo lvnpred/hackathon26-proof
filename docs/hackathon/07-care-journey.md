@@ -32,7 +32,7 @@ Each nudge stores the ids of the intent event and the fact event it compares, so
 | J1 | **Option A:** Doctor Dictation stays its own app. Count Guard reads a saved prescription over HTTP (`GET /api/v1/documents/{id}`). | No code is copied between the apps. Verified live: document 1 imported, schedule built. |
 | J2 | **Build-now cut** below. Everything else is planned, not built. | Four rules + screens on the existing timeline. No new storage. |
 | J3 | **Three-act script** below replaces `03` §3. | The story is filmed as one patient across two days. |
-| J4 | **Muse models** for every model call: Voice Transcribe (spoken lines), Spark 1.3 (strip photo, second look), Spark Open (count explanation), SAM 3.1 (count). | One `META_API_KEY` in the root `.env`. Without a key, typed input works and nothing is sent. |
+| J4 | **Muse models** for every model call: Voice Transcribe (spoken lines), Spark 1.3 (strip photo, second look, handover wording), SAM 3.1 (count) on the Meta Model API key; Spark Open (count explanation, which needs tool calls) on Baseten. | The Meta Model API key (`MODEL_API_KEY` or `META_API_KEY`) runs everything except the count explanation, which needs `BASETEN_API_KEY`. Without a key, typed input works and nothing is sent. Key checked live on 28 Oct: Spark 1.3 answered in 2.8 s. |
 
 ## Build-now cut (status)
 
@@ -49,7 +49,7 @@ Each nudge stores the ids of the intent event and the fact event it compares, so
 | Discharge card from a clinic template (warning signs, wound care, help line) | Doctor → Patient | Built |
 | Need help button and home check-in → nurse nudge | Patient → Nurse | Built |
 | Nudge inbox with an answer that is logged | Nurse, Patient | Built |
-| Shift handover from the timeline; Muse Spark Open rewording kept only if it adds no number, medicine or advice | Nurse → Nurse | Built |
+| Shift handover from the timeline; Muse Spark 1.3 rewording kept only if it adds no number, medicine or advice | Nurse → Nurse | Built |
 | Audit view: every line, who, when, what replaced it | All | Built |
 | Screens `/journey`, `/doctor`, `/nurse`, `/patient`, `/audit` | All | In progress |
 
@@ -93,6 +93,6 @@ episode clock (`Day 0 09:00` is the OPD visit).
 | Stories, clinic template, audit rows | `count-guard/backend/app/journey/stories.py` |
 | Routes (`/journey/episodes/{id}/...`) | `count-guard/backend/app/journey/api.py` |
 | The three-act play | `count-guard/backend/app/journey/play.py` |
-| Shift handover: template, Spark Open rewording, wording check | `count-guard/backend/app/journey/handover.py` |
+| Shift handover: template, Spark 1.3 rewording, wording check | `count-guard/backend/app/journey/handover.py` |
 | Strip reading with Muse Spark 1.3 | `count-guard/backend/app/adapters/spark.py` (`read_strips`) |
 | Doctor Dictation address | `count-guard/backend/app/config.py` (`dd_base`, from `DD_BASE_URL` or `DD_PORT`) |

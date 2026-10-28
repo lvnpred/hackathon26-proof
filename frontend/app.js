@@ -843,6 +843,7 @@ function deleteItem(li) {
   if (!ul.children.length) ul.appendChild(makeLi(""));
   markDirty();
   setUndo(rec, "Deleted item.");
+  if (ul.id === "pDx") YourUsual.refresh();
 }
 function undoDelete() {
   if (!undoStack.length || state.working) return;
@@ -873,6 +874,7 @@ function undoDelete() {
     if (only) only.remove();
     ul.insertBefore(li, only ? null : (lis[r.pos] || null));
     focusEl = li.querySelector(".x-btn");
+    if (r.ulId === "pDx") YourUsual.refresh();
   }
   markDirty();
   showUndo();
@@ -893,7 +895,7 @@ function fixLists(e) {
   const ul = e.target && e.target.closest ? e.target.closest("ul.editable-list") : null;
   if (ul) normalizeList(ul);
   if (ul && ul.id === "pCc") Sections.clearProse("complaints");
-  if (ul && ul.id === "pDx") Sections.clearProse("diagnosis");
+  if (ul && ul.id === "pDx") { Sections.clearProse("diagnosis"); YourUsual.refresh(); }
   if (ul && ul.id === "pFx") Sections.clearProse("findings");
 }
 sheetEl.addEventListener("input", fixLists);
@@ -973,6 +975,21 @@ function renderRx(rows, rowids) {
   list.forEach((r, i) => rxBody.appendChild(rxRow(r, i, rowids && rowids[i])));
 }
 
+// SH-B6: a tapped "Your usual" row joins the sheet through the same rxRow as a dictated one.
+function addRxRow(r) {
+  const empty = rxBody.querySelector("tr.rx-empty");
+  if (empty) empty.remove();
+  const tr = rxRow(r, rxBody.querySelectorAll("tr[data-index]").length);
+  rxBody.appendChild(tr);
+  renumberRx();
+  markDirty();
+  updateGrounding();
+  if (!blockPanel.hidden) refreshBlockPanel();
+  const st = tr.querySelector(".rx-state");
+  if (st) st.focus();
+  return tr;
+}
+
 // The row's state cell is built by rxview.js from the rules in rxstate.js.
 function renderCheck(tr) { RxView.renderRow(tr); }
 
@@ -1001,6 +1018,7 @@ function renderSheet(s, rowids) {
   refreshMicLabel();
   refreshPrintButton();
   updateGrounding();
+  YourUsual.refresh();
 }
 
 const stepCounts = () => ({ rows: [...rxBody.querySelectorAll("tr[data-index]")].filter(tr => !RxView.isBlank(tr)).length, needs: openRows().length });
@@ -1019,6 +1037,7 @@ function updateGrounding() {                            // :954 now a sentence p
     : "All medicines are ready. You can Save.";
   RxView.sync();
   if (window.Steps) Steps.needs(stepCounts());                                  // keeps the review line in step with the count
+  YourUsual.render();
 }
 
 // ---- inline-edit invalidation (Review Focus #2) ----------------------------
@@ -1332,6 +1351,7 @@ function resetSheet() {
   Sections.showDate(""); Sections.showProseCheck([]);
   groundingEl.hidden = true;
   RxView.sync();                                      // :1251 newPatient hides the bar
+  YourUsual.clear();
   highlightToday();
   refreshMicLabel();
   setStep("idle");
@@ -1363,6 +1383,10 @@ RxView.init({
   transcript: () => state.transcript, ageSex: () => text($("pAge")), post: postJson, snapshot: snapshotRow, pushUndo: setUndo, notify: setStatus,
   changed: () => { markDirty(); updateGrounding(); if (!blockPanel.hidden) refreshBlockPanel(); }, hasSheet: () => !sheetEl.classList.contains("empty"),
 });
+YourUsual.init({ post: postJson, diagnosis: () => readList("pDx"),
+  onSheet: () => [...rxBody.querySelectorAll("tr[data-index]")].map(tr => ({ name: cellText(tr, "name"), generic: RxView.meta(tr).generic || "" })),
+  ageSex: () => text($("pAge")), viewOnly: () => !!(window.Authorship && Authorship.isViewOnly()), working: () => state.working,
+  hasSheet: () => !sheetEl.classList.contains("empty"), sheetSeq: () => state.sheetSeq, add: addRxRow });
 DictGuard.init({
   state: () => state, serialize: serializeForm, render: renderSheet, rows: () => rxBody.querySelectorAll("tr[data-rowid]"), renderCheck, notify: setStatus,
   working: () => state.working || !!(mr && mr.state === "recording"),

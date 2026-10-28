@@ -271,4 +271,14 @@
   .theme-swatch { width:30px; height:18px; border-radius:5px; border:1px solid var(--line-control); }
   .theme-swatch[data-swatch="day"] { background:linear-gradient(90deg, var(--sw-day-paper) 55%, var(--sw-day-sun) 55%); }
   .theme-swatch[data-swatch="dusk"] { background:linear-gradient(90deg, var(--sw-dusk-paper) 55%, var(--sw-dusk-sun) 55%); }
+  /* SH-B6 "Your usual": tap-to-add medicines below Rx; screen only, never printed */
+  .usual-rx { margin-top:var(--space-2); color:var(--sheet-muted); }
+  .usual-line { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; }
+  .usual-dx { color:var(--sheet-ink); font-weight:700; }
+  .usual-add { min-height:var(--touch-min); border:1.5px dashed var(--line-control); border-radius:var(--radius-full); background:var(--sheet); color:var(--sheet-ink); font-weight:700; }
+  .usual-add:hover { border-style:solid; background:var(--sheet-active); }
+  .usual-add:focus-visible { box-shadow:var(--focus-ring); }
+  .usual-add:disabled { opacity:.6; }
+  .usual-count { color:var(--sheet-muted); }
+  #sheet.view-only .usual-rx { display:none; }
 }

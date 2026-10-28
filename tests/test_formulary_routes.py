@@ -139,7 +139,7 @@ def test_patient_words_are_read_from_the_clinics_patients_table(single):
 # ---- the layer reaches every route that grounds rows or builds hints ------------------------------------------------
 
 LAYER_ROUTES = [("POST", "/api/format"), ("POST", "/api/v1/correct"), ("POST", "/api/v1/documents"),
-                ("POST", "/api/v1/rx/check-row"), ("POST", "/api/transcribe")]
+                ("POST", "/api/v1/rx/check-row"), ("POST", "/api/transcribe"), ("POST", "/api/v1/spoken/usual")]
 
 
 def _api_routes(routes):

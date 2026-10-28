@@ -30,6 +30,7 @@ EXPECTED_ROUTES = {
     ("POST", "/api/v1/review-date"), ("POST", "/api/v1/investigations/lookup"),
     ("GET", "/api/v1/formulary"), ("DELETE", "/api/v1/formulary/{entry_id}"),
     ("GET", "/api/v1/spoken/mishearings"), ("DELETE", "/api/v1/spoken/mishearings/{entry_id}"),
+    ("POST", "/api/v1/spoken/usual"),
     ("GET", "/api/v1/sections"),
     ("GET", "/api/v1/lists/{kind}"), ("POST", "/api/v1/lists/{kind}/changes"),
     ("GET", "/api/v1/owner/lists/{kind}"), ("POST", "/api/v1/owner/lists/{kind}/changes"),

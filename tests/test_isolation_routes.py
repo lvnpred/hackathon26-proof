@@ -188,6 +188,7 @@ CLASSIFIED = {
     "DELETE /api/v1/formulary/{entry_id}": "admin only: test_formulary_routes.py (404 for another clinic's id, 403 for a doctor)",
     "GET /api/v1/spoken/mishearings": "list: test_isolation_mishearings.py",
     "DELETE /api/v1/spoken/mishearings/{entry_id}": "admin only: test_isolation_formulary.py::test_the_admin_sweep_covers_every_admin_only_route_across_clinics",
+    "POST /api/v1/spoken/usual": "read: test_isolation_your_usual.py",
     "GET /api/v1/sections": "the shipped section list, same for every clinic: test_sections_registry.py",
     "GET /api/v1/lists/{kind}": "list by kind: test_lists_routes.py::test_other_clinic_cannot_see_or_reset",
     "POST /api/v1/lists/{kind}/changes": "admin only; the clinic's own overlay: test_lists_routes.py (403 for a doctor, 404 for another clinic's key)",

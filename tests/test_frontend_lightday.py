@@ -62,7 +62,7 @@ def test_theme_css_loads_last_and_has_no_rule_outside_media_screen():
     html = _read("index.html")
     sheets = re.findall(r'<link rel="stylesheet" href="([^"?]+)\?v=\d+"', html)
     assert sheets[-1] == "theme.css" and sheets.count("theme.css") == 1
-    assert '<link rel="stylesheet" href="theme.css?v=6" />' in html
+    assert '<link rel="stylesheet" href="theme.css?v=7" />' in html
     assert _outside_screen(_nocomment("theme.css")).strip() == ""
 
 

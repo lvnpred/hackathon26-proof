@@ -209,6 +209,36 @@ def linked_term_ids(conn, doctor_id, diagnosis_keys: Sequence[str]) -> set[int]:
         (doctor_id, LINK_MIN, *keys))}
 
 
+def diagnosis_medicine_links(conn, doctor_id: int, diagnosis_key: str, limit: int) -> list:
+    """Rows (link_id, term_id, term_key, spoken, generic, count) of this doctor's live medicine terms linked to the key
+    by LINK_MIN documents, most used first (then most recent, then name), at most ``limit``."""
+    return conn.execute(
+        "SELECT l.id AS link_id, t.id AS term_id, t.term_key, t.spoken, t.generic, l.count"
+        " FROM term_links l JOIN spoken_terms t ON t.id = l.term_id"
+        " WHERE l.doctor_id = ? AND l.diagnosis_key = ? AND l.count >= ? AND t.kind = 'medicine'"
+        " AND t.removed_at IS NULL AND t.uses > 0 ORDER BY l.count DESC, l.last_seen_at DESC, t.spoken LIMIT ?",
+        (doctor_id, diagnosis_key, LINK_MIN, max(0, int(limit)))).fetchall()
+
+
+def link_document_forms(conn, link_id: int, limit: int) -> list:
+    """The saved forms (parsed ``structured_json``) of the newest ``limit`` finalized documents a link counted.
+
+    A document whose JSON does not parse to a dict adds nothing."""
+    rows = conn.execute(
+        "SELECT d.structured_json FROM term_link_docs k JOIN documents d ON d.id = k.document_id"
+        " WHERE k.link_id = ? AND d.finalized_at IS NOT NULL ORDER BY d.created_at DESC, d.id DESC LIMIT ?",
+        (link_id, max(0, int(limit)))).fetchall()
+    forms = []
+    for (raw,) in rows:
+        try:
+            form = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(form, dict):
+            forms.append(form)
+    return forms
+
+
 def patient_candidates(conn, doctor_id: int) -> list:
     """Rows (id, name, age_sex, op_no) of the patients this doctor has seen, by id. ``doctor_id`` 0 (single-database
     mode) has no doctor filter: every patient."""

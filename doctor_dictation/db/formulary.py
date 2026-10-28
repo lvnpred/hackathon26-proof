@@ -41,6 +41,11 @@ def remove(conn, entry_id) -> str | None:
     return row["name"]
 
 
+def removed_keys(conn) -> frozenset[str]:
+    """The ``name_key`` of every entry the clinic removed."""
+    return frozenset(r[0] for r in conn.execute("SELECT name_key FROM clinic_formulary WHERE removed_at IS NOT NULL"))
+
+
 def patient_words(conn) -> frozenset:
     """Casefolded words of 3+ letters in this clinic's patient names: a patient typed into a medicine cell is not a drug."""
     words = set()

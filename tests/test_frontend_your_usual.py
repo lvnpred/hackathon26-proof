@@ -194,7 +194,7 @@ def test_the_page_loads_and_wires_the_strip():
     assert "YourUsual.init(" in app and "function addRxRow(" in app
     for hook in ("YourUsual.refresh()", "YourUsual.render()", "YourUsual.clear()"):
         assert hook in app
-    assert '<link rel="stylesheet" href="theme.css?v=8" />' in html
+    assert '<link rel="stylesheet" href="theme.css?v=9" />' in html
 
 
 def test_a_new_sheet_never_shows_or_adds_the_previous_sheets_medicines():

@@ -62,7 +62,7 @@ def test_theme_css_loads_last_and_has_no_rule_outside_media_screen():
     html = _read("index.html")
     sheets = re.findall(r'<link rel="stylesheet" href="([^"?]+)\?v=\d+"', html)
     assert sheets[-1] == "theme.css" and sheets.count("theme.css") == 1
-    assert '<link rel="stylesheet" href="theme.css?v=8" />' in html
+    assert '<link rel="stylesheet" href="theme.css?v=9" />' in html
     assert _outside_screen(_nocomment("theme.css")).strip() == ""
 
 
@@ -188,20 +188,22 @@ def test_the_list_panel_is_a_light_surface_and_the_open_row_glows_sun_soft():
     assert "color:var(--sun-text)" in _rule(theme, ".today-item.active .today-meta")
 
 
-def test_what_to_say_is_a_quiet_numbered_guide():
+def test_what_to_say_is_a_quiet_help_note_below_the_steps():
     html, theme = _read("index.html"), _nocomment("theme.css")
     assert '<div class="cue-title">What to say</div>' in html and 'id="cuePanel"' in html
+    # after the steps and the alerts under them, so a warning never sits below the help
+    for before in ('id="steps"', 'id="status"', 'id="emptyFlags"', 'id="error"', 'id="grounding"'):
+        assert html.index(before) < html.index('id="cuePanel"'), before
     panel = _rule(theme, ".cue-panel")
-    assert "background:none" in panel and "counter-reset:cue" in panel
+    for v in ("background:none", "counter-reset:cue", "font-size:13px", "color:var(--ink-muted)", "border-top:1px solid var(--line)"):
+        assert v in panel, v
     title = _rule(theme, ".cue-title")
-    for v in ("font-size:13px", "font-weight:800", "letter-spacing:.8px", "text-transform:uppercase"):
-        assert v in title, v
+    assert "font-size:12px" in title and "color:var(--ink-muted)" in title and "text-transform" not in title
     num = _rule(theme, ".cue-panel li::before")
     assert "counter(cue)" in num and "color:var(--ink-muted)" in num and "font-variant-numeric:tabular-nums" in num
-    assert "font-weight:700" in _rule(theme, ".cue-lead") and "color:var(--ink)" in _rule(theme, ".cue-lead")
-    rest = _rule(theme, ".cue-rest")
-    assert "color:var(--ink-muted)" in rest and "font-size:14px" in rest
-    assert "sun-soft" not in panel
+    assert "border-top" not in _rule(theme, ".cue-panel li")                   # compressed: no rule between rows
+    assert "color:var(--ink-muted)" in _rule(theme, ".cue-lead") and "color:var(--ink-muted)" in _rule(theme, ".cue-rest")
+    assert "var(--ink)" not in panel and "sun-soft" not in panel
 
 
 def test_the_sheet_is_white_paper_in_both_themes():
@@ -262,8 +264,10 @@ def test_r1_the_mic_holds_the_icon_only_and_the_words_sit_beside_it_without_shif
 
 
 def test_r2_a_very_light_rule_separates_what_to_say_from_the_steps():
-    rule = _rule(_nocomment("theme.css"), ".cue-panel:not([hidden]) + .stp-list")
-    assert "border-top:1px solid var(--line)" in rule and "margin-top:14px" in rule and "padding-top:14px" in rule
+    theme = _nocomment("theme.css")
+    rule = _rule(theme, ".cue-panel")
+    assert "border-top:1px solid var(--line)" in rule and "margin:14px 0 0" in rule and "padding:12px 0 0" in rule
+    assert ".cue-panel:not([hidden]) + .stp-list" not in theme
 
 
 def test_r3_the_screen_sheet_keeps_patient_left_and_vitals_right():

@@ -154,19 +154,16 @@
   .rec-dot i { background:var(--record); }
   .rec-text { color:var(--record); }
 
-  /* --- SpokenGuide: "What to say", numbered, quiet; R2: a very light rule before the steps ---------------------------- */
-  .cue-panel { counter-reset:cue; margin:4px 0 0; padding:4px 0 0; font-size:15px; color:var(--ink); background:none; border:0; }
-  .cue-title { margin:0 0 6px; font-size:13px; line-height:18px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--ink); }
+  /* --- SpokenGuide: "What to say" as a quiet help note below the steps, after a very light rule ----------------------- */
+  .cue-panel { counter-reset:cue; margin:14px 0 0; padding:12px 0 0; border:0; border-top:1px solid var(--line); border-radius:0;
+    font-size:13px; color:var(--ink-muted); background:none; }
+  .cue-title { margin:0 0 4px; font-size:12px; line-height:16px; font-weight:600; color:var(--ink-muted); }
   .cue-panel ol { list-style:none; margin:0; padding:0; }
-  .cue-panel li { counter-increment:cue; position:relative; margin:0; padding:9px 10px 9px 40px; line-height:1.45;
-    border-top:1px solid var(--line); border-radius:var(--radius-sm); }
-  .cue-panel li:first-child { border-top-color:transparent; }
-  .cue-panel li::before { content:counter(cue); position:absolute; left:10px; top:10px; width:18px; font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--ink-muted); }
-  .cue-lead { font-weight:700; color:var(--ink); }
-  .cue-rest { font-size:14px; color:var(--ink-muted); }
-  .cue-panel li.on { background:var(--sun-soft); border-top-color:transparent; }
-  .cue-panel li.on::before { color:var(--sun-text); }
-  .cue-panel:not([hidden]) + .stp-list { margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .cue-panel li { counter-increment:cue; position:relative; margin:0; padding:2px 0 2px 22px; line-height:1.4; }
+  .cue-panel li::before { content:counter(cue); position:absolute; left:0; top:2px; width:14px; font-size:12px; font-weight:600;
+    font-variant-numeric:tabular-nums; color:var(--ink-muted); opacity:.7; }
+  .cue-lead { font-weight:600; color:var(--ink-muted); }
+  .cue-rest { color:var(--ink-muted); }
 
   /* --- PaperSheet: white paper in both themes, with its action bar above it ------------------------------------------ */
   .rx-bar { background:var(--surface); color:var(--ink); border-color:var(--line); border-radius:var(--radius-lg); }

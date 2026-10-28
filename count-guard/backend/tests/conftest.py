@@ -5,7 +5,11 @@ from __future__ import annotations
 import re
 import zlib
 
-_STREAM = re.compile(rb"stream\r?\n(.*?)\r?\nendstream", re.S)
+# A stream dictionary, then "stream" and its line ending. The data is read by its /Length, not
+# up to "endstream": compressed bytes that end in 0x0D would otherwise lose that byte.
+_STREAM = re.compile(rb"<<((?:(?!<<|stream).)*?)>>\s*stream\r?\n", re.S)
+_LENGTH = re.compile(rb"/Length\s+(\d+)(?!\s+\d+\s+R)")
+_FALLBACK_END = re.compile(rb"\r?\nendstream")
 _LITERAL = re.compile(rb"\((?:\\.|[^\\()])*\)", re.S)
 _ESCAPES = {b"n": b"\n", b"r": b"\r", b"t": b"\t", b"b": b"\b", b"f": b"\f"}
 
@@ -28,10 +32,17 @@ def pdf_text(raw: bytes) -> str:
     """
     lines: list[str] = []
     for match in _STREAM.finditer(raw):
+        start = match.end()
+        length = _LENGTH.search(match.group(1))
+        if length:
+            data = raw[start : start + int(length.group(1))]
+        else:  # an indirect /Length: fall back to the end marker
+            end = _FALLBACK_END.search(raw, start)
+            data = raw[start : end.start() if end else len(raw)]
         try:
-            content = zlib.decompress(match.group(1))
+            content = zlib.decompress(data)
         except zlib.error:
-            content = match.group(1)
+            content = data
         for literal in _LITERAL.findall(content):
             lines.append(_unescape(literal).decode("latin-1"))
     return "\n".join(lines)

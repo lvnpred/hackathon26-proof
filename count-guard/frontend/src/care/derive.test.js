@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { H, M } from "./clock.js";
-import { queueRows, todos, waitingPills } from "./derive.js";
+import { queueRows, todos, waitingPills, taskDue, STATE_LABEL } from "./derive.js";
 
 const nudge = (id, to, at_ms, says = "Observations are overdue.") => ({
   id, key: "obs_overdue", kind: "obs_overdue", to, says, at_ms, when: "Day 1 13:00",
 });
-const view = (over = {}) => ({ rx: null, orders: null, card: null, handover: null, nudges: [], ...over });
+const order = (id, at_ms, acknowledged_by = null) => ({ id, by: "Dr. A. Rao", items: [], at_ms, acknowledged_by });
+const view = (over = {}) => ({ state: "ward", order_list: [order("o0", 0, "Nurse")], tasks: [], handover: null, nudges: [], ...over });
 const patient = (id, bed, v) => ({ id, bed, name: `Patient ${id}`, view: v });
 
 test("identical nudges on two patients give two rows with their own key and bed", () => {
@@ -39,38 +40,98 @@ test("rows sort by longest waited first", () => {
   assert.deepEqual(queueRows(patients, "nurse", 30 * H).map((r) => r.bed), ["Bed 2", "Bed 1"]);
 });
 
-test("doctor sees to-dos only", () => {
-  const p = patient("e1", "Bed 1", view({ rx: { rows: [] }, nudges: [nudge("n1", "nurse", 28 * H)] }));
-  const rows = queueRows([p], "doctor", 30 * H);
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].says, "Ward orders not set");
-  assert.equal(rows[0].kind, "todo");
-  assert.equal(rows[0].lineId, null);
+test("doctor sees clinic patients, ward patients without orders, and past-limit nudges", () => {
+  const limit = { ...nudge("n9", "nurse", 28 * H, "Observations are past the limit."), kind: "obs_past_limit" };
+  const patients = [
+    patient("e1", "Bed 1", view({ state: "clinic", order_list: [] })),
+    patient("e2", "Bed 2", view({ state: "ward", order_list: [] })),
+    patient("e3", "Bed 3", view({ state: "ward", nudges: [nudge("n1", "nurse", 28 * H), limit] })),
+  ];
+  const rows = queueRows(patients, "doctor", 30 * H);
+  assert.deepEqual(rows.map((r) => [r.bed, r.says]).sort(), [
+    ["Bed 1", "See in clinic"],
+    ["Bed 2", "No orders signed"],
+    ["Bed 3", "Observations are past the limit."],
+  ]);
+  assert.equal(rows.find((r) => r.bed === "Bed 3").lineId, "n9");
+  assert.equal(rows.find((r) => r.bed === "Bed 1").state, "clinic");
 });
 
-test("patient sees only patient nudges", () => {
-  const p = patient("e1", "Bed 1", view({ nudges: [nudge("n1", "nurse", 28 * H), nudge("n2", "patient", 28 * H, "Check in is due.")] }));
-  const rows = queueRows([p], "patient", 30 * H);
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].lineId, "n2");
+test("patient queue is empty; patient nudges still show as pills", () => {
+  const p = patient("e1", "Bed 1", view({ nudges: [nudge("n2", "patient", 28 * H, "Check in is due.")] }));
+  assert.deepEqual(queueRows([p], "patient", 30 * H), []);
+  assert.deepEqual(waitingPills([p], 30 * H).map((x) => x.who), ["Patient"]);
 });
 
-test("todos follow the order of the journey", () => {
+test("the handover to-do shows until it is accepted", () => {
   const handover = { to_nurse: "Nurse Joseph", accepted_by: null };
-  const all = todos(patient("e1", "Bed 1", view({ rx: {}, orders: {}, handover })));
-  assert.deepEqual(all.map((r) => r.says), ["Discharge card not signed", "Handover to Nurse Joseph not accepted"]);
-  const none = todos(patient("e1", "Bed 1", view({ rx: {}, orders: {}, card: {}, handover: { ...handover, accepted_by: "Nurse Joseph" } })));
-  assert.equal(none.length, 0);
+  assert.deepEqual(todos(patient("e1", "Bed 1", view({ handover }))).map((r) => r.says), ["Handover to Nurse Joseph not accepted"]);
+  assert.equal(todos(patient("e1", "Bed 1", view({ handover: { ...handover, accepted_by: "Nurse Joseph" } }))).length, 0);
+});
+
+test("STATE_LABEL names all seven states", () => {
+  assert.deepEqual(Object.keys(STATE_LABEL), ["clinic", "clinic_done", "admitting", "ward", "theatre", "discharging", "home"]);
+  assert.equal(STATE_LABEL.discharging, "Being discharged");
+});
+
+const T = 40 * H;
+const task = (over = {}) => ({
+  id: "t1", order_id: "o1", title: "Obs", kind: "obs", mode: "tick", proof: "", every_h: null,
+  status: "open", due_ms: T, done: [], began_ms: null, ...over,
+});
+
+test("taskDue boundaries", () => {
+  assert.equal(taskDue(task(), T - 1), "later");
+  assert.equal(taskDue(task(), T), "due");
+  assert.equal(taskDue(task(), T + 30 * M), "due");
+  assert.equal(taskDue(task(), T + 30 * M + 1), "overdue");
+  assert.equal(taskDue(task({ status: "running" }), T + 5 * H), "running");
+  assert.equal(taskDue(task({ status: "done" }), T + 5 * H), "done");
+  assert.equal(taskDue(task({ due_ms: null }), T), "later");
+});
+
+test("nurse rows: new order and overdue task, overdue first", () => {
+  const p = patient("e1", "Bed 1", view({
+    order_list: [order("o1", T - 10 * M)],
+    tasks: [task({ title: "BP check", due_ms: T - H })],
+  }));
+  const rows = queueRows([p], "nurse", T);
+  assert.deepEqual(rows.map((r) => r.says), ["BP check \u00b7 due", "New orders from Dr. A. Rao"]);
+  assert.equal(rows[1].waited, "10 min");
+  assert.equal(rows[0].waited, "1 h");
+  assert.equal(rows[0].kind, "task");
+  assert.equal(rows[0].state, "ward");
+});
+
+test("nurse rows: due, running, admitting, discharging; later and done tasks are quiet", () => {
+  const tasks = [
+    task({ id: "a", title: "Dose A", due_ms: T }),
+    task({ id: "b", title: "Dose B", due_ms: T + H }),
+    task({ id: "c", title: "Walk", status: "running", mode: "start_end", began_ms: T - 20 * M }),
+    task({ id: "d", title: "Done one", status: "done" }),
+  ];
+  const rows = queueRows([patient("e1", "Bed 1", view({ tasks }))], "nurse", T);
+  assert.deepEqual(rows.map((r) => r.says), ["Dose A \u00b7 due", "Walk \u00b7 running"]);
+  const states = queueRows([
+    patient("e2", "Bed 2", view({ state: "admitting" })),
+    patient("e3", "Bed 3", view({ state: "discharging" })),
+  ], "nurse", T);
+  assert.deepEqual(states.map((r) => r.says).sort(), ["Complete admission", "Complete discharge"]);
+});
+
+test("doctor no longer sees nurse tasks or unacknowledged orders", () => {
+  const p = patient("e1", "Bed 1", view({ order_list: [order("o1", T)], tasks: [task({ due_ms: T - H })] }));
+  assert.equal(queueRows([p], "doctor", T).length, 0);
 });
 
 test("waitingPills name the owner of each item", () => {
-  const p = patient("e1", "Bed 1", view({ rx: {}, handover: { to_nurse: "Nurse Joseph", accepted_by: null }, nudges: [nudge("n1", "nurse", 28 * H), nudge("n2", "patient", 28 * H, "Check in is due.")] }));
+  const p = patient("e1", "Bed 1", view({ state: "clinic", order_list: [], handover: { to_nurse: "Nurse Joseph", accepted_by: null }, nudges: [nudge("n1", "nurse", 28 * H), nudge("n2", "patient", 28 * H, "Check in is due.")] }));
   const who = waitingPills([p], 29 * H).map((x) => x.who).sort();
   assert.deepEqual(who, ["Dr. A. Rao", "Nurse", "Nurse Joseph", "Patient"]);
 });
 
 test("no produced text gives instructions", () => {
-  const p = patient("e1", "Bed 1", view({ rx: {}, handover: { to_nurse: "Nurse Joseph", accepted_by: null }, nudges: [nudge("n1", "nurse", 28 * H)] }));
+  const p = patient("e1", "Bed 1", view({ state: "clinic", handover: { to_nurse: "Nurse Joseph", accepted_by: null }, tasks: [task({ due_ms: 0 })], order_list: [order("o1", 0)], nudges: [nudge("n1", "nurse", 28 * H)] }));
   const text = JSON.stringify([queueRows([p], "nurse", 30 * H), queueRows([p], "doctor", 30 * H), waitingPills([p], 30 * H)]);
   assert.doesNotMatch(text, /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i);
 });
@@ -86,19 +147,24 @@ test("nurse sees an unaccepted handover as a to-do after the nudges", () => {
 });
 
 test("to-dos have no waited text, are never late and sort after nudges", () => {
-  const p = patient("e1", "Bed 1", view({ rx: {}, nudges: [nudge("n1", "nurse", 29 * H)] }));
+  const p = patient("e1", "Bed 1", view({ state: "clinic", nudges: [nudge("n1", "nurse", 29 * H)] }));
   assert.equal(queueRows([p], "doctor", 40 * H)[0].waited, "");
   const pills = waitingPills([p], 40 * H);
   assert.deepEqual(pills.map((x) => [x.who, x.waited === "", x.late]), [["Nurse", false, true], ["Dr. A. Rao", true, false]]);
 });
 
-test("to-dos and pills carry the stage to open; nudges carry none", () => {
+test("pills and rows carry the stage to open; nudges carry none", () => {
   const handover = { to_nurse: "Nurse Joseph", accepted_by: null };
   const p = (v) => patient("e1", "Bed 1", view(v));
-  assert.equal(todos(p({ rx: {} }))[0].stage, "clinic");
-  assert.equal(todos(p({ rx: {}, orders: {} }))[0].stage, "clinic");
-  assert.equal(todos(p({ rx: {}, orders: {}, card: {}, handover }))[0].stage, "ward");
-  const pills = waitingPills([p({ rx: {}, nudges: [nudge("n1", "nurse", 0)] })], H);
-  assert.deepEqual(pills.map((x) => x.stage).sort(), ["clinic", null]);
+  assert.equal(todos(p({ handover }))[0].stage, "ward");
+  const pills = waitingPills([p({ handover, nudges: [nudge("n1", "nurse", 0)] })], H);
+  assert.deepEqual(pills.map((x) => String(x.stage)).sort(), ["null", "ward"]);
   assert.equal(queueRows([p({ nudges: [nudge("n1", "nurse", 0)] })], "nurse", H)[0].stage, null);
+});
+
+test("pills come from the same rows, named by role, without duplicates", () => {
+  const limit = { ...nudge("n9", "nurse", 28 * H), kind: "obs_past_limit" };
+  const p = patient("e1", "Bed 1", view({ state: "clinic", order_list: [], nudges: [limit] }));
+  const pills = waitingPills([p], 29 * H);
+  assert.deepEqual(pills.map((x) => [x.who, x.what]).sort(), [["Dr. A. Rao", "See in clinic"], ["Nurse", "Observations are overdue."]]);
 });

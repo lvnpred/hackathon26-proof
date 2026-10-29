@@ -17,74 +17,147 @@ function base(patient) {
   return { episodeId: patient.id, bed: patient.bed, name: patient.name };
 }
 
-// The view carries no time for a to-do, so it has no waited text and sorts after every nudge.
-export function todos(patient) {
-  const { view } = patient;
-  const make = (says, owner, role, stage) => ({
+export const STATE_LABEL = {
+  clinic: "In clinic",
+  clinic_done: "Clinic visit closed",
+  admitting: "Being admitted",
+  ward: "On the ward",
+  theatre: "In theatre",
+  discharging: "Being discharged",
+  home: "Home",
+};
+
+const GRACE = 30 * M;
+
+// "running" | "overdue" | "due" | "later" | "done". Overdue starts 30 min after the due time (v1 grace).
+export function taskDue(task, nowMs) {
+  if (task.status === "done") return "done";
+  if (task.status === "running") return "running";
+  if (task.due_ms == null || task.due_ms > nowMs) return "later";
+  return task.due_ms + GRACE < nowMs ? "overdue" : "due";
+}
+
+// Lower rank sorts first; rows of equal rank sort by longest waited.
+const RANK = { overdue: 0, nudge: 1, order: 2, due: 3, running: 4, todo: 5 };
+
+// waitedMs -1 means the view carries no time for the row.
+function row(patient, key, kind, says, extra) {
+  return {
     ...base(patient),
-    key: `${patient.id}:todo:${says}`,
-    kind: "todo",
+    key: `${patient.id}:${key}`,
+    kind,
     says,
     waited: "",
     lineId: null,
     action: null,
-    owner,
-    role,
-    stage,
+    stage: null,
+    state: patient.view.state,
     waitedMs: -1,
-  });
-  const rows = [];
-  if (view.rx && !view.orders) rows.push(make("Ward orders not set", DOCTOR, "doctor", "clinic"));
-  if (view.orders && !view.card) rows.push(make("Discharge card not signed", DOCTOR, "doctor", "clinic"));
-  if (view.handover && !view.handover.accepted_by) {
-    rows.push(make(`Handover to ${view.handover.to_nurse} not accepted`, view.handover.to_nurse, "nurse", "ward"));
-  }
-  return rows;
+    rank: RANK.todo,
+    ...extra,
+  };
+}
+
+function timed(nowMs, sinceMs) {
+  return { waited: waitedText(nowMs - sinceMs), waitedMs: nowMs - sinceMs };
+}
+
+// Handover is the one v1 to-do kept: the view still carries it.
+export function todos(patient) {
+  const { handover } = patient.view;
+  if (!handover || handover.accepted_by) return [];
+  const says = `Handover to ${handover.to_nurse} not accepted`;
+  return [row(patient, `todo:${says}`, "todo", says, { owner: handover.to_nurse, role: "nurse", stage: "ward" })];
 }
 
 function nudgeRows(patient, nowMs) {
-  return (patient.view.nudges || []).map((nudge) => ({
-    ...base(patient),
-    key: `${patient.id}:nudge:${nudge.id}`,
-    kind: "nudge",
-    says: nudge.says,
-    waited: waitedText(nowMs - nudge.at_ms),
-    lineId: nudge.id,
-    stage: null,
-    action: null,
-    to: nudge.to,
-    waitedMs: nowMs - nudge.at_ms,
-  }));
+  return (patient.view.nudges || []).map((nudge) =>
+    row(patient, `nudge:${nudge.id}`, "nudge", nudge.says, {
+      ...timed(nowMs, nudge.at_ms),
+      lineId: nudge.id,
+      to: nudge.to,
+      owner: ROLE_NAME[nudge.to] || nudge.to,
+      role: nudge.to,
+      nudgeKind: nudge.kind,
+      rank: RANK.nudge,
+    }),
+  );
 }
 
-function strip({ waitedMs, to, owner, role, ...row }) {
-  return row;
+function doctorRows(patient, nowMs) {
+  const { state, order_list: orders = [] } = patient.view;
+  const rows = [];
+  if (state === "clinic") rows.push(row(patient, "clinic", "state", "See in clinic", { owner: DOCTOR, role: "doctor" }));
+  if (state === "ward" && !orders.length) {
+    rows.push(row(patient, "no-orders", "state", "No orders signed", { owner: DOCTOR, role: "doctor" }));
+  }
+  const pastLimit = nudgeRows(patient, nowMs)
+    .filter((r) => r.nudgeKind === "obs_past_limit")
+    .map((r) => ({ ...r, role: "doctor", owner: DOCTOR }));
+  return [...rows, ...pastLimit];
+}
+
+function nurseRows(patient, nowMs) {
+  const { state, order_list: orders = [], tasks = [] } = patient.view;
+  const rows = [];
+  for (const order of orders.filter((o) => !o.acknowledged_by)) {
+    rows.push(row(patient, `order:${order.id}`, "order", `New orders from ${order.by}`, {
+      ...timed(nowMs, order.at_ms), owner: "Nurse", role: "nurse", rank: RANK.order,
+    }));
+  }
+  for (const task of tasks) {
+    const due = taskDue(task, nowMs);
+    if (due === "overdue" || due === "due") {
+      rows.push(row(patient, `task:${task.id}`, "task", `${task.title} \u00b7 due`, {
+        ...timed(nowMs, task.due_ms), owner: "Nurse", role: "nurse", rank: RANK[due],
+      }));
+    } else if (due === "running") {
+      rows.push(row(patient, `task:${task.id}`, "task", `${task.title} \u00b7 running`, {
+        ...(task.began_ms == null ? {} : timed(nowMs, task.began_ms)), owner: "Nurse", role: "nurse", rank: RANK.running,
+      }));
+    }
+  }
+  if (state === "admitting") rows.push(row(patient, "admitting", "state", "Complete admission", { owner: "Nurse", role: "nurse" }));
+  if (state === "discharging") rows.push(row(patient, "discharging", "state", "Complete discharge", { owner: "Nurse", role: "nurse" }));
+  return rows;
+}
+
+// Every row for a role. Patients get nudges only; their queue page stays empty (Today / My care).
+function rowsFor(patient, role, nowMs) {
+  const nudges = nudgeRows(patient, nowMs).filter((r) => r.to === role);
+  if (role === "doctor") return [...doctorRows(patient, nowMs), ...nudges];
+  if (role === "nurse") return [...nurseRows(patient, nowMs), ...nudges, ...todos(patient)];
+  return nudges;
+}
+
+function sorted(rows) {
+  return rows.sort((a, b) => a.rank - b.rank || b.waitedMs - a.waitedMs);
+}
+
+function strip({ waitedMs, to, owner, role, rank, nudgeKind, ...rest }) {
+  return rest;
 }
 
 export function queueRows(patients, role, nowMs) {
-  // Doctor: to-dos only. Nurse: nudges plus the nurse's to-dos. Patient: nudges only.
-  const rows = patients.flatMap((patient) => [
-    ...(role === "doctor" ? [] : nudgeRows(patient, nowMs).filter((row) => row.to === role)),
-    ...todos(patient).filter((row) => row.role === role),
-  ]);
-  return rows.sort((a, b) => b.waitedMs - a.waitedMs).map(strip);
+  if (role === "patient") return [];
+  const rows = patients.flatMap((patient) => rowsFor(patient, role, nowMs));
+  return sorted(rows).map(strip);
 }
 
 export function waitingPills(patients, nowMs) {
-  const pills = patients.flatMap((patient) => [
-    ...nudgeRows(patient, nowMs).map((row) => ({ row, who: ROLE_NAME[row.to] || row.to, what: row.says })),
-    ...todos(patient).map((row) => ({ row, who: row.owner, what: row.says })),
-  ]);
-  return pills
-    .sort((a, b) => b.row.waitedMs - a.row.waitedMs)
-    .map(({ row, who, what }) => ({
-      key: row.key,
-      who,
-      what,
-      waited: row.waited,
-      late: row.waitedMs >= H,
-      episodeId: row.episodeId,
-      lineId: row.lineId,
-      stage: row.stage,
-    }));
+  // Nurse first, so a nudge the doctor also sees keeps its own recipient.
+  const seen = new Set();
+  const rows = ["nurse", "patient", "doctor"]
+    .flatMap((role) => patients.flatMap((patient) => rowsFor(patient, role, nowMs)))
+    .filter((r) => !seen.has(r.key) && seen.add(r.key));
+  return sorted(rows).map((r) => ({
+    key: r.key,
+    who: r.owner,
+    what: r.says,
+    waited: r.waited,
+    late: r.waitedMs >= H,
+    episodeId: r.episodeId,
+    lineId: r.lineId,
+    stage: r.stage,
+  }));
 }

@@ -41,3 +41,17 @@ export function jumpTargets(nowMs) {
 export function plusHour(ms) {
   return ms + H;
 }
+
+// Skip-ahead buttons. "Next due" is the earliest open task still in the future.
+export function skipTargets(nowMs, patients) {
+  const targets = [
+    { id: "plus15", label: "+15 min", atMs: nowMs + 15 * M },
+    { id: "plus60", label: "+1 h", atMs: nowMs + H },
+  ];
+  const dues = patients
+    .flatMap((patient) => patient.view?.tasks || [])
+    .filter((task) => task.status === "open" && task.due_ms != null && task.due_ms > nowMs)
+    .map((task) => task.due_ms);
+  if (dues.length) targets.push({ id: "next-due", label: "Next due", atMs: Math.min(...dues) });
+  return targets;
+}

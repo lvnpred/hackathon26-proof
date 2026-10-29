@@ -14,13 +14,19 @@ import httpx
 
 from app.adapters.spark import SparkAdapter
 from app.adapters.voice import VoiceAdapter
+from app.adapters.sam import SamAdapter
 from app.config import Settings
+from app.journey.video import summarize
+from app.media_pipeline import to_sam_clip
+from app.spend import clip_seconds
 
 PREPARED_DIR = Path(__file__).parent / "prepared"
 _NAME = re.compile(r"^([a-z0-9-]{1,60})\.[a-z0-9]{1,5}$")
 NO_KEY = "No model key, so recordings are not transcribed here. Type what was said in the box."
 NO_SPEECH = "Nothing was heard in the recording. Type what was said in the box."
 FALLBACK = "prepared (live call failed)"
+MAX_LIVE_SECONDS = 120
+LONG_CLIP = "The clip is longer than 2 minutes. Trim it, then upload it again."
 UNREACHABLE = "The transcriber did not answer. Type what was said in the box."
 
 
@@ -112,3 +118,32 @@ def read_photo(
     if found and found.get("text"):
         return {"text": found["text"], "source": "prepared"}
     return {"text": None, "source": "none"}
+
+
+def segment_clip(
+    settings: Settings, clip: Path, filename: str, concepts: list[str], live_ok: bool = True
+) -> dict:
+    """Detections by concept for one clip: live SAM 3.1 with a key (and live_ok), else the prepared result."""
+    found = prepared(filename)
+    stored = found.get("detections") if found else None
+    if settings.sam_configured and live_ok:
+        try:
+            seconds = clip_seconds(clip)
+        except SystemExit:  # spend.clip_seconds exits on an unreadable clip
+            return {"detections": stored, "source": FALLBACK} if stored else {"detections": None, "source": "failed"}
+        if seconds > MAX_LIVE_SECONDS:
+            raise NotHeard(400, LONG_CLIP)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "clip.mp4"
+                to_sam_clip(clip, out, settings.sam_fps)
+                records = SamAdapter(settings).segment_video(out, concepts)
+            detections = summarize(records, settings.sam_fps, settings.low_confidence, concepts)
+        except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
+            if stored:
+                return {"detections": stored, "source": FALLBACK}
+            return {"detections": None, "source": "failed"}
+        return {"detections": detections, "source": "sam-3.1"}
+    if stored:
+        return {"detections": stored, "source": "prepared"}
+    return {"detections": None, "source": "none"}

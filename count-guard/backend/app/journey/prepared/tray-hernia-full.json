@@ -1,0 +1,32 @@
+{
+  "detections": {
+    "scalpel handle": {
+      "count": 2,
+      "at_s": 0.5
+    },
+    "artery forceps": {
+      "count": 2,
+      "at_s": 1.0
+    },
+    "needle holder": {
+      "count": 3,
+      "at_s": 1.5
+    },
+    "scissors": {
+      "count": 3,
+      "at_s": 2.0
+    },
+    "surgical forceps": {
+      "count": 4,
+      "at_s": 2.5
+    },
+    "retractor": {
+      "count": 4,
+      "at_s": 3.0
+    },
+    "towel clip": {
+      "count": 4,
+      "at_s": 3.5
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "detections": {
+    "saline bag": {
+      "count": 1,
+      "at_s": 0.5
+    },
+    "iv tubing": {
+      "count": 1,
+      "at_s": 1.0
+    },
+    "iv cannula": {
+      "count": 1,
+      "at_s": 1.5
+    },
+    "label": {
+      "count": 1,
+      "at_s": 2.0
+    }
+  }
+}

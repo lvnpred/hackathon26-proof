@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import uuid
 from pathlib import Path
 
 from app.adapters.sam import SamAdapter
@@ -36,14 +37,7 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     work.mkdir(parents=True, exist_ok=True)
     clip = work / "clip-2fps.mp4"
     audio = work / "speech.wav"
-    # SAM 3.1 takes H.264, H.265 or MPEG-4 only. Name the codec so a VP9 or HEVC phone clip is converted.
-    _ffmpeg(
-        [
-            "-y", "-i", str(source),
-            "-vf", f"fps={settings.sam_fps},scale=-2:720",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(clip),
-        ]
-    )
+    to_sam_clip(source, clip, settings.sam_fps)
     _ffmpeg(["-y", "-i", str(source), "-vn", "-ac", "1", "-ar", "16000", str(audio)])
     names = concepts or list(SAM_CONCEPTS)
     try:
@@ -115,6 +109,27 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     engine.apply_rules(case_id, now_ms=int(last * 1000 / settings.sam_fps), finalize=True)
     engine._cache_tracks(case_id, tracker)
     return engine.snapshot(case_id, perception="sam-3.1")
+
+
+def to_sam_clip(source: Path, out: Path, fps: int) -> None:
+    """Convert a clip to what SAM 3.1 reads. It takes H.264, H.265 or MPEG-4 only, so the codec is named."""
+    _ffmpeg(
+        [
+            "-y", "-i", str(source),
+            "-vf", f"fps={fps},scale=-2:720",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(out),
+        ]
+    )
+
+
+def cut_frames(clip: Path, times_s: list[float], out_dir: Path) -> list[Path]:
+    """One JPEG per time. A missing ffmpeg or an unreadable clip raises RuntimeError."""
+    files = []
+    for t in times_s:
+        target = out_dir / f"{uuid.uuid4().hex}.jpg"
+        _run_tool(["ffmpeg", "-y", "-ss", str(t), "-i", str(clip), "-frames:v", "1", "-q:v", "3", str(target)])
+        files.append(target)
+    return files
 
 
 def _one_line(text: str | None) -> str:

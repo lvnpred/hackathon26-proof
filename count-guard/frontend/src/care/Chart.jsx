@@ -54,7 +54,7 @@ export default function Chart() {
     <>
       <StateHeader patient={patient} view={view} />
 
-      <StatePanel state={view.state} role={ward.role} view={view} act={act} busy={ward.busy} episodeId={episodeId} />
+      <StatePanel state={view.state} role={ward.role} view={view} act={act} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
 
       <section className="card">
         <p className="label">Orders and tasks</p>

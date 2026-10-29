@@ -101,6 +101,18 @@ def plain(event: dict) -> str:
     if kind == "patient.state":
         said = f" Reason: {p.get('reason')}" if p.get("reason") else ""
         return f"{p.get('by')} moved the patient from {p.get('from')} to {p.get('to')}.{said}"
+    if kind == "order.signed":
+        return f"{p.get('by')} signed {len(p.get('items') or [])} orders."
+    if kind == "order.acknowledged":
+        return f"{p.get('by')} acknowledged the orders."
+    if kind == "task.created":
+        return f"Task added: {p.get('title')}."
+    if kind == "task.began":
+        return f"{p.get('by')} started a task."
+    if kind == "task.done":
+        return f"{p.get('by')} finished a task."
+    if kind == "discharge.signed":
+        return f"{p.get('by')} signed the discharge."
     if kind in ("surgery.began", "surgery.ended"):
         return f"{p.get('by')} recorded that surgery {kind.split('.')[1]}."
     return explain_event(event)

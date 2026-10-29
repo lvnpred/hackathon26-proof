@@ -7,8 +7,10 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field
 
-from app.journey import states
-from app.journey.api import At, Strict, _act, _require, _store, view
+from app.journey import states, tasks
+from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
+from app.journey.seed import card_payload
+from app.journey.stories import CARE_TEMPLATES
 
 flow_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 
@@ -53,3 +55,110 @@ def surgery(episode_id: str, body: SurgeryIn, request: Request) -> dict:
     if body.step == "ended" and status != "began":
         raise HTTPException(status_code=409, detail="Surgery has not begun, or has already ended.")
     return _act(request, episode_id, f"surgery.{body.step}", {"by": body.by}, body.at_ms)
+
+
+class OrderItem(Strict):
+    kind: Literal["dose", "obs", "procedure", "check", "other"]
+    text: str = Field(min_length=1, max_length=200)
+    name: str = Field(default="", max_length=80)
+    amount: str = Field(default="", max_length=40)
+    every_h: float | None = Field(default=None, gt=0, le=72)
+    mode: Literal["tick", "start_end"] = "tick"
+    proof: Literal["none", "photo", "video"] = "none"
+    limits: Limits = Field(default_factory=Limits)
+
+
+class SignIn(At):
+    items: list[OrderItem] = Field(min_length=1, max_length=20)
+    by: str = Field(min_length=1, max_length=80)
+
+
+class AckIn(At):
+    by: str = Field(min_length=1, max_length=80)
+
+
+class BeginIn(At):
+    by: str = Field(min_length=1, max_length=80)
+
+
+class Values(Strict):
+    sbp: int = Field(ge=30, le=300)
+    dbp: int = Field(ge=10, le=200)
+    hr: int = Field(ge=20, le=250)
+    spo2: int | None = Field(default=None, ge=50, le=100)
+    temp: float | None = Field(default=None, ge=30, le=45)
+
+
+class DoneIn(At):
+    by: str = Field(min_length=1, max_length=80)
+    via: Literal["tap"] = "tap"
+    note: str = Field(default="", max_length=300)
+    values: Values | None = None
+
+
+class DischargeIn(At):
+    summary: str = Field(min_length=1, max_length=2000)
+    template: str = Field(default="hernia-repair", max_length=40)
+    by: str = Field(min_length=1, max_length=80)
+
+
+def _write(request: Request, episode_id: str, at_ms: int | None, action) -> dict:
+    """Run a tasks.py writer at the demo time, map its refusal to HTTP, then raise nudges."""
+    _require(request, episode_id)
+    store = _store(request)
+    try:
+        ts = action(store, _at(store, episode_id, at_ms))
+    except tasks.TaskError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+    raise_nudges(store, episode_id, ts)
+    return view(request, episode_id)
+
+
+@flow_router.post("/orders/sign")
+def sign_orders(episode_id: str, body: SignIn, request: Request) -> dict:
+    items = []
+    for item in body.items:
+        row = item.model_dump()
+        row["limits"] = {k: v for k, v in row["limits"].items() if v is not None} if item.kind == "obs" else {}
+        items.append(row)
+    return _write(request, episode_id, body.at_ms, lambda s, ts: tasks.sign_order(s, episode_id, items, body.by, ts))
+
+
+@flow_router.post("/orders/{order_id}/ack")
+def acknowledge(episode_id: str, order_id: str, body: AckIn, request: Request) -> dict:
+    return _write(request, episode_id, body.at_ms, lambda s, ts: tasks.acknowledge_order(s, episode_id, order_id, body.by, ts))
+
+
+@flow_router.post("/tasks/{task_id}/begin")
+def begin(episode_id: str, task_id: str, body: BeginIn, request: Request) -> dict:
+    return _write(request, episode_id, body.at_ms, lambda s, ts: tasks.begin_task(s, episode_id, task_id, body.by, ts))
+
+
+@flow_router.post("/tasks/{task_id}/done")
+def done(episode_id: str, task_id: str, body: DoneIn, request: Request) -> dict:
+    values = body.values.model_dump(exclude_none=True) if body.values else None
+    return _write(
+        request,
+        episode_id,
+        body.at_ms,
+        lambda s, ts: tasks.complete_task(s, episode_id, task_id, body.by, ts, via=body.via, note=body.note, values=values),
+    )
+
+
+@flow_router.post("/discharge/sign")
+def sign_discharge(episode_id: str, body: DischargeIn, request: Request) -> dict:
+    _require(request, episode_id)
+    if body.template not in CARE_TEMPLATES:
+        raise HTTPException(status_code=404, detail="Unknown care template")
+    store = _store(request)
+    events = store.events(episode_id)
+    if states.current_state(events) != "ward":
+        raise HTTPException(status_code=409, detail="The discharge is signed only while the patient is on the ward.")
+    ts = _at(store, episode_id, body.at_ms)
+    rx = _latest(events, "rx.ordered")
+    store.append(episode_id, "discharge.signed", {"summary": body.summary.strip(), "by": body.by}, ts_ms=ts)
+    store.append(episode_id, "discharge.card", card_payload(body.template, rx["payload"] if rx else None, body.by), ts_ms=ts)
+    move = {"from": "ward", "to": "discharging", "by": body.by, "reason": ""}
+    store.append(episode_id, "patient.state", move, ts_ms=ts)
+    raise_nudges(store, episode_id, ts)
+    return view(request, episode_id)

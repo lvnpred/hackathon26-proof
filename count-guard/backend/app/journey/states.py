@@ -153,7 +153,11 @@ def flow_view(events: list[dict]) -> dict:
         (e["payload"]["procedure"] for e in reversed(events) if e["event_type"] == "patient.state" and e["payload"].get("procedure")),
         None,
     )
+    from app.journey.tasks import orders_list, task_list  # tasks imports this module
+
     return {
+        "order_list": orders_list(events),
+        "tasks": task_list(events),
         "state": current_state(events),
         "now_next": now_next(events),
         "allowed": allowed_moves(events),

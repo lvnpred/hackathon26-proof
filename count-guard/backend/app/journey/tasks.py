@@ -1,0 +1,182 @@
+"""Doctor orders become nurse tasks.
+
+Pure readers (`orders_list`, `task_list`) fold the ledger into views. The writer helpers
+(`sign_order`, `acknowledge_order`, `begin_task`, `complete_task`) append events and raise
+`TaskError` on a refusal, so the routes and the seed share them and stay HTTP-free. The caller
+runs `raise_nudges` after a write, using the ts the helper returns.
+"""
+
+from __future__ import annotations
+
+from app.journey.rx import key_of
+from app.journey.states import current_state
+from app.morning.discharge import visible_events
+
+HOUR_MS = 3_600_000
+ORDER_STATES = ("clinic", "admitting", "ward")
+OBS_FIELDS = ("sbp", "dbp", "hr", "spo2", "temp")
+
+
+class TaskError(Exception):
+    """A refused action. `status` is the HTTP code the route maps it to (404, 409 or 422)."""
+
+    def __init__(self, status: int, detail: str):
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
+
+
+def _of(events: list[dict], kind: str) -> list[dict]:
+    return [e for e in visible_events(events) if e["event_type"] == kind]
+
+
+def orders_list(events: list[dict]) -> list[dict]:
+    acked = {e["payload"]["order_id"]: e["payload"]["by"] for e in _of(events, "order.acknowledged")}
+    return [
+        {
+            "id": e["id"],
+            "by": e["payload"]["by"],
+            "items": e["payload"]["items"],
+            "at_ms": e["ts_ms"],
+            "acknowledged_by": acked.get(e["id"]),
+        }
+        for e in _of(events, "order.signed")
+    ]
+
+
+def task_list(events: list[dict]) -> list[dict]:
+    rows = visible_events(events)
+    out = []
+    for created in (e for e in rows if e["event_type"] == "task.created"):
+        p, tid = created["payload"], created["id"]
+        mine = [e for e in rows if e["payload"].get("task_id") == tid]
+        done = [e for e in mine if e["event_type"] == "task.done"]
+        began = [e for e in mine if e["event_type"] == "task.began"]
+        running = bool(mine) and mine[-1]["event_type"] == "task.began"
+        if running:
+            status, due = "running", p["due_ms"] if not done else done[-1]["ts_ms"] + _gap(p)
+        elif done and p["every_h"]:
+            status, due = "open", done[-1]["ts_ms"] + _gap(p)
+        elif done:
+            status, due = "done", None
+        else:
+            status, due = "open", p["due_ms"]
+        out.append(
+            {
+                "id": tid,
+                "order_id": p["order_id"],
+                "title": p["title"],
+                "kind": p["kind"],
+                "mode": p["mode"],
+                "proof": p["proof"],
+                "every_h": p["every_h"],
+                "status": status,
+                "due_ms": due,
+                "done": [
+                    {"at_ms": e["ts_ms"], "by": e["payload"]["by"], "via": e["payload"]["via"], "note": e["payload"]["note"]}
+                    for e in done
+                ],
+                "began_ms": began[-1]["ts_ms"] if began else None,
+            }
+        )
+    return out
+
+
+def _gap(payload: dict) -> int:
+    return int(payload["every_h"] * HOUR_MS) if payload["every_h"] else 0
+
+
+def _merged_orders(previous: dict | None, items: list[dict], by: str) -> dict | None:
+    doses = [i for i in items if i["kind"] == "dose" and i.get("every_h")]
+    obs = [i for i in items if i["kind"] == "obs"]
+    if not doses and not obs:
+        return None
+    old = previous or {}
+    by_key = {d["key"]: d for d in old.get("doses", [])}
+    for item in doses:
+        name = item["name"] or item["text"]
+        by_key[key_of(name)] = {"name": name, "amount": item["amount"], "every_h": item["every_h"], "key": key_of(name)}
+    limits = dict(old.get("limits", {}))
+    for item in obs:
+        limits.update({k: v for k, v in (item.get("limits") or {}).items() if v is not None})
+    every = next((i["every_h"] for i in reversed(obs) if i.get("every_h")), old.get("obs_every_h"))
+    return {"doses": list(by_key.values()), "obs_every_h": every, "limits": limits, "by": by}
+
+
+def sign_order(store, episode_id: str, items: list[dict], by: str, ts: int) -> int:
+    """Write `order.signed` and, for dose or obs items, the merged `ward.orders_set`. Returns ts."""
+    events = store.events(episode_id)
+    state = current_state(events)
+    if state not in ORDER_STATES:
+        raise TaskError(409, f"Orders are signed in clinic, admitting or ward. The patient is in {state}.")
+    store.append(episode_id, "order.signed", {"items": items, "by": by}, ts_ms=ts)
+    previous = next(iter(reversed(_of(events, "ward.orders_set"))), None)
+    merged = _merged_orders(previous["payload"] if previous else None, items, by)
+    if merged:
+        store.append(episode_id, "ward.orders_set", merged, ts_ms=ts)
+    return ts
+
+
+def acknowledge_order(store, episode_id: str, order_id: str, by: str, ts: int) -> int:
+    """Write `order.acknowledged`, then one `task.created` per item, all due at ts. Returns ts."""
+    order = store.get_event(order_id)
+    if order is None or order["episode_id"] != episode_id or order["event_type"] != "order.signed":
+        raise TaskError(404, "Order not found")
+    if any(e["payload"]["order_id"] == order_id for e in _of(store.events(episode_id), "order.acknowledged")):
+        raise TaskError(409, "This order is already acknowledged.")
+    store.append(episode_id, "order.acknowledged", {"order_id": order_id, "by": by}, ts_ms=ts)
+    for index, item in enumerate(order["payload"]["items"]):
+        payload = {
+            "order_id": order_id,
+            "index": index,
+            "title": item["text"],
+            "kind": item["kind"],
+            "mode": item["mode"],
+            "proof": item["proof"],
+            "every_h": item["every_h"],
+            "due_ms": ts,
+            "name": item["name"],
+            "amount": item["amount"],
+        }
+        store.append(episode_id, "task.created", payload, ts_ms=ts)
+    return ts
+
+
+def _task(store, episode_id: str, task_id: str) -> tuple[dict, dict]:
+    created = store.get_event(task_id)
+    if created is None or created["episode_id"] != episode_id or created["event_type"] != "task.created":
+        raise TaskError(404, "Task not found")
+    view = next(t for t in task_list(store.events(episode_id)) if t["id"] == task_id)
+    return created["payload"], view
+
+
+def begin_task(store, episode_id: str, task_id: str, by: str, ts: int) -> int:
+    payload, view = _task(store, episode_id, task_id)
+    if payload["mode"] != "start_end":
+        raise TaskError(409, "This task is ticked, not started.")
+    if view["status"] == "running":
+        raise TaskError(409, "This task is already running.")
+    if view["status"] == "done":
+        raise TaskError(409, "This task is already done.")
+    store.append(episode_id, "task.began", {"task_id": task_id, "by": by}, ts_ms=ts)
+    return ts
+
+
+def complete_task(
+    store, episode_id: str, task_id: str, by: str, ts: int, *, via: str = "tap", note: str = "", values: dict | None = None
+) -> int:
+    payload, view = _task(store, episode_id, task_id)
+    if view["status"] == "done":
+        raise TaskError(409, "This task is already done.")
+    if payload["mode"] == "start_end" and view["status"] != "running":
+        raise TaskError(409, "Start the task before finishing it.")
+    if payload["kind"] == "obs" and not values:
+        raise TaskError(422, "Observation values are needed to finish this task.")
+    store.append(episode_id, "task.done", {"task_id": task_id, "by": by, "via": via, "note": note}, ts_ms=ts)
+    if payload["kind"] == "dose":
+        name = payload["name"] or payload["title"]
+        fact = {"key": key_of(name), "name": name, "amount": payload["amount"], "by": by, "source": "task"}
+        store.append(episode_id, "dose.given", fact, ts_ms=ts)
+    elif payload["kind"] == "obs":
+        store.append(episode_id, "obs.recorded", {**values, "by": by}, ts_ms=ts)
+    return ts

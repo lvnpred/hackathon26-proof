@@ -107,7 +107,22 @@ export function useWard() {
   }
 
   const act = (id, path, body) => run(id, () => postJourney(id, path, { ...body, at_ms: nowMs }));
-  const upload = (id, path, file) => run(id, () => uploadJourney(id, path, file));
+  const send = (id, path, file, fields) => uploadJourney(id, path, file, { ...fields, at_ms: nowMs });
+  const upload = (id, path, file, fields) => run(id, () => send(id, path, file, fields));
+
+  // Like upload, but returns the JSON without swapping the view (a proposal is not a record).
+  async function ask(id, path, file, fields) {
+    setError("");
+    setBusy(true);
+    try {
+      return await send(id, path, file, fields);
+    } catch (exc) {
+      setError(exc.message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function jump(ms) {
     if (ms <= nowMs || !patients.length) return;
@@ -146,5 +161,5 @@ export function useWard() {
 
   const find = (id) => patients.find((p) => p.id === id);
 
-  return { patients, nowMs, role, setRole, busy, error, act, upload, jump, reset, find };
+  return { patients, nowMs, role, setRole, busy, error, act, upload, ask, jump, reset, find };
 }

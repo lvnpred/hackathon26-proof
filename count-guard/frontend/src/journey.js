@@ -34,9 +34,13 @@ export function postJourney(id, path, body) {
   });
 }
 
-export function uploadJourney(id, path, file) {
+// The file is added when given; each field is added unless it is null, undefined or "".
+export function uploadJourney(id, path, file, fields = {}) {
   const form = new FormData();
-  form.append("file", file);
+  if (file) form.append("file", file);
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") form.append(key, value);
+  });
   return call(`${base(id)}${path}`, { method: "POST", body: form });
 }
 

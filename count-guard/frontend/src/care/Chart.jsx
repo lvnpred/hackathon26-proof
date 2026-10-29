@@ -67,7 +67,7 @@ export default function Chart() {
 
       <Photos view={view} />
 
-      <AskInbox key={episodeId} view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} />
+      <AskInbox key={`ask-${episodeId}`}view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} />
 
       <VideoChecks view={view} />
 

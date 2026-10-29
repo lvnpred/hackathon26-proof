@@ -29,3 +29,13 @@ test("obsValues keeps numbers, drops blank optional fields, rejects out-of-range
   assert.ok(obsValues({ sbp: "400", dbp: "80", hr: "72", spo2: "", temp: "" }).error);
   assert.ok(obsValues({ sbp: "", dbp: "80", hr: "72", spo2: "", temp: "" }).error);
 });
+
+import { surgeryNow } from "./tasklist.js";
+
+test("surgeryNow reads only the current theatre stay", () => {
+  const line = (type) => ({ type });
+  assert.deepEqual(surgeryNow([line("patient.state"), line("surgery.began")]), { began: true, ended: false });
+  const second = [line("patient.state"), line("surgery.began"), line("surgery.ended"), line("patient.state"), line("patient.state")];
+  assert.deepEqual(surgeryNow(second), { began: false, ended: false });
+  assert.deepEqual(surgeryNow([]), { began: false, ended: false });
+});

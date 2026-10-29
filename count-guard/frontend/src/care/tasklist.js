@@ -32,3 +32,12 @@ export function obsValues(form) {
   }
   return { values };
 }
+
+// Surgery status for the current stay: only lines after the latest patient.state count.
+export function surgeryNow(timeline) {
+  const lines = timeline || [];
+  let since = 0;
+  lines.forEach((line, i) => { if (line.type === "patient.state") since = i + 1; });
+  const types = lines.slice(since).map((line) => line.type);
+  return { began: types.includes("surgery.began"), ended: types.includes("surgery.ended") };
+}

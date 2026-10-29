@@ -3,7 +3,7 @@ import { Nudge } from "../screens/WardPanel";
 import Checklist from "./Checklist";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
-import { OBS_FIELDS, obsValues, sortTasks } from "./tasklist";
+import { OBS_FIELDS, obsValues, sortTasks, surgeryNow } from "./tasklist";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
 const THEATRE_NURSE = "Nurse Asha (synthetic)";
@@ -44,7 +44,7 @@ function ObsForm({ busy, onSave }) {
     const out = obsValues(form);
     if (out.error) return setError(out.error);
     setError("");
-    onSave(out.values);
+    Promise.resolve(onSave(out.values)).then((next) => next && setForm({}));
   }
   return (
     <div className="row">
@@ -102,9 +102,7 @@ function Theatre({ episodeId, view, busy, act, replaced }) {
   const move = (view.allowed || []).find((m) => m.to === "ward");
   const countOpen = (view.nudges || []).some((nudge) => nudge.kind === "count_open");
   const askReason = countOpen || (move?.needs || []).some((need) => need.startsWith("reason"));
-  const timeline = view.timeline || [];
-  const began = timeline.some((line) => line.type === "surgery.began");
-  const ended = timeline.some((line) => line.type === "surgery.ended");
+  const { began, ended } = surgeryNow(view.timeline);
   return (
     <>
       <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} />

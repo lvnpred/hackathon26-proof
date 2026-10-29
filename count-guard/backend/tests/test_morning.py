@@ -215,3 +215,31 @@ def test_card_is_written_within_500ms_of_the_drop_reading(tmp_path):
     assert elapsed < 0.5
     card = api.get(f"/morning/episodes/{episode['id']}/card")
     assert card.json()["banner"] == "Research demo. Not for clinical use."
+
+
+def test_store_reads_are_safe_across_threads(tmp_path):
+    # The ward screen reads every episode at once; one shared connection must not garble a read.
+    from app.morning.store import MorningStore
+
+    store = MorningStore(tmp_path / "t.db")
+    ids = [store.create_episode("x")["id"] for _ in range(3)]
+    for episode_id in ids:
+        for k in range(30):
+            store.append(episode_id, "t", {"k": k}, ts_ms=k)
+    errors = []
+
+    def read(episode_id):
+        for _ in range(500):
+            try:
+                assert len(store.events(episode_id)) == 30
+                assert store.get_episode(episode_id)
+                assert len(store.list_episodes()) == 3
+            except BaseException as exc:  # noqa: BLE001 - any failure is the finding
+                errors.append(repr(exc))
+
+    threads = [threading.Thread(target=read, args=(episode_id,)) for episode_id in ids for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert errors == []

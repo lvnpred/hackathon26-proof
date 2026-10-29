@@ -46,9 +46,10 @@ class MorningStore:
         )
 
     def list_episodes(self) -> list[dict]:
-        rows = self._conn.execute(
-            "SELECT id, label, created_at FROM episodes ORDER BY created_at DESC"
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, label, created_at FROM episodes ORDER BY created_at DESC"
+            ).fetchall()
         return [dict(row) for row in rows]
 
     def create_episode(self, label: str) -> dict:
@@ -62,7 +63,8 @@ class MorningStore:
         return self.get_episode(episode_id)
 
     def get_episode(self, episode_id: str) -> dict | None:
-        row = self._conn.execute("SELECT * FROM episodes WHERE id = ?", (episode_id,)).fetchone()
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM episodes WHERE id = ?", (episode_id,)).fetchone()
         return dict(row) if row else None
 
     def append(
@@ -105,10 +107,11 @@ class MorningStore:
         return event
 
     def events(self, episode_id: str, after_id: str | None = None) -> list[dict]:
-        rows = self._conn.execute(
-            "SELECT * FROM timeline WHERE episode_id = ? ORDER BY rowid",
-            (episode_id,),
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM timeline WHERE episode_id = ? ORDER BY rowid",
+                (episode_id,),
+            ).fetchall()
         items = []
         started = after_id is None
         for row in rows:
@@ -122,7 +125,8 @@ class MorningStore:
         return items
 
     def get_event(self, event_id: str) -> dict | None:
-        row = self._conn.execute("SELECT * FROM timeline WHERE id = ?", (event_id,)).fetchone()
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM timeline WHERE id = ?", (event_id,)).fetchone()
         if row is None:
             return None
         item = dict(row)

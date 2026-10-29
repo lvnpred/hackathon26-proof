@@ -2,6 +2,7 @@ import { useState } from "react";
 import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
 import OrderForm from "./OrderForm";
+import { surgeryNow } from "./tasklist";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
 
@@ -109,12 +110,12 @@ export default function DoctorActions({ state, view, act, busy }) {
     );
   }
   if (state === "theatre") {
-    const at = (type) => (view.timeline || []).filter((line) => line.type === type).pop()?.when;
+    const { began, ended } = surgeryNow(view.timeline);
     return (
       <section className="card">
         <p className="label">In theatre</p>
-        <p className="small">Surgery began: {at("surgery.began") || "not yet"}</p>
-        <p className="small">Surgery ended: {at("surgery.ended") || "not yet"}</p>
+        <p className="small">Surgery began: {began ? "yes" : "not yet"}</p>
+        <p className="small">Surgery ended: {ended ? "yes" : "not yet"}</p>
       </section>
     );
   }

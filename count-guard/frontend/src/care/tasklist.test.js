@@ -39,3 +39,11 @@ test("surgeryNow reads only the current theatre stay", () => {
   assert.deepEqual(surgeryNow(second), { began: false, ended: false });
   assert.deepEqual(surgeryNow([]), { began: false, ended: false });
 });
+
+import { needsReason } from "./tasklist.js";
+
+test("needsReason follows the server's list, so a corrected count asks for none", () => {
+  assert.equal(needsReason({ needs: ["surgery ended", "reason (count open)"] }), true);
+  assert.equal(needsReason({ needs: ["surgery ended"] }), false);
+  assert.equal(needsReason(undefined), false);
+});

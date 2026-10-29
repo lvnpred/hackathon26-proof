@@ -3,7 +3,7 @@ import { Nudge } from "../screens/WardPanel";
 import Checklist from "./Checklist";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
-import { OBS_FIELDS, obsValues, sortTasks, surgeryNow } from "./tasklist";
+import { OBS_FIELDS, needsReason, obsValues, sortTasks, surgeryNow } from "./tasklist";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
 const THEATRE_NURSE = "Nurse Asha (synthetic)";
@@ -100,8 +100,7 @@ function Ward({ view, nowMs, by, busy, act }) {
 function Theatre({ episodeId, view, busy, act, replaced }) {
   const [reason, setReason] = useState("");
   const move = (view.allowed || []).find((m) => m.to === "ward");
-  const countOpen = (view.nudges || []).some((nudge) => nudge.kind === "count_open");
-  const askReason = countOpen || (move?.needs || []).some((need) => need.startsWith("reason"));
+  const askReason = needsReason(move);
   const { began, ended } = surgeryNow(view.timeline);
   return (
     <>

@@ -149,3 +149,16 @@ def test_no_advice_words_in_now_next(tmp_path):
     for view in seen:
         assert not ADVICE.search(view["now_next"]["now"] + " " + view["now_next"]["next"])
     assert len(seen) == 5
+
+
+def test_corrected_count_closes_its_open_nudge(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    base = f"/journey/episodes/{eid}"
+    by = {"by": "Nurse Priya (synthetic)", "at_ms": 0}
+    client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
+    view = client.post(f"{base}/count", json={"step": "closing", "returned": 19, **by}).json()
+    assert [n["kind"] for n in view["nudges"]] == ["count_open"]
+    first = next(n["fact_id"] for n in view["nudges"])
+    view = client.post(f"{base}/count", json={"step": "closing", "returned": 20, "supersedes_id": first, **by}).json()
+    assert view["nudges"] == []

@@ -41,3 +41,8 @@ export function surgeryNow(timeline) {
   const types = lines.slice(since).map((line) => line.type);
   return { began: types.includes("surgery.began"), ended: types.includes("surgery.ended") };
 }
+
+// The server lists what a move still needs; a reason is asked only while it appears there.
+export function needsReason(move) {
+  return (move?.needs || []).some((need) => need.startsWith("reason"));
+}

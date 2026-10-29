@@ -190,5 +190,10 @@ def fresh(events: list[dict], at_ms: int) -> list[dict]:
 
 
 def open_nudges(events: list[dict]) -> list[dict]:
+    """Raised nudges not yet answered. One about a fact since corrected is closed with it."""
     seen = {e["payload"]["nudge_id"] for e in events if e["event_type"] == "nudge.seen"}
-    return [e for e in events if e["event_type"] == "nudge.raised" and e["id"] not in seen]
+    struck = {e["supersedes_id"] for e in events if e.get("supersedes_id")}
+    return [
+        e for e in events
+        if e["event_type"] == "nudge.raised" and e["id"] not in seen and e["payload"].get("fact_id") not in struck
+    ]

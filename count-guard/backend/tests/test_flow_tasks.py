@@ -119,3 +119,45 @@ def test_discharge_sign_moves_to_discharging(tmp_path):
     assert view["state"] == "discharging"
     assert view["card"] is not None
     assert "discharge" in view["now_next"]["next"]
+
+
+def test_dose_without_every_h_is_a_task_but_not_a_v1_dose_order(tmp_path):
+    item = {"kind": "dose", "text": "Ondansetron 4 mg once", "name": "Ondansetron", "amount": "4 mg"}
+    client, eid, _, view = _ward_with_tasks(tmp_path, [item])
+    assert view["orders"] is None
+    view = _done(client, eid, view["tasks"][0]["id"]).json()
+    assert any(e["type"] == "dose.given" for e in view["timeline"])
+    assert view["tasks"][0]["status"] == "done"
+    assert view["orders"] is None
+
+
+def _emitted_strings():
+    """Every human-facing string literal in the new journey modules (docstrings and bare tokens excluded)."""
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "app" / "journey"
+    out = []
+    for name in ("tasks.py", "states.py", "flow_api.py", "stories.py"):
+        tree = ast.parse((root / name).read_text())
+        docstrings = {
+            id(n.body[0].value)
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.Module, ast.FunctionDef, ast.ClassDef)) and n.body and isinstance(n.body[0], ast.Expr)
+        }
+        scope = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "plain"] if name == "stories.py" else [tree]
+        for part in scope:
+            out += [
+                n.value
+                for n in ast.walk(part)
+                if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docstrings and " " in n.value.strip()
+            ]
+    return out
+
+
+def test_no_emitted_text_is_clinical_advice():
+    from tests.test_flow_states import ADVICE
+
+    strings = _emitted_strings()
+    assert any("Begin the task" in s for s in strings)  # the scan reaches tasks.py
+    assert [s for s in strings if ADVICE.search(s)] == []

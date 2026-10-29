@@ -108,7 +108,7 @@ def plain(event: dict) -> str:
     if kind == "task.created":
         return f"Task added: {p.get('title')}."
     if kind == "task.began":
-        return f"{p.get('by')} started a task."
+        return f"{p.get('by')} began a task."
     if kind == "task.done":
         return f"{p.get('by')} finished a task."
     if kind == "discharge.signed":

@@ -153,7 +153,7 @@ def _task(store, episode_id: str, task_id: str) -> tuple[dict, dict]:
 def begin_task(store, episode_id: str, task_id: str, by: str, ts: int) -> int:
     payload, view = _task(store, episode_id, task_id)
     if payload["mode"] != "start_end":
-        raise TaskError(409, "This task is ticked, not started.")
+        raise TaskError(409, "This task is ticked, not begun.")
     if view["status"] == "running":
         raise TaskError(409, "This task is already running.")
     if view["status"] == "done":
@@ -169,7 +169,7 @@ def complete_task(
     if view["status"] == "done":
         raise TaskError(409, "This task is already done.")
     if payload["mode"] == "start_end" and view["status"] != "running":
-        raise TaskError(409, "Start the task before finishing it.")
+        raise TaskError(409, "Begin the task before marking it done.")
     if payload["kind"] == "obs" and not values:
         raise TaskError(422, "Observation values are needed to finish this task.")
     store.append(episode_id, "task.done", {"task_id": task_id, "by": by, "via": via, "note": note}, ts_ms=ts)

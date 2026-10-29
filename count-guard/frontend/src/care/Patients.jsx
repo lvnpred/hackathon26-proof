@@ -1,26 +1,19 @@
 import { Link } from "react-router-dom";
 import { PageLead } from "../App";
-import { STAGES, stageOf } from "./clock";
 import { useCareWard } from "./CareShell";
-
-const NAME = Object.fromEntries(STAGES.map((s) => [s.id, s.label]));
+import { STATE_LABEL } from "./derive";
 
 // The demo patient (R. Kumar) sits in bed 4.
 export const KUMAR_BED = "4";
 export const findKumar = (patients) => patients.find((patient) => patient.bed === KUMAR_BED);
 
-// Kumar's story is built live on the demo clock; the others show the furthest stage their record reached.
-export function stageFor(patient, nowMs) {
-  if (patient.bed === KUMAR_BED) return NAME[stageOf(nowMs)];
-  const { view } = patient;
-  if (view.card) return NAME.home;
-  if (view.orders || view.handover) return NAME.ward;
-  if (view.rx) return NAME.theatre;
-  return NAME.clinic;
+export function StateBadge({ patient }) {
+  const state = patient.view.state;
+  return <span className="pill info state-badge">{STATE_LABEL[state] || state}</span>;
 }
 
 export default function Patients() {
-  const { patients, nowMs } = useCareWard();
+  const { patients } = useCareWard();
   return (
     <>
       <PageLead kicker="Ward" title="Patients" body="Open a chart to see the whole record." />
@@ -30,7 +23,7 @@ export default function Patients() {
             <Link to={`/chart/${patient.id}`}>
               <span className="num">Bed {patient.bed}</span>
               <span>{patient.name}</span>
-              <span className="pill">{stageFor(patient, nowMs)}</span>
+              <StateBadge patient={patient} />
             </Link>
           </li>
         ))}

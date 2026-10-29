@@ -421,3 +421,9 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 @media (max-width: 800px) {
   .stage-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.state-head .state-badge { font-weight: 600; }
+.now-next { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 12px 0 0; }
+.now-next dt { color: var(--ink-muted); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.now-next dd { margin: 0; }
+.task-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }

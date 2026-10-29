@@ -1,6 +1,6 @@
 import { Link, NavLink, Navigate, Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import { Banner, Mark } from "../App";
-import { jumpTargets, label, plusHour } from "./clock";
+import { label, skipTargets } from "./clock";
 import { waitingPills } from "./derive";
 import { useWard } from "./ward";
 
@@ -46,7 +46,7 @@ function Strip({ ward }) {
           <button
             type="button"
             className={`pill wait ${pill.late ? "sun" : ""}`}
-            onClick={() => navigate(`/chart/${pill.episodeId}${pill.lineId ? `?line=${pill.lineId}` : pill.stage ? `?stage=${pill.stage}` : ""}`)}
+            onClick={() => navigate(`/chart/${pill.episodeId}${pill.lineId ? `?line=${pill.lineId}` : ""}`)}
           >
             {pill.who} → {pill.what}{pill.waited ? ` · ${pill.waited}` : ""}
           </button>
@@ -60,12 +60,11 @@ function ClockBar({ ward }) {
   return (
     <div className="clock-bar" role="group" aria-label="Demo clock">
       <span className="num clock-now">{label(ward.nowMs)}</span>
-      {jumpTargets(ward.nowMs).filter((t) => t.enabled).map((target) => (
+      {skipTargets(ward.nowMs, ward.patients).map((target) => (
         <button key={target.id} type="button" disabled={ward.busy} onClick={() => ward.jump(target.atMs)}>
           {target.label}
         </button>
       ))}
-      <button type="button" disabled={ward.busy} onClick={() => ward.jump(plusHour(ward.nowMs))}>+1 h</button>
       <button type="button" disabled={ward.busy} onClick={ward.reset}>Reset</button>
     </div>
   );

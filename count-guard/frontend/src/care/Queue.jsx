@@ -4,14 +4,12 @@ import { PageLead } from "../App";
 import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
 import { queueRows } from "./derive";
-import { stageFor } from "./Patients";
+import { StateBadge } from "./Patients";
 
 function QueueRow({ row, ward, open, toggle }) {
   const patient = ward.find(row.episodeId);
   const nudge = (patient?.view.nudges || []).find((n) => n.id === row.lineId);
-  const to = row.lineId
-    ? `/chart/${row.episodeId}?line=${row.lineId}`
-    : `/chart/${row.episodeId}${row.stage ? `?stage=${row.stage}` : ""}`;
+  const to = `/chart/${row.episodeId}${row.lineId ? `?line=${row.lineId}` : ""}`;
   return (
     <>
       <tr>
@@ -73,7 +71,7 @@ export default function Queue() {
       )}
       {handovers.map((p) => (
         <div className="card" key={p.id}>
-          <Link to={`/chart/${p.id}?stage=ward`}>Handover: Bed {p.bed}, {p.name} →</Link>
+          <Link to={`/chart/${p.id}`}>Handover: Bed {p.bed}, {p.name} →</Link>
         </div>
       ))}
       <h2>My patients</h2>
@@ -83,7 +81,7 @@ export default function Queue() {
             <Link to={`/chart/${p.id}`}>
               <span className="num">Bed {p.bed}</span>
               <span>{p.name}</span>
-              <span className="pill">{stageFor(p, nowMs)}</span>
+              <StateBadge patient={p} />
             </Link>
           </li>
         ))}

@@ -129,8 +129,8 @@ def segment_clip(
     if settings.sam_configured and live_ok:
         try:
             seconds = clip_seconds(clip)
-        except SystemExit:  # spend.clip_seconds exits on an unreadable clip
-            return {"detections": stored, "source": FALLBACK} if stored else {"detections": None, "source": "failed"}
+        except (SystemExit, OSError, ValueError):  # no ffprobe, ffprobe fails or prints N/A
+            return {"detections": None, "source": "unreadable"}
         if seconds > MAX_LIVE_SECONDS:
             raise NotHeard(400, LONG_CLIP)
         try:

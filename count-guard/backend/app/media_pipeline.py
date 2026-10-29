@@ -13,6 +13,9 @@ from app.core.tracker import Tracker
 from app.engine import Engine
 
 
+TOOL_TIMEOUT_S = 60
+
+
 class SamCallFailed(RuntimeError):
     """The SAM 3.1 service failed or could not be reached. The route maps this to 502."""
 
@@ -128,6 +131,8 @@ def cut_frames(clip: Path, times_s: list[float], out_dir: Path) -> list[Path]:
     for t in times_s:
         target = out_dir / f"{uuid.uuid4().hex}.jpg"
         _run_tool(["ffmpeg", "-y", "-ss", str(t), "-i", str(clip), "-frames:v", "1", "-q:v", "3", str(target)])
+        if not target.is_file():  # ffmpeg exits 0 with no frame when -ss is past the end
+            raise RuntimeError(f"No frame at {t} s in the clip.")
         files.append(target)
     return files
 
@@ -141,7 +146,9 @@ def _one_line(text: str | None) -> str:
 def _run_tool(cmd: list[str]) -> subprocess.CompletedProcess:
     """Run ffmpeg or ffprobe; a missing binary or a bad clip becomes a one-line RuntimeError."""
     try:
-        completed = subprocess.run(cmd, capture_output=True, text=True)
+        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=TOOL_TIMEOUT_S)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"{cmd[0]} timed out after {TOOL_TIMEOUT_S} seconds.") from exc
     except FileNotFoundError as exc:
         raise RuntimeError(f"{cmd[0]} is not installed on this server; install ffmpeg to upload video.") from exc
     except subprocess.CalledProcessError as exc:

@@ -169,7 +169,7 @@ def test_segment_clip_unreadable_clip_and_too_long(tmp_path, monkeypatch):
 
     monkeypatch.setattr(live, "clip_seconds", unreadable)
     got = live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "IMG_1.mov", ["scissors"])
-    assert got == {"detections": None, "source": "failed"}
+    assert got == {"detections": None, "source": "unreadable"}
     _fake_media(monkeypatch, seconds=300)
     with pytest.raises(live.NotHeard) as err:
         live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "tray-hernia.mp4", ["scissors"])
@@ -211,7 +211,41 @@ def test_why_strings_have_no_advice_words():
         video.compare(expected, live.prepared("tray-hernia-full.mp4")["detections"])["why"],
         video.compare(expected, None)["why"],
         video.compare(expected, None, "failed")["why"],
+        video.compare(expected, None, "unreadable")["why"],
         video.NO_FRAMES, live.LONG_CLIP,
     ]
     for text in texts:
         assert not ADVICE.search(text), text
+
+
+@pytest.mark.parametrize("exc", [SystemExit("x"), FileNotFoundError("ffprobe"), ValueError("N/A")])
+def test_unreadable_clip_is_not_prepared_and_not_a_model_failure(tmp_path, monkeypatch, exc):
+    def probe(p):
+        raise exc
+
+    monkeypatch.setattr(live, "clip_seconds", probe)
+    got = live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "tray-hernia.mp4", ["scissors"])
+    assert got == {"detections": None, "source": "unreadable"}
+    why = video.compare([{"concept": "scissors", "names": ["S"], "planned": 1}], None, got["source"])["why"]
+    assert why == "The clip could not be read."
+
+
+def test_subprocess_timeouts(tmp_path, monkeypatch):
+    from app import media_pipeline, spend
+
+    def slow(cmd, **kw):
+        assert kw["timeout"] == 60
+        raise subprocess.TimeoutExpired(cmd, 60)
+
+    monkeypatch.setattr(subprocess, "run", slow)
+    with pytest.raises(RuntimeError, match="timed out"):
+        cut_frames(tmp_path / "c.mp4", [0.0], tmp_path)
+    with pytest.raises(SystemExit):
+        spend.clip_seconds(tmp_path / "c.mp4")
+
+
+def test_cut_frames_past_the_end_raises(tmp_path, monkeypatch):
+    done = subprocess.CompletedProcess([], 0, "", "")
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: done)
+    with pytest.raises(RuntimeError, match="No frame"):
+        cut_frames(tmp_path / "c.mp4", [99.0], tmp_path)

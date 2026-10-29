@@ -6,6 +6,7 @@ from app.journey.procedures import SETUP_TEMPLATES
 
 NOT_CHECKED = "The clip was not checked: no model key and no prepared result for this clip."
 NO_ANSWER = "The clip was not checked: the video model did not answer."
+UNREADABLE = "The clip could not be read."
 NO_FRAMES = " No frames could be cut from the clip."
 OK_WHY = "Every planned item was seen in the clip."
 MAX_FRAMES = 6
@@ -60,7 +61,8 @@ def summarize(records: list[dict], fps: int, min_score: float, concepts: list[st
 def compare(expected: list[dict], detections: dict | None, source: str = "none") -> dict:
     if detections is None:
         rows = [{**e, "seen": None, "at_s": None} for e in expected]
-        return {"rows": rows, "missing": [], "match": "none", "why": NO_ANSWER if source == "failed" else NOT_CHECKED}
+        why = {"failed": NO_ANSWER, "unreadable": UNREADABLE}.get(source, NOT_CHECKED)
+        return {"rows": rows, "missing": [], "match": "none", "why": why}
     rows = []
     for e in expected:
         cell = detections.get(e["concept"]) or {}

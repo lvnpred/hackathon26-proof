@@ -36,11 +36,15 @@ def sam_video_cost(duration_s: float, fps: int, concepts: int) -> dict:
 
 
 def clip_seconds(path: Path) -> float:
-    completed = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        raise SystemExit(f"ffprobe timed out on {path}")
     if completed.returncode != 0 or not completed.stdout.strip():
         raise SystemExit(f"ffprobe could not read {path}")
     return float(completed.stdout.strip())

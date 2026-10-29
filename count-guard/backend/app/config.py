@@ -20,6 +20,8 @@ SAM_CONCEPTS = (
     "scissors",
     "needle holder",
 )
+TRAY_CONCEPTS = SAM_CONCEPTS + ("artery forceps", "retractor", "scalpel handle", "towel clip")
+SETUP_CONCEPTS = ("saline bag", "iv tubing", "iv cannula", "label")
 
 
 def load_dotenv(path: Path | None = None) -> None:

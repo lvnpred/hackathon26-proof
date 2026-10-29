@@ -1,0 +1,16 @@
+{
+  "searched": [
+    "Wikimedia Commons file search (API, namespace File) for hernia surgery video, 2026-10-29",
+    "Web search for openly licensed surgical video on Wikimedia Commons, open-access journal video supplements, and research datasets (Cholec80, CholecT50, AVOS)",
+    "No openly licensed video of a tray set-up or saline set-up was found, so the stand-in clips (eval/p3/make_clips.py) cover those"
+  ],
+  "clips": [
+    {"name": "tep-groin-hernia-video-4", "url": "https://commons.wikimedia.org/wiki/File:TEP_Operation_of_Groin_Hernia_Video_4.ogv", "licence": "CC BY-SA 3.0", "licence_url": "https://creativecommons.org/licenses/by-sa/3.0", "allows_demo": true, "downloaded": true, "note": "Laparoscopic mesh placement, 134 s, 10.6 MB, author Anpol42. Saved to eval/p3/real/ (git-ignored). Credit the author and share alike if shown."},
+    {"name": "reducible-inguinal-hernia", "url": "https://commons.wikimedia.org/wiki/File:Reducible_inguinal_hernia.webm", "licence": "CC0", "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en", "allows_demo": true, "downloaded": false, "note": "Bedside examination, not an operation. File is 561 MB, over the 50 MB limit."},
+    {"name": "different-surgical-approaches-to-inguinal-hernia", "url": "https://commons.wikimedia.org/wiki/File:Different_surgical_approaches_to_inguinal_hernia.webm", "licence": "CC BY 3.0", "licence_url": "https://creativecommons.org/licenses/by/3.0", "allows_demo": true, "downloaded": false, "note": "Conference recording of 2.8 hours, author Nikolay Matveev. File is 527 MB, over the 50 MB limit."},
+    {"name": "groin-hernia-3d-guide-frontiers", "url": "https://www.frontierspartnerships.org/journals/journal-of-abdominal-wall-surgery/articles/10.3389/jaws.2024.13642/xml", "licence": "CC BY (article)", "licence_url": "https://creativecommons.org/licenses/by/4.0/", "allows_demo": true, "downloaded": false, "note": "3D explainer, not real surgery. Video1.MP4 has no direct download URL on the page, and its own licence is not stated apart from the article."},
+    {"name": "cholec80", "url": "https://camma.unistra.fr/datasets/", "licence": "CC BY-NC-SA 4.0", "licence_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en", "allows_demo": false, "downloaded": false, "note": "Non-commercial licence. Searched, not used (ruling P3-R1)."},
+    {"name": "cholect50", "url": "https://github.com/CAMMA-public/cholect50", "licence": "not stated on the dataset page", "licence_url": "https://camma.unistra.fr/datasets/", "allows_demo": false, "downloaded": false, "note": "No licence found, and it is built on Cholec80-family footage. Searched, not used."},
+    {"name": "avos", "url": "https://research.bidmc.org/surgical-informatics/avos", "licence": "not stated; access by request form", "licence_url": "https://research.bidmc.org/surgical-informatics/avos", "allows_demo": false, "downloaded": false, "note": "Videos come from YouTube and the page states no licence. Searched, not used."}
+  ]
+}

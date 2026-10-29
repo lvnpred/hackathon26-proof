@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient
+from app.journey.procedures import PROCEDURE_TEMPLATES
 from app.journey.stories import clock
 from app.morning.discharge import visible_events
 
 STATES = ("clinic", "clinic_done", "admitting", "ward", "theatre", "discharging", "home")
-PROCEDURES = {"hernia-repair": "Open inguinal hernia repair"}
+PROCEDURES = {k: t["title"] for k, t in PROCEDURE_TEMPLATES.items()}
 
 ADMISSION_CHECKS = ("band", "allergies", "baseline_obs", "consent")
 DISCHARGE_CHECKS = ("card_given", "medicines_handed", "reminders_set")

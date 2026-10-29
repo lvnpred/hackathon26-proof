@@ -1,0 +1,16 @@
+{
+  "key": "saline",
+  "title": "Saline set-up",
+  "keywords": ["saline", "drip", "infusion"],
+  "items": [
+    {"name": "Saline bag", "qty": 1, "concept": "saline bag", "source": 2},
+    {"name": "IV giving set (line)", "qty": 1, "concept": "iv tubing", "source": 1},
+    {"name": "IV cannula", "qty": 1, "concept": "iv cannula", "source": 1},
+    {"name": "Infusion label (date, time, substance)", "qty": 1, "concept": "label", "source": 1}
+  ],
+  "sources": [
+    {"id": 1, "url": "https://sfh-tr.nhs.uk/media/afybs3mi/intravenous-iv-medication-and-fluid-therapy-administration-through-a-peripheral-venous-cannula-policy.pdf", "title": "Sherwood Forest Hospitals policy on IV fluid therapy through a peripheral venous cannula (version 4.0, 2023)", "took": "Infusion goes through a peripheral venous cannula with a giving set (line). Section 6.5.5: label the giving set with date, time and substance infused."},
+    {"id": 2, "url": "https://www.leicspart.nhs.uk/wp-content/uploads/2024/05/IV-Policy-exp-May-2027.pdf", "title": "Leicestershire Partnership NHS Trust policy on safe IV administration (version 7)", "took": "Appendix 3: check the infusion solution bag, prime the giving set, and fit a completed infusion label to the bag."}
+  ],
+  "note": "Patients are synthetic. Items are taken from the sources listed."
+}

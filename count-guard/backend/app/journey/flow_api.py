@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.journey import states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
@@ -20,8 +20,15 @@ class StateIn(At):
     to: Literal["clinic", "clinic_done", "admitting", "ward", "theatre", "discharging", "home"]
     by: str = Field(min_length=1, max_length=80)
     reason: str = Field(default="", max_length=300)
-    procedure: Literal["hernia-repair"] | None = None
+    procedure: str | None = Field(None, min_length=1, max_length=40)
     checklist: dict[str, bool] = Field(default_factory=dict, max_length=10)
+
+    @field_validator("procedure")
+    @classmethod
+    def _known_procedure(cls, value: str | None) -> str | None:
+        if value is not None and value not in states.PROCEDURES:
+            raise ValueError("Unknown procedure.")
+        return value
 
 
 class SurgeryIn(At):

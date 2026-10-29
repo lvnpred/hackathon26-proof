@@ -2,9 +2,9 @@ import { Nudge } from "../screens/WardPanel";
 
 // Which timeline types each lens keeps. "everyone" has no entry: the chart shows the audit rows instead.
 export const LENSES = {
-  nurse: ["count.", "dose.", "obs.", "handover.", "nudge."],
-  doctor: ["rx.", "ward.orders", "discharge.card", "druglog."],
-  patient: ["brownbag.", "reminders.", "checkin.", "help."],
+  nurse: ["count.", "dose.", "obs.", "handover.", "nudge.", "patient.state", "order.", "task.", "surgery.", "discharge."],
+  doctor: ["rx.", "ward.orders", "discharge.", "druglog.", "patient.state", "order.", "task.", "surgery."],
+  patient: ["brownbag.", "reminders.", "checkin.", "help.", "patient.state", "order.signed", "task.done", "surgery.", "discharge."],
 };
 
 // One line per event in time order. An open nudge replaces its own "nudge.raised" line and keeps its actions.

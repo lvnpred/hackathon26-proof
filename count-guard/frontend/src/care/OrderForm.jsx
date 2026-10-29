@@ -5,7 +5,8 @@ import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 export default function OrderForm({ busy, onSign }) {
   const [rows, setRows] = useState([]);
   const set = (index, patch) => setRows((all) => all.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  const items = orderRowsToItems(rows);
+  const { items, errors } = orderRowsToItems(rows);
+  const invalid = Object.keys(errors).length > 0;
 
   async function sign() {
     if (await onSign(items)) setRows([]);
@@ -63,9 +64,10 @@ export default function OrderForm({ busy, onSign }) {
             )}
             <button type="button" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Remove row</button>
           </div>
+          {errors[index] && <p className="error small" role="alert">{errors[index]}</p>}
         </div>
       ))}
-      <button type="button" className="primary" disabled={busy || items.length === 0} onClick={sign}>Sign orders</button>
+      <button type="button" className="primary" disabled={busy || invalid || items.length === 0} onClick={sign}>Sign orders</button>
     </section>
   );
 }

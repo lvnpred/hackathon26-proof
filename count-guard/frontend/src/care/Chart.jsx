@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getAudit } from "../journey";
 import { AuditTable } from "../screens/Audit";
 import { useCareWard } from "./CareShell";
+import { label } from "./clock";
 import { taskDue } from "./derive";
 import { lensFor } from "./lens";
 import StateHeader from "./StateHeader";
@@ -49,26 +50,38 @@ export default function Chart() {
   const act = (path, body) => ward.act(episodeId, path, body);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
   const tasks = view.tasks || [];
+  const orders = view.order_list || [];
 
   return (
     <>
       <StateHeader patient={patient} view={view} />
 
-      <StatePanel state={view.state} role={ward.role} view={view} act={act} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
+      <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
 
       <section className="card">
         <p className="label">Orders and tasks</p>
-        {tasks.length === 0 && <p className="empty small">No orders or tasks yet.</p>}
-        <ul className="task-list">
-          {tasks.map((task) => {
-            const due = taskDue(task, ward.nowMs);
-            return (
-              <li key={task.id}>
-                <span>{task.title}</span> <span className={`pill ${due === "overdue" ? "sun" : due === "done" ? "ready" : "info"}`}>{due}</span>
-              </li>
-            );
-          })}
-        </ul>
+        {orders.length === 0 && <p className="empty small">No orders or tasks yet.</p>}
+        {orders.map((order) => (
+          <div key={order.id} data-order={order.id}>
+            <p className="small">
+              Signed by {order.by} at {label(order.at_ms)} ·{" "}
+              {order.acknowledged_by ? `Acknowledged by ${order.acknowledged_by}` : "Waiting for the nurse"}
+            </p>
+            <ul className="task-list">
+              {(order.items || []).map((item, i) => <li key={i}><span>{item.text}</span></li>)}
+            </ul>
+            <ul className="task-list">
+              {tasks.filter((task) => task.order_id === order.id).map((task) => {
+                const due = taskDue(task, ward.nowMs);
+                return (
+                  <li key={task.id}>
+                    <span>{task.title}</span> <span className={`pill ${due === "overdue" ? "sun" : due === "done" ? "ready" : "info"}`}>{due}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </section>
 
       <p className="label">History</p>

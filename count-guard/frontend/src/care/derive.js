@@ -29,8 +29,9 @@ export const STATE_LABEL = {
 
 const GRACE = 30 * M;
 
-// "running" | "overdue" | "due" | "later" | "done". Overdue starts 30 min after the due time (v1 grace).
+// "running" | "overdue" | "due" | "later" | "done" | "closed". Overdue starts 30 min after the due time (v1 grace).
 export function taskDue(task, nowMs) {
+  if (task.status === "closed") return "closed";
   if (task.status === "done") return "done";
   if (task.status === "running") return "running";
   if (task.due_ms == null || task.due_ms > nowMs) return "later";
@@ -105,7 +106,9 @@ function nurseRows(patient, nowMs) {
       ...timed(nowMs, order.at_ms), owner: "Nurse", role: "nurse", rank: RANK.order,
     }));
   }
-  for (const task of tasks) {
+  // Recurring tasks belong to the ward stay: none appear once the patient is discharging, home or in theatre.
+  const taskStates = ["ward", "admitting"];
+  for (const task of taskStates.includes(state) ? tasks : []) {
     const due = taskDue(task, nowMs);
     if (due === "overdue" || due === "due") {
       rows.push(row(patient, `task:${task.id}`, "task", `${task.title} \u00b7 due`, {

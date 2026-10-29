@@ -132,20 +132,54 @@ def allowed_moves(events: list[dict]) -> list[dict]:
         elif to == "theatre":
             needs = ["procedure"]
         elif current_state(events) == "theatre":
-            needs = ["surgery ended"] + (["reason (count open)"] if count_open(events) else [])
+            open_count = count_open(events)
+            needs = ["surgery ended"] if surgery_status(events) != "ended" else []
+            if open_count:
+                needs.append("reason (count open)")
+                role = "doctor"  # the surgeon records why the patient leaves with the count open (D14)
         out.append({"to": to, "label": label, "role": role, "needs": needs})
     return out
 
 
+def _latest_happening(events: list[dict]) -> str | None:
+    """The most recent of: order signed, order acknowledged, task began or done, state move."""
+    rows = visible_events(events)
+    titles = {e["id"]: e["payload"]["title"] for e in rows if e["event_type"] == "task.created"}
+    best = None
+    for index, e in enumerate(rows):
+        p, kind = e["payload"], e["event_type"]
+        if kind == "patient.state":
+            if p.get("from") is None:
+                text, rank = f"{p['by']} admitted the patient to the ward the day before.", 1
+            else:
+                text, rank = f"{p['by']} {DID[p['to']]} at {clock(e['ts_ms'])}.", 0
+        elif kind == "order.signed":
+            text, rank = f"{p['by']} signed new orders at {clock(e['ts_ms'])}.", 0
+        elif kind == "order.acknowledged":
+            text, rank = f"{p['by']} acknowledged the orders at {clock(e['ts_ms'])}.", 0
+        elif kind in ("task.began", "task.done"):
+            verb = "began" if kind == "task.began" else "finished"
+            title = titles.get(p["task_id"], "a task")
+            text, rank = f"{p['by']} {verb} {title} at {clock(e['ts_ms'])}.", 0
+        else:
+            continue
+        key = (e["ts_ms"], rank, index)
+        if best is None or key >= best[0]:
+            best = (key, text)
+    return best[1] if best else None
+
+
 def now_next(events: list[dict]) -> dict:
-    last = _last_state_event(events)
+    from app.journey.tasks import orders_list  # tasks imports this module
+
     state = current_state(events)
-    if last is None:
-        now = "The patient is in clinic."
-    else:
-        p = last["payload"]
-        now = f"{p['by']} {DID[state]} at {clock(last['ts_ms'])}."
-    return {"now": now, "next": NEXT[state]}
+    now = _latest_happening(events) or "The patient is in clinic."
+    next_ = NEXT[state]
+    fresh = [o for o in orders_list(events) if not o["acknowledged_by"]]
+    if fresh and state in ("ward", "admitting"):
+        ack = f"Nurse acknowledges the new orders from {fresh[-1]['by']}."
+        next_ = ack if state == "ward" else f"{ack[:-1]}, then completes the admission."
+    return {"now": now, "next": next_}
 
 
 def flow_view(events: list[dict]) -> dict:

@@ -100,6 +100,8 @@ def plain(event: dict) -> str:
         return f"Day {p.get('day')} check-in: {p.get('feels')}; {signs}."
     if kind == "patient.state":
         said = f" Reason: {p.get('reason')}" if p.get("reason") else ""
+        if p.get("from") is None:
+            return f"{p.get('by')} admitted the patient to the {p.get('to')}.{said}"
         return f"{p.get('by')} moved the patient from {p.get('from')} to {p.get('to')}.{said}"
     if kind == "order.signed":
         return f"{p.get('by')} signed {len(p.get('items') or [])} orders."

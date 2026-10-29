@@ -30,3 +30,9 @@ test("Next due ignores past, done, running and untimed tasks and is omitted when
   assert.deepEqual(skipTargets(26 * H, patients).map((t) => t.id), ["plus15", "plus60"]);
   assert.deepEqual(skipTargets(0, [{ id: "e", view: {} }]).map((t) => t.id), ["plus15", "plus60"]);
 });
+
+test("Next due leaves out closed tasks and patients whose stay has ended", () => {
+  const closed = { id: "e1", view: { state: "discharging", tasks: [task("a", "closed", 30 * H), task("b", "open", 30 * H)] } };
+  const home = { id: "e2", view: { state: "home", tasks: [task("c", "open", 29 * H)] } };
+  assert.deepEqual(skipTargets(26 * H, [closed, home]).map((t) => t.id), ["plus15", "plus60"]);
+});

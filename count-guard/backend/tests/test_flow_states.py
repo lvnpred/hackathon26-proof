@@ -173,3 +173,89 @@ def test_correction_does_not_close_overdue_nudges():
     events = [raised("dose_overdue"), raised("obs_overdue"), raised("obs_past_limit"), raised("count_open"),
               {"id": "f2", "event_type": "obs.recorded", "supersedes_id": "f1", "payload": {}}]
     assert [e["payload"]["kind"] for e in open_nudges(events)] == ["dose_overdue", "obs_overdue"]
+
+
+def _open_count_in_theatre(client, eid):
+    _to_theatre(client, eid)
+    base = f"/journey/episodes/{eid}"
+    by = {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
+    client.post(f"{base}/count", json={"step": "closing", "returned": 19, **by})
+    _surgery(client, eid, "began")
+    _surgery(client, eid, "ended")
+
+
+def _back_to_ward(view):
+    return next(m for m in view["allowed"] if m["to"] == "ward")
+
+
+def test_open_count_makes_the_theatre_exit_the_surgeons(tmp_path):
+    client, eid = _new(tmp_path)
+    _open_count_in_theatre(client, eid)
+    move = _back_to_ward(_view(client, eid))
+    assert move["role"] == "doctor"
+    assert "reason (count open)" in move["needs"]
+    assert _move(client, eid, "ward", reason="").status_code == 409
+
+
+def test_closed_count_leaves_the_theatre_exit_to_the_nurse(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    base = f"/journey/episodes/{eid}"
+    by = {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
+    client.post(f"{base}/count", json={"step": "closing", "returned": 20, **by})
+    _surgery(client, eid, "began")
+    _surgery(client, eid, "ended")
+    move = _back_to_ward(_view(client, eid))
+    assert move["role"] == "nurse"
+    assert move["needs"] == []
+
+
+def test_needs_list_drops_surgery_once_ended(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    assert "surgery ended" in _back_to_ward(_view(client, eid))["needs"]
+    _surgery(client, eid, "began")
+    _surgery(client, eid, "ended")
+    assert "surgery ended" not in _back_to_ward(_view(client, eid))["needs"]
+
+
+def test_next_names_the_unacknowledged_orders_and_now_the_latest_event(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_ward(client, eid)
+    items = [{"kind": "check", "text": "Check wound dressing", "mode": "tick", "proof": "none", "every_h": None}]
+    view = client.post(
+        f"/journey/episodes/{eid}/orders/sign", json={"items": items, "by": "Dr. A. Rao (synthetic)", "at_ms": 600_000}
+    ).json()
+    assert view["now_next"]["next"] == "Nurse acknowledges the new orders from Dr. A. Rao (synthetic)."
+    assert "signed new orders" in view["now_next"]["now"]
+    order = view["order_list"][0]
+    view = client.post(
+        f"/journey/episodes/{eid}/orders/{order['id']}/ack", json={"by": "Nurse Meena (synthetic)", "at_ms": 900_000}
+    ).json()
+    assert "acknowledged the orders" in view["now_next"]["now"]
+    assert view["now_next"]["next"] == NEXT_WARD
+    task = view["tasks"][0]
+    view = client.post(
+        f"/journey/episodes/{eid}/tasks/{task['id']}/done",
+        json={"by": "Nurse Meena (synthetic)", "via": "tap", "at_ms": 1_200_000},
+    ).json()
+    assert "Check wound dressing" in view["now_next"]["now"]
+    for text in (view["now_next"]["now"], view["now_next"]["next"]):
+        assert not ADVICE.search(text)
+
+
+NEXT_WARD = "Doctor sends the patient to theatre or signs the discharge."
+
+
+def test_state_line_with_no_earlier_state_reads_as_an_admission(tmp_path):
+    from app.journey.stories import plain
+
+    event = {
+        "id": "x", "event_type": "patient.state", "ts_ms": 0, "supersedes_id": None,
+        "payload": {"from": None, "to": "ward", "by": "Dr. A. Rao (synthetic)", "reason": "Admitted the day before (seed)"},
+    }
+    text = plain(event)
+    assert "admitted the patient to the ward" in text
+    assert "None" not in text

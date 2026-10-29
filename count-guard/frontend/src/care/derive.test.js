@@ -168,3 +168,19 @@ test("pills come from the same rows, named by role, without duplicates", () => {
   const pills = waitingPills([p], 29 * H);
   assert.deepEqual(pills.map((x) => [x.who, x.what]).sort(), [["Dr. A. Rao", "See in clinic"], ["Nurse", "Observations are overdue."]]);
 });
+
+test("closed tasks and tasks of patients past the ward stay out of the queue and the strip", () => {
+  const due = { id: "t1", title: "Paracetamol", status: "open", mode: "tick", due_ms: 0, done: [] };
+  const closed = { ...due, id: "t2", status: "closed", due_ms: null };
+  const patients = [
+    patient("e1", "Bed 1", view({ state: "discharging", tasks: [closed, due] })),
+    patient("e2", "Bed 2", view({ state: "home", tasks: [due] })),
+    patient("e3", "Bed 3", view({ state: "ward", tasks: [closed] })),
+    patient("e4", "Bed 4", view({ state: "theatre", tasks: [due] })),
+    patient("e5", "Bed 5", view({ state: "ward", tasks: [due] })),
+  ];
+  const rows = queueRows(patients, "nurse", 2 * H).filter((r) => r.kind === "task");
+  assert.deepEqual(rows.map((r) => r.bed), ["Bed 5"]);
+  assert.deepEqual(waitingPills(patients, 2 * H).filter((p) => p.what.includes("Paracetamol")).map((p) => p.episodeId), ["e5"]);
+  assert.equal(taskDue(closed, 2 * H), "closed");
+});

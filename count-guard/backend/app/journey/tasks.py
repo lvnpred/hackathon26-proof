@@ -14,6 +14,7 @@ from app.morning.discharge import visible_events
 
 HOUR_MS = 3_600_000
 ORDER_STATES = ("clinic", "admitting", "ward")
+CLOSED_STATES = ("discharging", "home", "clinic_done")  # tasks end with the stay
 OBS_FIELDS = ("sbp", "dbp", "hr", "spo2", "temp")
 
 
@@ -46,6 +47,7 @@ def orders_list(events: list[dict]) -> list[dict]:
 
 def task_list(events: list[dict]) -> list[dict]:
     rows = visible_events(events)
+    stay_over = current_state(events) in CLOSED_STATES
     out = []
     for created in (e for e in rows if e["event_type"] == "task.created"):
         p, tid = created["payload"], created["id"]
@@ -53,7 +55,9 @@ def task_list(events: list[dict]) -> list[dict]:
         done = [e for e in mine if e["event_type"] == "task.done"]
         began = [e for e in mine if e["event_type"] == "task.began"]
         running = bool(mine) and mine[-1]["event_type"] == "task.began"
-        if running:
+        if stay_over:
+            status, due = "closed", None
+        elif running:
             status, due = "running", p["due_ms"] if not done else done[-1]["ts_ms"] + _gap(p)
         elif done and p["every_h"]:
             status, due = "open", done[-1]["ts_ms"] + _gap(p)
@@ -150,8 +154,14 @@ def _task(store, episode_id: str, task_id: str) -> tuple[dict, dict]:
     return created["payload"], view
 
 
+def _refuse_if_closed(view: dict) -> None:
+    if view["status"] == "closed":
+        raise TaskError(409, "This task is closed because the patient's stay has ended.")
+
+
 def begin_task(store, episode_id: str, task_id: str, by: str, ts: int) -> int:
     payload, view = _task(store, episode_id, task_id)
+    _refuse_if_closed(view)
     if payload["mode"] != "start_end":
         raise TaskError(409, "This task is ticked, not begun.")
     if view["status"] == "running":
@@ -166,6 +176,7 @@ def complete_task(
     store, episode_id: str, task_id: str, by: str, ts: int, *, via: str = "tap", note: str = "", values: dict | None = None
 ) -> int:
     payload, view = _task(store, episode_id, task_id)
+    _refuse_if_closed(view)
     if view["status"] == "done":
         raise TaskError(409, "This task is already done.")
     if payload["mode"] == "start_end" and view["status"] != "running":

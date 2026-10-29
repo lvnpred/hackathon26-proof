@@ -161,3 +161,17 @@ def test_no_emitted_text_is_clinical_advice():
     strings = _emitted_strings()
     assert any("Begin the task" in s for s in strings)  # the scan reaches tasks.py
     assert [s for s in strings if ADVICE.search(s)] == []
+
+
+def test_tasks_close_when_the_stay_ends(tmp_path):
+    client, eid, _, view = _ward_with_tasks(tmp_path, [DOSE])
+    tid = view["tasks"][0]["id"]
+    assert view["tasks"][0]["status"] == "open"
+    body = {"summary": "Recovered well.", "by": DOC, "at_ms": 0}
+    view = client.post(_url(eid, "discharge/sign"), json=body).json()
+    assert view["state"] == "discharging"
+    assert [t["status"] for t in view["tasks"]] == ["closed"]
+    refused = _done(client, eid, tid)
+    assert refused.status_code == 409 and "closed" in refused.json()["detail"]
+    began = client.post(_url(eid, f"tasks/{tid}/begin"), json={"by": NURSE})
+    assert began.status_code == 409 and "closed" in began.json()["detail"]

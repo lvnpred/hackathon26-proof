@@ -85,6 +85,38 @@ function Ward({ view, busy, act }) {
   );
 }
 
+function Theatre({ view, busy, act }) {
+  const [reason, setReason] = useState("");
+  const { began, ended } = surgeryNow(view.timeline);
+  const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
+  return (
+    <section className="card">
+      <p className="label">In theatre</p>
+      <p className="small">Surgery began: {began || "not yet"}</p>
+      <p className="small">Surgery ended: {ended || "not yet"}</p>
+      {move && (
+        <>
+          <label className="field">
+            Reason for leaving the count open
+            <input value={reason} onChange={(event) => setReason(event.target.value)} />
+          </label>
+          {move.needs.filter((need) => !need.startsWith("reason")).length > 0 && (
+            <p className="small muted">Needs: {move.needs.filter((need) => !need.startsWith("reason")).join(", ")}</p>
+          )}
+          <button
+            type="button"
+            className="primary"
+            disabled={busy || !ended || !reason.trim()}
+            onClick={() => act("/state", { to: "ward", by: DOCTOR, reason: reason.trim(), checklist: {} })}
+          >
+            Back to ward
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
+
 const sign = (act) => (items) => act("/orders/sign", { items, by: DOCTOR });
 
 // The doctor's actions for the patient's current state.
@@ -110,14 +142,7 @@ export default function DoctorActions({ state, view, act, busy }) {
     );
   }
   if (state === "theatre") {
-    const { began, ended } = surgeryNow(view.timeline);
-    return (
-      <section className="card">
-        <p className="label">In theatre</p>
-        <p className="small">Surgery began: {began || "not yet"}</p>
-        <p className="small">Surgery ended: {ended || "not yet"}</p>
-      </section>
-    );
+    return <Theatre view={view} busy={busy} act={act} />;
   }
   return <p className="empty small">Nothing to do from this state. The chart below is the record.</p>;
 }

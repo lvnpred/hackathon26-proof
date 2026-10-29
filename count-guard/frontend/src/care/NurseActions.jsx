@@ -3,7 +3,7 @@ import { Nudge } from "../screens/WardPanel";
 import Checklist from "./Checklist";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
-import { OBS_FIELDS, needsReason, obsValues, sortTasks, surgeryNow } from "./tasklist";
+import { OBS_FIELDS, obsValues, sortTasks, surgeryNow } from "./tasklist";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
 const THEATRE_NURSE = "Nurse Asha (synthetic)";
@@ -98,9 +98,8 @@ function Ward({ view, nowMs, by, busy, act }) {
 }
 
 function Theatre({ episodeId, view, busy, act, replaced }) {
-  const [reason, setReason] = useState("");
   const move = (view.allowed || []).find((m) => m.to === "ward");
-  const askReason = needsReason(move);
+  const surgeonMoves = move?.role === "doctor";
   const { began, ended } = surgeryNow(view.timeline);
   return (
     <>
@@ -111,21 +110,21 @@ function Theatre({ episodeId, view, busy, act, replaced }) {
           <button type="button" disabled={busy || began} onClick={() => act("/surgery", { step: "began", by: THEATRE_NURSE })}>Surgery began</button>
           <button type="button" disabled={busy || !began || ended} onClick={() => act("/surgery", { step: "ended", by: THEATRE_NURSE })}>Surgery ended</button>
         </div>
-        {askReason && (
-          <label className="field">
-            Reason for leaving the count open
-            <input value={reason} onChange={(event) => setReason(event.target.value)} />
-          </label>
+        {surgeonMoves ? (
+          <p className="note" role="status">The count is open: the surgeon records the reason before the patient leaves theatre.</p>
+        ) : (
+          <>
+            {move && (move.needs || []).length > 0 && <p className="small muted">Needs: {move.needs.join(", ")}</p>}
+            <button
+              type="button"
+              className="primary"
+              disabled={busy || !ended}
+              onClick={() => act("/state", { to: "ward", by: THEATRE_NURSE, reason: "", checklist: {} })}
+            >
+              Back to ward
+            </button>
+          </>
         )}
-        {move && (move.needs || []).length > 0 && <p className="small muted">Needs: {move.needs.join(", ")}</p>}
-        <button
-          type="button"
-          className="primary"
-          disabled={busy || !ended || (askReason && !reason.trim())}
-          onClick={() => act("/state", { to: "ward", by: THEATRE_NURSE, reason: reason.trim(), checklist: {} })}
-        >
-          Back to ward
-        </button>
       </section>
     </>
   );
@@ -137,7 +136,7 @@ export default function NurseActions({ state, view, act, busy, nowMs, episodeId,
   const move = (to, checklist) => act("/state", { to, by, reason: "", checklist });
   return (
     <>
-      <Orders orders={view.order_list || []} by={by} busy={busy} act={act} />
+      <Orders orders={["clinic", "admitting", "ward"].includes(state) ? view.order_list || [] : []} by={by} busy={busy} act={act} />
       {state === "admitting" && (
         <section className="card">
           <p className="label">Admission checklist</p>

@@ -1,6 +1,6 @@
 import { taskDue } from "./derive.js";
 
-const ORDER = { overdue: 0, due: 1, running: 2, later: 3, done: 4 };
+const ORDER = { overdue: 0, due: 1, running: 2, later: 3, done: 4, closed: 5 };
 
 // Overdue, due, running, later, done. Within a group the earliest due time comes first.
 export function sortTasks(tasks, nowMs) {

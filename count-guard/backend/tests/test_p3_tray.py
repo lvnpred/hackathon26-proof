@@ -110,6 +110,7 @@ def test_tray_check_refusals(tmp_path):
     _to_ward(client, eid)
     n = len(_events(client, eid))
     assert _upload(client, eid).status_code == 409
+    assert len(_events(client, eid)) == n
     assert _move(client, eid, "theatre", procedure="hernia-repair").status_code == 200
     n = len(_events(client, eid))
     assert _upload(client, eid, task_id="t1").status_code == 422
@@ -223,3 +224,17 @@ def test_tool_timeout_is_a_parameter(tmp_path, monkeypatch):
     with pytest.raises(media_pipeline.SamCallFailed):
         media_pipeline.run_recorded_video(engine, "c1", tmp_path / "src.mp4")
     assert seen == [600, 600]
+
+
+def test_tray_live_cut_switch(tmp_path, monkeypatch):
+    def boom(self, path, concepts):
+        raise AssertionError("the live model was called")
+
+    monkeypatch.setattr(SamAdapter, "segment_video", boom)
+    monkeypatch.setattr(video_api, "TRAY_LIVE", False)
+    client = TestClient(create_app(_keyed(tmp_path)))
+    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
+    _to_theatre(client, eid)
+    assert _upload(client, eid).status_code == 200
+    stored = next(e for e in _events(client, eid) if e["event_type"] == "tray.checked")["payload"]
+    assert stored["source"] == "prepared"

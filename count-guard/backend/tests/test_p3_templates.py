@@ -72,6 +72,7 @@ def test_tray_plan_shape():
     assert plan["title"] == "Open inguinal hernia repair"
     assert plan["swab_total"] == sum(s["packs"] * s["pack_size"] for s in plan["swabs"]) > 0
     assert plan["expected_minutes"] == template["expected_minutes"]
+    assert plan["note"] == template["note"] and "open incisional" in plan["note"]
     assert {set(i) == {"name", "qty", "concept"} for i in plan["instruments"]} == {True}
     assert plan["sources"] == [{"id": s["id"], "title": s["title"], "url": s["url"]} for s in template["sources"]]
     with pytest.raises(KeyError):

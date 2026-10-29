@@ -111,6 +111,7 @@ def tray_plan(key: str) -> dict:
         "swabs": swabs,
         "swab_total": sum(s["packs"] * s["pack_size"] for s in swabs),
         "expected_minutes": template["expected_minutes"],
+        "note": template["note"],
         "sources": [{k: s[k] for k in ("id", "title", "url")} for s in template["sources"]],
     }
 

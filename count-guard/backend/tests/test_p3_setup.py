@@ -147,3 +147,22 @@ def test_setup_live_cut_switch(tmp_path, monkeypatch):
     assert _setup(client, eid, task).status_code == 200
     stored = next(e for e in _events(client, eid) if e["event_type"] == "setup.checked")["payload"]
     assert stored["source"] == "prepared"
+
+
+def test_task_row_says_whether_a_setup_list_exists(tmp_path):
+    client, eid = _new(tmp_path)
+    ids = _ward(client, eid, [SALINE, DRESSING, DOSE])
+    view = _view(client, eid)
+    assert [_row(view, ids[i["text"]])["has_setup"] for i in (SALINE, DRESSING, DOSE)] == [True, False, False]
+
+
+def test_frame_is_not_task_proof(tmp_path):
+    client, eid = _new(tmp_path)
+    task = _ward(client, eid, [SALINE])[SALINE["text"]]
+    assert _begin(client, eid, task, 5).status_code == 200
+    assert _setup(client, eid, task, at_ms=6).status_code == 200
+    frame = next(e for e in _events(client, eid) if e["event_type"] == "photo.added")
+    n = len(_events(client, eid))
+    refused = _done(client, eid, task, at_ms=7, proof_id=frame["id"])
+    assert refused.status_code == 409 and "not photo proof" in refused.json()["detail"]
+    assert len(_events(client, eid)) == n

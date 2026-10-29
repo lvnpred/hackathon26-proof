@@ -18,6 +18,7 @@ from app.media_pipeline import cut_frames
 video_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 
 SETUP_LIVE = True  # D3 cut switch: False makes the set-up check use the prepared result only
+TRAY_LIVE = True  # the same cut switch for the tray check
 MAX_VIDEO_BYTES = 50 * 1024 * 1024
 VIDEO_TYPES = {"video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm"}
 NAMES_TASK = "A set-up check names its task; a tray check names none."
@@ -126,7 +127,7 @@ def add_video(
         if refusal:
             raise HTTPException(status_code=409, detail=refusal)
         planned = next(e for e in reversed(events) if e["event_type"] == "tray.planned")["payload"]
-        rows, live_ok = expected_for_tray(planned), True
+        rows, live_ok = expected_for_tray(planned), TRAY_LIVE
         extra = {"template": planned["template"]}
     filename = file.filename or ""
     found, result, kept = _read_clip(request, episode_id, raw, suffix, filename, rows, live_ok)
@@ -139,13 +140,13 @@ def add_video(
     payload = {
         **extra,
         **{k: result[k] for k in ("rows", "missing")},
-        **({"unchecked": unchecked_for_tray(planned)} if planned else {}),
+        **({"unchecked": unchecked_for_tray(planned)} if check == "tray" else {}),
         **{k: result[k] for k in ("match", "why")},
         "source": found["source"],
         "clip": filename.lower() if live.safe_stem(filename) else "",
         "frame_ids": frame_ids,
         "by": by,
     }
-    store.append(episode_id, "tray.checked" if planned else "setup.checked", payload, ts_ms=ts)
+    store.append(episode_id, "tray.checked" if check == "tray" else "setup.checked", payload, ts_ms=ts)
     raise_nudges(store, episode_id, ts)
     return view(request, episode_id)

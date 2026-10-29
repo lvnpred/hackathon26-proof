@@ -117,7 +117,8 @@ def plain(event: dict) -> str:
     if kind == "setup.checked":
         return f"Set-up check by video: {p.get('why')}"
     if kind == "photo.added" and p.get("purpose") == "frame":
-        return f"A frame from the {p.get('video')} clip was kept as proof."
+        clip = "set-up" if p.get("video") == "setup" else p.get("video")
+        return f"A frame from the {clip} clip was kept as proof."
     if kind == "photo.added":
         return f"{p.get('by')} added a {p.get('purpose')} photo."
     if kind == "proof.checked":

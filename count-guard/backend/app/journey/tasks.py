@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from app.journey import proof
 from app.journey.dictation import draft_refusal
+from app.journey.procedures import setup_for
 from app.journey.rx import key_of
 from app.journey.states import current_state
 from app.morning.discharge import visible_events
@@ -97,6 +98,7 @@ def task_list(events: list[dict]) -> list[dict]:
                     for e in done
                 ],
                 "began_ms": began[-1]["ts_ms"] if began else None,
+                "has_setup": setup_for(p) is not None,
                 "video": _video_of(rows, tid),
             }
         )
@@ -205,6 +207,7 @@ def begin_task(store, episode_id: str, task_id: str, by: str, ts: int) -> int:
 
 
 NOT_CHECKED = "Kept as proof; no check was made."
+FRAME_NOT_PROOF = "A frame from a video check is not photo proof. Add a photo."
 EARLIER_PHOTO = "This photo was taken before the last time this task was done. Add a new photo."
 
 
@@ -216,6 +219,8 @@ def _proof_match(store, episode_id: str, task: dict, task_id: str, proof_id: str
     photo = store.get_event(proof_id)
     if photo is None or photo["episode_id"] != episode_id or photo["event_type"] != "photo.added":
         raise TaskError(404, "Photo not found")
+    if photo["payload"].get("purpose") == "frame":
+        raise TaskError(409, FRAME_NOT_PROOF)
     if photo["payload"].get("task_id") != task_id:
         raise TaskError(409, "This photo was checked against another task.")
     events = store.events(episode_id)

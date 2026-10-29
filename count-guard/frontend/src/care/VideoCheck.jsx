@@ -3,7 +3,7 @@ import { checkLabel, videoProblem } from "./video";
 import { useState } from "react";
 
 // A tray or set-up clip: pick it, and the result shows beside the planned list. A flag never blocks.
-export default function VideoCheck({ title, kind, check, busy, onFile }) {
+export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
     const file = event.target.files?.[0];
@@ -16,10 +16,12 @@ export default function VideoCheck({ title, kind, check, busy, onFile }) {
   return (
     <section className="card" aria-label={title}>
       <p className="label">{title}</p>
-      <label className="field">
-        {kind === "tray" ? "Upload tray video" : "Add video check"}
-        <input type="file" accept="video/*" capture="environment" disabled={busy} onChange={pick} />
-      </label>
+      {!hideUpload && (
+        <label className="field">
+          {kind === "tray" ? "Upload tray video" : "Add video check"}
+          <input type="file" accept="video/*" capture="environment" disabled={busy} onChange={pick} />
+        </label>
+      )}
       {problem && <p className="note" role="alert">{problem}</p>}
       {check && <CheckResult check={check} />}
     </section>
@@ -69,6 +71,7 @@ export function TrayPreview({ plan }) {
         {(plan.instruments || []).map((item) => <li key={item.name}>{item.name} x {item.qty}</li>)}
       </ul>
       <p className="small">Swabs: {plan.swab_total}</p>
+      {plan.note && <p className="small muted">{plan.note}</p>}
       {(plan.sources || []).length > 0 && (
         <p className="small muted">
           Sources: {plan.sources.map((s, i) => (

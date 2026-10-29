@@ -52,8 +52,8 @@ function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
       {due !== "done" && task.proof === "photo" && (
         <button type="button" disabled={busy} onClick={() => onProof(task)}>Add photo proof</button>
       )}
-      {taskVideoLabel(task) && !(due !== "done" && task.proof === "video") && <p className="small muted">{taskVideoLabel(task)}</p>}
-      {due !== "done" && task.proof === "video" && (
+      {taskVideoLabel(task) && !(due !== "done" && task.proof === "video" && task.has_setup) && <p className="small muted">{taskVideoLabel(task)}</p>}
+      {due !== "done" && task.proof === "video" && task.has_setup && (
         <VideoCheck
           title="Set-up check"
           kind="setup"
@@ -105,6 +105,7 @@ function Theatre({ episodeId, view, busy, act, upload, replaced }) {
           kind="tray"
           check={view.tray.latest}
           busy={busy}
+          hideUpload={began}
           onFile={(file) => upload("/video", file, { check: "tray", by: THEATRE_NURSE })}
         />
       )}

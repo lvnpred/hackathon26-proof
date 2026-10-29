@@ -18,6 +18,11 @@ models_router = APIRouter(prefix="/journey")
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 SPARK = "muse-spark-1.3"
 PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+MAGIC = {
+    "image/jpeg": lambda b: b.startswith(b"\xff\xd8\xff"),
+    "image/png": lambda b: b.startswith(b"\x89PNG"),
+    "image/webp": lambda b: b[:4] == b"RIFF" and b[8:12] == b"WEBP",
+}
 NOTHING = "Nothing to draft was heard. Type the {what} instead."
 
 
@@ -141,7 +146,9 @@ def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated:
         return {**proof.check_strip(strips, task), "source": read["source"]}
     if task["kind"] == "obs":
         read = live.read_photo(settings, "monitor", raw, name, kind)
-        return {**proof.check_monitor(proof.parse_monitor_text(read["text"] or ""), stated), "source": read["source"]}
+        values_read = proof.parse_monitor_text(read["text"] or "")
+        # values_read is kept so that Confirm can compare the photo with the values the nurse confirms.
+        return {**proof.check_monitor(values_read, stated), "source": read["source"], "values_read": values_read}
     return {"read": "", "match": "none", "why": proof.NO_READING, "source": "none"}
 
 
@@ -167,6 +174,8 @@ def add_photo(
     raw = file.file.read(MAX_PHOTO_BYTES + 1)
     if not raw or len(raw) > MAX_PHOTO_BYTES:
         raise HTTPException(status_code=400, detail="The photo is empty or larger than 8 MB.")
+    if not MAGIC[kind](raw):
+        raise HTTPException(status_code=400, detail="The file is not a real JPEG, PNG or WebP image.")
     store, settings = _store(request), request.app.state.settings
     task = None
     if task_id is not None:
@@ -201,4 +210,4 @@ def get_photo(episode_id: str, photo_id: str, request: Request) -> FileResponse:
     path = (data_dir / event["payload"]["path"]).resolve()
     if not path.is_relative_to(data_dir / "journey_media") or not path.is_file():
         raise HTTPException(status_code=404, detail="Photo not found")
-    return FileResponse(path)
+    return FileResponse(path, headers={"X-Content-Type-Options": "nosniff"})

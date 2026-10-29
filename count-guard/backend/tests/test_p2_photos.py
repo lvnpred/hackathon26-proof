@@ -19,6 +19,7 @@ from tests.test_p2_live import _keyed
 
 ADVICE = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
 PNG = b"\x89PNG\r\n\x1a\nfake"
+JPEG = b"\xff\xd8\xff\xe0fake"
 SALINE = {"kind": "procedure", "text": "Saline 1 litre over 2 hours", "name": "", "amount": "", "every_h": None, "mode": "start_end"}
 
 
@@ -37,7 +38,8 @@ def _ward(client, eid, items):
     return _ack(client, eid, order["id"]).json()["tasks"]
 
 
-def _photo(client, eid, name="strip-paracetamol.png", kind="image/png", data=PNG, **form):
+def _photo(client, eid, name="strip-paracetamol.png", kind="image/png", data=None, **form):
+    data = data if data is not None else (JPEG if kind == "image/jpeg" else PNG)
     form = {"purpose": "proof", "by": NURSE, "at_ms": 0, **form}
     return client.post(_url(eid, "photos"), data=form, files={"file": (name, data, kind)})
 

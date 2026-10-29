@@ -79,7 +79,7 @@ function ModelsChip() {
     call("/journey/models").then((m) => setLive(Boolean(m.live))).catch(() => setLive(null));
   }, []);
   if (live === null) return null;
-  return <span className={`pill ${live ? "ready" : "info"}`}>{live ? "Models: live" : "Models: prepared (no key)"}</span>;
+  return <span className={`pill ${live ? "ready" : "info"}`}>{live ? "Models: live" : "Models: offline (prepared results)"}</span>;
 }
 
 export default function CareShell({ ward, children }) {

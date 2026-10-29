@@ -20,6 +20,7 @@ PREPARED_DIR = Path(__file__).parent / "prepared"
 _NAME = re.compile(r"^([a-z0-9-]{1,60})\.[a-z0-9]{1,5}$")
 NO_KEY = "No model key, so recordings are not transcribed here. Type what was said in the box."
 NO_SPEECH = "Nothing was heard in the recording. Type what was said in the box."
+FALLBACK = "prepared (live call failed)"
 UNREACHABLE = "The transcriber did not answer. Type what was said in the box."
 
 
@@ -65,6 +66,9 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
                 path.write_bytes(wav)
                 turns = VoiceAdapter(settings).transcribe(path, 0, "audio/wav")
         except (httpx.HTTPError, subprocess.SubprocessError, OSError, ValueError) as exc:
+            found = prepared(filename)
+            if found and found.get("transcript"):
+                return {"text": found["transcript"], "source": FALLBACK}
             raise NotHeard(502, UNREACHABLE) from exc
         text = " ".join(t["text"] for t in turns).strip()
         if not text:
@@ -99,6 +103,9 @@ def read_photo(
         try:
             text = adapter.read_strips(data_url) if reader == "strip" else adapter.read_monitor(data_url)
         except (httpx.HTTPError, RuntimeError, ValueError):
+            found = prepared(filename)
+            if found and found.get("text"):
+                return {"text": found["text"], "source": FALLBACK}
             return {"text": None, "source": "failed"}
         return {"text": text, "source": "muse-spark-1.3"}
     found = prepared(filename)

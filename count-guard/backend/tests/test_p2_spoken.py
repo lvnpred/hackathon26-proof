@@ -230,7 +230,7 @@ def test_task_view_has_name_amount_and_done_fields(tmp_path):
     assert (dose["name"], dose["amount"]) == ("Paracetamol", "1 g")
     assert (obs["name"], obs["amount"]) == ("", "")
     done = _done(client, eid, dose["id"]).json()["tasks"][0]["done"][0]
-    assert set(done) == {"at_ms", "by", "via", "note", "transcript", "proof_id", "match"}
+    assert set(done) == {"at_ms", "by", "via", "note", "transcript", "proof_id", "match", "why", "source"}
 
 
 def test_plain_for_voice_done():

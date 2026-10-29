@@ -8,6 +8,7 @@ runs `raise_nudges` after a write, using the ts the helper returns.
 
 from __future__ import annotations
 
+from app.journey import proof
 from app.journey.dictation import draft_refusal
 from app.journey.rx import key_of
 from app.journey.states import current_state
@@ -90,6 +91,8 @@ def task_list(events: list[dict]) -> list[dict]:
                         "transcript": e["payload"].get("transcript", ""),
                         "proof_id": e["payload"].get("proof_id"),
                         "match": e["payload"].get("match"),
+                        "why": e["payload"].get("why", ""),
+                        "source": e["payload"].get("source", ""),
                     }
                     for e in done
                 ],
@@ -192,15 +195,36 @@ def begin_task(store, episode_id: str, task_id: str, by: str, ts: int) -> int:
     return ts
 
 
-def _proof_match(store, episode_id: str, task_id: str, proof_id: str) -> str:
-    """The proof check for this task's photo: ok, mismatch or none (kept, not checked). A mismatch never refuses (D9)."""
+NOT_CHECKED = "Kept as proof; no check was made."
+EARLIER_PHOTO = "This photo was taken before the last time this task was done. Add a new photo."
+
+
+def _proof_match(store, episode_id: str, task: dict, task_id: str, proof_id: str, values: dict | None) -> dict:
+    """{match, why, source} for this task's photo. A mismatch never refuses (D9).
+
+    A monitor photo is compared again with the values confirmed now, not with what the form held at upload.
+    """
     photo = store.get_event(proof_id)
     if photo is None or photo["episode_id"] != episode_id or photo["event_type"] != "photo.added":
         raise TaskError(404, "Photo not found")
     if photo["payload"].get("task_id") != task_id:
         raise TaskError(409, "This photo was checked against another task.")
-    checks = [e for e in store.events(episode_id) if e["event_type"] == "proof.checked" and e["payload"]["photo_id"] == proof_id]
-    return checks[-1]["payload"]["match"] if checks else "none"
+    events = store.events(episode_id)
+    seen_photo, checks = False, []
+    for e in events:
+        if e["id"] == proof_id:
+            seen_photo = True
+        elif e["event_type"] == "task.done" and e["payload"]["task_id"] == task_id and seen_photo:
+            raise TaskError(409, EARLIER_PHOTO)
+        elif e["event_type"] == "proof.checked" and e["payload"]["photo_id"] == proof_id:
+            checks.append(e["payload"])
+    if not checks:
+        return {"match": "none", "why": NOT_CHECKED, "source": "none"}
+    found = checks[-1]
+    if task["kind"] == "obs" and values and "values_read" in found:
+        again = proof.check_monitor(found["values_read"], values)
+        return {"match": again["match"], "why": again["why"], "source": found.get("source", "none")}
+    return {"match": found["match"], "why": found.get("why", ""), "source": found.get("source", "none")}
 
 
 def complete_task(
@@ -226,7 +250,7 @@ def complete_task(
         raise TaskError(422, "Observation values are needed to finish this task.")
     done = {"task_id": task_id, "by": by, "via": via, "note": note, "transcript": transcript}
     if proof_id:
-        done.update(proof_id=proof_id, match=_proof_match(store, episode_id, task_id, proof_id))
+        done.update(proof_id=proof_id, **_proof_match(store, episode_id, payload, task_id, proof_id, values))
     if values:
         done["values"] = values
     store.append(episode_id, "task.done", done, ts_ms=ts)

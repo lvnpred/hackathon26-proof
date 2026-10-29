@@ -127,3 +127,10 @@ test("proofOf finds the photo, the voice flag and the mismatch flag", () => {
   assert.deepEqual([b.voice, b.photo, b.flagged], [false, null, false]);
   assert.equal(proofOf({ via: "tap", proof_id: "gone", match: "ok" }, photos).photo, null);
 });
+
+test("sourceLabel names a failed or fallback read", () => {
+  assert.equal(sourceLabel("failed"), "Not read (the model call failed)");
+  assert.equal(sourceLabel("prepared (live call failed)"), "Prepared demo result (the live call failed)");
+  assert.equal(sourceLabel("none"), "Not read");
+  assert.equal(sourceLabel("muse-spark-1.3"), "Muse Spark");
+});

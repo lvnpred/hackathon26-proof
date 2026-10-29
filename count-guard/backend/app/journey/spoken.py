@@ -16,8 +16,10 @@ from app.journey.rx import key_of
 
 TASK_PROMPT = (
     "A nurse said which ward task she finished. Reply with JSON only, with no other text: "
-    '{"task_ids": [], "values": {"sbp": 0, "dbp": 0, "hr": 0, "spo2": 0, "temp": 0}}. '
-    "Choose task_ids only from the open tasks below. Put in values only numbers she said. "
+    '{"task_ids": [], "values": {}}. '
+    "Choose task_ids only from the open tasks below. "
+    "Put in values only numbers she said, using the keys sbp, dbp, hr, spo2 and temp. "
+    "Omit a value that was not said; never write 0 or null for it. "
     "Do not give medical advice.\nOpen tasks (id: title):\n"
 )
 
@@ -80,12 +82,19 @@ def _value_ok(key: str, value) -> bool:
     return True
 
 
+def _without_placeholders(values: dict, transcript: str) -> dict:
+    """Drop null entries, and a 0 for a key the rules did not read from the transcript: both mean "not said"."""
+    stated = parse_values(transcript)
+    return {k: v for k, v in values.items() if v is not None and not (v == 0 and not isinstance(v, bool) and k not in stated)}
+
+
 def completion_from_reply(reply: str | None, tasks: list[dict], transcript: str) -> dict | None:
     """The model's {"task_ids", "values"} when the transcript supports all of it, else None."""
     data = _json_of(reply)
     ids, values = (data or {}).get("task_ids"), (data or {}).get("values", {})
     if not isinstance(ids, list) or not ids or not isinstance(values, dict):
         return None
+    values = _without_placeholders(values, transcript)
     open_ids = {t["id"] for t in tasks if t["status"] in OPEN}
     if not all(isinstance(i, str) and i in open_ids for i in ids):
         return None

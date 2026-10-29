@@ -157,6 +157,8 @@ _STOP = set(
     "per all any out off its our can may will been being over under".split()
 )
 _WORD = re.compile(r"[a-z]{3,}")
+# Words that flip a meaning. Each must be said as often as the text uses it.
+DIRECTION = re.compile(r"\b(no|not|never|without|over|under|above|below|before|after)\b", re.I)
 
 
 def _words_heard(text: str, heard: str) -> bool:
@@ -175,7 +177,14 @@ def grounded(text: str, transcript: str) -> bool:
         return False
     if any(d.lower() not in heard for d in _DRUG.findall(text)):
         return False
-    return all(w.lower() in heard for w in ADVICE.findall(text))
+    if not all(w.lower() in heard for w in ADVICE.findall(text)):
+        return False
+    said = [w.lower() for w in DIRECTION.findall(heard)]
+    return all(said.count(w) >= n for w, n in _counts(DIRECTION.findall(text.lower())).items())
+
+
+def _counts(words: list[str]) -> dict[str, int]:
+    return {w: words.count(w) for w in set(words)}
 
 
 def _json_of(reply: str | None) -> dict | None:

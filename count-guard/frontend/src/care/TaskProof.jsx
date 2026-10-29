@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Dictate from "./Dictate";
-import { ObsForm } from "./NurseActions";
+import ObsForm from "./ObsForm";
 import { doneBody, MATCH_LABEL, newestPhoto, proposalChoices, sourceLabel } from "./drafts";
 import { obsValues } from "./tasklist";
 
@@ -109,6 +109,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
       {photo && (
         <p className="small">
           <span className={`pill ${photo.check?.match === "mismatch" ? "sun" : "info"}`}>{MATCH_LABEL[photo.check?.match] || MATCH_LABEL.none}</span>{" "}
+          <span className="muted">({sourceLabel(photo.check?.source)})</span>{" "}
           {photo.check?.why}
         </p>
       )}

@@ -1,5 +1,5 @@
 import { label } from "./clock";
-import { photoCheckLabel } from "./drafts";
+import { photoCheckLabel, sourceLabel } from "./drafts";
 
 // Every photo on the chart, for every role. A mismatch is flagged, never hidden.
 export default function Photos({ view }) {
@@ -18,6 +18,7 @@ export default function Photos({ view }) {
                 <>
                   <br />
                   <span className={`pill ${photo.check.match === "mismatch" ? "sun" : "info"}`}>{photoCheckLabel(photo.check)}</span>{" "}
+                  <span className="muted">({sourceLabel(photo.check.source)})</span>{" "}
                   {photo.check.why}
                 </>
               )}

@@ -12,6 +12,8 @@ export const SOURCE_LABEL = {
   rules: "Rules (no model)",
   "rules (model reply not usable)": "Rules (model reply not usable)",
   prepared: "Prepared demo result",
+  "prepared (live call failed)": "Prepared demo result (the live call failed)",
+  failed: "Not read (the model call failed)",
   typed: "Typed",
   "muse-voice-transcribe": "Muse Voice",
 };

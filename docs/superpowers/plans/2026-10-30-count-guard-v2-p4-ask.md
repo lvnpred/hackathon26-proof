@@ -423,3 +423,26 @@ The cut sets it to `False`, so the medicine photo always uses the prepared resul
 - [ ] **Step 3:** For each failure: fix it, add a test where the fault is in pure logic, and re-walk that step.
 - [ ] **Step 4:** `make test`, the node tests and `npm run build` → all pass. Stop the walk servers.
 - [ ] **Step 5: Commit** `Count Guard v2 P4: browser walk of the Ask section and doctor status; fixes`.
+
+---
+
+### Task 8 (owner request, 30 Oct; runs after Task 6 and BEFORE Task 7): Photos wherever a video check is offered
+
+The owner asked: wherever video is needed, the user can also upload photos against the same action, so the demo continues when video is slow or unavailable. This also closes P3-R19 (photo at Begin of a start_end task) for set-up checks.
+
+**Files:**
+- Modify: `count-guard/backend/app/journey/video_api.py` (accept images on `POST /video`), `count-guard/backend/app/journey/live.py` (image seam), `count-guard/backend/app/adapters/sam.py` (only if an image helper is missing — `concept_request` already takes `image_data_url`), `count-guard/backend/app/journey/video.py` (summarize detections over photos), `count-guard/backend/app/journey/stories.py` (plain line wording "photo check" vs "video check")
+- Modify: `count-guard/frontend/src/care/VideoCheck.jsx` (accept photos too), `count-guard/frontend/src/care/video.js` (`videoProblem` → accepts images; label text)
+- Test: `count-guard/backend/tests/test_p4_photo_checks.py`, `count-guard/frontend/src/care/video.test.js`
+
+**Interfaces:**
+- `POST /journey/episodes/{id}/video` keeps its form (`check` tray|setup, `task_id` for setup, `by`, `at_ms`) and now takes either one video `file` (as today) or 1–6 image files (`files`, image/jpeg|png|webp, each ≤ 8 MB, magic bytes checked with the existing `media_api.MAGIC`/`read_upload_photo` rules). Exactly one of the two; else 422 "Send one video or 1 to 6 photos.". All existing refusals and their order are unchanged.
+- Live (key set and `TRAY_LIVE`/`SETUP_LIVE` true): `live.segment_photos(settings, paths, concepts, filename, live_ok)` sends each image to SAM 3.1 via `concept_request(concept, image_data_url=...)` per concept; per concept the seen count is the max over photos (same rule as frames). Keyed failure → prepared fallback with source "prepared (live call failed)"; no prepared → "failed". No key or switch off → prepared by the first photo's file stem (`tray-hernia.jpg` → `tray-hernia` prepared result) via `live.prepared`, else source "none".
+- The photos themselves are stored as the check's frames (`photo.added{purpose:"frame", task_id?}`) — no ffmpeg; `frame_ids` = the stored photo ids. The written `tray.checked` / `setup.checked` gains `media: "video" | "photos"`; everything else (rows, missing, match, why, source, clip) unchanged (`clip` = the first photo's safe stem).
+- `plain()` says "Tray check by photos: …" / "Set-up check by photos: …" when `media == "photos"`.
+- Frontend `VideoCheck`: the file input accepts `video/*,image/*` with `multiple`; `videoProblem(files)` returns null for one video or 1–6 images, else a plain message. Card label reads "Upload tray video or photos" / "Add video or photo check". Results show the same way (frames grid).
+- Generated stand-in photos: extend `eval/p3/make_clips.py` (or a sibling script) to also write `tray-hernia.png`, `tray-hernia-full.png`, `saline-setup.png` (gitignored); prepared results already exist for those stems.
+
+- [ ] **Step 1: Failing tests** in `test_p4_photo_checks.py` (network guard on): tray check with 2 photos offline → 200, `media "photos"`, `source "prepared"`, 2 frame ids served by `/photos/{id}`; setup check with 1 photo on Iyer's running/open saline task → `setup.checked` with `media "photos"`; video + photos together → 422; 7 photos → 422; a PNG with JPEG content type → 400; keyed live path with `concept_request` faked: per-concept max over photos; keyed failure → "prepared (live call failed)"; `TRAY_LIVE=False` with a key → prepared; existing P3 video tests stay green; plain lines have no advice words. Node: `videoProblem` accepts 1 video or 1–6 images, rejects mixes and 7 images.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** `make test`, node tests, `npm run build` → PASS.
+- [ ] **Step 5: Commit** `Count Guard v2 P4: photos accepted wherever a video check is offered`.

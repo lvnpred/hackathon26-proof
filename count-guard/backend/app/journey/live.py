@@ -121,6 +121,19 @@ def read_photo(
     return {"text": None, "source": "none"}
 
 
+def _stored_or(stored: dict | None, failed: str) -> dict:
+    """A live call did not work: the prepared detections under the fallback label, else `failed`."""
+    if stored:
+        return {"detections": stored, "source": FALLBACK}
+    return {"detections": None, "source": failed}
+
+
+def _prepared_or_none(stored: dict | None) -> dict:
+    if stored:
+        return {"detections": stored, "source": "prepared"}
+    return {"detections": None, "source": "none"}
+
+
 def segment_clip(
     settings: Settings, clip: Path, filename: str, concepts: list[str], live_ok: bool = True
 ) -> dict:
@@ -141,10 +154,31 @@ def segment_clip(
                 records = SamAdapter(settings).segment_video(out, concepts)
             detections = summarize(records, settings.sam_fps, settings.low_confidence, concepts)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            if stored:
-                return {"detections": stored, "source": FALLBACK}
-            return {"detections": None, "source": "failed"}
+            return _stored_or(stored, "failed")
         return {"detections": detections, "source": "sam-3.1"}
-    if stored:
-        return {"detections": stored, "source": "prepared"}
-    return {"detections": None, "source": "none"}
+    return _prepared_or_none(stored)
+
+
+_IMAGE_TYPES = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+
+
+def segment_photos(
+    settings: Settings, paths: list[Path], concepts: list[str], filename: str, live_ok: bool = True
+) -> dict:
+    """Detections by concept for 1-6 photos: per concept the most seen in any one photo (as for frames)."""
+    found = prepared(filename)
+    stored = found.get("detections") if found else None
+    if settings.sam_configured and live_ok:
+        try:
+            urls = [
+                f"data:{_IMAGE_TYPES.get(p.suffix, 'image/jpeg')};base64,{base64.b64encode(p.read_bytes()).decode()}"
+                for p in paths
+            ]
+            records = SamAdapter(settings).segment_images(urls, concepts)
+            detections = summarize(records, 1, settings.low_confidence, concepts)
+        except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
+            return _stored_or(stored, "failed")
+        for cell in detections.values():
+            cell["at_s"] = None  # a photo has no time
+        return {"detections": detections, "source": "sam-3.1"}
+    return _prepared_or_none(stored)

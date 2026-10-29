@@ -14,17 +14,36 @@ export const CHECK_LABEL = {
   },
 };
 
-// "" when the clip can be sent, else the plain reason it cannot.
-export function videoProblem(file) {
-  if (!file || !VIDEO_TYPES.includes(file.type)) return "Choose an MP4, MOV or WebM clip.";
-  if (file.size > MAX_VIDEO_MB * 1024 * 1024) return `The clip is larger than ${MAX_VIDEO_MB} MB.`;
-  return "";
+export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const MAX_PHOTO_MB = 8;
+export const MAX_PHOTOS = 6;
+const ONE_OR_PHOTOS = "Send one video or 1 to 6 photos.";
+
+// "" when what was picked can be sent, else the plain reason it cannot. One video, or 1 to 6 photos.
+export function videoProblem(picked) {
+  const files = Array.isArray(picked) ? picked : [picked];
+  if (!files.length || files.some((f) => !f || ![...VIDEO_TYPES, ...PHOTO_TYPES].includes(f.type))) {
+    return "Choose an MP4, MOV or WebM clip, or 1 to 6 JPEG, PNG or WebP photos.";
+  }
+  const videos = files.filter((f) => VIDEO_TYPES.includes(f.type));
+  if (videos.length) {
+    if (files.length > 1) return ONE_OR_PHOTOS;
+    return videos[0].size > MAX_VIDEO_MB * 1024 * 1024 ? `The clip is larger than ${MAX_VIDEO_MB} MB.` : "";
+  }
+  if (files.length > MAX_PHOTOS) return ONE_OR_PHOTOS;
+  return files.some((f) => f.size > MAX_PHOTO_MB * 1024 * 1024) ? `A photo is larger than ${MAX_PHOTO_MB} MB.` : "";
+}
+
+// What to hand to the upload: the video itself, or the list of photos.
+export function toUpload(files) {
+  return files.length === 1 && VIDEO_TYPES.includes(files[0].type) ? files[0] : files;
 }
 
 // An unknown match reads as "kept, not checked".
 export function checkLabel(check) {
   if (!check) return "";
   const labels = CHECK_LABEL[check.check] || CHECK_LABEL.tray;
+  if (check.match !== "ok" && check.match !== "mismatch" && check.media === "photos") return "Photos kept, not checked";
   return labels[check.match] || labels.none;
 }
 

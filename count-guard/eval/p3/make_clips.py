@@ -4,6 +4,8 @@ These clips are D12 stand-ins until the owner films: labelled shapes, not real i
 Each item is drawn at the count in its prepared result (backend/app/journey/prepared/<stem>.json),
 from the second its at_s says, for the rest of the 6 s clip at 2 fps.
 
+Each stem also gets a still photo (<stem>.png) drawn with every item present, for the photo check.
+
 Run: .venv/bin/python eval/p3/make_clips.py
 """
 
@@ -52,7 +54,16 @@ def make(stem: str) -> Path:
     return out
 
 
+def make_photo(stem: str) -> Path:
+    """A still of the same scene with every item in view: the stand-in for a photo of the tray or set-up."""
+    detections = json.loads((PREPARED / f"{stem}.json").read_text())["detections"]
+    out = HERE / f"{stem}.png"
+    draw_frame(detections, SECONDS).save(out)
+    return out
+
+
 if __name__ == "__main__":
     for name in STEMS:
         print(make(name))
+        print(make_photo(name))
     sys.exit(0)

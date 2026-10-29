@@ -9,8 +9,9 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from app.journey import live, states, tasks
-from app.journey.live import segment_clip
+from app.journey.live import segment_clip, segment_photos
 from app.journey.api import _at, _require, _store, raise_nudges, view
+from app.journey.media_api import PHOTO_TYPES, read_upload_photo, write_photo
 from app.journey.procedures import setup_for
 from app.journey.video import NO_FRAMES, compare, expected_for_setup, expected_for_tray, frame_times, unchecked_for_tray
 from app.media_pipeline import cut_frames
@@ -23,6 +24,8 @@ MAX_VIDEO_BYTES = 50 * 1024 * 1024
 VIDEO_TYPES = {"video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm"}
 NAMES_TASK = "A set-up check names its task; a tray check names none."
 NOT_THEATRE = "The tray is checked in theatre, after the tray plan is confirmed."
+ONE_OR_PHOTOS = "Send one video or 1 to 6 photos."
+MAX_PHOTOS = 6
 BEGUN = "Surgery has begun; the tray is checked before it begins."
 
 
@@ -100,11 +103,29 @@ def _read_clip(request: Request, episode_id: str, raw: bytes, suffix: str, filen
     return found, result, kept
 
 
+def _read_photos(request: Request, episode_id: str, photos: list[tuple[bytes, str]], filename: str, rows: list[dict], live_ok: bool):
+    """Check the photos against the rows: (found, result). Nothing is stored here."""
+    settings = request.app.state.settings
+    work = settings.data_dir / "journey_media" / episode_id / f"tmp-{uuid.uuid4().hex}"
+    work.mkdir(parents=True)
+    try:
+        paths = []
+        for n, (raw, kind) in enumerate(photos):
+            path = work / f"photo{n}{PHOTO_TYPES[kind]}"  # a server-made name; the client's name is never a path
+            path.write_bytes(raw)
+            paths.append(path)
+        found = segment_photos(settings, paths, [r["concept"] for r in rows], filename, live_ok=live_ok)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    return found, compare(rows, found["detections"], found["source"])
+
+
 @video_router.post("/video")
 def add_video(
     episode_id: str,
     request: Request,
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
+    files: list[UploadFile] | None = File(None),
     check: Literal["tray", "setup"] = Form(...),
     by: str = Form(..., min_length=1, max_length=80),
     at_ms: int | None = Form(None, ge=0),
@@ -113,7 +134,11 @@ def add_video(
     _require(request, episode_id)
     if (check == "setup") != (task_id is not None):
         raise HTTPException(status_code=422, detail=NAMES_TASK)
-    raw, suffix = _read_upload(file)
+    photo_files = files or []
+    if (file is None) == (not photo_files) or len(photo_files) > MAX_PHOTOS:
+        raise HTTPException(status_code=422, detail=ONE_OR_PHOTOS)
+    raw, suffix = _read_upload(file) if file is not None else (b"", "")
+    photos = [read_upload_photo(f) for f in photo_files]
     store, settings = _store(request), request.app.state.settings
     events = store.events(episode_id)
     if check == "setup":
@@ -129,16 +154,25 @@ def add_video(
         planned = next(e for e in reversed(events) if e["event_type"] == "tray.planned")["payload"]
         rows, live_ok = expected_for_tray(planned), TRAY_LIVE
         extra = {"template": planned["template"]}
-    filename = file.filename or ""
-    found, result, kept = _read_clip(request, episode_id, raw, suffix, filename, rows, live_ok)
+    media = "photos" if photos else "video"
+    filename = (photo_files[0] if photos else file).filename or ""
+    kept: list = []
+    if photos:
+        found, result = _read_photos(request, episode_id, photos, filename, rows, live_ok)
+    else:
+        found, result, kept = _read_clip(request, episode_id, raw, suffix, filename, rows, live_ok)
     ts = _at(store, episode_id, at_ms)
-    frame = {"purpose": "frame", "video": check, "by": by, **({"task_id": task_id} if task_id else {})}
-    frame_ids = [
-        store.append(episode_id, "photo.added", {**frame, "path": str(p.relative_to(settings.data_dir))}, ts_ms=ts)["id"]
-        for p in kept
-    ]
+    frame = {"purpose": "frame", "video": check, "by": by, "media": media, **({"task_id": task_id} if task_id else {})}
+    if photos:
+        frame_ids = [write_photo(settings, store, episode_id, r, kind, frame, ts)["id"] for r, kind in photos]
+    else:
+        frame_ids = [
+            store.append(episode_id, "photo.added", {**frame, "path": str(p.relative_to(settings.data_dir))}, ts_ms=ts)["id"]
+            for p in kept
+        ]
     payload = {
         **extra,
+        "media": media,
         **{k: result[k] for k in ("rows", "missing")},
         **({"unchecked": unchecked_for_tray(planned)} if check == "tray" else {}),
         **{k: result[k] for k in ("match", "why")},

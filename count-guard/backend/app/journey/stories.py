@@ -122,9 +122,9 @@ def plain(event: dict) -> str:
     if kind == "medicines.read":
         return f"Medicines photo: {p.get('why')}"
     if kind == "tray.checked":
-        return f"Tray check by video: {p.get('why')}"
+        return f"Tray check by {'photos' if p.get('media') == 'photos' else 'video'}: {p.get('why')}"
     if kind == "setup.checked":
-        return f"Set-up check by video: {p.get('why')}"
+        return f"Set-up check by {'photos' if p.get('media') == 'photos' else 'video'}: {p.get('why')}"
     if kind == "question.asked":
         if p.get("to") == "bot":
             return f"{short_name(p.get('by'))} asked the record bot a question."
@@ -141,6 +141,8 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} reviewed the healing photo: {p.get('label')}."
     if kind == "photo.added" and p.get("purpose") == "frame":
         clip = "set-up" if p.get("video") == "setup" else p.get("video")
+        if p.get("media") == "photos":
+            return f"A photo from the {clip} check was kept as proof."
         return f"A frame from the {clip} clip was kept as proof."
     if kind == "photo.added":
         return f"{p.get('by')} added a {p.get('purpose')} photo."

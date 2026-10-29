@@ -135,6 +135,20 @@ class SamAdapter:
                 records.append(record)
         return records
 
+    def segment_images(self, data_urls: list[str], concepts: list[str]) -> list[dict]:
+        """Records for still photos: `frame_index` is the photo's position, so a concept's count is per photo."""
+        if not self.settings.sam_configured:
+            raise RuntimeError("MODEL_API_KEY is not set")
+        records: list[dict] = []
+        for concept in concepts:
+            for index, url in enumerate(data_urls):
+                text = self._stream(concept_request(concept, image_data_url=url, model=self.settings.sam_model))
+                if text.strip() and not re.match(r"\s*<\d+f>", text):
+                    text = "<0f>" + text.strip().replace("\n", "\n<0f>")  # an image reply may carry no frame marker
+                for record in parse_sam_text(text):
+                    records.append({**record, "label": concept, "frame_index": index})
+        return records
+
     def _upload(self, path: Path) -> str:
         return upload_video(self.settings, path)
 

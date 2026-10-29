@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CHECK_LABEL, checkLabel, latestCheck, swabTotal, taskVideoLabel, trayFlag, videoProblem } from "./video.js";
+import { CHECK_LABEL, checkLabel, latestCheck, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const file = (type, mb) => ({ type, size: mb * 1024 * 1024 });
@@ -11,9 +11,40 @@ test("videoProblem accepts MP4, MOV and WebM within 50 MB", () => {
   assert.equal(videoProblem(file("video/webm", 1)), "");
 });
 
-test("videoProblem refuses a PNG and a 60 MB MP4", () => {
-  assert.equal(videoProblem(file("image/png", 1)), "Choose an MP4, MOV or WebM clip.");
+test("videoProblem refuses a GIF and a 60 MB MP4", () => {
+  assert.match(videoProblem(file("image/gif", 1)), /^Choose an MP4, MOV or WebM clip/);
   assert.equal(videoProblem(file("video/mp4", 60)), "The clip is larger than 50 MB.");
+});
+
+test("videoProblem accepts one video or 1 to 6 photos", () => {
+  assert.equal(videoProblem([file("video/mp4", 5)]), "");
+  assert.equal(videoProblem([file("image/png", 1)]), "");
+  assert.equal(videoProblem(Array.from({ length: 6 }, () => file("image/jpeg", 8))), "");
+  assert.equal(videoProblem(file("image/webp", 1)), "");
+});
+
+test("videoProblem refuses mixes, 7 photos, two videos, none and a 9 MB photo", () => {
+  const sendOne = "Send one video or 1 to 6 photos.";
+  assert.equal(videoProblem([file("video/mp4", 1), file("image/png", 1)]), sendOne);
+  assert.equal(videoProblem([file("video/mp4", 1), file("video/mp4", 1)]), sendOne);
+  assert.equal(videoProblem(Array.from({ length: 7 }, () => file("image/png", 1))), sendOne);
+  assert.match(videoProblem([]), /^Choose an MP4/);
+  assert.equal(videoProblem([file("image/png", 9)]), "A photo is larger than 8 MB.");
+  assert.ok(![sendOne, "Choose an MP4"].some((m) => ADVICE.test(m)));
+});
+
+test("toUpload sends one video as itself and photos as a list", () => {
+  const video = file("video/mp4", 1);
+  const photos = [file("image/png", 1), file("image/png", 1)];
+  assert.equal(toUpload([video]), video);
+  assert.equal(toUpload(photos), photos);
+  assert.deepEqual(toUpload([photos[0]]), [photos[0]]);
+});
+
+test("checkLabel says photos when a photo check was not read", () => {
+  assert.equal(checkLabel({ check: "tray", match: "none", media: "photos" }), "Photos kept, not checked");
+  assert.equal(checkLabel({ check: "tray", match: "none", media: "video" }), CHECK_LABEL.tray.none);
+  assert.equal(checkLabel({ check: "tray", match: "ok", media: "photos" }), CHECK_LABEL.tray.ok);
 });
 
 test("checkLabel reads an unknown match as none", () => {

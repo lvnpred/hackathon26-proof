@@ -1,25 +1,25 @@
 import { sourceLabel } from "./drafts";
-import { checkLabel, videoProblem } from "./video";
+import { checkLabel, toUpload, videoProblem } from "./video";
 import { useState } from "react";
 
 // A tray or set-up clip: pick it, and the result shows beside the planned list. A flag never blocks.
 export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (!file) return;
-    const bad = videoProblem(file);
+    if (!files.length) return;
+    const bad = videoProblem(files);
     setProblem(bad);
-    if (!bad) await onFile(file);
+    if (!bad) await onFile(toUpload(files));
   }
   return (
     <section className="card" aria-label={title}>
       <p className="label">{title}</p>
       {!hideUpload && (
         <label className="field">
-          {kind === "tray" ? "Upload tray video" : "Add video check"}
-          <input type="file" accept="video/*" capture="environment" disabled={busy} onChange={pick} />
+          {kind === "tray" ? "Upload tray video or photos" : "Add video or photo check"}
+          <input type="file" accept="video/*,image/*" multiple disabled={busy} onChange={pick} />
         </label>
       )}
       {problem && <p className="note" role="alert">{problem}</p>}
@@ -49,11 +49,11 @@ function CheckResult({ check }) {
           </tbody>
         </table>
       )}
-      {(check.unchecked || []).length > 0 && <p className="small muted">Not checked by video: {check.unchecked.join(", ")}</p>}
+      {(check.unchecked || []).length > 0 && <p className="small muted">Not checked here: {check.unchecked.join(", ")}</p>}
       {(check.frames || []).length > 0 && (
         <div className="row">
           {check.frames.map((frame) => (
-            <img key={frame.id} src={frame.url} alt="Frame from the clip" width={96} style={{ borderRadius: 6 }} />
+            <img key={frame.id} src={frame.url} alt={check.media === "photos" ? "Photo from the check" : "Frame from the clip"} width={96} style={{ borderRadius: 6 }} />
           ))}
         </div>
       )}

@@ -9,6 +9,7 @@ from pydantic import Field
 
 from app.journey import states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
+from app.journey.dictation import draft_refusal
 from app.journey.seed import card_payload
 from app.journey.stories import CARE_TEMPLATES
 
@@ -32,14 +33,10 @@ class SurgeryIn(At):
 def move(episode_id: str, body: StateIn, request: Request) -> dict:
     _require(request, episode_id)
     events = _store(request).events(episode_id)
-    refusal = states.check_move(events, body.to, body.model_dump())
-    if refusal:
-        raise HTTPException(status_code=409, detail=refusal)
-    payload = {"from": states.current_state(events), "to": body.to, "by": body.by, "reason": body.reason.strip()}
-    if body.procedure:
-        payload["procedure"] = body.procedure
-    if body.checklist:
-        payload["checklist"] = body.checklist
+    try:
+        payload = states.move_payload(events, body.to, body.model_dump())
+    except states.MoveRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _act(request, episode_id, "patient.state", payload, body.at_ms)
 
 
@@ -71,6 +68,7 @@ class OrderItem(Strict):
 class SignIn(At):
     items: list[OrderItem] = Field(min_length=1, max_length=20)
     by: str = Field(min_length=1, max_length=80)
+    draft_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class AckIn(At):
@@ -100,6 +98,7 @@ class DischargeIn(At):
     summary: str = Field(min_length=1, max_length=2000)
     template: str = Field(default="hernia-repair", max_length=40)
     by: str = Field(min_length=1, max_length=80)
+    draft_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 def _write(request: Request, episode_id: str, at_ms: int | None, action) -> dict:
@@ -121,7 +120,7 @@ def sign_orders(episode_id: str, body: SignIn, request: Request) -> dict:
         row = item.model_dump()
         row["limits"] = {k: v for k, v in row["limits"].items() if v is not None} if item.kind == "obs" else {}
         items.append(row)
-    return _write(request, episode_id, body.at_ms, lambda s, ts: tasks.sign_order(s, episode_id, items, body.by, ts))
+    return _write(request, episode_id, body.at_ms, lambda s, ts: tasks.sign_order(s, episode_id, items, body.by, ts, body.draft_id))
 
 
 @flow_router.post("/orders/{order_id}/ack")
@@ -154,11 +153,16 @@ def sign_discharge(episode_id: str, body: DischargeIn, request: Request) -> dict
     events = store.events(episode_id)
     if states.current_state(events) != "ward":
         raise HTTPException(status_code=409, detail="The discharge is signed only while the patient is on the ward.")
+    refusal = draft_refusal(events, "discharge", body.draft_id)
+    if refusal:
+        raise HTTPException(status_code=refusal[0], detail=refusal[1])
     ts = _at(store, episode_id, body.at_ms)
     rx = _latest(events, "rx.ordered")
-    store.append(episode_id, "discharge.signed", {"summary": body.summary.strip(), "by": body.by}, ts_ms=ts)
+    signed = {"summary": body.summary.strip(), "by": body.by, **({"draft_id": body.draft_id} if body.draft_id else {})}
+    store.append(episode_id, "discharge.signed", signed, ts_ms=ts)
     store.append(episode_id, "discharge.card", card_payload(body.template, rx["payload"] if rx else None, body.by), ts_ms=ts)
-    move = {"from": "ward", "to": "discharging", "by": body.by, "reason": ""}
+    # Every refusal is above. check_move needs the signed event, so a refusal here would be a bug (P2-R6).
+    move = states.move_payload(store.events(episode_id), "discharging", {"by": body.by})
     store.append(episode_id, "patient.state", move, ts_ms=ts)
     raise_nudges(store, episode_id, ts)
     return view(request, episode_id)

@@ -7,6 +7,7 @@ plain reason before anything is written.
 
 from __future__ import annotations
 
+from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient
 from app.journey.stories import clock
 from app.morning.discharge import visible_events
@@ -121,6 +122,23 @@ def check_move(events: list[dict], to: str, body: dict) -> str | None:
     return None
 
 
+class MoveRefused(Exception):
+    """A move the table does not allow. The message is the plain reason."""
+
+
+def move_payload(events: list[dict], to: str, body: dict) -> dict:
+    """The `patient.state` payload for a move, or `MoveRefused` with the reason. The one place a move is built."""
+    refusal = check_move(events, to, body)
+    if refusal:
+        raise MoveRefused(refusal)
+    payload = {"from": current_state(events), "to": to, "by": body["by"], "reason": (body.get("reason") or "").strip()}
+    if body.get("procedure"):
+        payload["procedure"] = body["procedure"]
+    if body.get("checklist"):
+        payload["checklist"] = body["checklist"]
+    return payload
+
+
 def allowed_moves(events: list[dict]) -> list[dict]:
     out = []
     for to, (label, role, keys) in MOVES.get(current_state(events), {}).items():
@@ -197,4 +215,5 @@ def flow_view(events: list[dict]) -> dict:
         "allowed": allowed_moves(events),
         "procedure": {"key": procedure, "title": PROCEDURES[procedure]} if procedure else None,
         "procedures": dict(PROCEDURES),
+        "drafts": open_drafts(events),
     }

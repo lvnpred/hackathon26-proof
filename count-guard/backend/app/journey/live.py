@@ -19,6 +19,7 @@ from app.config import Settings
 PREPARED_DIR = Path(__file__).parent / "prepared"
 _NAME = re.compile(r"^([a-z0-9-]{1,60})\.[a-z0-9]{1,5}$")
 NO_KEY = "No model key, so recordings are not transcribed here. Type what was said in the box."
+NO_SPEECH = "Nothing was heard in the recording. Type what was said in the box."
 UNREACHABLE = "The transcriber did not answer. Type what was said in the box."
 
 
@@ -63,9 +64,12 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
                 path = Path(tmp) / "heard.wav"
                 path.write_bytes(wav)
                 turns = VoiceAdapter(settings).transcribe(path, 0, "audio/wav")
-        except (httpx.HTTPError, subprocess.SubprocessError, OSError) as exc:
+        except (httpx.HTTPError, subprocess.SubprocessError, OSError, ValueError) as exc:
             raise NotHeard(502, UNREACHABLE) from exc
-        return {"text": " ".join(t["text"] for t in turns), "source": "muse-voice-transcribe"}
+        text = " ".join(t["text"] for t in turns).strip()
+        if not text:
+            raise NotHeard(409, NO_SPEECH)
+        return {"text": text, "source": "muse-voice-transcribe"}
     found = prepared(filename)
     if found and found.get("transcript"):
         return {"text": found["transcript"], "source": "prepared"}

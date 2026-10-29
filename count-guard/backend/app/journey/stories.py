@@ -105,6 +105,10 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} moved the patient from {p.get('from')} to {p.get('to')}.{said}"
     if kind == "order.signed":
         return f"{p.get('by')} signed {len(p.get('items') or [])} orders."
+    if kind == "order.drafted":
+        return f"{p.get('by')} dictated {len(p.get('items') or [])} orders (draft, not signed)."
+    if kind == "discharge.drafted":
+        return f"{p.get('by')} dictated a discharge summary (draft, not signed)."
     if kind == "order.acknowledged":
         return f"{p.get('by')} acknowledged the orders."
     if kind == "task.created":

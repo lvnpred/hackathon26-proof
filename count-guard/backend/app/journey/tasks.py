@@ -8,6 +8,7 @@ runs `raise_nudges` after a write, using the ts the helper returns.
 
 from __future__ import annotations
 
+from app.journey.dictation import draft_refusal
 from app.journey.rx import key_of
 from app.journey.states import current_state
 from app.morning.discharge import visible_events
@@ -107,13 +108,20 @@ def _merged_orders(previous: dict | None, items: list[dict], by: str) -> dict | 
     return {"doses": list(by_key.values()), "obs_every_h": every, "limits": limits, "by": by}
 
 
-def sign_order(store, episode_id: str, items: list[dict], by: str, ts: int) -> int:
-    """Write `order.signed` and, for dose or obs items, the merged `ward.orders_set`. Returns ts."""
+def sign_order(store, episode_id: str, items: list[dict], by: str, ts: int, draft_id: str | None = None) -> int:
+    """Write `order.signed` and, for dose or obs items, the merged `ward.orders_set`. Returns ts.
+
+    `draft_id` names the dictated draft being signed; it is stored so the draft closes.
+    """
     events = store.events(episode_id)
     state = current_state(events)
     if state not in ORDER_STATES:
         raise TaskError(409, f"Orders are signed in clinic, admitting or ward. The patient is in {state}.")
-    store.append(episode_id, "order.signed", {"items": items, "by": by}, ts_ms=ts)
+    refusal = draft_refusal(events, "order", draft_id)
+    if refusal:
+        raise TaskError(*refusal)
+    signed = {"items": items, "by": by, **({"draft_id": draft_id} if draft_id else {})}
+    store.append(episode_id, "order.signed", signed, ts_ms=ts)
     previous = next(iter(reversed(_of(events, "ward.orders_set"))), None)
     merged = _merged_orders(previous["payload"] if previous else None, items, by)
     if merged:

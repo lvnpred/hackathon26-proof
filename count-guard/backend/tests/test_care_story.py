@@ -1,100 +1,125 @@
-"""The demo video's whole story, played through the routes the care screens call."""
+"""The demo video's whole story: three patients, three paths, every step by tap on the shared clock."""
 
 from __future__ import annotations
 
 from tests.test_care_demo import _client
+from tests.test_flow_states import ADMIT_CHECKS, ADVICE, DISCHARGE_CHECKS
 
 H = 3_600_000
 M = 60_000
-DOCTOR, SCRUB, WARD, NIGHT = "Dr. A. Rao", "Nurse Priya", "Nurse Meena", "Nurse Kavya"
-ORDERS = {
-    "doses": [{"name": "Paracetamol", "amount": "1 g IV", "every_h": 6}],
-    "obs_every_h": 1,
-    "limits": {"sbp_min": 90},
-    "by": DOCTOR,
-}
+DOCTOR = "Dr. A. Rao (synthetic)"
+NURSE = "Nurse Asha (synthetic)"
+SCRUB = "Nurse Priya (synthetic)"
+PARACETAMOL = {"kind": "dose", "text": "Paracetamol 1 g every 6 h", "name": "Paracetamol", "amount": "1 g", "every_h": 6}
+OBS_HOURLY = {"kind": "obs", "text": "BP and pulse every 1 h", "every_h": 1, "limits": {"sbp_min": 90}}
+SALINE = {"kind": "procedure", "text": "Saline 1 L over 2 h", "mode": "start_end"}
+OBS_QUARTER = {"kind": "obs", "text": "BP and pulse every 15 min", "every_h": 0.25}
+SUMMARY = "Recovered well. Home with the discharge card."
 
 
-def _open(view, kind):
-    return [n for n in view["nudges"] if n["kind"] == kind]
+class Ward:
+    """One patient's HTTP calls, recording every now/next line the screens would show."""
+
+    def __init__(self, client, eid):
+        self.client, self.eid, self.seen = client, eid, []
+
+    def post(self, path, body):
+        res = self.client.post(f"/journey/episodes/{self.eid}/{path}", json=body)
+        assert res.status_code == 200, f"{path}: {res.text}"
+        view = res.json()
+        if "now_next" in view:
+            self.seen.append(view["now_next"])
+        return view
+
+    def get(self):
+        view = self.client.get(f"/journey/episodes/{self.eid}").json()
+        self.seen.append(view["now_next"])
+        return view
+
+    def move(self, to, at, by=DOCTOR, **extra):
+        return self.post("state", {"to": to, "by": by, "at_ms": at, **extra})
+
+    def sign(self, items, at):
+        return self.post("orders/sign", {"items": items, "by": DOCTOR, "at_ms": at})["order_list"][-1]["id"]
+
+    def ack(self, order_id, at):
+        return self.post(f"orders/{order_id}/ack", {"by": NURSE, "at_ms": at})
+
+    def done(self, task_id, at, **extra):
+        return self.post(f"tasks/{task_id}/done", {"by": NURSE, "via": "tap", "at_ms": at, **extra})
+
+    def count(self, at, **body):
+        return self.post("count", {"by": SCRUB, "at_ms": at, **body})
+
+    def audit(self, kind):
+        rows = self.client.get(f"/journey/episodes/{self.eid}/audit").json()["rows"]
+        return [r for r in rows if r["type"] == kind]
 
 
-def test_care_story(tmp_path):
-    client = _client(tmp_path)
+def _wards(client):
     seeded = client.post("/journey/demo/seed").json()["patients"]
-    eid = next(p["id"] for p in seeded if p["bed"] == "4")
-    base = f"/journey/episodes/{eid}"
+    return {p["bed"]: Ward(client, p["id"]) for p in seeded}
 
-    def post(path, body):
-        res = client.post(f"{base}{path}", json=body)
-        assert res.status_code == 200, res.text
-        return res.json()
 
-    def seen_ok(view, kind, to, by, at):
-        """The nudge is open with the right recipient, then leaves the queue once seen."""
-        found = _open(view, kind)
-        assert found, f"{kind} not raised; open: {[n['kind'] for n in view['nudges']]}"
-        nudge = found[0]
-        assert nudge["to"] == to
-        after = post(f"/nudges/{nudge['id']}/seen", {"by": by, "note": "Answered.", "at_ms": at})
-        assert nudge["id"] not in {n["id"] for n in after["nudges"]}
-        return after
+def _tasks(view, kind):
+    return [t for t in view["tasks"] if t["kind"] == kind]
 
-    def nurse_open(view):
-        return [n for n in view["nudges"] if n["to"] == "nurse"]
 
-    # Clinic
-    post("/rx/demo", {"at_ms": 0})
+def _discharge(ward, sign_at, home_at):
+    ward.post("discharge/sign", {"summary": SUMMARY, "by": DOCTOR, "at_ms": sign_at})
+    return ward.move("home", home_at, by=NURSE, checklist=DISCHARGE_CHECKS)
 
-    # Admission (Day 1 07:00): the doctor sets the ward orders
-    view = post("/orders", {**ORDERS, "at_ms": 22 * H})
-    assert view["orders"]["limits"]["sbp_min"] == 90
 
-    # Strips: the patient types amlodipine 10 mg
-    view = post("/strips", {"strips": [{"name": "amlodipine", "strength": "10 mg"}], "at_ms": 10 * H})
-    view = seen_ok(view, "strip_strength_differs", "patient", "patient", 10 * H + M)
+def test_three_paths_by_tap(tmp_path):
+    client = _client(tmp_path)
+    wards = _wards(client)
 
-    # Theatre: pack opened 20, closing 19, then corrected to 20
-    post("/count", {"step": "opened", "quantity": 20, "by": SCRUB, "at_ms": 24 * H})
-    view = post("/count", {"step": "closing", "returned": 19, "by": SCRUB, "at_ms": 24 * H + 50 * M})
-    closing_id = next(
-        r["id"] for r in client.get(f"{base}/audit").json()["rows"] if r["type"] == "count.closing"
-    )
-    view = seen_ok(view, "count_open", "nurse", SCRUB, 24 * H + 52 * M)
-    post("/count", {"step": "closing", "returned": 20, "by": SCRUB, "at_ms": 24 * H + 54 * M,
-                    "supersedes_id": closing_id})
-    rows = [r for r in client.get(f"{base}/audit").json()["rows"] if r["type"] == "count.closing"]
-    assert len(rows) == 2
-    old = next(r for r in rows if r["id"] == closing_id)
-    assert old["replaced_by"], "the 19-of-20 closing is shown as replaced"
-    assert next(r for r in rows if r is not old)["replaced_by"] in (None, "")
+    # Das: seen in clinic, visit closed.
+    das = wards["9"]
+    das.post("rx/demo", {"at_ms": 0})
+    assert das.move("clinic_done", 10 * M)["state"] == "clinic_done"
 
-    # Ward
-    post("/obs", {"sbp": 128, "dbp": 80, "hr": 84, "by": WARD, "at_ms": 26 * H})
-    view = post("/dose", {"name": "Paracetamol", "amount": "1 g IV", "by": WARD, "at_ms": 26 * H})
-    view = post("/obs", {"sbp": 86, "dbp": 54, "hr": 96, "by": WARD, "at_ms": 31 * H + 10 * M})
-    view = seen_ok(view, "obs_past_limit", "nurse", WARD, 31 * H + 15 * M)
-    assert not _open(view, "dose_overdue"), "no dose is overdue before the 18:30 check"
-    view = post("/tick", {"at_ms": 33 * H + 30 * M})
-    assert _open(view, "dose_overdue")[0]["when"] == "Day 1 18:30"
-    view = seen_ok(view, "dose_overdue", "nurse", WARD, 33 * H + 31 * M)
-    post("/dose", {"name": "Paracetamol", "amount": "1 g IV", "by": WARD, "at_ms": 33 * H + 35 * M})
-    drafted = post("/handover", {"from_nurse": WARD, "to_nurse": NIGHT, "use_model": False,
-                                 "at_ms": 34 * H})
-    assert drafted["handover"]["accepted_by"] is None
-    view = post(f"/handover/{drafted['handover']['id']}/accept", {"by": NIGHT, "at_ms": 34 * H + 5 * M})
-    assert view["handover"]["accepted_by"] == NIGHT
+    # Kumar: clinic, admission, orders, theatre with a corrected count, ward, discharge, home.
+    kumar = wards["4"]
+    kumar.post("rx/demo", {"at_ms": 0})
+    assert kumar.move("admitting", 40 * M, reason="Hernia repair")["state"] == "admitting"
+    assert kumar.move("ward", H, by=NURSE, checklist=ADMIT_CHECKS)["state"] == "ward"
+    order = kumar.sign([PARACETAMOL, OBS_HOURLY], H + 10 * M)
+    view = kumar.ack(order, H + 15 * M)
+    assert len(view["tasks"]) == 2
+    assert kumar.move("theatre", 2 * H, procedure="hernia-repair")["state"] == "theatre"
+    kumar.post("surgery", {"step": "began", "by": SCRUB, "at_ms": 2 * H + 5 * M})
+    kumar.count(2 * H + 20 * M, step="opened", quantity=20)
+    view = kumar.count(3 * H + 30 * M, step="closing", returned=19)
+    assert [n["kind"] for n in view["nudges"]] == ["count_open"]
+    first = kumar.audit("count.closing")[0]["id"]
+    kumar.count(3 * H + 35 * M, step="closing", returned=20, supersedes_id=first)
+    kumar.post("surgery", {"step": "ended", "by": SCRUB, "at_ms": 3 * H + 40 * M})
+    assert kumar.move("ward", 3 * H + 45 * M, by=NURSE, reason="")["state"] == "ward"
+    paracetamol = _tasks(kumar.get(), "dose")[0]
+    view = kumar.done(paracetamol["id"], 4 * H)
+    assert any(e["type"] == "dose.given" for e in view["timeline"])
+    assert _discharge(kumar, 30 * H, 31 * H)["state"] == "home"
+    closings = kumar.audit("count.closing")
+    struck = next(r for r in closings if r["id"] == first)
+    assert len(closings) == 2 and struck["replaced_by"]
 
-    # Home
-    view = post("/discharge-card", {"by": DOCTOR, "at_ms": 35 * H})
-    assert view["card"] is not None
-    post("/tick", {"at_ms": 48 * H})
-    view = post("/checkin", {"day": 2, "feels": "Sore and warm", "signs": ["Fever above 38 °C"],
-                             "at_ms": 48 * H})
-    view = seen_ok(view, "warning_sign_ticked", "nurse", WARD, 48 * H + M)
-    view = post("/help", {"says": "The dressing is wet.", "at_ms": 48 * H + 2 * M})
-    view = seen_ok(view, "help_requested", "nurse", WARD, 48 * H + 3 * M)
+    # Iyer: already on the ward; a low reading, a saline drip, discharge.
+    iyer = wards["7"]
+    view = iyer.get()
+    assert view["state"] == "ward"
+    obs = _tasks(view, "obs")[0]
+    view = iyer.done(obs["id"], H, values={"sbp": 82, "dbp": 50, "hr": 96})
+    assert [n["kind"] for n in view["nudges"]] == ["obs_past_limit"]
+    order = iyer.sign([SALINE, OBS_QUARTER], H + 5 * M)
+    view = iyer.ack(order, H + 5 * M)
+    drip = _tasks(view, "procedure")[0]
+    assert iyer.post(f"tasks/{drip['id']}/begin", {"by": NURSE, "at_ms": H + 10 * M})["tasks"]
+    view = iyer.done(drip["id"], 3 * H + 10 * M)
+    assert next(t for t in view["tasks"] if t["id"] == drip["id"])["status"] == "done"
+    assert _discharge(iyer, 26 * H, 27 * H)["state"] == "home"
 
-    left = [n["kind"] for n in nurse_open(view)]
-    # obs_overdue is the real rule firing after the time jumps; the story leaves it open on purpose.
-    assert not {"count_open", "obs_past_limit", "dose_overdue", "warning_sign_ticked", "help_requested"} & set(left)
+    assert [w.get()["state"] for w in (das, kumar, iyer)] == ["clinic_done", "home", "home"]
+    for ward in wards.values():
+        for line in ward.seen:
+            assert not ADVICE.search(f"{line['now']} {line['next']}"), line

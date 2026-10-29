@@ -174,10 +174,23 @@ def test_seed_iyer_overdue_by_rule(tmp_path):
     assert overdue[0]["to"] == "nurse"
 
 
+def test_seed_starting_states(tmp_path):
+    client = _client(tmp_path)
+    views = [client.get(f"/journey/episodes/{p['id']}").json() for p in _seed(client)]
+    assert [v["state"] for v in views] == ["clinic", "ward", "clinic"]
+
+
+def test_seed_iyer_has_one_open_recurring_obs_task(tmp_path):
+    client = _client(tmp_path)
+    view = client.get(f"/journey/episodes/{_seed(client)[1]['id']}").json()
+    assert [(t["kind"], t["status"], t["every_h"], t["due_ms"]) for t in view["tasks"]] == [("obs", "open", 1, H)]
+    assert view["order_list"][0]["acknowledged_by"] == "Nurse Meena (synthetic)"
+
+
 def test_seed_das_quiet(tmp_path):
     client = _client(tmp_path)
     view = client.get(f"/journey/episodes/{_seed(client)[2]['id']}").json()
-    assert view["card"] is not None
+    assert view["card"] is None
     assert view["nudges"] == []
 
 

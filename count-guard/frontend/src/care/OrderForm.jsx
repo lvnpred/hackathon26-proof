@@ -72,6 +72,7 @@ export default function OrderForm({ busy, onSign, draft }) {
               <select value={row.proof} onChange={(e) => set(index, { proof: e.target.value })}>
                 <option value="none">None</option>
                 <option value="photo">Photo</option>
+                <option value="video">Video</option>
               </select>
             </label>
             {row.kind === "obs" && (

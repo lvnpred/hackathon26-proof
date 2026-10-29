@@ -11,6 +11,8 @@ import Photos from "./Photos";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
 import Timeline, { LENSES } from "./Timeline";
+import VideoChecks from "./VideoChecks";
+import { taskVideoLabel } from "./video";
 
 const LENS_CHIPS = [["nurse", "Nurse"], ["doctor", "Doctor"], ["patient", "Patient"], ["everyone", "Everyone (audit)"]];
 
@@ -64,6 +66,8 @@ export default function Chart() {
 
       <Photos view={view} />
 
+      <VideoChecks view={view} />
+
       <section className="card">
         <p className="label">Orders and tasks</p>
         {orders.length === 0 && <p className="empty small">No orders or tasks yet.</p>}
@@ -82,6 +86,7 @@ export default function Chart() {
                 return (
                   <li key={task.id}>
                     <span>{task.title}</span> <span className={`pill ${due === "overdue" ? "sun" : due === "done" ? "ready" : "info"}`}>{due}</span>
+                    {taskVideoLabel(task) && <span className="small muted"> · {taskVideoLabel(task)}</span>}
                     {(task.done || []).slice(-1).map((d) => {
                       const proof = proofOf(d, view.photos);
                       return (

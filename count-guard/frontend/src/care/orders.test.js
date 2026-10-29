@@ -53,3 +53,8 @@ test("a dose row needs a medicine name", () => {
   const ok = orderRowsToItems([{ ...blankRow("dose"), text: "Paracetamol 1 g", name: "paracetamol" }]);
   assert.deepEqual(ok.errors, {});
 });
+
+test("a video proof survives the round trip", () => {
+  const { items } = orderRowsToItems([{ ...blankRow("procedure"), text: "Saline 1 L over 2 h", mode: "start_end", proof: "video" }]);
+  assert.equal(items[0].proof, "video");
+});

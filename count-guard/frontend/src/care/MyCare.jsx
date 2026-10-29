@@ -5,6 +5,8 @@ import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
 import { findKumar } from "./Patients";
 import Timeline from "./Timeline";
+import VideoChecks from "./VideoChecks";
+import { taskVideoLabel } from "./video";
 
 // The same record as Today, read-only: no forms, no actions.
 export default function MyCare() {
@@ -26,6 +28,7 @@ export default function MyCare() {
               {(view.tasks || []).filter((task) => task.order_id === order.id).map((task) => (
                 <li key={task.id}>
                   <span>{task.title}</span> <span className="pill info">{task.status}</span>
+                  {taskVideoLabel(task) && <p className="small muted">{taskVideoLabel(task)}</p>}
                   {(task.done || []).map((d) => {
                     const proof = proofOf(d, view.photos);
                     return (
@@ -42,6 +45,7 @@ export default function MyCare() {
           </div>
         ))}
       </section>
+      <VideoChecks view={view} />
       <section className="card">
         <p className="label">Timeline</p>
         <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" readOnly />

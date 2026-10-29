@@ -5,6 +5,7 @@ import ObsForm from "./ObsForm";
 import TaskProof from "./TaskProof";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
+import { latestCheck, taskVideoLabel } from "./video";
 import { sortTasks, surgeryNow } from "./tasklist";
 import VideoCheck from "./VideoCheck";
 
@@ -40,7 +41,7 @@ function Orders({ orders, by, busy, act }) {
   );
 }
 
-function TaskRow({ task, due, by, busy, act, onProof }) {
+function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
   const done = (body = {}) => act(`/tasks/${task.id}/done`, { by, via: "tap", note: "", ...body });
   return (
     <li>
@@ -50,6 +51,16 @@ function TaskRow({ task, due, by, busy, act, onProof }) {
       </div>
       {due !== "done" && task.proof === "photo" && (
         <button type="button" disabled={busy} onClick={() => onProof(task)}>Add photo proof</button>
+      )}
+      {taskVideoLabel(task) && <p className="small muted">{taskVideoLabel(task)}</p>}
+      {due !== "done" && task.proof === "video" && (
+        <VideoCheck
+          title={`Set-up check · ${task.title}`}
+          kind="setup"
+          check={latestCheck(view, "setup", task.id)}
+          busy={busy}
+          onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
+        />
       )}
       {due !== "done" && task.kind === "obs" && <ObsForm busy={busy} onSave={(values) => done({ values })} />}
       {due !== "done" && task.kind !== "obs" && task.mode === "start_end" && (
@@ -74,7 +85,7 @@ function Ward({ view, nowMs, by, busy, act, upload, ask }) {
         <p className="label">Tasks</p>
         {tasks.length === 0 && <p className="empty small">No open tasks.</p>}
         <ul className="task-list">
-          {tasks.map((task) => <TaskRow key={task.id} task={task} due={taskDue(task, nowMs)} by={by} busy={busy} act={act} onProof={setPreset} />)}
+          {tasks.map((task) => <TaskRow key={task.id} view={view} task={task} due={taskDue(task, nowMs)} by={by} busy={busy} act={act} upload={upload} onProof={setPreset} />)}
         </ul>
       </section>
       {(view.nudges || []).map((nudge) => <Nudge key={nudge.id} nudge={nudge} busy={busy} act={act} />)}

@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
 import net from "node:net";
-import { API_PORT, NO_KEY, OWNER_PORTS, WEB_PORT, assertOffline, busyPorts, childEnv, devArgs, portFree } from "./server.mjs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { API_PORT, NO_KEY, OWNER_PORTS, WEB_PORT, assertOffline, busyPorts, childEnv, devArgs, portFree, startServers } from "./server.mjs";
 
 test("devArgs uses 8200/5273 and the data dir, never the owner's ports", () => {
   const args = devArgs("/tmp/data");
@@ -56,4 +59,40 @@ test("portFree is false while something listens and true once it stops", async (
   assert.equal(await portFree(port), false);
   await new Promise((resolve) => server.close(resolve));
   assert.equal(await portFree(port), true);
+});
+
+test("a stop requested during start-up reaches the spawned group", async () => {
+  const sent = [];
+  let up = true;
+  const fakeChild = { pid: 4242, on() {} };
+  const deps = {
+    spawn: () => fakeChild,
+    free: async () => true,
+    json: async () => null, // the API never answers: start-up would poll for 60 s
+    kill: (pid, sig) => {
+      if (sig === 0) { if (!up) throw new Error("gone"); return; }
+      sent.push([pid, sig]);
+      up = false;
+    },
+  };
+  let stopFn = null;
+  const dir = mkdtempSync(join(tmpdir(), "cg-test-"));
+  const started = startServers({ dataDir: dir, logPath: join(dir, "log"), onSpawn: (stop) => { stopFn = stop; }, deps })
+    .then(() => "started", (err) => err.message);
+  while (!stopFn) await new Promise((r) => setTimeout(r, 10));
+  await stopFn(); // what the SIGINT handler does
+  assert.equal(await started, "Stopped while starting.");
+  assert.deepEqual(sent, [[-4242, "SIGTERM"]]);
+});
+
+test("a spawn error rejects start-up and still stops", async () => {
+  let fail;
+  const deps = {
+    spawn: () => ({ pid: 1, on: (ev, cb) => { if (ev === "error") fail = cb; } }),
+    free: async () => true,
+    json: async () => { fail?.(new Error("spawn make ENOENT")); return null; },
+    kill: () => { throw new Error("gone"); },
+  };
+  const dir = mkdtempSync(join(tmpdir(), "cg-test-"));
+  await assert.rejects(startServers({ dataDir: dir, logPath: join(dir, "log"), deps }), /Could not start make: spawn make ENOENT/);
 });

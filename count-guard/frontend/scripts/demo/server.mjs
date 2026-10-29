@@ -59,9 +59,10 @@ async function getJson(url) {
   return res.ok ? res.json() : null;
 }
 
-async function waitFor(what, probe, ms = 60000) {
+async function waitFor(what, probe, cancelled, ms = 60000) {
   const end = Date.now() + ms;
   while (Date.now() < end) {
+    if (cancelled()) throw new Error("Stopped while starting.");
     try {
       const got = await probe();
       if (got !== null && got !== undefined) return got;
@@ -73,34 +74,48 @@ async function waitFor(what, probe, ms = 60000) {
   throw new Error(`${what} did not answer within ${ms / 1000} s. See the server log in demo-shots/server.log.`);
 }
 
-export async function startServers({ dataDir, logPath }) {
-  const probes = { [API_PORT]: await portFree(API_PORT), [WEB_PORT]: await portFree(WEB_PORT) };
+const REAL = {
+  spawn, free: portFree, json: getJson, kill: (pid, sig) => process.kill(pid, sig),
+  web: async (url) => (await fetch(url)).ok || null,
+};
+
+// onSpawn(stop) runs right after the spawn, so a signal during start-up can still stop the group.
+// deps replaces process control in tests.
+export async function startServers({ dataDir, logPath, onSpawn = () => {}, deps = {} }) {
+  const d = { ...REAL, ...deps };
+  const probes = { [API_PORT]: await d.free(API_PORT), [WEB_PORT]: await d.free(WEB_PORT) };
   const busy = busyPorts(probes);
   if (busy) throw new Error(busy);
 
   const log = openSync(logPath, "a");
-  const child = spawn("make", devArgs(dataDir), {
+  const child = d.spawn("make", devArgs(dataDir), {
     cwd: REPO, detached: true, stdio: ["ignore", log, log], env: childEnv(process.env),
   });
+  let spawnError = null;
+  child.on("error", (err) => { spawnError = err; });
   let stopping = null;
-  const alive = () => { try { process.kill(-child.pid, 0); return true; } catch { return false; } };
+  const alive = () => { try { d.kill(-child.pid, 0); return true; } catch { return false; } };
   const stop = () => {
     stopping ??= (async () => {
-      if (alive()) { try { process.kill(-child.pid, "SIGTERM"); } catch { /* already gone */ } }
+      if (alive()) { try { d.kill(-child.pid, "SIGTERM"); } catch { /* already gone */ } }
       const end = Date.now() + 10000;
-      while (Date.now() < end && !((await portFree(API_PORT)) && (await portFree(WEB_PORT)))) await sleep(250);
-      if (alive()) { try { process.kill(-child.pid, "SIGKILL"); } catch { /* already gone */ } }
+      while (Date.now() < end && !((await d.free(API_PORT)) && (await d.free(WEB_PORT)))) await sleep(250);
+      if (alive()) { try { d.kill(-child.pid, "SIGKILL"); } catch { /* already gone */ } }
       closeSync(log);
     })();
     return stopping;
   };
+  onSpawn(stop);
 
+  const cancelled = () => {
+    if (spawnError) throw new Error(`Could not start make: ${spawnError.message}`);
+    return stopping !== null;
+  };
   try {
     // Both URLs: the browser reaches the API through Vite's proxy, whose target comes from the environment.
-    const direct = await waitFor("The API", () => getJson(`http://127.0.0.1:${API_PORT}/journey/models`));
-    assertOffline(direct);
-    await waitFor("The web server", async () => (await fetch(`http://127.0.0.1:${WEB_PORT}/`)).ok || null);
-    assertOffline(await waitFor("The web proxy", () => getJson(`http://127.0.0.1:${WEB_PORT}/journey/models`)));
+    assertOffline(await waitFor("The API", () => d.json(`http://127.0.0.1:${API_PORT}/journey/models`), cancelled));
+    await waitFor("The web server", () => d.web(`http://127.0.0.1:${WEB_PORT}/`), cancelled);
+    assertOffline(await waitFor("The web proxy", () => d.json(`http://127.0.0.1:${WEB_PORT}/journey/models`), cancelled));
   } catch (err) {
     await stop();
     throw err;

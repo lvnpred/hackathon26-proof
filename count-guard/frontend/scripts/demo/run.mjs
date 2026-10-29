@@ -24,10 +24,7 @@ let chrome;
 try { chrome = findChrome(); } catch (err) { console.error(err.message); process.exit(1); }
 if (until && !BEATS.some((b) => b.id === until)) { console.error(`CG_DEMO_UNTIL names no beat: ${until}`); process.exit(1); }
 
-fs.rmSync(SHOTS, { recursive: true, force: true });
-fs.mkdirSync(SHOTS, { recursive: true });
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "cg-demo-"));
-
+let dataDir = "";
 let servers = null;
 let browser = null;
 let code = 1;
@@ -40,7 +37,14 @@ for (const sig of ["SIGINT", "SIGTERM"]) {
 }
 
 try {
-  servers = await startServers({ dataDir, logPath: path.join(SHOTS, "server.log") });
+  // Start-up checks the ports first; a refused run keeps the previous screenshots.
+  fs.mkdirSync(SHOTS, { recursive: true });
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "cg-demo-"));
+  servers = await startServers({ dataDir, logPath: path.join(SHOTS, "server.log"), onSpawn: (stop) => {
+    servers = { stop };
+    // Ports were free: only now drop the previous run's screenshots (the open server.log stays).
+    for (const f of fs.readdirSync(SHOTS)) if (f.endsWith(".png")) fs.rmSync(path.join(SHOTS, f));
+  } });
   browser = await chromium.launch({ executablePath: chrome, headless: !headed });
   const context = await browser.newContext({ viewport: { width: 1200, height: 1600 } });
   const page = await context.newPage();
@@ -91,6 +95,6 @@ try {
   code = 1;
 } finally {
   await cleanup();
-  if (!keepData) fs.rmSync(dataDir, { recursive: true, force: true });
+  if (!keepData && dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
 }
 process.exit(code);

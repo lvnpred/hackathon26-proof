@@ -4,17 +4,19 @@ import { mkdtempSync } from "node:fs";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { API_PORT, NO_KEY, OWNER_PORTS, WEB_PORT, assertOffline, busyPorts, childEnv, devArgs, portFree, startServers } from "./server.mjs";
+import { API_PORT, NO_KEY, NO_KEYS, OWNER_PORTS, WEB_PORT, assertOffline, busyPorts, childEnv, devArgs, portFree, startServers } from "./server.mjs";
 
 test("devArgs uses 8200/5273 and the data dir, never the owner's ports", () => {
   const args = devArgs("/tmp/data");
-  assert.deepEqual(args, ["dev", NO_KEY, "CG_API_PORT=8200", "CG_WEB_PORT=5273", "COUNT_GUARD_DATA=/tmp/data"]);
+  assert.deepEqual(args, ["dev", ...NO_KEYS, "CG_API_PORT=8200", "CG_WEB_PORT=5273", "COUNT_GUARD_DATA=/tmp/data"]);
   for (const a of args) for (const p of OWNER_PORTS) assert.ok(!a.includes(String(p)), a);
   assert.deepEqual([API_PORT, WEB_PORT], [8200, 5273]);
 });
 
-test("the key is passed empty", () => {
+test("every model key is passed empty on the make command line", () => {
   assert.deepEqual(NO_KEY.split("="), ["MODEL_API_KEY", ""]);
+  assert.deepEqual(NO_KEYS.map((k) => k.split("=")), [["MODEL_API_KEY", ""], ["BASETEN_API_KEY", ""], ["META_API_KEY", ""]]);
+  assert.deepEqual(devArgs("/d").slice(1, 4), NO_KEYS);
 });
 
 test("assertOffline stops on live, missing or junk", () => {

@@ -13,7 +13,7 @@ const VOICE = "Complete a task by voice";
 
 export const STEPS = {
   async intro(H) {
-    await H.page.goto(URL);
+    await H.page.goto(URL, { waitUntil: "domcontentloaded" });
     await H.role("Doctor");
   },
   async "das-rx"(H) {
@@ -73,6 +73,8 @@ export const STEPS = {
     await H.clock("+1 h");
   },
   async "kumar-tray"(H) {
+    await H.role("Nurse");
+    await H.chart(KUMAR);
     await H.file("Tray check", "eval/p3/tray-hernia.mp4");
   },
   async "kumar-count"(H) {
@@ -162,6 +164,16 @@ export const STEPS = {
     await H.clock("+1 h");
     await H.clock("+1 h");
     await H.click("End");
+  },
+  async "iyer-recheck"(H) {
+    await H.role("Nurse");
+    await H.fill("Or type what was said", "BP 112 over 70, pulse 84, bed 7.", VOICE);
+    await H.click("Use this text");
+    await H.page.getByLabel("BP and pulse every 1 h", { exact: true }).check();
+    await H.click("Confirm");
+    const flag = H.page.locator(".card.sunk").filter({ hasText: "is below the limit of 90" }).first();
+    await flag.getByLabel("What you did or saw").fill("Reading checked again at the bedside");
+    await flag.getByRole("button", { name: "Answer", exact: true }).click();
   },
   async "iyer-discharge"(H) {
     await H.role("Doctor");

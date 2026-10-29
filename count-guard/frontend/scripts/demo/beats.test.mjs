@@ -5,7 +5,7 @@ import { ADVICE, BEATS, GENERATOR, MEDIA, ROLES, filmSeconds, missingMedia, role
 test("ids are unique and every beat has a known role and path", () => {
   const ids = BEATS.map((b) => b.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(BEATS.length, 30);
+  assert.equal(BEATS.length, 31);
   for (const b of BEATS) {
     assert.ok([...ROLES, "none"].includes(b.role), b.id);
     assert.ok(["intro", "das", "kumar", "iyer", "close"].includes(b.path), b.id);

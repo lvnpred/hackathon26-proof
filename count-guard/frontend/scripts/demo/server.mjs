@@ -9,15 +9,17 @@ export const WEB_PORT = 5273;
 export const OWNER_PORTS = [8100, 5173];
 // Built from parts so no tracked line reads the key name, "=", then a quote (repo hygiene test).
 export const NO_KEY = ["MODEL_API_KEY", ""].join("=");
+export const NO_KEYS = [NO_KEY, ["BASETEN_API_KEY", ""].join("="), ["META_API_KEY", ""].join("=")];
 
 const EMPTIED = ["MODEL_API_KEY", "BASETEN_API_KEY", "META_API_KEY"];
 const DROPPED = ["MAKEFLAGS", "MAKELEVEL", "MFLAGS", "CG_API_PORT", "CG_WEB_PORT"];
 
 export function devArgs(dataDir) {
-  return ["dev", NO_KEY, `CG_API_PORT=${API_PORT}`, `CG_WEB_PORT=${WEB_PORT}`, `COUNT_GUARD_DATA=${dataDir}`];
+  return ["dev", ...NO_KEYS, `CG_API_PORT=${API_PORT}`, `CG_WEB_PORT=${WEB_PORT}`, `COUNT_GUARD_DATA=${dataDir}`];
 }
 
-// Environment for the child `make dev`: every model key empty, nothing inherited from a parent make.
+// Environment for the child `make dev`: the three model keys emptied here (and again on the make command line,
+// which wins over any value make loads itself), nothing inherited from a parent make.
 export function childEnv(parent) {
   const env = { ...parent };
   for (const k of DROPPED) delete env[k];

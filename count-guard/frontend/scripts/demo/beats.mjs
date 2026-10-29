@@ -118,15 +118,15 @@ export const BEATS = [
     keyed: "No model call.",
   },
   {
-    id: "kumar-tray", path: "kumar", role: "nurse", seconds: 8, film: true,
+    id: "kumar-tray", path: "kumar", role: "nurse", seconds: 6, film: true,
     say: "Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon.",
-    clicks: ['File eval/p3/tray-hernia.mp4 into "Tray check"'],
+    clicks: ["Role Nurse", "Chart R. Kumar", 'File eval/p3/tray-hernia.mp4 into "Tray check"'],
     expect: ["Flagged: not everything planned was seen. The surgeon decides.", "needle holder", "2 (missing)", "Prepared demo result"],
     files: ["tray-hernia.mp4"],
     keyed: "SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill.",
   },
   {
-    id: "kumar-count", path: "kumar", role: "nurse", seconds: 10, film: true,
+    id: "kumar-count", path: "kumar", role: "nurse", seconds: 9, film: true,
     say: "Surgery begins, the pack opens at 15 swabs, and a count of 14 is flagged until it is corrected to 15.",
     clicks: ['Button "Surgery began"', 'Button "Record pack opened" (prefilled 15)', 'Field "Closing count (returned)" <- 14', 'Button "Record closing count"', 'Field "Closing count (returned)" <- 15', 'Button "Correct the count"'],
     expect: ["Closing count: 14 of 15 back, 1 unaccounted.", "Correction recorded."],
@@ -141,8 +141,8 @@ export const BEATS = [
     keyed: "No model call.",
   },
   {
-    id: "kumar-paracetamol", path: "kumar", role: "nurse", seconds: 9, film: true,
-    say: "Nurse Asha records the paracetamol round by voice, adds the strip photo, and confirms.",
+    id: "kumar-paracetamol", path: "kumar", role: "nurse", seconds: 7, film: true,
+    say: "Nurse Meena records the paracetamol round by voice, adds the strip photo, and confirms.",
     clicks: ['File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"', 'Button "Add photo" <- eval/p2/strip-paracetamol.png', 'Button "Confirm"'],
     expect: ["Paracetamol 1 g given to bed 4.", HEARD, "Photo matches the task", "by voice"],
     before: ["Paracetamol 1 g given to bed 4.", HEARD],
@@ -198,7 +198,7 @@ export const BEATS = [
   },
   {
     id: "iyer-bp", path: "iyer", role: "nurse", seconds: 6, film: true,
-    say: "Nurse Asha records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.",
+    say: "Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.",
     clicks: ["Role Nurse", "Chart S. Iyer", 'File eval/p2/iyer-bp.wav into "Complete a task by voice"', 'Button "Confirm"'],
     expect: ["BP 82 over 54, pulse 112, bed 7.", "is below the limit of 90"],
     before: ["BP 82 over 54, pulse 112, bed 7."],
@@ -227,6 +227,14 @@ export const BEATS = [
     clicks: ['Button "+1 h" twice', 'Button "End"'],
     expect: [`finished ${SALINE}`],
     keyed: "No model call.",
+  },
+  {
+    id: "iyer-recheck", path: "iyer", role: "nurse", seconds: 5, film: true,
+    say: "Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.",
+    clicks: ["Role Nurse", 'Textarea in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this text"', 'Radio "BP and pulse every 1 h"', 'Button "Confirm"', 'Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside', 'Button "Answer" in that flag'],
+    expect: ["logged BP 112/70, HR 84"],
+    absent: "→ Systolic BP 82 is below the limit of 90",
+    keyed: "1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch.",
   },
   {
     id: "iyer-discharge", path: "iyer", role: "doctor", seconds: 3, film: true,

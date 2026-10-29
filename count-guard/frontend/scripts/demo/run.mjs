@@ -32,7 +32,7 @@ const cleanup = async () => {
   await browser?.close().catch(() => {});
   await servers?.stop();
 };
-for (const sig of ["SIGINT", "SIGTERM"]) {
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   process.on(sig, () => { cleanup().finally(() => process.exit(130)); });
 }
 

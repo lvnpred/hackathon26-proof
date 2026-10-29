@@ -1,4 +1,5 @@
 import { label } from "./clock";
+import { MATCH_LABEL, proofOf } from "./drafts";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
@@ -25,9 +26,16 @@ export default function MyCare() {
               {(view.tasks || []).filter((task) => task.order_id === order.id).map((task) => (
                 <li key={task.id}>
                   <span>{task.title}</span> <span className="pill info">{task.status}</span>
-                  {(task.done || []).map((d) => (
-                    <p className="small muted" key={d.at_ms}>Done by {d.by} at {label(d.at_ms)}</p>
-                  ))}
+                  {(task.done || []).map((d) => {
+                    const proof = proofOf(d, view.photos);
+                    return (
+                      <p className="small muted" key={d.at_ms}>
+                        Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}
+                        {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
+                        {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span></>}
+                      </p>
+                    );
+                  })}
                 </li>
               ))}
             </ul>

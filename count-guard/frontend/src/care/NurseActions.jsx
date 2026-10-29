@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Nudge } from "../screens/WardPanel";
 import Checklist from "./Checklist";
+import TaskProof from "./TaskProof";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
 import { OBS_FIELDS, obsValues, sortTasks, surgeryNow } from "./tasklist";
@@ -37,9 +38,11 @@ function Orders({ orders, by, busy, act }) {
   );
 }
 
-function ObsForm({ busy, onSave }) {
-  const [form, setForm] = useState({});
+// Observation inputs. With `onChange` and no `onSave`, the parent owns the button (TaskProof).
+export function ObsForm({ busy, onSave, onChange, initial = {} }) {
+  const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
+  const edit = (next) => { setForm(next); onChange?.(next); };
   function save() {
     const out = obsValues(form);
     if (out.error) return setError(out.error);
@@ -51,16 +54,16 @@ function ObsForm({ busy, onSave }) {
       {OBS_FIELDS.map(([key, label]) => (
         <label className="field" key={key} style={{ flex: "1 1 70px" }}>
           {label}
-          <input inputMode="decimal" value={form[key] || ""} onChange={(event) => setForm({ ...form, [key]: event.target.value })} />
+          <input inputMode="decimal" value={form[key] || ""} onChange={(event) => edit({ ...form, [key]: event.target.value })} />
         </label>
       ))}
-      <button type="button" className="primary" disabled={busy} onClick={save}>Mark done</button>
+      {onSave && <button type="button" className="primary" disabled={busy} onClick={save}>Mark done</button>}
       {error && <p className="error small" role="alert">{error}</p>}
     </div>
   );
 }
 
-function TaskRow({ task, due, by, busy, act }) {
+function TaskRow({ task, due, by, busy, act, onProof }) {
   const done = (body = {}) => act(`/tasks/${task.id}/done`, { by, via: "tap", note: "", ...body });
   return (
     <li>
@@ -68,6 +71,9 @@ function TaskRow({ task, due, by, busy, act }) {
         <span>{task.title}</span>
         <span className={`pill ${due === "overdue" ? "sun" : due === "done" ? "ready" : "info"}`}>{due}</span>
       </div>
+      {due !== "done" && task.proof === "photo" && (
+        <button type="button" disabled={busy} onClick={() => onProof(task)}>Add photo proof</button>
+      )}
       {due !== "done" && task.kind === "obs" && <ObsForm busy={busy} onSave={(values) => done({ values })} />}
       {due !== "done" && task.kind !== "obs" && task.mode === "start_end" && (
         task.status === "running"
@@ -81,15 +87,17 @@ function TaskRow({ task, due, by, busy, act }) {
   );
 }
 
-function Ward({ view, nowMs, by, busy, act }) {
+function Ward({ view, nowMs, by, busy, act, upload, ask }) {
+  const [preset, setPreset] = useState(null);
   const tasks = sortTasks(view.tasks || [], nowMs).filter((task) => task.status !== "done");
   return (
     <>
+      <TaskProof view={view} tasks={view.tasks || []} by={by} busy={busy} act={act} upload={upload} ask={ask} preset={preset} onClear={() => setPreset(null)} />
       <section className="card">
         <p className="label">Tasks</p>
         {tasks.length === 0 && <p className="empty small">No open tasks.</p>}
         <ul className="task-list">
-          {tasks.map((task) => <TaskRow key={task.id} task={task} due={taskDue(task, nowMs)} by={by} busy={busy} act={act} />)}
+          {tasks.map((task) => <TaskRow key={task.id} task={task} due={taskDue(task, nowMs)} by={by} busy={busy} act={act} onProof={setPreset} />)}
         </ul>
       </section>
       {(view.nudges || []).map((nudge) => <Nudge key={nudge.id} nudge={nudge} busy={busy} act={act} />)}
@@ -131,7 +139,7 @@ function Theatre({ episodeId, view, busy, act, replaced }) {
 }
 
 // The nurse's actions for the patient's current state: orders first, then one branch per state.
-export default function NurseActions({ state, view, act, busy, nowMs, episodeId, replaced }) {
+export default function NurseActions({ state, view, act, upload, ask, busy, nowMs, episodeId, replaced }) {
   const by = state === "theatre" ? THEATRE_NURSE : WARD_NURSE;
   const move = (to, checklist) => act("/state", { to, by, reason: "", checklist });
   return (
@@ -143,7 +151,7 @@ export default function NurseActions({ state, view, act, busy, nowMs, episodeId,
           <Checklist items={ADMISSION} busy={busy} button="Complete admission" onDone={(c) => move("ward", c)} />
         </section>
       )}
-      {state === "ward" && <Ward view={view} nowMs={nowMs} by={by} busy={busy} act={act} />}
+      {state === "ward" && <Ward view={view} nowMs={nowMs} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
       {state === "theatre" && <Theatre episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} />}
       {state === "discharging" && (
         <section className="card">

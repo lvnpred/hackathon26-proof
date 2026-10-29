@@ -1,4 +1,5 @@
 import { blankRow } from "./orders.js";
+import { obsValues } from "./tasklist.js";
 
 export const MATCH_LABEL = {
   ok: "Photo matches the task",
@@ -64,4 +65,24 @@ export function proposalChoices(proposal, tasks) {
 export function newestPhoto(view, taskId) {
   const photos = (view?.photos || []).filter((p) => taskId === null || p.task_id === taskId);
   return photos.length ? photos[photos.length - 1] : null;
+}
+
+// The body for POST /tasks/{id}/done (without `by`), or { error }. Mirrors the server's DoneIn rules.
+export function doneBody({ task, via, transcript, form, photo }) {
+  const said = (transcript || "").trim();
+  if (via === "voice" && !said) return { error: "A completion by voice needs what was said." };
+  const body = { via, transcript: said, note: "" };
+  if (task.kind === "obs") {
+    const out = obsValues(form || {});
+    if (out.error) return { error: out.error };
+    body.values = out.values;
+  }
+  if (photo) body.proof_id = photo.id;
+  return { body };
+}
+
+// What a done entry shows: spoken or tapped, its photo (if still on the chart) and whether it was flagged.
+export function proofOf(done, photos) {
+  const photo = done.proof_id ? (photos || []).find((p) => p.id === done.proof_id) || null : null;
+  return { voice: done.via === "voice", photo, flagged: done.match === "mismatch" };
 }

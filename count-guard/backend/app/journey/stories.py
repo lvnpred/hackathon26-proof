@@ -109,6 +109,10 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} dictated {len(p.get('items') or [])} orders (draft, not signed)."
     if kind == "discharge.drafted":
         return f"{p.get('by')} dictated a discharge summary (draft, not signed)."
+    if kind == "photo.added":
+        return f"{p.get('by')} added a {p.get('purpose')} photo."
+    if kind == "proof.checked":
+        return f"Photo check: {p.get('why')}"
     if kind == "order.acknowledged":
         return f"{p.get('by')} acknowledged the orders."
     if kind == "task.created":

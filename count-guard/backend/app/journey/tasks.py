@@ -16,6 +16,7 @@ from app.morning.discharge import visible_events
 HOUR_MS = 3_600_000
 ORDER_STATES = ("clinic", "admitting", "ward")
 CLOSED_STATES = ("discharging", "home", "clinic_done")  # tasks end with the stay
+PROGRESS = ("task.began", "task.done")
 OBS_FIELDS = ("sbp", "dbp", "hr", "spo2", "temp")
 
 
@@ -52,7 +53,8 @@ def task_list(events: list[dict]) -> list[dict]:
     out = []
     for created in (e for e in rows if e["event_type"] == "task.created"):
         p, tid = created["payload"], created["id"]
-        mine = [e for e in rows if e["payload"].get("task_id") == tid]
+        # Only began and done are progress; a photo or its check carries task_id but changes nothing.
+        mine = [e for e in rows if e["payload"].get("task_id") == tid and e["event_type"] in PROGRESS]
         done = [e for e in mine if e["event_type"] == "task.done"]
         began = [e for e in mine if e["event_type"] == "task.began"]
         running = bool(mine) and mine[-1]["event_type"] == "task.began"

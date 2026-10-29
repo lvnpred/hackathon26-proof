@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+import uuid
+from typing import Literal
 
-from app.journey import dictation, live, states, tasks
-from app.journey.api import _act, _require, _store
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
+
+from app.journey import dictation, live, proof, states, tasks
+from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, view
+from app.morning.strips import parse_strip_text
 
 media_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 models_router = APIRouter(prefix="/journey")
 
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 SPARK = "muse-spark-1.3"
+PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 NOTHING = "Nothing to draft was heard. Type the {what} instead."
 
 
@@ -98,3 +104,78 @@ def dictate_discharge(
         "discharge summary", lambda r: not r,
     )
     return _act(request, episode_id, "discharge.drafted", {**meta, "sections": result, "by": by}, at_ms)
+
+
+def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated: dict) -> dict:
+    """The proof check for one photo. A reader that gave nothing, or a reply that does not parse, is `none`."""
+    if task["kind"] == "dose":
+        read = live.read_photo(settings, "strip", raw, name, kind)
+        try:
+            strips = parse_strip_text(read["text"] or "")
+        except (ValueError, KeyError, TypeError, AttributeError):
+            strips = []
+        return {**proof.check_strip(strips, task), "source": read["source"]}
+    if task["kind"] == "obs":
+        read = live.read_photo(settings, "monitor", raw, name, kind)
+        return {**proof.check_monitor(proof.parse_monitor_text(read["text"] or ""), stated), "source": read["source"]}
+    return {"read": "", "match": "none", "why": proof.NO_READING, "source": "none"}
+
+
+@media_router.post("/photos")
+def add_photo(
+    episode_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    purpose: Literal["reference", "proof"] = Form(...),
+    by: str = Form(..., min_length=1, max_length=80),
+    at_ms: int | None = Form(None, ge=0),
+    task_id: str | None = Form(None, min_length=1, max_length=64),
+    sbp: int | None = Form(None, ge=30, le=300),
+    dbp: int | None = Form(None, ge=10, le=200),
+    hr: int | None = Form(None, ge=20, le=250),
+) -> dict:
+    _require(request, episode_id)
+    if (purpose == "proof") != (task_id is not None):
+        raise HTTPException(status_code=422, detail="A proof photo names a task; a reference photo names none.")
+    kind = (file.content_type or "").split(";")[0].strip().lower()
+    if kind not in PHOTO_TYPES:
+        raise HTTPException(status_code=400, detail="The photo must be a JPEG, PNG or WebP image.")
+    raw = file.file.read(MAX_PHOTO_BYTES + 1)
+    if not raw or len(raw) > MAX_PHOTO_BYTES:
+        raise HTTPException(status_code=400, detail="The photo is empty or larger than 8 MB.")
+    store, settings = _store(request), request.app.state.settings
+    task = None
+    if task_id is not None:
+        task = next((t for t in tasks.task_list(store.events(episode_id)) if t["id"] == task_id), None)
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task["status"] not in ("open", "running"):
+            raise HTTPException(status_code=409, detail=f"This task is {task['status']}; a proof photo goes with an open task.")
+        task = {**task, "name": store.get_event(task_id)["payload"]["name"]}
+    folder = settings.data_dir / "journey_media" / episode_id
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{uuid.uuid4().hex}{PHOTO_TYPES[kind]}"
+    path.write_bytes(raw)
+    ts = _at(store, episode_id, at_ms)
+    added = {"purpose": purpose, "path": str(path.relative_to(settings.data_dir)), "by": by}
+    if task_id is not None:
+        added["task_id"] = task_id
+    photo = store.append(episode_id, "photo.added", added, ts_ms=ts)
+    if task is not None:
+        stated = {k: v for k, v in (("sbp", sbp), ("dbp", dbp), ("hr", hr)) if v is not None}
+        checked = _check_photo(settings, task, raw, file.filename or "", kind, stated)
+        store.append(episode_id, "proof.checked", {"photo_id": photo["id"], "task_id": task_id, **checked}, ts_ms=ts)
+    return view(request, episode_id)
+
+
+@media_router.get("/photos/{photo_id}")
+def get_photo(episode_id: str, photo_id: str, request: Request) -> FileResponse:
+    _require(request, episode_id)
+    event = _store(request).get_event(photo_id)
+    if event is None or event["episode_id"] != episode_id or event["event_type"] != "photo.added":
+        raise HTTPException(status_code=404, detail="Photo not found")
+    data_dir = request.app.state.settings.data_dir.resolve()
+    path = (data_dir / event["payload"]["path"]).resolve()
+    if not path.is_relative_to(data_dir / "journey_media") or not path.is_file():
+        raise HTTPException(status_code=404, detail="Photo not found")
+    return FileResponse(path)

@@ -205,6 +205,7 @@ def flow_view(events: list[dict]) -> dict:
         (e["payload"]["procedure"] for e in reversed(events) if e["event_type"] == "patient.state" and e["payload"].get("procedure")),
         None,
     )
+    from app.journey.proof import photos_view
     from app.journey.tasks import orders_list, task_list  # tasks imports this module
 
     return {
@@ -216,4 +217,5 @@ def flow_view(events: list[dict]) -> dict:
         "procedure": {"key": procedure, "title": PROCEDURES[procedure]} if procedure else None,
         "procedures": dict(PROCEDURES),
         "drafts": open_drafts(events),
+        "photos": photos_view(visible_events(events)),
     }

@@ -14,7 +14,7 @@ from app.journey.doctor_status import current
 staff_router = APIRouter(prefix="/journey/staff")
 
 NOT_BOARD = "That is not the ward staff board."
-IDS_BAD = "Give 1 to 10 patient ids, each 1 to 64 characters."
+IDS_BAD = "Send 1 to 10 patient ids, each 1 to 64 characters."
 MAX_HOURS = 12 * 3_600_000
 
 

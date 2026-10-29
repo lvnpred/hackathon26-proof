@@ -104,8 +104,20 @@ def test_manual_busy_wins_until_it_expires(tmp_path):
     assert cleared.status_code == 200 and cleared.json()["text"] == THEATRE and cleared.json()["source"] == "auto"
 
 
-def test_status_refusals(tmp_path):
+def test_status_refusals(tmp_path, monkeypatch):
     client, ids, board = _ward(tmp_path)
+    details = []
+    plain_set, plain_chip = _set, _chip
+
+    def collect(call):
+        def wrapped(*a, **k):
+            r = call(*a, **k)
+            details.append(str(r.json().get("detail", "")) if r.status_code >= 400 else "")
+            return r
+        return wrapped
+
+    monkeypatch.setitem(globals(), "_set", collect(plain_set))
+    monkeypatch.setitem(globals(), "_chip", collect(plain_chip))
     before = len(_events(client, board))
     at = 2 * H
     for status, until in (("busy", at), ("busy", at - 1), ("busy", at + 12 * H + 1), ("busy", None),
@@ -124,6 +136,12 @@ def test_status_refusals(tmp_path):
     assert client.get("/journey/staff/doctor", params={"board": board, "ids": "", "at_ms": 0}).status_code == 422
     assert client.get("/journey/staff/doctor", params={"board": board, "ids": "a" * 65, "at_ms": 0}).status_code == 422
     assert len(_events(client, board)) == before + 1
+    refusals = [d for d in details if d]
+    assert any("Send 1 to 10 patient ids" in d for d in refusals) and len(refusals) >= 10
+    assert client.get("/journey/staff/doctor", params={"board": ids["4"], "ids": board, "at_ms": 0}).status_code == 422
+    refusals.append(plain_set(client, ids["4"], ids, "auto", 0).json()["detail"])
+    for text in refusals:
+        assert not ADVICE.search(text), text
 
 
 def test_staff_routes_refuse_a_patient_as_board(tmp_path):

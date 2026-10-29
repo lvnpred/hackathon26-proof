@@ -13,7 +13,8 @@ from app.core.tracker import Tracker
 from app.engine import Engine
 
 
-TOOL_TIMEOUT_S = 60
+TOOL_TIMEOUT_S = 60  # request-path calls (one upload, one clip)
+RECORDING_TOOL_TIMEOUT_S = 600  # v1 recordings are not capped in length
 
 
 class SamCallFailed(RuntimeError):
@@ -40,8 +41,8 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     work.mkdir(parents=True, exist_ok=True)
     clip = work / "clip-2fps.mp4"
     audio = work / "speech.wav"
-    to_sam_clip(source, clip, settings.sam_fps)
-    _ffmpeg(["-y", "-i", str(source), "-vn", "-ac", "1", "-ar", "16000", str(audio)])
+    to_sam_clip(source, clip, settings.sam_fps, RECORDING_TOOL_TIMEOUT_S)
+    _ffmpeg(["-y", "-i", str(source), "-vn", "-ac", "1", "-ar", "16000", str(audio)], RECORDING_TOOL_TIMEOUT_S)
     names = concepts or list(SAM_CONCEPTS)
     try:
         records = SamAdapter(settings).segment_video(clip, names)
@@ -68,7 +69,7 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
         lost_after_frames=settings.lost_after_frames,
         low_confidence=settings.low_confidence,
     )
-    width, height = _video_size(clip)
+    width, height = _video_size(clip, RECORDING_TOOL_TIMEOUT_S)
     for index in sorted(by_frame):
         media_ts = int(index * 1000 / settings.sam_fps)
         engine._ingest_detections(
@@ -114,14 +115,15 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     return engine.snapshot(case_id, perception="sam-3.1")
 
 
-def to_sam_clip(source: Path, out: Path, fps: int) -> None:
+def to_sam_clip(source: Path, out: Path, fps: int, timeout: int = TOOL_TIMEOUT_S) -> None:
     """Convert a clip to what SAM 3.1 reads. It takes H.264, H.265 or MPEG-4 only, so the codec is named."""
     _ffmpeg(
         [
             "-y", "-i", str(source),
             "-vf", f"fps={fps},scale=-2:720",
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(out),
-        ]
+        ],
+        timeout,
     )
 
 
@@ -143,12 +145,12 @@ def _one_line(text: str | None) -> str:
     return lines[-1][:300] if lines else ""
 
 
-def _run_tool(cmd: list[str]) -> subprocess.CompletedProcess:
+def _run_tool(cmd: list[str], timeout: int = TOOL_TIMEOUT_S) -> subprocess.CompletedProcess:
     """Run ffmpeg or ffprobe; a missing binary or a bad clip becomes a one-line RuntimeError."""
     try:
-        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=TOOL_TIMEOUT_S)
+        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"{cmd[0]} timed out after {TOOL_TIMEOUT_S} seconds.") from exc
+        raise RuntimeError(f"{cmd[0]} timed out after {timeout} seconds.") from exc
     except FileNotFoundError as exc:
         raise RuntimeError(f"{cmd[0]} is not installed on this server; install ffmpeg to upload video.") from exc
     except subprocess.CalledProcessError as exc:
@@ -159,11 +161,11 @@ def _run_tool(cmd: list[str]) -> subprocess.CompletedProcess:
     return completed
 
 
-def _ffmpeg(args: list[str]) -> None:
-    _run_tool(["ffmpeg", *args])
+def _ffmpeg(args: list[str], timeout: int = TOOL_TIMEOUT_S) -> None:
+    _run_tool(["ffmpeg", *args], timeout)
 
 
-def _video_size(path: Path) -> tuple[int, int]:
+def _video_size(path: Path, timeout: int = TOOL_TIMEOUT_S) -> tuple[int, int]:
     completed = _run_tool(
         [
             "ffprobe",
@@ -177,6 +179,7 @@ def _video_size(path: Path) -> tuple[int, int]:
             "csv=p=0:s=x",
             str(path),
         ],
+        timeout,
     )
     try:
         width, height = completed.stdout.strip().split("x")

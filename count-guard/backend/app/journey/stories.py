@@ -109,6 +109,15 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} dictated {len(p.get('items') or [])} orders (draft, not signed)."
     if kind == "discharge.drafted":
         return f"{p.get('by')} dictated a discharge summary (draft, not signed)."
+    if kind == "tray.planned":
+        n = sum(i["qty"] for i in p["instruments"])
+        return f"{p['by']} confirmed the tray plan for {p['title']}: {n} instruments, {p['swab_total']} swabs."
+    if kind == "tray.checked":
+        return f"Tray check by video: {p.get('why')}"
+    if kind == "setup.checked":
+        return f"Set-up check by video: {p.get('why')}"
+    if kind == "photo.added" and p.get("purpose") == "frame":
+        return f"A frame from the {p.get('video')} clip was kept as proof."
     if kind == "photo.added":
         return f"{p.get('by')} added a {p.get('purpose')} photo."
     if kind == "proof.checked":

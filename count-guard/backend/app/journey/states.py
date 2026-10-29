@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient
-from app.journey.procedures import PROCEDURE_TEMPLATES
+from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
 from app.journey.stories import clock
+from app.journey.video import checks_view, tray_state
 from app.morning.discharge import visible_events
 
 STATES = ("clinic", "clinic_done", "admitting", "ward", "theatre", "discharging", "home")
@@ -198,6 +199,10 @@ def now_next(events: list[dict]) -> dict:
     if fresh and state in ("ward", "admitting"):
         ack = f"Nurse acknowledges the new orders from {fresh[-1]['by']}."
         next_ = ack if state == "ward" else f"{ack[:-1]}, then completes the admission."
+    if state == "theatre" and surgery_status(events) == "none":
+        tray = tray_state(events)
+        if tray["planned"] and not tray["latest"]:
+            next_ = "Nurse checks the tray by video, then records the surgery and the count."
     return {"now": now, "next": next_}
 
 
@@ -219,4 +224,7 @@ def flow_view(events: list[dict]) -> dict:
         "procedures": dict(PROCEDURES),
         "drafts": open_drafts(events),
         "photos": photos_view(visible_events(events)),
+        "tray": tray_state(events),
+        "video_checks": checks_view(events),
+        "tray_templates": {key: tray_plan(key) for key in PROCEDURE_TEMPLATES},
     }

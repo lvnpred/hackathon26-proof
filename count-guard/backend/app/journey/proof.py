@@ -71,6 +71,8 @@ def photos_view(events: list[dict]) -> list[dict]:
         if e["event_type"] != "photo.added":
             continue
         p, found = e["payload"], checks.get(e["id"])
+        if p["purpose"] == "frame":  # frames belong to a video check, not to the photo list
+            continue
         out.append(
             {
                 "id": e["id"],

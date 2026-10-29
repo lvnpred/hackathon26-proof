@@ -81,3 +81,38 @@ def frame_times(rows: list[dict]) -> list[float]:
         return []
     times = sorted({r["at_s"] for r in rows if r["seen"] and r["at_s"] is not None})
     return times[:MAX_FRAMES] if times else [0.0]
+
+
+def _frames(episode_id: str, ids: list[str]) -> list[dict]:
+    return [{"id": i, "url": f"/journey/episodes/{episode_id}/photos/{i}"} for i in ids]
+
+
+def checks_view(events: list[dict]) -> list[dict]:
+    """Every tray and set-up check, oldest first, with its kept frames."""
+    out = []
+    for e in events:
+        if e["event_type"] not in ("tray.checked", "setup.checked"):
+            continue
+        p = e["payload"]
+        out.append(
+            {
+                "id": e["id"],
+                "check": e["event_type"].split(".")[0],
+                "task_id": p.get("task_id"),
+                "at_ms": e["ts_ms"],
+                "by": p["by"],
+                **{k: p[k] for k in ("rows", "missing", "unchecked", "match", "why", "source")},
+                "frames": _frames(e["episode_id"], p["frame_ids"]),
+            }
+        )
+    return out
+
+
+def tray_state(events: list[dict]) -> dict:
+    """The latest tray plan, and the latest tray check written after it."""
+    planned = next((i for i in range(len(events) - 1, -1, -1) if events[i]["event_type"] == "tray.planned"), None)
+    if planned is None:
+        return {"planned": None, "latest": None}
+    checks = checks_view(events[planned + 1 :])
+    latest = [c for c in checks if c["check"] == "tray"]
+    return {"planned": events[planned]["payload"], "latest": latest[-1] if latest else None}

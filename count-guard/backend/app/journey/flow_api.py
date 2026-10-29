@@ -10,6 +10,7 @@ from pydantic import Field, field_validator, model_validator
 from app.journey import states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
 from app.journey.dictation import draft_refusal
+from app.journey.procedures import tray_plan
 from app.journey.seed import card_payload
 from app.journey.stories import CARE_TEMPLATES
 
@@ -44,7 +45,13 @@ def move(episode_id: str, body: StateIn, request: Request) -> dict:
         payload = states.move_payload(events, body.to, body.model_dump())
     except states.MoveRefused as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _act(request, episode_id, "patient.state", payload, body.at_ms)
+    store = _store(request)
+    ts = _at(store, episode_id, body.at_ms)
+    store.append(episode_id, "patient.state", payload, ts_ms=ts)
+    if body.to == "theatre":  # the plan the doctor confirms is the template as published
+        store.append(episode_id, "tray.planned", {**tray_plan(payload["procedure"]), "by": body.by}, ts_ms=ts)
+    raise_nudges(store, episode_id, ts)
+    return view(request, episode_id)
 
 
 @flow_router.post("/surgery")

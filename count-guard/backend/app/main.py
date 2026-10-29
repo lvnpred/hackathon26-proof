@@ -14,6 +14,7 @@ from app.engine import Engine
 from app.journey.api import demo_router, router as journey_router
 from app.journey.flow_api import flow_router
 from app.journey.media_api import media_router, models_router
+from app.journey.video_api import video_router
 from app.morning.api import router as morning_router
 from app.morning.routes_extra import router as morning_extra_router
 from app.morning.store import MorningStore
@@ -50,6 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(demo_router)
     app.include_router(flow_router)
     app.include_router(media_router)
+    app.include_router(video_router)
     app.include_router(models_router)
     return app
 

@@ -74,6 +74,11 @@ def test_discharge_sections_kumar():
     assert sections[-1]["text"] == "Review in clinic on day 7."
 
 
+def test_discharge_section_drops_a_spoken_heading_cue():
+    sections = d.discharge_sections("Diagnosis: right inguinal hernia. Review in clinic on day 7.")
+    assert sections[0] == {"heading": "Diagnosis", "text": "Right inguinal hernia."}
+
+
 def test_dictate_orders_prepared_no_key(tmp_path):
     client, eid = _new(tmp_path)
     view = _upload(client, eid, "dictate/orders", "kumar-orders.wav").json()

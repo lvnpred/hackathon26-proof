@@ -144,6 +144,10 @@ def discharge_sections(text: str) -> list[dict]:
             if hit:
                 heading = name
                 break
+        cue = re.match(rf"{re.escape(heading)}\s*:\s*(?=\S)", sentence, re.I)
+        if cue:  # a spoken heading cue would double the heading
+            sentence = sentence[cue.end():]
+            sentence = sentence[:1].upper() + sentence[1:]
         found.setdefault(heading, []).append(sentence + ".")
     return [{"heading": h, "text": " ".join(found[h])[:600]} for h in HEADINGS if h in found]
 

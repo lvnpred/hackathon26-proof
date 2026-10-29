@@ -52,10 +52,10 @@ function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
       {due !== "done" && task.proof === "photo" && (
         <button type="button" disabled={busy} onClick={() => onProof(task)}>Add photo proof</button>
       )}
-      {taskVideoLabel(task) && <p className="small muted">{taskVideoLabel(task)}</p>}
+      {taskVideoLabel(task) && !(due !== "done" && task.proof === "video") && <p className="small muted">{taskVideoLabel(task)}</p>}
       {due !== "done" && task.proof === "video" && (
         <VideoCheck
-          title={`Set-up check · ${task.title}`}
+          title="Set-up check"
           kind="setup"
           check={latestCheck(view, "setup", task.id)}
           busy={busy}

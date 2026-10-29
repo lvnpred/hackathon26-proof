@@ -113,6 +113,12 @@ def plain(event: dict) -> str:
     if kind == "tray.planned":
         n = sum(i["qty"] for i in p["instruments"])
         return f"{p['by']} confirmed the tray plan for {p['title']}: {n} instruments, {p['swab_total']} swabs."
+    if kind == "doctor.status":
+        doctor = short_name(p.get("doctor"))
+        if p.get("source") == "manual":
+            said = {"available": "Available", "busy": f"Busy until {clock(p.get('until_ms') or 0)[-5:]}"}
+            return f"{doctor} set the status: {said.get(p.get('status'), 'automatic')}."
+        return f"{doctor} is in theatre with {p.get('patient')}, free about {clock(p.get('until_ms') or 0)[-5:]}."
     if kind == "medicines.read":
         return f"Medicines photo: {p.get('why')}"
     if kind == "tray.checked":

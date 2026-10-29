@@ -10,6 +10,7 @@ from pydantic import Field, field_validator, model_validator
 from app.journey import states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
 from app.journey.dictation import draft_refusal
+from app.journey.doctor_status import theatre_payload
 from app.journey.procedures import tray_plan
 from app.journey.seed import card_payload
 from app.journey.stories import CARE_TEMPLATES
@@ -49,7 +50,10 @@ def move(episode_id: str, body: StateIn, request: Request) -> dict:
     ts = _at(store, episode_id, body.at_ms)
     store.append(episode_id, "patient.state", payload, ts_ms=ts)
     if body.to == "theatre":  # the plan the doctor confirms is the template as published
-        store.append(episode_id, "tray.planned", {**tray_plan(payload["procedure"]), "by": body.by}, ts_ms=ts)
+        plan = tray_plan(payload["procedure"])
+        store.append(episode_id, "tray.planned", {**plan, "by": body.by}, ts_ms=ts)
+        status = theatre_payload(body.by, _require(request, episode_id)["label"], ts, plan["expected_minutes"])
+        store.append(episode_id, "doctor.status", {**status, "by": body.by}, ts_ms=ts)
     raise_nudges(store, episode_id, ts)
     return view(request, episode_id)
 

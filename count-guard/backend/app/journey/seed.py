@@ -18,6 +18,7 @@ from app.journey.stories import CARE_TEMPLATES
 DOCTOR = "Dr. A. Rao (synthetic)"
 NURSE = "Nurse Meena (synthetic)"
 NURSE_THEATRE = "Nurse Asha (synthetic)"
+BOARD_LABEL = "Ward staff board (synthetic)"  # holds the doctor's hand-set status; never a patient
 
 PATIENTS = [
     ("4", "R. Kumar, 58 M (synthetic)"),
@@ -41,12 +42,16 @@ def card_payload(template_key: str, rx_payload: dict | None, by: str) -> dict:
     }
 
 
-def seed_ward(store, raise_nudges: Callable) -> list[dict]:
-    """Create the three episodes; Iyer gets her ward history. Returns id, bed and name in bed order."""
+def seed_ward(store, raise_nudges: Callable) -> dict:
+    """Create the three episodes and the staff board; Iyer gets her ward history.
+
+    Returns {"patients": id, bed and name in bed order, "board": the staff board's episode id}.
+    """
     made = []
     for bed, name in PATIENTS:
         episode_id = store.create_episode(name)["id"]
         made.append({"id": episode_id, "bed": bed, "name": name})
+    board = store.create_episode(BOARD_LABEL)["id"]
 
     iyer = made[1]["id"]
     admitted = {"from": None, "to": "ward", "by": DOCTOR, "reason": "Admitted the day before (seed)"}
@@ -63,4 +68,4 @@ def seed_ward(store, raise_nudges: Callable) -> list[dict]:
     reading = {"sbp": 124, "dbp": 78, "hr": 80, "spo2": 98, "temp": 36.9}
     tasks.complete_task(store, iyer, task["id"], NURSE, 0, values=reading)
     raise_nudges(store, iyer, 0)
-    return made
+    return {"patients": made, "board": board}

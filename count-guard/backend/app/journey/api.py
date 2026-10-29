@@ -463,5 +463,5 @@ def play(episode_id: str, request: Request) -> dict:
 
 @demo_router.post("/seed")
 def seed(request: Request) -> dict:
-    """Three new synthetic patients for the ward queue. Earlier episodes stay."""
-    return {"patients": seed_ward(_store(request), raise_nudges)}
+    """Three new synthetic patients and the staff board. Earlier episodes stay."""
+    return seed_ward(_store(request), raise_nudges)

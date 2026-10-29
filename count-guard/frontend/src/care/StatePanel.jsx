@@ -1,10 +1,11 @@
-// Placeholder: one button per allowed move for the current role. Moves that need extra input are left to a later panel.
+import DoctorActions from "./DoctorActions";
+
 const BY = {
-  doctor: "Dr. A. Rao (synthetic)",
   nurse: "Nurse Meena (synthetic)",
 };
 
-export default function StatePanel({ state, role, view, act, busy }) {
+// Stopgap until the nurse and patient branches land: one button per allowed move that needs no extra input.
+function MoveButtons({ role, view, act, busy }) {
   const moves = (view.allowed || []).filter((move) => move.role === role && !(move.needs || []).length);
   return (
     <section className="card" aria-label="State">
@@ -19,4 +20,15 @@ export default function StatePanel({ state, role, view, act, busy }) {
       </div>
     </section>
   );
+}
+
+// Actions for the open chart: one branch per role.
+export default function StatePanel({ state, role, view, act, busy }) {
+  switch (role) {
+    case "doctor":
+      return <DoctorActions state={state} view={view} act={act} busy={busy} />;
+    // NurseActions and the patient branch replace MoveButtons in the next task.
+    default:
+      return <MoveButtons role={role} view={view} act={act} busy={busy} />;
+  }
 }

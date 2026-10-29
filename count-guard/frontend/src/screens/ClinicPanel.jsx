@@ -1,7 +1,7 @@
 import { useState } from "react";
 import DoctorOrders from "./DoctorOrders";
 
-function RxTable({ rx }) {
+export function RxTable({ rx }) {
   if (!rx) return <p className="empty small">No prescription yet. Import one or use the demo prescription.</p>;
   return (
     <div className="stack">
@@ -35,6 +35,28 @@ function RxTable({ rx }) {
   );
 }
 
+// Prescription import: a Doctor Dictation document number, or the demo prescription.
+export function RxImport({ busy, act }) {
+  const [documentId, setDocumentId] = useState("");
+  const docNumber = Number(documentId);
+  return (
+    <div className="row">
+      <label className="field" style={{ flex: "1 1 220px" }}>
+        Doctor Dictation document number
+        <input inputMode="numeric" value={documentId} onChange={(event) => setDocumentId(event.target.value)} placeholder="1" />
+      </label>
+      <button
+        className="primary"
+        disabled={busy || !Number.isInteger(docNumber) || docNumber < 1}
+        onClick={() => act("/rx/import", { document_id: docNumber })}
+      >
+        Import from Doctor Dictation
+      </button>
+      <button disabled={busy} onClick={() => act("/rx/demo", {})}>Use the demo prescription</button>
+    </div>
+  );
+}
+
 function CardSummary({ card }) {
   if (!card) return <p className="empty small">No card signed yet.</p>;
   return (
@@ -51,31 +73,16 @@ function CardSummary({ card }) {
 
 // The doctor's cards: prescription, ward limits, discharge card.
 export default function ClinicPanel({ view, busy, act }) {
-  const [documentId, setDocumentId] = useState("");
   const [template, setTemplate] = useState("hernia-repair");
   const [signer, setSigner] = useState("Dr. A. Rao (synthetic)");
 
   const templates = Object.entries(view?.templates || {});
-  const docNumber = Number(documentId);
 
   return (
     <>
       <section className="card">
         <p className="label">Prescription</p>
-        <div className="row">
-          <label className="field" style={{ flex: "1 1 220px" }}>
-            Doctor Dictation document number
-            <input inputMode="numeric" value={documentId} onChange={(event) => setDocumentId(event.target.value)} placeholder="1" />
-          </label>
-          <button
-            className="primary"
-            disabled={busy || !view || !Number.isInteger(docNumber) || docNumber < 1}
-            onClick={() => act("/rx/import", { document_id: docNumber })}
-          >
-            Import from Doctor Dictation
-          </button>
-          <button disabled={busy || !view} onClick={() => act("/rx/demo", {})}>Use the demo prescription</button>
-        </div>
+        <RxImport busy={busy || !view} act={act} />
         <RxTable rx={view?.rx} />
       </section>
       <DoctorOrders orders={view?.orders} busy={busy || !view} act={act} />

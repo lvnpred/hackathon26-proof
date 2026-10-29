@@ -20,6 +20,7 @@ import Ot from "./screens/Ot";
 import Patient from "./screens/Patient";
 import Setup from "./screens/Setup";
 import Ward from "./screens/Ward";
+import { OLD_NAV, OLDER_SCREENS } from "./care/older";
 
 export const BANNER = "Research demo. Not for clinical use.";
 
@@ -142,14 +143,7 @@ export function Shell({ children, guide, subtitle, status }) {
       </header>
       <div className="nav-bar">
         <nav className="nav" aria-label="Main">
-          <NavLink to="/steps">Morning</NavLink>
-          <NavLink to="/guide">Guide</NavLink>
-          <NavLink to="/count">Camera count</NavLink>
-          <NavLink to="/journey">Journey</NavLink>
-          <NavLink to="/doctor">Doctor</NavLink>
-          <NavLink to="/nurse">Nurse</NavLink>
-          <NavLink to="/patient">Patient</NavLink>
-          <NavLink to="/audit">Audit</NavLink>
+          {OLD_NAV.map(([to, name]) => <NavLink key={to} to={to}>{name}</NavLink>)}
         </nav>
         <Banner />
       </div>
@@ -161,16 +155,11 @@ export function Shell({ children, guide, subtitle, status }) {
   );
 }
 
-const OLDER = [
-  ["/steps", "Morning"], ["/count", "Camera count"], ["/journey", "Journey"], ["/doctor", "Doctor"],
-  ["/nurse", "Nurse"], ["/patient", "Patient"], ["/audit", "Audit"],
-];
-
 function Older() {
   return (
     <Shell>
       <PageLead kicker="Archive" title="Older screens" body="These still work. The ward care screens are the main route now." />
-      <ul>{OLDER.map(([to, name]) => <li key={to}><Link to={to}>{name}</Link></li>)}</ul>
+      <ul>{OLDER_SCREENS.map(([to, name]) => <li key={to}><Link to={to}>{name}</Link></li>)}</ul>
     </Shell>
   );
 }

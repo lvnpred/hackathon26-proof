@@ -1,7 +1,7 @@
 """Stand-in photos for the P4 demo, until the owner photographs real strips (P2-R2). Needs Pillow.
 
 Run: .venv/bin/python eval/p4/make_photos.py
-Writes meds-kumar.png, meds-iyer.png (one drawn strip per prepared row) and wound-day3.png.
+Writes meds-kumar.png, meds-iyer.png (one drawn strip per prepared row) wound-day3.png and wound-day0.png (the reference photo taken after theatre).
 The output (*.png) is git-ignored. The medicine file names match backend/app/journey/prepared/*.json.
 """
 
@@ -49,11 +49,21 @@ def wound_photo(out: Path) -> None:
     img.save(out)
 
 
+def wound_photo_day0(out: Path) -> None:
+    """The same panel as wound_photo, with a fresh dressing: a clean blue line, so the two thumbnails differ."""
+    img = Image.new("RGB", (640, 400), (224, 172, 140))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((200, 150, 440, 250), radius=10, fill=(250, 250, 250), outline=(150, 150, 150), width=3)
+    d.line((220, 200, 420, 200), fill=(70, 110, 190), width=5)
+    img.save(out)
+
+
 def main() -> None:
     for name in ("meds-kumar", "meds-iyer"):
         text = json.loads((PREPARED / f"{name}.json").read_text())["text"]
         medicines_photo(json.loads(text)["strips"], HERE / f"{name}.png")
     wound_photo(HERE / "wound-day3.png")
+    wound_photo_day0(HERE / "wound-day0.png")
 
 
 if __name__ == "__main__":

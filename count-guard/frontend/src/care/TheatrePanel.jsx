@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { swabTotal } from "./video";
 
 const NURSE = "Nurse Asha (synthetic)";
 
 // The Theatre count: pack opened, closing count, a correction, and the door to the camera count.
 export default function TheatrePanel({ episodeId, view, busy, act, replaced }) {
   const navigate = useNavigate();
-  const [quantity, setQuantity] = useState("20");
+  const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
   const [detail, setDetail] = useState("");
   const [by, setBy] = useState(NURSE);

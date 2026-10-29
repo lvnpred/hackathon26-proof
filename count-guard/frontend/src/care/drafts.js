@@ -15,6 +15,7 @@ export const SOURCE_LABEL = {
   "prepared (live call failed)": "Prepared demo result (the live call failed)",
   failed: "Not read (the model call failed)",
   unreadable: "Clip could not be read",
+  "sam-3.1": "SAM 3.1",
   typed: "Typed",
   "muse-voice-transcribe": "Muse Voice",
 };

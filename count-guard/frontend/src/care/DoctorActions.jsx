@@ -5,6 +5,8 @@ import Dictate from "./Dictate";
 import { draftChanged, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
 import { surgeryNow } from "./tasklist";
+import { trayFlag } from "./video";
+import { TrayPreview } from "./VideoCheck";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
 
@@ -113,6 +115,7 @@ function Ward({ view, busy, act, upload }) {
             {procedures.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
           </select>
         </label>
+        <TrayPreview plan={view.tray_templates?.[procedure]} />
         <button type="button" className="primary" disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
       </section>
       <Dictate label="Dictate discharge" busy={busy} onSend={dictate(upload, "/dictate/discharge")} />
@@ -145,9 +148,11 @@ function Theatre({ view, busy, act }) {
   const [reason, setReason] = useState("");
   const { began, ended } = surgeryNow(view.timeline);
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
+  const flag = trayFlag(view);
   return (
     <section className="card">
       <p className="label">In theatre</p>
+      {flag && <p className="note" role="status"><span className="pill sun">Tray flag</span> {flag}</p>}
       <p className="small">Surgery began: {began || "not yet"}</p>
       <p className="small">Surgery ended: {ended || "not yet"}</p>
       {move && (

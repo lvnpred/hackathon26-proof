@@ -1,0 +1,68 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { CHECK_LABEL, checkLabel, latestCheck, swabTotal, taskVideoLabel, trayFlag, videoProblem } from "./video.js";
+
+const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
+const file = (type, mb) => ({ type, size: mb * 1024 * 1024 });
+
+test("videoProblem accepts MP4, MOV and WebM within 50 MB", () => {
+  assert.equal(videoProblem(file("video/quicktime", 10)), "");
+  assert.equal(videoProblem(file("video/mp4", 50)), "");
+  assert.equal(videoProblem(file("video/webm", 1)), "");
+});
+
+test("videoProblem refuses a PNG and a 60 MB MP4", () => {
+  assert.equal(videoProblem(file("image/png", 1)), "Choose an MP4, MOV or WebM clip.");
+  assert.equal(videoProblem(file("video/mp4", 60)), "The clip is larger than 50 MB.");
+});
+
+test("checkLabel reads an unknown match as none", () => {
+  assert.equal(checkLabel({ check: "tray", match: "ok" }), CHECK_LABEL.tray.ok);
+  assert.equal(checkLabel({ check: "setup", match: "mismatch" }), CHECK_LABEL.setup.mismatch);
+  assert.equal(checkLabel({ check: "tray", match: "weird" }), CHECK_LABEL.tray.none);
+  assert.equal(checkLabel(null), "");
+});
+
+test("latestCheck picks the last check of that kind and task", () => {
+  const view = {
+    video_checks: [
+      { id: "a", check: "tray", task_id: null },
+      { id: "b", check: "setup", task_id: "t1" },
+      { id: "c", check: "tray", task_id: null },
+      { id: "d", check: "setup", task_id: "t2" },
+      { id: "e", check: "setup", task_id: "t1" },
+    ],
+  };
+  assert.equal(latestCheck(view, "tray").id, "c");
+  assert.equal(latestCheck(view, "setup", "t1").id, "e");
+  assert.equal(latestCheck(view, "setup", "t3"), null);
+  assert.equal(latestCheck({}, "tray"), null);
+});
+
+test("trayFlag is null unless the latest tray check is a mismatch", () => {
+  assert.equal(trayFlag({}), null);
+  assert.equal(trayFlag({ tray: { planned: {}, latest: null } }), null);
+  assert.equal(trayFlag({ tray: { latest: { match: "ok", why: "x" } } }), null);
+  assert.equal(trayFlag({ tray: { latest: { match: "none", why: "x" } } }), null);
+  const text = trayFlag({ tray: { latest: { match: "mismatch", why: "Seen 1 of 2 forceps." } } });
+  assert.equal(text, `${CHECK_LABEL.tray.mismatch} Seen 1 of 2 forceps.`);
+  assert.doesNotMatch(text, ADVICE);
+});
+
+test("swabTotal follows the plan, else null", () => {
+  assert.equal(swabTotal({}), null);
+  assert.equal(swabTotal({ tray: { planned: null } }), null);
+  assert.equal(swabTotal({ tray: { planned: { swab_total: 15 } } }), 15);
+  assert.equal(swabTotal({ tray: { planned: { swab_total: 0 } } }), null);
+});
+
+test("taskVideoLabel is empty without a video", () => {
+  assert.equal(taskVideoLabel({ video: null }), "");
+  assert.equal(taskVideoLabel({}), "");
+  assert.equal(taskVideoLabel({ video: { match: "ok" } }), CHECK_LABEL.setup.ok);
+});
+
+test("no UI string reads as advice", () => {
+  const all = [...Object.values(CHECK_LABEL.tray), ...Object.values(CHECK_LABEL.setup), videoProblem(file("image/png", 1)), videoProblem(file("video/mp4", 60))];
+  for (const s of all) assert.doesNotMatch(s, ADVICE, s);
+});

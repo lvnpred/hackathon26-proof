@@ -6,6 +6,7 @@ import TaskProof from "./TaskProof";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
 import { sortTasks, surgeryNow } from "./tasklist";
+import VideoCheck from "./VideoCheck";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
 const THEATRE_NURSE = "Nurse Asha (synthetic)";
@@ -81,12 +82,21 @@ function Ward({ view, nowMs, by, busy, act, upload, ask }) {
   );
 }
 
-function Theatre({ episodeId, view, busy, act, replaced }) {
+function Theatre({ episodeId, view, busy, act, upload, replaced }) {
   const move = (view.allowed || []).find((m) => m.to === "ward");
   const surgeonMoves = move?.role === "doctor";
   const { began, ended } = surgeryNow(view.timeline);
   return (
     <>
+      {view.tray?.planned && (
+        <VideoCheck
+          title="Tray check"
+          kind="tray"
+          check={view.tray.latest}
+          busy={busy}
+          onFile={(file) => upload("/video", file, { check: "tray", by: THEATRE_NURSE })}
+        />
+      )}
       <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} />
       <section className="card">
         <p className="label">Surgery</p>
@@ -128,7 +138,7 @@ export default function NurseActions({ state, view, act, upload, ask, busy, nowM
         </section>
       )}
       {state === "ward" && <Ward view={view} nowMs={nowMs} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
-      {state === "theatre" && <Theatre episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} />}
+      {state === "theatre" && <Theatre episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} />}
       {state === "discharging" && (
         <section className="card">
           <p className="label">Discharge checklist</p>

@@ -3,6 +3,7 @@ import { label } from "./clock";
 import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
 import { sourceLabel } from "./drafts";
+import { answerHow, questionText } from "./askText";
 
 // The three fixed review decisions, as the server names them.
 const DECISIONS = [["no_visit", "No visit needed"], ["come_in", "Come in to the clinic"], ["call", "The doctor will call you"]];
@@ -19,26 +20,25 @@ function Answered({ answer, text }) {
 
 function QuestionItem({ q, role, busy, act, ask }) {
   const [text, setText] = useState("");
-  const [how, setHow] = useState({ via: "text", heard_by: "" });
+  const [heard, setHeard] = useState({ text: "", by: "" });
   async function hear({ file, text: typed }) {
     if (!file) {
       setText(typed);
-      setHow({ via: "text", heard_by: "" });
       return true;
     }
-    const heard = await ask("/ask/hear", file, { by: DOCTOR });
-    if (!heard) return false;
-    setText(heard.text);
-    setHow({ via: "voice", heard_by: heard.heard_by });
+    const result = await ask("/ask/hear", file, { by: DOCTOR });
+    if (!result) return false;
+    setText(result.text);
+    setHeard({ text: result.text, by: result.heard_by });
     return true;
   }
   async function send() {
-    const done = await act(`/questions/${q.id}/answer`, { text: text.trim(), by: DOCTOR, ...how });
+    const done = await act(`/questions/${q.id}/answer`, { text: text.trim(), by: DOCTOR, ...answerHow(heard.text, text, heard.by) });
     if (done) setText("");
   }
   return (
     <div data-line={q.id}>
-      <p><b>{q.by}</b> asked at {label(q.at_ms)}: {q.text}</p>
+      <p><b>{q.by}</b> asked at {label(q.at_ms)}: {questionText(role, q)}</p>
       {q.answer && <Answered answer={q.answer} text={q.answer.text} />}
       {!q.answer && role === "doctor" && (
         <>

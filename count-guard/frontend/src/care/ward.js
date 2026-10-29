@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { call, getJourney, postJourney, uploadJourney } from "../journey";
 import { statusBody, statusQuery } from "./status";
 
@@ -78,6 +78,7 @@ export function useWard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [doctorStatus, setDoctorStatus] = useState(null);
+  const statusSeq = useRef(0); // a reply to a read that began before a newer one or a POST is dropped
 
   useEffect(() => {
     loadWard()
@@ -93,19 +94,23 @@ export function useWard() {
   useEffect(() => {
     if (!board || !patients.length) return undefined;
     let live = true;
+    const mine = ++statusSeq.current;
     call(statusQuery(board, patients.map((p) => p.id), nowMs))
-      .then((status) => { if (live) setDoctorStatus(status); })
+      .then((status) => { if (live && mine === statusSeq.current) setDoctorStatus(status); })
       .catch(() => {});
     return () => { live = false; };
   }, [board, patients, nowMs]);
 
   async function chooseDoctorStatus(choice) {
     setError("");
+    statusSeq.current += 1;
     try {
       const body = statusBody(choice, nowMs, board, patients.map((p) => p.id));
-      setDoctorStatus(await call("/journey/staff/doctor", {
+      const reply = await call("/journey/staff/doctor", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      }));
+      });
+      statusSeq.current += 1; // reads that began before this reply must not overwrite it
+      setDoctorStatus(reply);
     } catch (exc) {
       setError(exc.message);
     }

@@ -36,3 +36,13 @@ export function questionProblem(text) {
   if (said.length > 300) return "Keep the question under 300 characters.";
   return "";
 }
+
+// How an answer was given: "voice" only while the text is exactly what was heard.
+export function answerHow(heardText, currentText, heardBy) {
+  if (heardText && currentText === heardText) return { via: "voice", heard_by: heardBy };
+  return { via: "text", heard_by: "" };
+}
+
+// The patient's own words go to the doctor only; other roles see a fixed line.
+export const QUESTION_HIDDEN = "Question from the patient";
+export const questionText = (role, question) => (role === "doctor" ? question.text : QUESTION_HIDDEN);

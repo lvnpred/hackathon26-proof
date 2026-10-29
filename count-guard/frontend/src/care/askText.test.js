@@ -71,3 +71,12 @@ test("no fixed text or helper output reads as advice", () => {
   assert.equal(NOT_FOUND, "I can't find that in your record.");
   for (const text of texts) assert.doesNotMatch(text, ADVICE);
 });
+
+test("answerHow: voice only for unchanged heard text", async () => {
+  const { answerHow, questionText } = await import("./askText.js");
+  assert.deepEqual(answerHow("Come in", "Come in", "prepared"), { via: "voice", heard_by: "prepared" });
+  assert.deepEqual(answerHow("Come in", "Come in today", "prepared"), { via: "text", heard_by: "" });
+  assert.deepEqual(answerHow("", "Come in", ""), { via: "text", heard_by: "" });
+  assert.equal(questionText("doctor", { text: "Can I take two?" }), "Can I take two?");
+  assert.equal(questionText("nurse", { text: "Can I take two?" }), "Question from the patient");
+});

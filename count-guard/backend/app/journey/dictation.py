@@ -148,9 +148,24 @@ def discharge_sections(text: str) -> list[dict]:
     return [{"heading": h, "text": " ".join(found[h])[:600]} for h in HEADINGS if h in found]
 
 
+_STOP = set(
+    "the and for with that this from was were has have had are not but his her they them then than into onto "
+    "per all any out off its our can may will been being over under".split()
+)
+_WORD = re.compile(r"[a-z]{3,}")
+
+
+def _words_heard(text: str, heard: str) -> bool:
+    """Every content word (3+ letters, not a stopword) of `text` is in `heard`, allowing a plural 's'."""
+    said = set(_WORD.findall(heard))
+    return all(w in said or w.rstrip("s") in said or w + "s" in said for w in _WORD.findall(text.lower()) if w not in _STOP)
+
+
 def grounded(text: str, transcript: str) -> bool:
-    """Every number, drug name and advice word in `text` is also in the transcript."""
+    """Every number, drug name, advice word and content word in `text` is also in the transcript."""
     heard = digits(transcript).lower()
+    if not _words_heard(text, heard):
+        return False
     heard_numbers = set(_NUMBER.findall(heard))
     if not set(_NUMBER.findall(text)) <= heard_numbers:
         return False
@@ -176,6 +191,13 @@ def _item_grounded(item: dict, transcript: str) -> bool:
     if name and name.lower() not in digits(transcript).lower():
         return False
     if not all(grounded(str(item.get(k) or ""), transcript) for k in ("text", "name", "amount")) or not grounded(limits, transcript):
+        return False
+    heard = transcript.lower()
+    if item.get("proof") == "photo" and not re.search(r"photo|picture", heard):
+        return False
+    if item.get("proof") == "video" and "video" not in heard:
+        return False
+    if item.get("mode") == "start_end" and not _PROCEDURE.search(item["text"]):
         return False
     return item.get("every_h") is None or item["every_h"] == _every_h(item["text"])
 

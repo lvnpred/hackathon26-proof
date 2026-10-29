@@ -150,6 +150,44 @@ def test_model_reply_with_invented_content_falls_back(tmp_path, monkeypatch, rep
     assert len(draft["items"]) == 2 and not any("ondansetron" in i["text"].lower() for i in draft["items"])
 
 
+def _with_item(item):
+    return json.dumps({**GOOD_REPLY, "items": GOOD_REPLY["items"] + [item]})
+
+
+@pytest.mark.parametrize("item", [
+    {"kind": "other", "text": "Insert urinary catheter"},
+    {"kind": "other", "text": "Ceftriaxone IV"},
+    {"kind": "other", "text": "Paracetamol rest", "proof": "none", "mode": "start_end"},
+])
+def test_digit_free_invention_falls_back(tmp_path, monkeypatch, item):
+    monkeypatch.setattr(live, "spark_text", lambda s, prompt: _with_item(item))
+    client = _keyed_client(tmp_path)
+    eid = client.post("/morning/episodes", json={"label": "x"}).json()["id"]
+    draft = _typed(client, eid, "dictate/orders", ORDERS_TEXT).json()["drafts"]["order"]
+    assert draft["source"] == "rules (model reply not usable)" and len(draft["items"]) == 2
+
+
+def test_invented_proof_and_mode_not_accepted():
+    said = "Paracetamol 1 g every 6 hours."
+    item = {"kind": "dose", "text": "Paracetamol 1 g every 6 hours", "name": "paracetamol", "amount": "1 g", "every_h": 6}
+    reply = lambda extra: json.dumps({"reason": "", "items": [{**item, **extra}]})
+    assert d.items_from_reply(reply({}), said) is not None
+    assert d.items_from_reply(reply({"proof": "photo"}), said) is None
+    assert d.items_from_reply(reply({"proof": "video"}), said) is None
+    assert d.items_from_reply(reply({"mode": "start_end"}), said) is None
+    assert d.items_from_reply(reply({"proof": "photo"}), said + " Photo as proof.") is not None
+
+
+def test_reworded_same_words_reply_is_used():
+    said = "Paracetamol 1 g every 6 hours. Review in clinic on day 7."
+    reply = json.dumps({"reason": "", "items": [{"kind": "dose", "text": "Every 6 hours paracetamol 1 g", "name": "paracetamol", "amount": "1 g"}]})
+    assert d.items_from_reply(reply, said) is not None
+    sec = json.dumps({"sections": [{"heading": "Follow-up", "text": "Clinic review on day 7."}]})
+    assert d.sections_from_reply(sec, said) is not None
+    bad = json.dumps({"sections": [{"heading": "Follow-up", "text": "Clinic review and catheter removal."}]})
+    assert d.sections_from_reply(bad, said) is None
+
+
 def test_sign_with_draft_id_closes_draft(tmp_path):
     client, eid = _new(tmp_path)
     draft = _upload(client, eid, "dictate/orders", "kumar-orders.wav").json()["drafts"]["order"]

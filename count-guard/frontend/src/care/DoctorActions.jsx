@@ -114,8 +114,8 @@ export default function DoctorActions({ state, view, act, busy }) {
     return (
       <section className="card">
         <p className="label">In theatre</p>
-        <p className="small">Surgery began: {began ? "yes" : "not yet"}</p>
-        <p className="small">Surgery ended: {ended ? "yes" : "not yet"}</p>
+        <p className="small">Surgery began: {began || "not yet"}</p>
+        <p className="small">Surgery ended: {ended || "not yet"}</p>
       </section>
     );
   }

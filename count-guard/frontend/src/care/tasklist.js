@@ -33,13 +33,14 @@ export function obsValues(form) {
   return { values };
 }
 
-// Surgery status for the current stay: only lines after the latest patient.state count.
+// Surgery times for the current stay: the `when` of its began and ended lines, null when absent.
+// Only lines after the latest patient.state count.
 export function surgeryNow(timeline) {
   const lines = timeline || [];
   let since = 0;
   lines.forEach((line, i) => { if (line.type === "patient.state") since = i + 1; });
-  const types = lines.slice(since).map((line) => line.type);
-  return { began: types.includes("surgery.began"), ended: types.includes("surgery.ended") };
+  const when = (type) => lines.slice(since).filter((line) => line.type === type).pop()?.when || null;
+  return { began: when("surgery.began"), ended: when("surgery.ended") };
 }
 
 // The server lists what a move still needs; a reason is asked only while it appears there.

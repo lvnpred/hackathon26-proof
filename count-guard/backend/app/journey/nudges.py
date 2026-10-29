@@ -10,6 +10,7 @@ from app.morning.discharge import visible_events
 
 HOUR_MS = 3_600_000
 GRACE_MS = 30 * 60_000
+CORRECTABLE = {"count_open", "obs_past_limit"}  # nudges about a recorded fact that a correction replaces
 LIMIT_TEXT = {
     "sbp_min": ("systolic BP", "below", "sbp"),
     "sbp_max": ("systolic BP", "above", "sbp"),
@@ -190,10 +191,14 @@ def fresh(events: list[dict], at_ms: int) -> list[dict]:
 
 
 def open_nudges(events: list[dict]) -> list[dict]:
-    """Raised nudges not yet answered. One about a fact since corrected is closed with it."""
+    """Raised nudges not yet answered. A count_open or obs_past_limit nudge closes when its fact is corrected.
+
+    Overdue nudges (dose_overdue, obs_overdue) keep v1 behaviour: only an answer closes them.
+    """
     seen = {e["payload"]["nudge_id"] for e in events if e["event_type"] == "nudge.seen"}
     struck = {e["supersedes_id"] for e in events if e.get("supersedes_id")}
     return [
         e for e in events
-        if e["event_type"] == "nudge.raised" and e["id"] not in seen and e["payload"].get("fact_id") not in struck
+        if e["event_type"] == "nudge.raised" and e["id"] not in seen
+        and not (e["payload"].get("kind") in CORRECTABLE and e["payload"].get("fact_id") in struck)
     ]

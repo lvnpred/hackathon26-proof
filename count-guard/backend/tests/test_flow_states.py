@@ -162,3 +162,14 @@ def test_corrected_count_closes_its_open_nudge(tmp_path):
     first = next(n["fact_id"] for n in view["nudges"])
     view = client.post(f"{base}/count", json={"step": "closing", "returned": 20, "supersedes_id": first, **by}).json()
     assert view["nudges"] == []
+
+
+def test_correction_does_not_close_overdue_nudges():
+    from app.journey.nudges import open_nudges
+
+    def raised(kind):
+        return {"id": f"n-{kind}", "event_type": "nudge.raised", "payload": {"kind": kind, "fact_id": "f1"}}
+
+    events = [raised("dose_overdue"), raised("obs_overdue"), raised("obs_past_limit"), raised("count_open"),
+              {"id": "f2", "event_type": "obs.recorded", "supersedes_id": "f1", "payload": {}}]
+    assert [e["payload"]["kind"] for e in open_nudges(events)] == ["dose_overdue", "obs_overdue"]

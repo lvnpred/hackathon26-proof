@@ -36,8 +36,13 @@ def run_recorded_video(engine: Engine, case_id: str, source: Path, concepts: lis
     work.mkdir(parents=True, exist_ok=True)
     clip = work / "clip-2fps.mp4"
     audio = work / "speech.wav"
+    # SAM 3.1 takes H.264, H.265 or MPEG-4 only. Name the codec so a VP9 or HEVC phone clip is converted.
     _ffmpeg(
-        ["-y", "-i", str(source), "-vf", f"fps={settings.sam_fps},scale=-2:720", "-an", str(clip)]
+        [
+            "-y", "-i", str(source),
+            "-vf", f"fps={settings.sam_fps},scale=-2:720",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", str(clip),
+        ]
     )
     _ffmpeg(["-y", "-i", str(source), "-vn", "-ac", "1", "-ar", "16000", str(audio)])
     names = concepts or list(SAM_CONCEPTS)

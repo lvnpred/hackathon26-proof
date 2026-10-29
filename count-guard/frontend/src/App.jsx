@@ -1,4 +1,10 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
+import { CareHome, CareRoutes } from "./care/CareShell";
+import Chart from "./care/Chart";
+import MyCare from "./care/MyCare";
+import Patients from "./care/Patients";
+import Queue from "./care/Queue";
+import Today from "./care/Today";
 import Audit from "./screens/Audit";
 import Close from "./screens/Close";
 import Doctor from "./screens/Doctor";
@@ -30,7 +36,7 @@ export function Banner() {
 }
 
 // The Lightday mark: a half sun resting above a horizon.
-function Mark() {
+export function Mark() {
   return (
     <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
       <path className="sun" d="M6 19a10 10 0 0 1 20 0z" />
@@ -107,7 +113,7 @@ function Steps({ guide }) {
           <p className="label sun">
             {now ? `Step ${nowIndex + 1} of ${steps.length} · ${now.title}` : `All ${steps.length} steps recorded`}
           </p>
-          <Link to="/">All steps</Link>
+          <Link to="/steps">All steps</Link>
         </div>
         <div className="segments" aria-hidden="true">
           {steps.map((step) => (
@@ -124,7 +130,7 @@ export function Shell({ children, guide, subtitle, status }) {
   return (
     <div className="app">
       <header className="app-bar">
-        <Link to="/" className="brand">
+        <Link to="/steps" className="brand">
           <span className="brand-logo"><Mark /></span>
           <span className="brand-names">
             <span className="brand-name"><b>lightday</b> <span>· Count Guard</span></span>
@@ -135,7 +141,7 @@ export function Shell({ children, guide, subtitle, status }) {
       </header>
       <div className="nav-bar">
         <nav className="nav" aria-label="Main">
-          <NavLink to="/" end>Morning</NavLink>
+          <NavLink to="/steps">Morning</NavLink>
           <NavLink to="/guide">Guide</NavLink>
           <NavLink to="/count">Camera count</NavLink>
           <NavLink to="/journey">Journey</NavLink>
@@ -154,10 +160,33 @@ export function Shell({ children, guide, subtitle, status }) {
   );
 }
 
+const OLDER = [
+  ["/steps", "Morning"], ["/count", "Camera count"], ["/journey", "Journey"], ["/doctor", "Doctor"],
+  ["/nurse", "Nurse"], ["/patient", "Patient"], ["/audit", "Audit"],
+];
+
+function Older() {
+  return (
+    <Shell>
+      <PageLead kicker="Archive" title="Older screens" body="These still work. The ward care screens are the main route now." />
+      <ul>{OLDER.map(([to, name]) => <li key={to}><Link to={to}>{name}</Link></li>)}</ul>
+    </Shell>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route element={<CareRoutes />}>
+        <Route path="/" element={<CareHome />} />
+        <Route path="/queue" element={<Queue />} />
+        <Route path="/patients" element={<Patients />} />
+        <Route path="/chart/:episodeId" element={<Chart />} />
+        <Route path="/today" element={<Today />} />
+        <Route path="/my-care" element={<MyCare />} />
+      </Route>
+      <Route path="/steps" element={<Home />} />
+      <Route path="/older" element={<Older />} />
       <Route path="/guide" element={<Guide />} />
       <Route path="/count" element={<Setup />} />
       <Route path="/morning" element={<Morning />} />

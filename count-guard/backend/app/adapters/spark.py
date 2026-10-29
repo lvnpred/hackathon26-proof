@@ -57,21 +57,30 @@ class SparkAdapter:
         """Text in, text out. The caller checks the wording before it is shown."""
         return self._ask(prompt)
 
-    def _ask(self, prompt: str, image_data_url: str | None = None) -> str:
+    def watch(self, prompt: str, video_file_id: str) -> str:
+        """Muse Spark alone on an uploaded MP4. Used only by the eval baseline in app.baseline."""
+        return self._ask(prompt, video_file_id=video_file_id, timeout=300)
+
+    def _ask(
+        self,
+        prompt: str,
+        image_data_url: str | None = None,
+        *,
+        video_file_id: str | None = None,
+        timeout: float = 60,
+    ) -> str:
         if not self.settings.spark_configured:
             raise RuntimeError("MODEL_API_KEY is not set")
+        content: list[dict] = [{"type": "input_text", "text": prompt}]
+        if image_data_url:
+            content.append({"type": "input_image", "image_url": image_data_url})
+        if video_file_id:
+            content.append({"type": "input_video", "file_id": video_file_id})
         body = {
             "model": self.settings.spark_model,
-            "input": [
-                {
-                    "type": "message",
-                    "role": "user",
-                    "content": [{"type": "input_text", "text": prompt}]
-                    + ([{"type": "input_image", "image_url": image_data_url}] if image_data_url else []),
-                }
-            ],
+            "input": [{"type": "message", "role": "user", "content": content}],
         }
-        with httpx.Client(timeout=60) as client:
+        with httpx.Client(timeout=timeout) as client:
             response = client.post(
                 f"{self.settings.meta_base}/responses",
                 headers={"Authorization": f"Bearer {self.settings.meta_api_key}"},

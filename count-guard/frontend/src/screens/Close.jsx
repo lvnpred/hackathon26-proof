@@ -3,6 +3,16 @@ import { Link, useParams } from "react-router-dom";
 import { TITLES, closeCase, discrepancies, health, resolveDiscrepancy } from "../api";
 import { Models, Shell } from "../App";
 import { loadEpisode, send } from "../episode";
+import { getJourney } from "../journey";
+
+// The chart's "Count by camera" tied its patient to this case when Setup made it; storage can throw.
+function chartEpisode(caseId) {
+  try {
+    return sessionStorage.getItem(`cg-chart:${caseId}`) || "";
+  } catch {
+    return "";
+  }
+}
 
 const EXAMPLE = "For example: found under drape, placed in bucket";
 
@@ -14,6 +24,7 @@ export default function Close() {
   const [by, setBy] = useState("demo user");
   const [result, setResult] = useState(null);
   const [patient, setPatient] = useState(null);
+  const [chartLabel, setChartLabel] = useState("");
   const [filed, setFiled] = useState(null);
   const [error, setError] = useState("");
 
@@ -26,6 +37,8 @@ export default function Close() {
     load().catch((exc) => setError(exc.message));
     health().then(setStatus).catch(() => setStatus(null));
     loadEpisode().then(setPatient).catch(() => setPatient(null));
+    const chart = chartEpisode(caseId);
+    if (chart) getJourney(chart).then((view) => setChartLabel(view.episode?.label || "")).catch(() => setChartLabel(""));
   }, [caseId]);
 
   async function resolve(id) {
@@ -44,11 +57,14 @@ export default function Close() {
     }
   }
 
+  const chartId = chartEpisode(caseId);
+  const targetId = chartId || patient?.episode?.id;
+
   async function fileOnPatient() {
     setError("");
     try {
       setFiled(
-        await send(`/morning/episodes/${patient.episode.id}/count/from-case`, {
+        await send(`/morning/episodes/${targetId}/count/from-case`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ case_id: caseId }),
@@ -72,7 +88,7 @@ export default function Close() {
   const blocks = (row) => row.status === "open" && row.blocks_closing !== false && row.rule_id !== "R5";
   const openHard = rows.filter(blocks);
   const resolved = rows.filter((row) => row.resolution);
-  const label = patient?.episode?.label || "the current patient";
+  const label = (chartId ? chartLabel : patient?.episode?.label) || "the current patient";
 
   return (
     <Shell
@@ -155,12 +171,13 @@ export default function Close() {
                   Filing writes the ledger onto {label} and does not mix it with another morning.
                 </p>
               </div>
-              <button onClick={fileOnPatient} disabled={!patient}>File on this patient</button>
+              <button onClick={fileOnPatient} disabled={!targetId}>File on this patient</button>
             </div>
             {filed?.already_filed && <p className="small">Already filed on this patient.</p>}
             {filed?.filed && (
               <p className="small">
                 Filed. Opened {filed.sheet.count.opened}, back {filed.sheet.count.returned}, unaccounted {filed.sheet.count.unaccounted}.{" "}
+                {chartId && <><Link to={`/chart/${chartId}`}>Back to the chart</Link>{" "}</>}
                 <Link to="/ward">Read the discharge sheet</Link>
               </p>
             )}

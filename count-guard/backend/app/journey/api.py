@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import base64
+from typing import Literal
 
 import httpx
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.adapters.spark import SparkAdapter
 from app.config import BANNER
@@ -16,6 +17,7 @@ from app.journey.handover import draft as draft_handover
 from app.journey.play import play_journey
 from app.journey.rx import DEMO_DOCUMENT, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
+from app.journey.seed import card_payload, seed_ward
 from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, clock, plain
 from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
@@ -23,6 +25,7 @@ from app.morning.druglog import parse_drug_phrase
 from app.morning.strips import parse_strip_text
 
 router = APIRouter(prefix="/journey/episodes/{episode_id}")
+demo_router = APIRouter(prefix="/journey/demo")
 
 MAX_PHOTO_BYTES = 8 * 1024 * 1024
 
@@ -85,7 +88,7 @@ class ObsIn(At):
     by: str = Field(min_length=1, max_length=80)
 
 
-class SeenIn(Strict):
+class SeenIn(At):
     by: str = Field(min_length=1, max_length=80)
     note: str = Field(default="", max_length=300)
 
@@ -106,7 +109,7 @@ class HandoverIn(At):
     use_model: bool = True
 
 
-class AcceptIn(Strict):
+class AcceptIn(At):
     by: str = Field(min_length=1, max_length=80)
 
 
@@ -115,6 +118,26 @@ class CheckinIn(At):
     feels: str = Field(min_length=1, max_length=80)
     signs: list[str] = Field(default_factory=list, max_length=10)
     note: str = Field(default="", max_length=300)
+
+
+class CountIn(At):
+    step: Literal["opened", "closing"]
+    quantity: int | None = Field(default=None, ge=1, le=200)  # required when step is "opened"
+    returned: int | None = Field(default=None, ge=0, le=200)  # required when step is "closing"
+    detail: str = Field(default="", max_length=200)
+    by: str = Field(min_length=1, max_length=80)
+    supersedes_id: str | None = None
+
+    @model_validator(mode="after")
+    def _step_fields(self):
+        if self.step == "opened":
+            if self.quantity is None:
+                raise ValueError("quantity is required when the pack is opened")
+            if self.supersedes_id:
+                raise ValueError("an opened pack cannot replace a line")
+        elif self.returned is None:
+            raise ValueError("returned is required for the closing count")
+        return self
 
 
 def _store(request: Request):
@@ -184,11 +207,13 @@ def view(request: Request, episode_id: str) -> dict:
     }
 
 
-def _act(request: Request, episode_id: str, kind: str, payload: dict, at_ms: int | None) -> dict:
+def _act(
+    request: Request, episode_id: str, kind: str, payload: dict, at_ms: int | None, supersedes_id: str | None = None
+) -> dict:
     _require(request, episode_id)
     store = _store(request)
     ts = _at(store, episode_id, at_ms)
-    store.append(episode_id, kind, payload, ts_ms=ts)
+    store.append(episode_id, kind, payload, ts_ms=ts, supersedes_id=supersedes_id)
     raise_nudges(store, episode_id, ts)
     return view(request, episode_id)
 
@@ -331,7 +356,8 @@ def nudge_seen(episode_id: str, nudge_id: str, body: SeenIn, request: Request) -
     if nudge is None or nudge["episode_id"] != episode_id or nudge["event_type"] != "nudge.raised":
         raise HTTPException(status_code=404, detail="Nudge not found")
     payload = {"nudge_id": nudge_id, "by": body.by, "note": body.note}
-    return _act(request, episode_id, "nudge.seen", payload, None)
+    at_ms = max(body.at_ms, nudge["ts_ms"]) if body.at_ms is not None else None  # never before the nudge
+    return _act(request, episode_id, "nudge.seen", payload, at_ms)
 
 
 @router.post("/handover")
@@ -366,7 +392,8 @@ def accept_handover(episode_id: str, handover_id: str, body: AcceptIn, request: 
     drafted = _store(request).get_event(handover_id)
     if drafted is None or drafted["episode_id"] != episode_id or drafted["event_type"] != "handover.drafted":
         raise HTTPException(status_code=404, detail="Handover not found")
-    return _act(request, episode_id, "handover.accepted", {"handover_id": handover_id, "by": body.by}, None)
+    at_ms = max(body.at_ms, drafted["ts_ms"]) if body.at_ms is not None else None  # never before the draft
+    return _act(request, episode_id, "handover.accepted", {"handover_id": handover_id, "by": body.by}, at_ms)
 
 
 @router.post("/discharge-card")
@@ -376,16 +403,7 @@ def discharge_card(episode_id: str, body: CardIn, request: Request) -> dict:
         raise HTTPException(status_code=404, detail="Unknown care template")
     events = _store(request).events(episode_id)
     rx = _latest(events, "rx.ordered")
-    payload = {
-        "template": body.template,
-        "title": template["title"],
-        "warning_signs": template["warning_signs"],
-        "wound_care": template["wound_care"],
-        "help_line": template["help_line"],
-        "review": template["review"],
-        "schedule": build_schedule(rx["payload"]) if rx else [],
-        "by": body.by,
-    }
+    payload = card_payload(body.template, rx["payload"] if rx else None, body.by)
     return _act(request, episode_id, "discharge.card", payload, body.at_ms)
 
 
@@ -400,6 +418,32 @@ def check_in(episode_id: str, body: CheckinIn, request: Request) -> dict:
     return _act(request, episode_id, "checkin.recorded", payload, body.at_ms)
 
 
+@router.post("/count")
+def count(episode_id: str, body: CountIn, request: Request) -> dict:
+    """The theatre nurse's swab count at the demo time. A corrected closing replaces the one it names."""
+    _require(request, episode_id)
+    store = _store(request)
+    if body.supersedes_id:
+        old = store.get_event(body.supersedes_id)
+        if old is None or old["episode_id"] != episode_id or old["event_type"] != "count.closing":
+            raise HTTPException(status_code=404, detail="Closing count not found")
+    if body.step == "opened":
+        payload = {"item_type": "swab", "quantity": body.quantity, "source": "typed", "by": body.by}
+        return _act(request, episode_id, "count.pack_opened", payload, body.at_ms, body.supersedes_id)
+    opened = _latest(store.events(episode_id), "count.pack_opened")
+    if opened is None:
+        raise HTTPException(status_code=409, detail="Record the pack opened first.")
+    start = opened["payload"]["quantity"]
+    payload = {
+        "opened": start,
+        "returned": body.returned,
+        "unaccounted": start - body.returned,
+        "detail": body.detail,
+        "by": body.by,
+    }
+    return _act(request, episode_id, "count.closing", payload, body.at_ms, body.supersedes_id)
+
+
 @router.get("/audit")
 def audit(episode_id: str, request: Request) -> dict:
     episode = _require(request, episode_id)
@@ -412,3 +456,9 @@ def play(episode_id: str, request: Request) -> dict:
     _require(request, episode_id)
     play_journey(_store(request), episode_id, raise_nudges)
     return view(request, episode_id)
+
+
+@demo_router.post("/seed")
+def seed(request: Request) -> dict:
+    """Three new synthetic patients for the ward queue. Earlier episodes stay."""
+    return {"patients": seed_ward(_store(request), raise_nudges)}

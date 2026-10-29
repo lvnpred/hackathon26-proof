@@ -13,11 +13,11 @@ export default defineConfig(({ mode }) => {
     },
   };
 
-  // "/journey" is also a screen; only the API paths under /journey/episodes go to the backend.
+  // "/journey" is also a screen; only the API paths under /journey/episodes and /journey/demo go to the backend.
   const journey = {
     target: apiTarget,
     bypass(req) {
-      if (!req.url.startsWith("/journey/episodes")) return "/index.html";
+      if (!req.url.startsWith("/journey/episodes") && !req.url.startsWith("/journey/demo")) return "/index.html";
     },
   };
 

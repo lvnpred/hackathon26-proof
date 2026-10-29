@@ -105,6 +105,19 @@ def read_sse_text(lines: list[str]) -> str:
     return "".join(parts)
 
 
+def upload_video(settings: Settings, path: Path) -> str:
+    """Upload one MP4 to the Files API. SAM 3.1 and the Muse Spark baseline both read it by id."""
+    with httpx.Client(timeout=120) as client:
+        response = client.post(
+            f"{settings.meta_base}/files",
+            headers={"Authorization": f"Bearer {settings.meta_api_key}"},
+            files={"file": (path.name, path.read_bytes(), "video/mp4")},
+            data={"purpose": "user_data"},
+        )
+        response.raise_for_status()
+        return response.json()["id"]
+
+
 class SamAdapter:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -123,15 +136,7 @@ class SamAdapter:
         return records
 
     def _upload(self, path: Path) -> str:
-        with httpx.Client(timeout=120) as client:
-            response = client.post(
-                f"{self.settings.meta_base}/files",
-                headers={"Authorization": f"Bearer {self.settings.meta_api_key}"},
-                files={"file": (path.name, path.read_bytes(), "video/mp4")},
-                data={"purpose": "user_data"},
-            )
-            response.raise_for_status()
-            return response.json()["id"]
+        return upload_video(self.settings, path)
 
     def _stream(self, body: dict) -> str:
         lines: list[str] = []

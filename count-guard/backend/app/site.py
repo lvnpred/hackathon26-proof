@@ -24,7 +24,7 @@ def catalog() -> dict:
             {
                 "who": "Someone using the demo",
                 "start": "/",
-                "does": "Follow the six steps for one labelled patient, then start the next patient.",
+                "does": "Pick a role, work the queue, and open a patient's chart to act.",
             },
             {
                 "who": "A developer",
@@ -37,7 +37,7 @@ def catalog() -> dict:
                 "id": "morning",
                 "title": "One patient, one morning",
                 "where": "Home",
-                "href": "/",
+                "href": "/steps",
                 "use": "See which of the six steps is recorded, and start a new patient so the records do not mix.",
                 "code": "frontend/src/screens/Home.jsx",
                 "api": "GET /morning/episodes/{id}",

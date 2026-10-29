@@ -392,3 +392,32 @@ a.list-row:hover { background: var(--surface-sunk); }
 @media (max-width: 800px) {
   .grid-3 { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Care shell: role switch, waiting strip, demo clock bar, patient list */
+.role-switch { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface-sunk); }
+.role-switch button { min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-muted); font: inherit; font-weight: 700; cursor: pointer; }
+.role-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sheet); }
+.wait-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 10px 24px; list-style: none; background: var(--surface-sunk); border-bottom: 1px solid var(--line); }
+.pill.wait { min-height: 44px; border: 1px solid var(--line); cursor: pointer; font-family: inherit; white-space: normal; text-align: left; background: var(--surface); }
+.pill.wait.sun { background: var(--sun-soft); color: var(--sun-text); border-color: var(--sun); }
+.clock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 24px; background: var(--surface-sunk); border-bottom: 1px solid var(--line); font-size: 14px; }
+.clock-now { font-weight: 800; margin-right: 4px; }
+.clock-bar button { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-control); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.clock-bar button:disabled { opacity: 0.5; cursor: default; }
+.patient-list { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.patient-list a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.care-foot { display: flex; gap: 16px; padding: 16px 24px; font-size: 14px; }
+
+/* Chart: stage bar, lens chips, timeline, deep-link highlight */
+.stage-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 16px 0; padding: 0; list-style: none; }
+.stage-btn { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 56px; padding: 8px 12px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.stage-btn.now { border-color: var(--sun); background: var(--sun-soft); }
+.stage-btn.later { color: var(--ink-muted); }
+.stage-btn[aria-pressed="true"] { box-shadow: var(--shadow-sheet); }
+button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun-text); }
+.timeline { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.timeline li { padding: 6px 8px; border-radius: 8px; }
+.timeline li.line-hit { background: var(--sun-soft); outline: 2px solid var(--sun); }
+@media (max-width: 800px) {
+  .stage-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

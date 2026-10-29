@@ -3,7 +3,7 @@ import { detailMessage } from "./api";
 import { loadEpisode } from "./episode";
 
 // The care journey sits on the same morning episode. Every POST returns the whole journey view.
-async function call(path, options) {
+export async function call(path, options) {
   const response = await fetch(path, options);
   const text = await response.text();
   let body = null;

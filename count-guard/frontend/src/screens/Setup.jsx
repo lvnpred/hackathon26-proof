@@ -3,6 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { ITEM_TYPES, PROP_ZONES, createCase, health, saveZones, uploadScenario } from "../api";
 import { Models, PageLead, Pill, Shell } from "../App";
 
+// The chart's "Count by camera" leaves its patient for one case: move it onto that case and clear the tab key.
+function claimChart(caseId) {
+  try {
+    const id = sessionStorage.getItem("cg-chart-episode");
+    if (!id) return;
+    sessionStorage.setItem(`cg-chart:${caseId}`, id);
+    sessionStorage.removeItem("cg-chart-episode");
+  } catch {
+    // the case then files to the morning patient
+  }
+}
+
 export default function Setup() {
   const navigate = useNavigate();
   const [status, setStatus] = useState(null);
@@ -24,6 +36,7 @@ export default function Setup() {
     setError("");
     try {
       const created = await createCase("Prop tray demo", ITEM_TYPES);
+      claimChart(created.id);
       const snapshot = await uploadScenario(created.id, "demo");
       sessionStorage.setItem(`cg:${created.id}`, JSON.stringify(snapshot));
       navigate(`/case/${created.id}`);
@@ -39,6 +52,7 @@ export default function Setup() {
     setError("");
     try {
       const created = await createCase(label, picked);
+      claimChart(created.id);
       setCaseId(created.id);
     } catch (exc) {
       setError(exc.message);

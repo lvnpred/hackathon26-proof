@@ -1,0 +1,150 @@
+import { useEffect, useState } from "react";
+import { call, getJourney, postJourney, uploadJourney } from "../journey";
+
+const ROSTER = "cg-ward-roster";
+const NOW = "cg-ward-now";
+const ROLE = "cg-role";
+
+// sessionStorage can throw (private window, blocked site data); the ward still works without it.
+function read(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function write(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // keep going without storage
+  }
+}
+
+function savedRoster() {
+  try {
+    const roster = JSON.parse(read(ROSTER));
+    return Array.isArray(roster?.patients) ? roster : null;
+  } catch {
+    return null;
+  }
+}
+
+async function withViews(roster) {
+  const views = await Promise.all(roster.patients.map((p) => getJourney(p.id)));
+  return roster.patients.map((p, i) => ({ ...p, view: views[i] }));
+}
+
+async function seed() {
+  const roster = await call("/journey/demo/seed", { method: "POST" });
+  write(ROSTER, JSON.stringify(roster));
+  write(NOW, "0");
+  return { patients: await withViews(roster), nowMs: 0 };
+}
+
+// StrictMode runs effects twice in dev, and two screens can mount at once.
+// Share one load so a tab never seeds the ward twice.
+let pending = null;
+
+export function loadWard() {
+  if (!pending) pending = fetchWard().finally(() => { pending = null; });
+  return pending;
+}
+
+async function fetchWard() {
+  const roster = savedRoster();
+  if (roster) {
+    try {
+      const nowMs = Number(read(NOW)) || 0;
+      return { patients: await withViews(roster), nowMs };
+    } catch (exc) {
+      if (exc.status !== 404) throw exc;
+    }
+  }
+  return seed();
+}
+
+// One view per patient. act() and upload() swap in the returned view; jump() ticks everyone.
+export function useWard() {
+  const [patients, setPatients] = useState([]);
+  const [nowMs, setNowMs] = useState(0);
+  const [role, setRoleState] = useState(() => read(ROLE) || "nurse");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadWard()
+      .then((ward) => {
+        setPatients(ward.patients);
+        setNowMs(ward.nowMs);
+      })
+      .catch((exc) => setError(exc.message));
+  }, []);
+
+  function setRole(next) {
+    write(ROLE, next);
+    setRoleState(next);
+  }
+
+  function swap(id, view) {
+    setPatients((list) => list.map((p) => (p.id === id ? { ...p, view } : p)));
+  }
+
+  async function run(id, send) {
+    setError("");
+    setBusy(true);
+    try {
+      const next = await send();
+      swap(id, next);
+      return next;
+    } catch (exc) {
+      setError(exc.message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const act = (id, path, body) => run(id, () => postJourney(id, path, { ...body, at_ms: nowMs }));
+  const upload = (id, path, file) => run(id, () => uploadJourney(id, path, file));
+
+  async function jump(ms) {
+    if (ms <= nowMs || !patients.length) return;
+    setNowMs(ms);
+    write(NOW, String(ms));
+    setError("");
+    setBusy(true);
+    try {
+      const results = await Promise.allSettled(patients.map((p) => postJourney(p.id, "/tick", { at_ms: ms })));
+      const views = new Map();
+      const failed = [];
+      results.forEach((res, i) => {
+        if (res.status === "fulfilled") views.set(patients[i].id, res.value);
+        else failed.push(`${patients[i].name}: ${res.reason?.message || "failed"}`);
+      });
+      setPatients((list) => list.map((p) => (views.has(p.id) ? { ...p, view: views.get(p.id) } : p)));
+      if (failed.length) setError(`The time moved, but ${failed.join("; ")}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reset() {
+    setError("");
+    setBusy(true);
+    try {
+      const ward = await seed();
+      setPatients(ward.patients);
+      setNowMs(ward.nowMs);
+    } catch (exc) {
+      setError(exc.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const find = (id) => patients.find((p) => p.id === id);
+
+  return { patients, nowMs, role, setRole, busy, error, act, upload, jump, reset, find };
+}

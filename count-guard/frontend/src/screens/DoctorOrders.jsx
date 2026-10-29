@@ -3,7 +3,6 @@ import { num } from "../journey";
 
 const DOSES = [
   { name: "Paracetamol", amount: "1 g IV", every_h: "6" },
-  { name: "Ondansetron", amount: "4 mg IV", every_h: "8" },
 ];
 const LIMITS = { sbp_min: "90", sbp_max: "160", hr_max: "110", spo2_min: "94", temp_max: "38" };
 const LIMIT_LABELS = [

@@ -7,7 +7,7 @@ from app.site import catalog
 def test_product_map_links_every_feature_to_a_screen():
     product = catalog()
     hrefs = {feature["href"] for feature in product["features"]}
-    assert {"/", "/opd", "/ot", "/ward", "/count", "/guide"} <= hrefs
+    assert {"/steps", "/opd", "/ot", "/ward", "/count", "/guide"} <= hrefs
     assert product["banner"].startswith("Research demo")
     assert all(feature["code"] and feature["api"] for feature in product["features"])
 

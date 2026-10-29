@@ -101,8 +101,9 @@ def read_photo(
     raw: bytes,
     filename: str,
     content_type: str,
+    live_ok: bool = True,
 ) -> dict:
-    if settings.spark_configured:
+    if settings.spark_configured and live_ok:
         kind = content_type if (content_type or "").startswith("image/") else "image/jpeg"
         data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
         adapter = SparkAdapter(settings)

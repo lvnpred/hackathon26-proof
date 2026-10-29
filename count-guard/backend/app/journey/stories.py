@@ -113,6 +113,8 @@ def plain(event: dict) -> str:
     if kind == "tray.planned":
         n = sum(i["qty"] for i in p["instruments"])
         return f"{p['by']} confirmed the tray plan for {p['title']}: {n} instruments, {p['swab_total']} swabs."
+    if kind == "medicines.read":
+        return f"Medicines photo: {p.get('why')}"
     if kind == "tray.checked":
         return f"Tray check by video: {p.get('why')}"
     if kind == "setup.checked":

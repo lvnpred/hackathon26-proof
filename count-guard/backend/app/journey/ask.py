@@ -28,7 +28,7 @@ def _answer(p: dict, ts_ms: int) -> dict:
 
 
 def ask_view(events: list[dict]) -> dict:
-    """Questions and reviews, oldest first, each with its first answer. Task 3 fills `medicines`."""
+    """Questions and reviews, oldest first, each with its first answer. Medicine photos too."""
     answers, decisions = {}, {}
     for e in events:
         p = e["payload"]
@@ -36,7 +36,7 @@ def ask_view(events: list[dict]) -> dict:
             answers.setdefault(p["question_id"], e)
         elif e["event_type"] == "review.answered":
             decisions.setdefault(p["review_id"], e)
-    questions, reviews = [], []
+    questions, reviews, medicines = [], [], []
     for e in events:
         p = e["payload"]
         if e["event_type"] == "question.asked":
@@ -63,7 +63,15 @@ def ask_view(events: list[dict]) -> dict:
                     ),
                 }
             )
-    return {"questions": questions, "reviews": reviews, "medicines": []}
+        elif e["event_type"] == "medicines.read":
+            medicines.append(
+                {
+                    "id": e["id"],
+                    "photo": {"id": p["photo_id"], "url": f"/journey/episodes/{e['episode_id']}/photos/{p['photo_id']}"},
+                    "rows": p["rows"], "match": p["match"], "why": p["why"], "source": p["source"], "at_ms": e["ts_ms"],
+                }
+            )
+    return {"questions": questions, "reviews": reviews, "medicines": medicines}
 
 
 def open_for_doctor(events: list[dict]) -> dict:

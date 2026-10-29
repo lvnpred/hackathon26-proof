@@ -135,14 +135,19 @@ def dictate_task(
     return {**meta, "candidates": candidates, "values": result["values"]}
 
 
+def strips_from(text: str) -> list[dict]:
+    """Grounded strips from a reader's text. A reply that does not parse gives no strips."""
+    try:
+        return parse_strip_text(text)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return []
+
+
 def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated: dict) -> dict:
     """The proof check for one photo. A reader that gave nothing, or a reply that does not parse, is `none`."""
     if task["kind"] == "dose":
         read = live.read_photo(settings, "strip", raw, name, kind)
-        try:
-            strips = parse_strip_text(read["text"] or "")
-        except (ValueError, KeyError, TypeError, AttributeError):
-            strips = []
+        strips = strips_from(read["text"] or "")
         return {**proof.check_strip(strips, task), "source": read["source"]}
     if task["kind"] == "obs":
         read = live.read_photo(settings, "monitor", raw, name, kind)

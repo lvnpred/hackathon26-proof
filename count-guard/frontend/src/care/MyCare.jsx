@@ -1,21 +1,24 @@
+import { Fragment } from "react";
 import { label } from "./clock";
 import { MATCH_LABEL, proofOf, sourceLabel } from "./drafts";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
-import { findKumar } from "./Patients";
+import { findPatient } from "./Patients";
 import Timeline from "./Timeline";
 import VideoChecks from "./VideoChecks";
+import { taskStatusLabel } from "./tasklist";
+import Photos from "./Photos";
 import { taskVideoLabel } from "./video";
 
 // The same record as Today, read-only: no forms, no actions.
 export default function MyCare() {
   const ward = useCareWard();
-  const patient = findKumar(ward.patients);
+  const patient = findPatient(ward.patients, ward.patientBed);
   if (!patient) return <p className="empty">{ward.error || "Loading your care…"}</p>;
   const { view } = patient;
   return (
-    <>
+    <Fragment key={patient.id}>
       <PageLead kicker={patient.name} title="My care" body="Where you are and what has been recorded. You can read it here." />
       <StateHeader patient={patient} view={view} />
       <section className="card">
@@ -27,12 +30,12 @@ export default function MyCare() {
             <ul className="task-list">
               {(view.tasks || []).filter((task) => task.order_id === order.id).map((task) => (
                 <li key={task.id}>
-                  <span>{task.title}</span> <span className="pill info">{task.status}</span>
+                  <span>{task.title}</span> <span className="pill info">{taskStatusLabel(task.status)}</span>
                   {taskVideoLabel(task) && <p className="small muted">{taskVideoLabel(task)}</p>}
-                  {(task.done || []).map((d) => {
+                  {(task.done || []).map((d, index) => {
                     const proof = proofOf(d, view.photos);
                     return (
-                      <p className="small muted" key={d.at_ms}>
+                      <p className="small muted" key={`${task.id}:${index}`}>
                         Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}
                         {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
                         {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
@@ -45,11 +48,12 @@ export default function MyCare() {
           </div>
         ))}
       </section>
+      <Photos view={view} />
       <VideoChecks view={view} />
       <section className="card">
         <p className="label">Timeline</p>
         <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" readOnly />
       </section>
-    </>
+    </Fragment>
   );
 }

@@ -4,6 +4,7 @@ import { call, getJourney, postJourney, uploadJourney } from "../journey";
 const ROSTER = "cg-ward-roster";
 const NOW = "cg-ward-now";
 const ROLE = "cg-role";
+const PATIENT = "cg-patient";
 
 // sessionStorage can throw (private window, blocked site data); the ward still works without it.
 function read(key) {
@@ -25,7 +26,8 @@ function write(key, value) {
 function savedRoster() {
   try {
     const roster = JSON.parse(read(ROSTER));
-    return Array.isArray(roster?.patients) ? roster : null;
+    // A roster saved before the staff board existed is dropped, so the ward reseeds once.
+    return Array.isArray(roster?.patients) && typeof roster.board === "string" ? roster : null;
   } catch {
     return null;
   }
@@ -40,7 +42,7 @@ async function seed() {
   const roster = await call("/journey/demo/seed", { method: "POST" });
   write(ROSTER, JSON.stringify(roster));
   write(NOW, "0");
-  return { patients: await withViews(roster), nowMs: 0 };
+  return { patients: await withViews(roster), board: roster.board, nowMs: 0 };
 }
 
 // StrictMode runs effects twice in dev, and two screens can mount at once.
@@ -57,7 +59,7 @@ async function fetchWard() {
   if (roster) {
     try {
       const nowMs = Number(read(NOW)) || 0;
-      return { patients: await withViews(roster), nowMs };
+      return { patients: await withViews(roster), board: roster.board, nowMs };
     } catch (exc) {
       if (exc.status !== 404) throw exc;
     }
@@ -70,6 +72,8 @@ export function useWard() {
   const [patients, setPatients] = useState([]);
   const [nowMs, setNowMs] = useState(0);
   const [role, setRoleState] = useState(() => read(ROLE) || "nurse");
+  const [board, setBoard] = useState("");
+  const [patientBed, setPatientBedState] = useState(() => read(PATIENT) || "4");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -78,6 +82,7 @@ export function useWard() {
       .then((ward) => {
         setPatients(ward.patients);
         setNowMs(ward.nowMs);
+        setBoard(ward.board);
       })
       .catch((exc) => setError(exc.message));
   }, []);
@@ -85,6 +90,11 @@ export function useWard() {
   function setRole(next) {
     write(ROLE, next);
     setRoleState(next);
+  }
+
+  function setPatientBed(bed) {
+    write(PATIENT, bed);
+    setPatientBedState(bed);
   }
 
   function swap(id, view) {
@@ -152,6 +162,7 @@ export function useWard() {
       const ward = await seed();
       setPatients(ward.patients);
       setNowMs(ward.nowMs);
+      setBoard(ward.board);
     } catch (exc) {
       setError(exc.message);
     } finally {
@@ -161,5 +172,5 @@ export function useWard() {
 
   const find = (id) => patients.find((p) => p.id === id);
 
-  return { patients, nowMs, role, setRole, busy, error, act, upload, ask, jump, reset, find };
+  return { patients, board, nowMs, role, setRole, patientBed, setPatientBed, busy, error, act, upload, ask, jump, reset, find };
 }

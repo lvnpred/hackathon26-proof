@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues } from "./tasklist.js";
+import { sortTasks, obsValues, taskStatusLabel, TASK_STATUS_LABEL } from "./tasklist.js";
 import { M } from "./clock.js";
 
 const NOW = 10 * 60 * M;
@@ -48,4 +48,13 @@ test("needsReason follows the server's list, so a corrected count asks for none"
   assert.equal(needsReason({ needs: ["surgery ended", "reason (count open)"] }), true);
   assert.equal(needsReason({ needs: ["surgery ended"] }), false);
   assert.equal(needsReason(undefined), false);
+});
+
+test("taskStatusLabel gives plain words, and keeps an unknown word as is", () => {
+  assert.equal(taskStatusLabel("open"), "To do");
+  assert.equal(taskStatusLabel("running"), "Running");
+  assert.equal(taskStatusLabel("done"), "Done");
+  assert.equal(taskStatusLabel("closed"), "Stay ended");
+  assert.equal(taskStatusLabel("paused"), "paused");
+  assert.equal(TASK_STATUS_LABEL.closed, "Stay ended");
 });

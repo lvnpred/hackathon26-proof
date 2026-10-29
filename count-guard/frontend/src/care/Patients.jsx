@@ -3,9 +3,8 @@ import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import { STATE_LABEL } from "./derive";
 
-// The demo patient (R. Kumar) sits in bed 4.
-export const KUMAR_BED = "4";
-export const findKumar = (patients) => patients.find((patient) => patient.bed === KUMAR_BED);
+// The patient the Patient role is looking at; a saved bed the roster lacks falls back to the first patient.
+export const findPatient = (patients, bed) => patients.find((patient) => patient.bed === bed) || patients[0];
 
 export function StateBadge({ patient }) {
   const state = patient.view.state;

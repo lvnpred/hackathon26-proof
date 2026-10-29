@@ -1,6 +1,7 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { CareHome, CareRoutes } from "./care/CareShell";
 import Chart from "./care/Chart";
+import Ask from "./care/Ask.jsx";
 import MyCare from "./care/MyCare";
 import Patients from "./care/Patients";
 import Queue from "./care/Queue";
@@ -184,6 +185,7 @@ export default function App() {
         <Route path="/chart/:episodeId" element={<Chart />} />
         <Route path="/today" element={<Today />} />
         <Route path="/my-care" element={<MyCare />} />
+        <Route path="/ask" element={<Ask />} />
       </Route>
       <Route path="/steps" element={<Home />} />
       <Route path="/older" element={<Older />} />

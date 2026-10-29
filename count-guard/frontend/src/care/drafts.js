@@ -32,6 +32,10 @@ export function photoCheckLabel(check) {
   return MATCH_LABEL[check.match] || MATCH_LABEL.none;
 }
 
+const PURPOSE_LABEL = { proof: "Proof", reference: "Reference", healing: "Healing photo", medicines: "Medicines photo" };
+
+export const photoPurposeLabel = (purpose) => PURPOSE_LABEL[purpose] || "Photo";
+
 // True when a draft with an id we have not loaded yet has appeared (drives the prefill effects).
 export function draftChanged(prevId, draft) {
   return Boolean(draft?.id) && draft.id !== prevId;

@@ -47,3 +47,8 @@ export function surgeryNow(timeline) {
 export function needsReason(move) {
   return (move?.needs || []).some((need) => need.startsWith("reason"));
 }
+
+export const TASK_STATUS_LABEL = { open: "To do", running: "Running", done: "Done", closed: "Stay ended" };
+
+// A status the table does not know shows as the raw word.
+export const taskStatusLabel = (status) => TASK_STATUS_LABEL[status] || status;

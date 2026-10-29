@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL } from "./drafts.js";
+import { photoPurposeLabel, doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL } from "./drafts.js";
 import { orderRowsToItems } from "./orders.js";
 
 // The Task 2 Kumar draft, in the shape orderRowsToItems emits (P2-R9).
@@ -133,4 +133,12 @@ test("sourceLabel names a failed or fallback read", () => {
   assert.equal(sourceLabel("prepared (live call failed)"), "Prepared demo result (the live call failed)");
   assert.equal(sourceLabel("none"), "Not read");
   assert.equal(sourceLabel("muse-spark-1.3"), "Muse Spark");
+});
+
+test("photoPurposeLabel names each purpose, and unknown ones plainly", () => {
+  assert.equal(photoPurposeLabel("proof"), "Proof");
+  assert.equal(photoPurposeLabel("reference"), "Reference");
+  assert.equal(photoPurposeLabel("healing"), "Healing photo");
+  assert.equal(photoPurposeLabel("medicines"), "Medicines photo");
+  assert.equal(photoPurposeLabel("other"), "Photo");
 });

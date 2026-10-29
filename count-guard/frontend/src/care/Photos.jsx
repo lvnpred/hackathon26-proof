@@ -1,5 +1,5 @@
 import { label } from "./clock";
-import { photoCheckLabel, sourceLabel } from "./drafts";
+import { photoCheckLabel, photoPurposeLabel, sourceLabel } from "./drafts";
 
 // Every photo on the chart, for every role. A mismatch is flagged, never hidden.
 export default function Photos({ view }) {
@@ -13,7 +13,7 @@ export default function Photos({ view }) {
           <li key={photo.id}>
             <img src={photo.url} alt={`${photo.purpose} photo by ${photo.by}`} width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />
             <span className="small">
-              {photo.purpose === "proof" ? "Proof" : "Reference"} · {photo.by} · {label(photo.at_ms)}
+              {photoPurposeLabel(photo.purpose)} · {photo.by} · {label(photo.at_ms)}
               {photo.check && (
                 <>
                   <br />

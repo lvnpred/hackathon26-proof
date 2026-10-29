@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { API_PORT, NO_KEY, OWNER_PORTS, WEB_PORT, assertOffline, busyPorts, childEnv, devArgs } from "./server.mjs";
+import net from "node:net";
+import { API_PORT, NO_KEY, OWNER_PORTS, WEB_PORT, assertOffline, busyPorts, childEnv, devArgs, portFree } from "./server.mjs";
 
 test("devArgs uses 8200/5273 and the data dir, never the owner's ports", () => {
   const args = devArgs("/tmp/data");
@@ -46,4 +47,13 @@ test("childEnv empties every model key and drops make's inherited flags", () => 
   assert.equal(env.META_API_KEY, "");
   for (const k of ["MAKEFLAGS", "MAKELEVEL", "MFLAGS"]) assert.ok(!(k in env), k);
   assert.ok(!("CG_API_PORT" in env), "the port comes from the command line only");
+});
+
+test("portFree is false while something listens and true once it stops", async () => {
+  const server = net.createServer().listen(0, "127.0.0.1");
+  await new Promise((resolve) => server.once("listening", resolve));
+  const { port } = server.address();
+  assert.equal(await portFree(port), false);
+  await new Promise((resolve) => server.close(resolve));
+  assert.equal(await portFree(port), true);
 });

@@ -7,7 +7,7 @@ CG_API_PORT ?= 8100
 CG_WEB_PORT ?= 5173
 export CG_API_PORT CG_WEB_PORT
 
-.PHONY: setup test eval day1 cost baseline backend frontend dev
+.PHONY: setup test eval day1 cost baseline backend frontend dev demo-check
 
 setup:
 	python3 -m venv .venv
@@ -39,3 +39,10 @@ frontend:
 
 dev:
 	$(MAKE) -j2 backend frontend
+
+# Offline run of the demo script in a headless browser; starts its own servers on 8200 and 5273.
+demo-check:
+	$(PY)/python eval/p2/make_media.py
+	$(PY)/python eval/p3/make_clips.py
+	$(PY)/python eval/p4/make_photos.py
+	cd frontend && node --test 'scripts/demo/*.test.mjs' && node scripts/demo/run.mjs

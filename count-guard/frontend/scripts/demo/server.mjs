@@ -1,3 +1,8 @@
+import { spawn } from "node:child_process";
+import { closeSync, openSync } from "node:fs";
+import net from "node:net";
+import { fileURLToPath } from "node:url";
+
 // Pure guards for the demo check's own servers. The owner's servers (8100, 5173) are never used.
 export const API_PORT = 8200;
 export const WEB_PORT = 5273;
@@ -34,4 +39,71 @@ export function busyPorts(free) {
     }
   }
   return "";
+}
+
+// ---- Process side: starts and stops the demo check's own servers (8200 and 5273 only). ----
+const REPO = fileURLToPath(new URL("../../../", import.meta.url));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Free when the connection is refused. Any other outcome counts as taken.
+export function portFree(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: "127.0.0.1" });
+    socket.once("connect", () => { socket.destroy(); resolve(false); });
+    socket.once("error", (err) => resolve(err.code === "ECONNREFUSED"));
+  });
+}
+
+async function getJson(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+  return res.ok ? res.json() : null;
+}
+
+async function waitFor(what, probe, ms = 60000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    try {
+      const got = await probe();
+      if (got !== null && got !== undefined) return got;
+    } catch {
+      // not up yet
+    }
+    await sleep(500);
+  }
+  throw new Error(`${what} did not answer within ${ms / 1000} s. See the server log in demo-shots/server.log.`);
+}
+
+export async function startServers({ dataDir, logPath }) {
+  const probes = { [API_PORT]: await portFree(API_PORT), [WEB_PORT]: await portFree(WEB_PORT) };
+  const busy = busyPorts(probes);
+  if (busy) throw new Error(busy);
+
+  const log = openSync(logPath, "a");
+  const child = spawn("make", devArgs(dataDir), {
+    cwd: REPO, detached: true, stdio: ["ignore", log, log], env: childEnv(process.env),
+  });
+  let stopping = null;
+  const alive = () => { try { process.kill(-child.pid, 0); return true; } catch { return false; } };
+  const stop = () => {
+    stopping ??= (async () => {
+      if (alive()) { try { process.kill(-child.pid, "SIGTERM"); } catch { /* already gone */ } }
+      const end = Date.now() + 10000;
+      while (Date.now() < end && !((await portFree(API_PORT)) && (await portFree(WEB_PORT)))) await sleep(250);
+      if (alive()) { try { process.kill(-child.pid, "SIGKILL"); } catch { /* already gone */ } }
+      closeSync(log);
+    })();
+    return stopping;
+  };
+
+  try {
+    // Both URLs: the browser reaches the API through Vite's proxy, whose target comes from the environment.
+    const direct = await waitFor("The API", () => getJson(`http://127.0.0.1:${API_PORT}/journey/models`));
+    assertOffline(direct);
+    await waitFor("The web server", async () => (await fetch(`http://127.0.0.1:${WEB_PORT}/`)).ok || null);
+    assertOffline(await waitFor("The web proxy", () => getJson(`http://127.0.0.1:${WEB_PORT}/journey/models`)));
+  } catch (err) {
+    await stop();
+    throw err;
+  }
+  return { stop };
 }

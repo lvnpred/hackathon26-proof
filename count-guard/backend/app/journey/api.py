@@ -15,7 +15,7 @@ from app.config import BANNER
 from app.journey import nudges as rules
 from app.journey.handover import draft as draft_handover
 from app.journey.play import play_journey
-from app.journey.rx import DEMO_DOCUMENT, fetch_document, from_document, key_of
+from app.journey.rx import document_for, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
 from app.journey.seed import card_payload, seed_ward
 from app.journey.states import flow_view
@@ -244,7 +244,8 @@ def import_rx(episode_id: str, body: ImportIn, request: Request) -> dict:
 
 @router.post("/rx/demo")
 def demo_rx(episode_id: str, body: At, request: Request) -> dict:
-    return _act(request, episode_id, "rx.ordered", from_document(DEMO_DOCUMENT, source="demo"), body.at_ms)
+    episode = _require(request, episode_id)
+    return _act(request, episode_id, "rx.ordered", from_document(document_for(episode["label"]), source="demo"), body.at_ms)
 
 
 @router.post("/orders")

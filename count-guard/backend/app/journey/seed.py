@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Callable
 
 from app.journey import tasks
+from app.journey.rx import IYER_DOCUMENT, from_document
 from app.journey.schedule import build as build_schedule
 from app.journey.stories import CARE_TEMPLATES
 
@@ -50,6 +51,7 @@ def seed_ward(store, raise_nudges: Callable) -> list[dict]:
     iyer = made[1]["id"]
     admitted = {"from": None, "to": "ward", "by": DOCTOR, "reason": "Admitted the day before (seed)"}
     store.append(iyer, "patient.state", admitted, ts_ms=0)
+    store.append(iyer, "rx.ordered", from_document(IYER_DOCUMENT, source="demo"), ts_ms=0)
     obs = {
         "kind": "obs", "text": "BP and pulse every 1 h", "name": "", "amount": "", "every_h": 1,
         "mode": "tick", "proof": "none", "limits": {"sbp_min": 90},

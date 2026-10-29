@@ -47,6 +47,16 @@ def build(rx: dict) -> list[dict]:
     return out
 
 
+def schedule_text(row: dict) -> str:
+    """One `build` row as the doctor wrote it: slots, timing, days, note, joined by '; '."""
+    if row["as_needed"]:
+        when = "as needed"
+    else:
+        when = ", ".join(f"{amount} {SLOT_WORDS[slot]}" for slot, amount in row["slots"].items() if amount)
+    days_text = f"for {row['days']} days" if row["days"] else ""
+    return "; ".join(part for part in (when, row["timing"], days_text, row["note"]) if part)
+
+
 def _escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", " ")
 

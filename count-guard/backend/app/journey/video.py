@@ -58,10 +58,21 @@ def summarize(records: list[dict], fps: int, min_score: float, concepts: list[st
     return out
 
 
-def compare(expected: list[dict], detections: dict | None, source: str = "none") -> dict:
+def _said(text: str, media: str) -> str:
+    """The same sentence worded for photos: a photo check never says "clip"."""
+    if media != "photos":
+        return text
+    for old, new in (("The clip was", "The photos were"), ("for this clip", "for these photos"),
+                     ("The clip could", "The photos could"), ("in the clip", "in the photos")):
+        text = text.replace(old, new)
+    return text
+
+
+def compare(expected: list[dict], detections: dict | None, source: str = "none", media: str = "video") -> dict:
     if detections is None:
         rows = [{**e, "seen": None, "at_s": None} for e in expected]
         why = {"failed": NO_ANSWER, "unreadable": UNREADABLE}.get(source, NOT_CHECKED)
+        why = _said(why, media)
         return {"rows": rows, "missing": [], "match": "none", "why": why}
     rows = []
     for e in expected:
@@ -69,10 +80,10 @@ def compare(expected: list[dict], detections: dict | None, source: str = "none")
         rows.append({**e, "seen": cell.get("count", 0), "at_s": cell.get("at_s")})
     short = [r for r in rows if r["seen"] < r["planned"]]
     if not short:
-        return {"rows": rows, "missing": [], "match": "ok", "why": OK_WHY}
+        return {"rows": rows, "missing": [], "match": "ok", "why": _said(OK_WHY, media)}
     parts = "; ".join(f"{r['concept']} (planned {r['planned']}, seen {r['seen']})" for r in short)
     return {"rows": rows, "missing": [r["concept"] for r in short], "match": "mismatch",
-            "why": f"Not seen in the clip: {parts}."}
+            "why": _said(f"Not seen in the clip: {parts}.", media)}
 
 
 def frame_times(rows: list[dict]) -> list[float]:

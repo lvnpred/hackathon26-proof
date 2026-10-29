@@ -117,7 +117,7 @@ def _read_photos(request: Request, episode_id: str, photos: list[tuple[bytes, st
         found = segment_photos(settings, paths, [r["concept"] for r in rows], filename, live_ok=live_ok)
     finally:
         shutil.rmtree(work, ignore_errors=True)
-    return found, compare(rows, found["detections"], found["source"])
+    return found, compare(rows, found["detections"], found["source"], "photos")
 
 
 @video_router.post("/video")

@@ -12,8 +12,9 @@ from app.adapters.sam import SamAdapter
 from app.main import create_app
 from tests.test_flow_states import _new
 from tests.test_p3_setup import SALINE, _begin, _row, _ward
+from tests.test_flow_tasks import _done
 from tests.test_p3_tray import JPEG, MP4, NURSE, _events, _to_theatre
-from tests.test_p3_video import _keyed, _no_key
+from tests.test_p3_video import _keyed
 
 ADVICE = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
 PNG = b"\x89PNG\r\n" + b"png"
@@ -210,3 +211,55 @@ def test_plain_lines_say_photos_and_have_no_advice(tmp_path):
     assert any(t.startswith("Tray check by photos: ") for t in texts2)
     assert any(t.startswith("A photo from the tray check") for t in texts2)
     assert not any(ADVICE.search(t) for t in texts2 if "check" in t.lower() or "photo" in t.lower())
+
+
+def test_photo_why_says_photos_not_clip(tmp_path):
+    from app.journey import stories
+
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    stored = _photos(client, eid)
+    why = _checked(client, eid, "tray.checked")["why"]
+    assert why.startswith("Not seen in the photos: ") and "clip" not in why
+    assert stories.plain(next(e for e in _events(client, eid) if e["event_type"] == "tray.checked")).endswith(why)
+    client2, eid2 = _new(tmp_path / "b")
+    task = _ward(client2, eid2, [SALINE])[SALINE["text"]]
+    _photos(client2, eid2, ("saline-setup.png",), check="setup", task_id=task)
+    ok = _checked(client2, eid2, "setup.checked")["why"]
+    assert ok == "Every planned item was seen in the photos."
+    assert stories.plain(next(e for e in _events(client2, eid2) if e["event_type"] == "setup.checked")) == f"Set-up check by photos: {ok}"
+    client3, eid3 = _new(tmp_path / "c")
+    _to_theatre(client3, eid3)
+    _photos(client3, eid3, ("IMG_0001.png",))
+    none = _checked(client3, eid3, "tray.checked")["why"]
+    assert none.startswith("The photos were not checked:") and "clip" not in none
+    assert stored.status_code == 200
+
+
+def test_keyed_reply_without_frame_marker_still_counts(tmp_path, monkeypatch):
+    bare = BOX.replace("<0f>", "")
+
+    def stream(self, body):
+        concept = body["input"][0]["content"][0]["text"]
+        return bare + "\n" + bare.replace("1<|box", "2<|box", 1) if concept == "scalpel handle" else ""
+
+    monkeypatch.setattr(SamAdapter, "_stream", stream)
+    client = TestClient(create_app(_keyed(tmp_path)))
+    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    _to_theatre(client, eid)
+    latest = _photos(client, eid).json()["tray"]["latest"]
+    assert latest["source"] == "sam-3.1"
+    seen = {row["concept"]: row["seen"] for row in latest["rows"]}
+    assert seen["scalpel handle"] == 2 and all(v == 0 for k, v in seen.items() if k != "scalpel handle")
+
+
+def test_photo_check_frame_is_not_task_proof(tmp_path):
+    from app.journey.tasks import FRAME_NOT_PROOF
+
+    client, eid = _new(tmp_path)
+    task = _ward(client, eid, [SALINE])[SALINE["text"]]
+    _photos(client, eid, ("saline-setup.png",), check="setup", task_id=task)
+    frame = next(e for e in _events(client, eid) if e["event_type"] == "photo.added")
+    assert _begin(client, eid, task, 5).status_code == 200
+    refused = _done(client, eid, task, at_ms=7, proof_id=frame["id"])
+    assert refused.status_code == 409 and refused.json()["detail"] == FRAME_NOT_PROOF

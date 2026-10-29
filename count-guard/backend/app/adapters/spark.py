@@ -39,6 +39,12 @@ STRIP_PROMPT = (
     "Copy what is printed. Leave strength empty if it cannot be read. Do not give medical advice."
 )
 
+MONITOR_PROMPT = (
+    "Read the numbers on this blood pressure monitor screen. "
+    'Reply with JSON only: {"sbp": 0, "dbp": 0, "hr": 0}. '
+    "Use null for a number that cannot be read. Copy what is shown. Do not give medical advice."
+)
+
 
 class SparkAdapter:
     """Called when rule R5 fires, a patient photographs strips, or a nurse drafts a handover. Only with a key."""
@@ -52,6 +58,10 @@ class SparkAdapter:
     def read_strips(self, image_data_url: str) -> str:
         """Raw model text. app.morning.strips.parse_strip_text grounds it."""
         return self._ask(STRIP_PROMPT, image_data_url)
+
+    def read_monitor(self, image_data_url: str) -> str:
+        """Raw model text for a monitor photo."""
+        return self._ask(MONITOR_PROMPT, image_data_url)
 
     def write(self, prompt: str) -> str:
         """Text in, text out. The caller checks the wording before it is shown."""

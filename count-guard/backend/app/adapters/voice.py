@@ -40,14 +40,15 @@ class VoiceAdapter:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    def transcribe(self, path: Path, offset_ms: int = 0) -> list[dict]:
+    def transcribe(self, path: Path, offset_ms: int = 0, content_type: str = "audio/wav"
+    ) -> list[dict]:
         if not self.settings.voice_configured:
             raise RuntimeError("MODEL_API_KEY is not set")
         with httpx.Client(timeout=120) as client:
             response = client.post(
                 f"{self.settings.meta_base}/asr/transcribe",
                 headers={"Authorization": f"Bearer {self.settings.meta_api_key}"},
-                files={"file": (path.name, path.read_bytes(), "audio/wav")},
+                files={"file": (path.name, path.read_bytes(), content_type)},
                 data={"model": self.settings.voice_model, "language": "en"},
             )
             response.raise_for_status()

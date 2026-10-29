@@ -97,9 +97,18 @@ def task_list(events: list[dict]) -> list[dict]:
                     for e in done
                 ],
                 "began_ms": began[-1]["ts_ms"] if began else None,
+                "video": _video_of(rows, tid),
             }
         )
     return out
+
+
+def _video_of(rows: list[dict], task_id: str) -> dict | None:
+    checks = [e for e in rows if e["event_type"] == "setup.checked" and e["payload"].get("task_id") == task_id]
+    if not checks:
+        return None
+    latest = checks[-1]
+    return {"id": latest["id"], "match": latest["payload"]["match"], "why": latest["payload"]["why"]}
 
 
 def _gap(payload: dict) -> int:

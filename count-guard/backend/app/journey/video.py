@@ -101,7 +101,8 @@ def checks_view(events: list[dict]) -> list[dict]:
                 "task_id": p.get("task_id"),
                 "at_ms": e["ts_ms"],
                 "by": p["by"],
-                **{k: p[k] for k in ("rows", "missing", "unchecked", "match", "why", "source")},
+                **{k: p[k] for k in ("rows", "missing", "match", "why", "source")},
+                "unchecked": p.get("unchecked", []),
                 "frames": _frames(e["episode_id"], p["frame_ids"]),
             }
         )

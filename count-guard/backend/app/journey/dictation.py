@@ -105,8 +105,13 @@ def _tidy(item: dict) -> dict:
     return out
 
 
+def _proof_of(clause: str) -> str:
+    said = clause.lower()
+    return "video" if "video" in said else "photo" if "photo" in said else "none"
+
+
 def _clause_item(clause: str) -> dict:
-    item = {"kind": "other", "text": clause[:200], "mode": "tick", "proof": "photo" if "photo" in clause.lower() else "none"}
+    item = {"kind": "other", "text": clause[:200], "mode": "tick", "proof": _proof_of(clause)}
     drug = _drug_in(clause)
     if drug:
         item.update(kind="dose", name=drug, amount=_amount(clause))

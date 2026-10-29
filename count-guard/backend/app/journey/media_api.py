@@ -8,7 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.journey import dictation, live, proof, states, tasks
+from app.journey import dictation, live, proof, spoken, states, tasks
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, view
 from app.morning.strips import parse_strip_text
 
@@ -106,6 +106,30 @@ def dictate_discharge(
     return _act(request, episode_id, "discharge.drafted", {**meta, "sections": result, "by": by}, at_ms)
 
 
+@media_router.post("/dictate/task")
+def dictate_task(
+    episode_id: str,
+    request: Request,
+    by: str = Form(..., min_length=1, max_length=80),
+    at_ms: int | None = Form(None, ge=0),
+    text: str | None = Form(None, min_length=1, max_length=2000),
+    file: UploadFile | None = File(None),
+) -> dict:
+    """Which open tasks the nurse's sentence is about, and the values she stated. Writes nothing (D10)."""
+    _require(request, episode_id)
+    open_tasks = [t for t in tasks.task_list(_store(request).events(episode_id)) if t["status"] in spoken.OPEN]
+    result, meta = _dictate(
+        request, episode_id, ("ward",),
+        "A finished task is spoken in the ward. The patient is in {state}.",
+        file, text, spoken.task_prompt(open_tasks), lambda reply, said: spoken.completion_from_reply(reply, open_tasks, said),
+        lambda said: {"task_ids": spoken.match_tasks(said, open_tasks), "values": spoken.parse_values(said)},
+        "task", lambda r: False,
+    )
+    chosen = [t for t in open_tasks if t["id"] in result["task_ids"]]
+    candidates = [{k: t[k] for k in ("id", "title", "kind", "mode", "status")} for t in chosen]
+    return {**meta, "candidates": candidates, "values": result["values"]}
+
+
 def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated: dict) -> dict:
     """The proof check for one photo. A reader that gave nothing, or a reply that does not parse, is `none`."""
     if task["kind"] == "dose":
@@ -151,7 +175,6 @@ def add_photo(
             raise HTTPException(status_code=404, detail="Task not found")
         if task["status"] not in ("open", "running"):
             raise HTTPException(status_code=409, detail=f"This task is {task['status']}; a proof photo goes with an open task.")
-        task = {**task, "name": store.get_event(task_id)["payload"]["name"]}
     folder = settings.data_dir / "journey_media" / episode_id
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{uuid.uuid4().hex}{PHOTO_TYPES[kind]}"

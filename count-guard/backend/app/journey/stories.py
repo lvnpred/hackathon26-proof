@@ -120,6 +120,8 @@ def plain(event: dict) -> str:
     if kind == "task.began":
         return f"{p.get('by')} began a task."
     if kind == "task.done":
+        if p.get("via") == "voice":
+            return f"{p.get('by')} finished a task by voice." + (" Photo flagged." if p.get("match") == "mismatch" else "")
         return f"{p.get('by')} finished a task."
     if kind == "discharge.signed":
         return f"{p.get('by')} signed the discharge."

@@ -73,6 +73,8 @@ def task_list(events: list[dict]) -> list[dict]:
                 "id": tid,
                 "order_id": p["order_id"],
                 "title": p["title"],
+                "name": p.get("name") or "",
+                "amount": p.get("amount") or "",
                 "kind": p["kind"],
                 "mode": p["mode"],
                 "proof": p["proof"],
@@ -80,7 +82,15 @@ def task_list(events: list[dict]) -> list[dict]:
                 "status": status,
                 "due_ms": due,
                 "done": [
-                    {"at_ms": e["ts_ms"], "by": e["payload"]["by"], "via": e["payload"]["via"], "note": e["payload"]["note"]}
+                    {
+                        "at_ms": e["ts_ms"],
+                        "by": e["payload"]["by"],
+                        "via": e["payload"]["via"],
+                        "note": e["payload"]["note"],
+                        "transcript": e["payload"].get("transcript", ""),
+                        "proof_id": e["payload"].get("proof_id"),
+                        "match": e["payload"].get("match"),
+                    }
                     for e in done
                 ],
                 "began_ms": began[-1]["ts_ms"] if began else None,
@@ -182,8 +192,29 @@ def begin_task(store, episode_id: str, task_id: str, by: str, ts: int) -> int:
     return ts
 
 
+def _proof_match(store, episode_id: str, task_id: str, proof_id: str) -> str:
+    """The proof check for this task's photo: ok, mismatch or none (kept, not checked). A mismatch never refuses (D9)."""
+    photo = store.get_event(proof_id)
+    if photo is None or photo["episode_id"] != episode_id or photo["event_type"] != "photo.added":
+        raise TaskError(404, "Photo not found")
+    if photo["payload"].get("task_id") != task_id:
+        raise TaskError(409, "This photo was checked against another task.")
+    checks = [e for e in store.events(episode_id) if e["event_type"] == "proof.checked" and e["payload"]["photo_id"] == proof_id]
+    return checks[-1]["payload"]["match"] if checks else "none"
+
+
 def complete_task(
-    store, episode_id: str, task_id: str, by: str, ts: int, *, via: str = "tap", note: str = "", values: dict | None = None
+    store,
+    episode_id: str,
+    task_id: str,
+    by: str,
+    ts: int,
+    *,
+    via: str = "tap",
+    note: str = "",
+    values: dict | None = None,
+    transcript: str = "",
+    proof_id: str | None = None,
 ) -> int:
     payload, view = _task(store, episode_id, task_id)
     _refuse_if_closed(view)
@@ -193,7 +224,12 @@ def complete_task(
         raise TaskError(409, "Begin the task before marking it done.")
     if payload["kind"] == "obs" and not values:
         raise TaskError(422, "Observation values are needed to finish this task.")
-    store.append(episode_id, "task.done", {"task_id": task_id, "by": by, "via": via, "note": note}, ts_ms=ts)
+    done = {"task_id": task_id, "by": by, "via": via, "note": note, "transcript": transcript}
+    if proof_id:
+        done.update(proof_id=proof_id, match=_proof_match(store, episode_id, task_id, proof_id))
+    if values:
+        done["values"] = values
+    store.append(episode_id, "task.done", done, ts_ms=ts)
     if payload["kind"] == "dose":
         name = payload["name"] or payload["title"]
         fact = {"key": key_of(name), "name": name, "amount": payload["amount"], "by": by, "source": "task"}

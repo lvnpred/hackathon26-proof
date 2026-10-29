@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.journey import states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
@@ -89,9 +89,17 @@ class Values(Strict):
 
 class DoneIn(At):
     by: str = Field(min_length=1, max_length=80)
-    via: Literal["tap"] = "tap"
+    via: Literal["tap", "voice"] = "tap"
     note: str = Field(default="", max_length=300)
     values: Values | None = None
+    transcript: str = Field(default="", max_length=2000)
+    proof_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def _voice_needs_words(self):
+        if self.via == "voice" and not self.transcript.strip():
+            raise ValueError("A completion by voice needs what was said.")
+        return self
 
 
 class DischargeIn(At):
@@ -136,11 +144,12 @@ def begin(episode_id: str, task_id: str, body: BeginIn, request: Request) -> dic
 @flow_router.post("/tasks/{task_id}/done")
 def done(episode_id: str, task_id: str, body: DoneIn, request: Request) -> dict:
     values = body.values.model_dump(exclude_none=True) if body.values else None
+    extra = {"transcript": body.transcript.strip(), "proof_id": body.proof_id}
     return _write(
         request,
         episode_id,
         body.at_ms,
-        lambda s, ts: tasks.complete_task(s, episode_id, task_id, body.by, ts, via=body.via, note=body.note, values=values),
+        lambda s, ts: tasks.complete_task(s, episode_id, task_id, body.by, ts, via=body.via, note=body.note, values=values, **extra),
     )
 
 

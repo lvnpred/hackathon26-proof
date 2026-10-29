@@ -98,6 +98,11 @@ def plain(event: dict) -> str:
     if kind == "checkin.recorded":
         signs = ", ".join(p.get("signs") or []) or "no listed signs"
         return f"Day {p.get('day')} check-in: {p.get('feels')}; {signs}."
+    if kind == "patient.state":
+        said = f" Reason: {p.get('reason')}" if p.get("reason") else ""
+        return f"{p.get('by')} moved the patient from {p.get('from')} to {p.get('to')}.{said}"
+    if kind in ("surgery.began", "surgery.ended"):
+        return f"{p.get('by')} recorded that surgery {kind.split('.')[1]}."
     return explain_event(event)
 
 

@@ -10,7 +10,7 @@ The film is three paths in 3:00. Offline is the safe default and `make demo-chec
 
 Totals: doctor 58 s, nurse 58 s, patient 58 s, intro and close 6 s, film 3:00.
 
-How to check it: run `make demo-check` from `count-guard/`. It makes the media, runs the unit tests, starts its own servers on ports 8200 and 5273 with no model key, walks all 30 beats in a headless browser, and saves one screenshot per beat in `count-guard/demo-shots/`. It takes a few minutes.
+How to check it: run `make demo-check` from `count-guard/`. It makes the media, runs the unit tests, starts its own servers on ports 8200 and 5273 with no model key, walks all 30 beats in a headless browser, and saves one screenshot per beat in `count-guard/demo-shots/`. It takes about 25 seconds (measured: 23 s, twice).
 
 Decision for the owner: film offline or keyed (see Owner handover). The script below is the offline one. Section "Keyed variant" lists what changes.
 
@@ -179,7 +179,7 @@ On screen: `Waiting for Dr. Rao` · `The doctor reviews the healing photo.`
 #### `kumar-review` · 2:04 · doctor · 9 s
 Clicks: 1) Role Doctor; 2) Tab "My queue"; 3) Link "Open →" in the row with "Healing photo to review"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Answer by voice"; 5) Button "Send answer"; 6) Button "No visit needed"
 
-On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` · `by voice` · `No visit needed`
+On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send answer) · `by voice · Prepared demo result` · `No visit needed`
 
 > Dr. Rao opens the healing photo beside the reference photo and answers by voice.
 
@@ -300,6 +300,11 @@ The prepared results key on the file name stem. Keep these names when you replac
 - Offline, a check with several photos follows the first file. Upload the intended one first.
 - The prepared results are the JSON files in `count-guard/backend/app/journey/prepared/`, named by file stem (for example `tray-hernia.json`, `saline-setup.json`, `meds-iyer.json`).
 
+### Keyed vs offline
+
+- Offline (the default, and what `make demo-check` runs): no model key, labels read `Rules (no model)` and `Prepared demo result`, no credits spent.
+- Keyed: you start the backend with a key and film by hand. Labels change to `Muse Voice`, `Muse Spark` or `SAM 3.1`. See "Keyed variant" for the calls per beat. The run is never keyed.
+
 ### Running the check
 
 `make demo-check` from `count-guard/`. Offline only. A refused run (ports 8200 or 5273 in use) keeps the earlier screenshots.
@@ -309,7 +314,7 @@ The prepared results key on the file name stem. Keep these names when you replac
 - The tray list comes from open incisional hernia counts, while the template title says inguinal. The preview shows the source note (P5-R4).
 - The swab total is 15. The count beat shows `14 of 15` first, then the correction to 15.
 - No openly licensed tray or saline footage exists. NC-licensed footage is excluded (P3-R1). The media are drawn stand-ins until filmed (D12, P2-R2).
-- A photo at Begin works only through the set-up check.
+- A photo cannot be attached when a begin-and-end task is begun, except through the set-up check.
 - Iyer's card uses the hernia care template (P5-R3).
 - The offline bot quotes only the record. Keep the scripted questions.
 - The `/journey` old screen still shows raw nudge kinds. It opens by URL only (P5-D1).

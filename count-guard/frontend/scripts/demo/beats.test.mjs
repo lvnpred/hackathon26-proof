@@ -79,5 +79,6 @@ test("expected strings follow the accepted rulings", () => {
   assert.ok(by["iyer-setup"].expect.includes(`began ${title}`));
   assert.ok(by["iyer-end"].expect.includes(`finished ${title}`));
   assert.ok(by["kumar-count"].before.includes("Closing count: 14 of 15 back, 1 unaccounted."));
-  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s), `${b.id} ${s}`);
+  // kumar-review: the "Heard by" line goes once the answer is sent, so it is checked before and not in expect.
+  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review", `${b.id} ${s}`);
 });

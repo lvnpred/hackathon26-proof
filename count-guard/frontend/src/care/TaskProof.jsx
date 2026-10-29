@@ -9,7 +9,7 @@ const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(
 // A nurse completes a task: say it, pick the task, check the values, add a photo, press Confirm.
 // Nothing is saved until Confirm. A photo that does not match is flagged and Confirm stays on (D9).
 export default function TaskProof({ view, tasks, by, busy, act, upload, ask, preset, onClear }) {
-  const [session, setSession] = useState(null); // { proposal, via, transcript, source }
+  const [session, setSession] = useState(null); // { proposal, via, transcript, source, heardBy }
   const [pickId, setPickId] = useState("");
   const [form, setForm] = useState({});
   const [photo, setPhoto] = useState(null);
@@ -41,7 +41,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
     if (!proposal) return false;
     const { choices, pick } = proposalChoices(proposal, tasks);
     open(
-      { proposal, via: "voice", transcript: proposal.transcript || "", source: proposal.source },
+      { proposal, via: "voice", transcript: proposal.transcript || "", source: proposal.source, heardBy: proposal.heard_by },
       pick ? "" : choices[0].id,
       proposal.values,
     );
@@ -79,6 +79,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
       {session.via === "voice" && (
         <p className="small">
           “{session.transcript}” <span className="muted">· {sourceLabel(session.source)}</span>
+          {session.heardBy && <span className="muted"> · Heard by: {sourceLabel(session.heardBy)}</span>}
         </p>
       )}
       {pick && choices.length === 0 && <p className="empty small">No open tasks.</p>}

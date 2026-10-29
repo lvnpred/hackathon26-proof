@@ -184,7 +184,7 @@ export const BEATS = [
     id: "kumar-review", path: "kumar", role: "doctor", seconds: 9, film: true,
     say: "Dr. Rao opens the healing photo beside the reference photo and answers by voice.",
     clicks: ["Role Doctor", 'Tab "My queue"', 'Link "Open →" in the row with "Healing photo to review"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Answer by voice"', 'Button "Send answer"', 'Button "No visit needed"'],
-    expect: ["Healing photo", "Reference", HEARD, "by voice", "No visit needed"],
+    expect: ["Healing photo", "Reference", "by voice · Prepared demo result", "No visit needed"],
     before: [HEARD],
     files: ["rao-answer.wav"],
     keyed: "1 Voice call (hear). Heard by reads Muse Voice. No switch.",

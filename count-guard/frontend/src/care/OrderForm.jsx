@@ -29,6 +29,7 @@ export default function OrderForm({ busy, onSign, draft }) {
         <p className="note small" role="status">
           Draft from dictation · {sourceLabel(draft?.source)}. Check each row, then sign.
           {draft?.transcript && <> Heard: “{draft.transcript}”</>}
+          {draft?.heard_by && <> Heard by: {sourceLabel(draft.heard_by)}</>}
         </p>
       )}
       <div className="row">

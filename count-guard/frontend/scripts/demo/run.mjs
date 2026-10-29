@@ -37,7 +37,8 @@ for (const sig of ["SIGINT", "SIGTERM"]) {
 }
 
 try {
-  // Start-up checks the ports first; a refused run keeps the previous screenshots.
+  // The data dir is made first (the servers need it at spawn); startServers then checks the ports.
+  // A refused run keeps the previous screenshots, and the finally removes the dir.
   fs.mkdirSync(SHOTS, { recursive: true });
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "cg-demo-"));
   servers = await startServers({ dataDir, logPath: path.join(SHOTS, "server.log"), onSpawn: (stop) => {

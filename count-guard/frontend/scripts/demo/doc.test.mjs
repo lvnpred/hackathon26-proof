@@ -20,6 +20,11 @@ test("every expected string appears verbatim", () => {
   for (const b of BEATS) for (const e of b.expect) assert.ok(text.includes(e), `${b.id}: ${e}`);
 });
 
+test("every narration line appears", () => {
+  const text = doc();
+  for (const b of BEATS) assert.ok(text.includes(b.say), `${b.id}: ${b.say}`);
+});
+
 test("every media file name appears", () => {
   const text = doc();
   for (const name of Object.keys(MEDIA)) assert.ok(text.includes(name), name);

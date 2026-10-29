@@ -39,7 +39,7 @@ export function taskDue(task, nowMs) {
 }
 
 // Lower rank sorts first; rows of equal rank sort by longest waited.
-const RANK = { overdue: 0, nudge: 1, order: 2, due: 3, running: 4, todo: 5 };
+const RANK = { overdue: 0, nudge: 1, ask: 2, order: 2, due: 3, running: 4, todo: 5 };
 
 // waitedMs -1 means the view carries no time for the row.
 function row(patient, key, kind, says, extra) {
@@ -95,7 +95,18 @@ function doctorRows(patient, nowMs) {
   const pastLimit = nudgeRows(patient, nowMs)
     .filter((r) => r.nudgeKind === "obs_past_limit")
     .map((r) => ({ ...r, role: "doctor", owner: DOCTOR }));
-  return [...rows, ...pastLimit];
+  return [...rows, ...askRows(patient, nowMs), ...pastLimit];
+}
+
+// Open questions to the doctor and healing photos to review. The question text stays on the chart.
+function askRows(patient, nowMs) {
+  const { questions = [], reviews = [] } = patient.view.ask || {};
+  const open = (key, id, at_ms, says) =>
+    row(patient, `${key}:${id}`, "ask", says, { ...timed(nowMs, at_ms), lineId: id, owner: DOCTOR, role: "doctor", rank: RANK.ask });
+  return [
+    ...questions.filter((q) => q.to === "doctor" && !q.answer).map((q) => open("question", q.id, q.at_ms, "Question from the patient")),
+    ...reviews.filter((r) => !r.answer).map((r) => open("review", r.id, r.at_ms, "Healing photo to review")),
+  ];
 }
 
 function nurseRows(patient, nowMs) {
@@ -128,7 +139,10 @@ function nurseRows(patient, nowMs) {
 // Every row for a role. Patients get nudges only; their queue page stays empty (Today / My care).
 function rowsFor(patient, role, nowMs) {
   const nudges = nudgeRows(patient, nowMs).filter((r) => r.to === role);
-  if (role === "doctor") return [...doctorRows(patient, nowMs), ...nudges];
+  if (role === "doctor") {
+    const seen = new Set();
+    return [...doctorRows(patient, nowMs), ...nudges].filter((r) => !seen.has(r.key) && seen.add(r.key));
+  }
   if (role === "nurse") return [...nurseRows(patient, nowMs), ...nudges, ...todos(patient)];
   return nudges;
 }

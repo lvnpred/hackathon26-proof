@@ -184,3 +184,40 @@ test("closed tasks and tasks of patients past the ward stay out of the queue and
   assert.deepEqual(waitingPills(patients, 2 * H).filter((p) => p.what.includes("Paracetamol")).map((p) => p.episodeId), ["e5"]);
   assert.equal(taskDue(closed, 2 * H), "closed");
 });
+
+const ask = (over) => ({ questions: [], reviews: [], medicines: [], ...over });
+const question = (id, to, answer = null) => ({ id, to, text: "Can I take two?", by: "R. Kumar", at_ms: 28 * H, answer });
+const review = (id, answer = null) => ({ id, photo: { id: "p1", url: "/p" }, note: "", by: "R. Kumar", at_ms: 29 * H, answer });
+
+test("doctor rows: an open question and an open review, with fixed texts and no question text", () => {
+  const p = patient("e1", "Bed 1", view({ state: "home", ask: ask({ questions: [question("q1", "doctor")], reviews: [review("r1")] }) }));
+  const rows = queueRows([p], "doctor", 30 * H);
+  assert.deepEqual(rows.map((r) => [r.key, r.says, r.lineId, r.kind]).sort(), [
+    ["e1:question:q1", "Question from the patient", "q1", "ask"],
+    ["e1:review:r1", "Healing photo to review", "r1", "ask"],
+  ]);
+  assert.doesNotMatch(JSON.stringify(rows), /take two/);
+});
+
+test("answered and bot questions give no doctor rows", () => {
+  const done = { text: "ok", by: "Dr", at_ms: 29 * H, source: "doctor" };
+  const p = patient("e1", "Bed 1", view({
+    state: "home",
+    ask: ask({ questions: [question("q1", "doctor", done), question("q2", "bot", done), question("q3", "bot")], reviews: [review("r1", { decision: "no_visit" })] }),
+  }));
+  assert.deepEqual(queueRows([p], "doctor", 30 * H), []);
+});
+
+test("a doctor-addressed nudge gives exactly one doctor row", () => {
+  const n = { ...nudge("n9", "doctor", 28 * H, "Observations are past the limit."), kind: "obs_past_limit" };
+  const rows = queueRows([patient("e1", "Bed 1", view({ nudges: [n] }))], "doctor", 30 * H);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].lineId, "n9");
+});
+
+test("the waiting strip names the doctor for a question", () => {
+  const p = patient("e1", "Bed 1", view({ state: "home", ask: ask({ questions: [question("q1", "doctor")] }) }));
+  const pill = waitingPills([p], 30 * H)[0];
+  assert.equal(`${pill.who} → ${pill.what}`, "Dr. A. Rao → Question from the patient");
+  assert.equal(pill.lineId, "q1");
+});

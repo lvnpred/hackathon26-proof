@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { call, getJourney, postJourney, uploadJourney } from "../journey";
+import { statusBody, statusQuery } from "./status";
 
 const ROSTER = "cg-ward-roster";
 const NOW = "cg-ward-now";
@@ -76,6 +77,7 @@ export function useWard() {
   const [patientBed, setPatientBedState] = useState(() => read(PATIENT) || "4");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [doctorStatus, setDoctorStatus] = useState(null);
 
   useEffect(() => {
     loadWard()
@@ -86,6 +88,28 @@ export function useWard() {
       })
       .catch((exc) => setError(exc.message));
   }, []);
+
+  // The chip follows the ward: ask again whenever a record or the clock changes. An error keeps the last status.
+  useEffect(() => {
+    if (!board || !patients.length) return undefined;
+    let live = true;
+    call(statusQuery(board, patients.map((p) => p.id), nowMs))
+      .then((status) => { if (live) setDoctorStatus(status); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [board, patients, nowMs]);
+
+  async function chooseDoctorStatus(choice) {
+    setError("");
+    try {
+      const body = statusBody(choice, nowMs, board, patients.map((p) => p.id));
+      setDoctorStatus(await call("/journey/staff/doctor", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }));
+    } catch (exc) {
+      setError(exc.message);
+    }
+  }
 
   function setRole(next) {
     write(ROLE, next);
@@ -172,5 +196,5 @@ export function useWard() {
 
   const find = (id) => patients.find((p) => p.id === id);
 
-  return { patients, board, nowMs, role, setRole, patientBed, setPatientBed, busy, error, act, upload, ask, jump, reset, find };
+  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, error, act, upload, ask, jump, reset, find };
 }

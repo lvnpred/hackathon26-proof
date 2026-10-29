@@ -4,6 +4,7 @@ import { getAudit } from "../journey";
 import { AuditTable } from "../screens/Audit";
 import { useCareWard } from "./CareShell";
 import { label } from "./clock";
+import AskInbox from "./AskInbox";
 import { taskDue } from "./derive";
 import { MATCH_LABEL, proofOf, sourceLabel } from "./drafts";
 import { lensFor } from "./lens";
@@ -65,6 +66,8 @@ export default function Chart() {
       <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
 
       <Photos view={view} />
+
+      <AskInbox key={episodeId} view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} />
 
       <VideoChecks view={view} />
 

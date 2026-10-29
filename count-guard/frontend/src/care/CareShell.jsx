@@ -5,6 +5,7 @@ import { call } from "../journey";
 import { label, skipTargets } from "./clock";
 import { waitingPills } from "./derive";
 import { findPatient } from "./Patients";
+import { chipClass } from "./status";
 import { useWard } from "./ward";
 
 const ROLES = [
@@ -83,6 +84,12 @@ function ModelsChip() {
   return <span className={`pill ${live ? "ready" : "info"}`}>{live ? "Models: live" : "Models: offline (prepared results)"}</span>;
 }
 
+// The doctor's status, on every screen. Nothing until the server has answered.
+function DoctorChip({ status }) {
+  if (!status) return null;
+  return <span className={`pill ${chipClass(status.status)}`}>{status.text}</span>;
+}
+
 export default function CareShell({ ward, children }) {
   const navigate = useNavigate();
   const tabs = ward.role === "patient" ? PATIENT_TABS : STAFF_TABS;
@@ -118,6 +125,7 @@ export default function CareShell({ ward, children }) {
         <nav className="nav" aria-label="Main">
           {tabs.map(([to, name]) => <NavLink key={to} to={to}>{name}</NavLink>)}
         </nav>
+        <DoctorChip status={ward.doctorStatus} />
         <ModelsChip />
         <Banner />
       </div>

@@ -5,6 +5,7 @@ import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
 import { queueRows } from "./derive";
 import { StateBadge } from "./Patients";
+import { STATUS_CHOICES } from "./status";
 
 function QueueRow({ row, ward, open, toggle }) {
   const patient = ward.find(row.episodeId);
@@ -41,6 +42,14 @@ export default function Queue() {
   return (
     <>
       <PageLead kicker="Ward" title="My queue" body="What is waiting on you, longest wait first." />
+      {role === "doctor" && (
+        <div className="row" role="group" aria-label="My status">
+          <span className="label">My status</span>
+          {STATUS_CHOICES.map((choice) => (
+            <button key={choice.id} type="button" disabled={ward.busy} onClick={() => ward.setDoctorStatus(choice)}>{choice.label}</button>
+          ))}
+        </div>
+      )}
       {rows.length ? (
         <div className="card table-box">
           <table>

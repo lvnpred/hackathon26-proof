@@ -3,17 +3,18 @@ import { label } from "./clock";
 import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
 import { sourceLabel } from "./drafts";
-import { answerHow, questionText } from "./askText";
+import { answerHow, answerSourceLine, noteText, questionText } from "./askText";
 
 // The three fixed review decisions, as the server names them.
 const DECISIONS = [["no_visit", "No visit needed"], ["come_in", "Come in to the clinic"], ["call", "The doctor will call you"]];
 const THUMB = { objectFit: "cover", borderRadius: 6 };
 
 function Answered({ answer, text }) {
+  const source = answerSourceLine(answer);
   const how = answer.via === "voice" ? "by voice" : answer.via === "text" ? "typed" : "";
   return (
     <p className="small">
-      {text} <span className="muted">{answer.by} · {label(answer.at_ms)}{how ? ` · ${how}` : ""}{answer.source ? ` · ${sourceLabel(answer.source)}` : ""}</span>
+      {text} <span className="muted">{answer.by} · {label(answer.at_ms)}{how ? ` · ${how}` : ""}{source ? ` · ${source}` : ""}</span>
     </p>
   );
 }
@@ -47,6 +48,7 @@ function QuestionItem({ q, role, busy, act, ask }) {
             Your answer (check it before sending)
             <textarea rows={3} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
           </label>
+          {heard.text && <p className="small muted">Heard by: {sourceLabel(heard.by)}</p>}
           <button type="button" className="primary" disabled={busy || !text.trim()} onClick={send}>Send answer</button>
         </>
       )}
@@ -59,7 +61,7 @@ function ReviewItem({ r, role, busy, act, references }) {
   const decide = (decision) => act(`/reviews/${r.id}/answer`, { decision, note: note.trim(), by: DOCTOR });
   return (
     <div data-line={r.id}>
-      <p className="small">Healing photo from <b>{r.by}</b> at {label(r.at_ms)}{r.note ? `: ${r.note}` : ""}</p>
+      <p className="small">Healing photo from <b>{r.by}</b> at {label(r.at_ms)}{noteText(role, r) ? `: ${noteText(role, r)}` : ""}</p>
       <div className="row">
         <figure>
           <img src={r.photo.url} alt="Healing photo to review" width={96} height={96} style={THUMB} />

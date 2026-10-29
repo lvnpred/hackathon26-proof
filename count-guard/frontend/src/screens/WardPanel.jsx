@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { num } from "../journey";
+import { nudgeLabel } from "../care/askText";
 import NurseHandover from "./NurseHandover";
 
 const NURSE = "Nurse Meena (synthetic)";
@@ -18,7 +19,7 @@ export function Nudge({ nudge, busy, act }) {
     <div className="card sunk">
       <div className="row between">
         <span className="tag sun">{nudge.when}</span>
-        <span className="small muted">{nudge.kind}</span>
+        <span className="small muted">{nudgeLabel(nudge.kind)}</span>
       </div>
       <p><b>{nudge.says}</b></p>
       <div className="row">

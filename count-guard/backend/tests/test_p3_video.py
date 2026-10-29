@@ -98,7 +98,7 @@ def test_compare_ok_mismatch_none():
     assert none["why"] == "The clip was not checked: no model key and no prepared result for this clip."
     assert all(r["seen"] is None for r in none["rows"])
     failed = video.compare(expected, None, "failed")
-    assert failed["why"] == video.NO_ANSWER == "The clip was not checked: the video model did not answer."
+    assert failed["why"] == video.NO_ANSWER == "The clip was not checked: the model did not answer."
 
 
 def test_prepared_tray_flags_only_the_needle_holder():

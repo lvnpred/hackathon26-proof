@@ -161,7 +161,7 @@ def test_question_to_doctor_answered_by_text(tmp_path):
         for line in record_lines(_events(client, kumar))
     )
     plain = [r["what"] for r in client.get(_url(kumar, "audit")).json()["rows"]]
-    assert "R. Kumar sent a question to the doctor." in plain and f"{DOC} answered the question (text)." in plain
+    assert "R. Kumar sent a question to the doctor." in plain and f"{DOC} answered the question (typed)." in plain
     assert not any("redness" in line for line in plain)
 
 

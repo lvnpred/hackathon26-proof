@@ -75,7 +75,8 @@ def current(doctor: str, episodes: list[list[dict]], board: list[dict], now_ms: 
         return {"doctor": doctor, "status": status, "text": text, "until_ms": until, "source": "manual", "patient": None}
     auto = _auto(doctor, episodes, now_ms)
     if auto:
-        text = f"{name}: In theatre with {auto['patient']}, free about {_hhmm(auto['until_ms'])}"
+        free = "expected free soon" if now_ms >= auto["until_ms"] else f"free about {_hhmm(auto['until_ms'])}"
+        text = f"{name}: In theatre with {auto['patient']}, {free}"
         return {"doctor": doctor, "status": "in_theatre", "text": text, "until_ms": auto["until_ms"],
                 "source": "auto", "patient": auto["patient"]}
     return {"doctor": doctor, "status": "available", "text": f"{name}: Available", "until_ms": None,

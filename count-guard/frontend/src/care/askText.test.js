@@ -80,3 +80,34 @@ test("answerHow: voice only for unchanged heard text", async () => {
   assert.equal(questionText("doctor", { text: "Can I take two?" }), "Can I take two?");
   assert.equal(questionText("nurse", { text: "Can I take two?" }), "Question from the patient");
 });
+
+import { sourceLabel } from "./drafts.js";
+import { NOTE_HIDDEN, answerSourceLine, noteText, nudgeLabel, NUDGE_LABEL } from "./askText.js";
+import { readFileSync } from "node:fs";
+
+test("answerSourceLine names the voice source for a doctor answer and never the raw word", () => {
+  assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "gemini" }), sourceLabel("gemini"));
+  assert.equal(answerSourceLine({ source: "doctor", via: "text", heard_by: "" }), "");
+  assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "" }), "");
+  assert.equal(answerSourceLine({ source: "record" }), sourceLabel("record"));
+});
+
+test("noteText shows the patient's note to the doctor only", () => {
+  assert.equal(noteText("doctor", { note: "itchy" }), "itchy");
+  for (const role of ["nurse", "patient", ""]) assert.equal(noteText(role, { note: "itchy" }), NOTE_HIDDEN);
+  assert.equal(noteText("doctor", { note: "" }), "");
+  assert.equal(noteText("nurse", { note: "" }), "");
+  assert.equal(NOTE_HIDDEN, "A note from the patient");
+});
+
+test("nudgeLabel covers every kind the server raises, in plain words", () => {
+  const src = readFileSync(new URL("../../../backend/app/journey/nudges.py", import.meta.url), "utf8");
+  const kinds = [...src.matchAll(/_nudge\(f"[^"]*", "([a-z_]+)"/g)].map((m) => m[1]);
+  assert.ok(kinds.length >= 10);
+  for (const kind of kinds) {
+    const text = nudgeLabel(kind);
+    assert.ok(NUDGE_LABEL[kind], kind);
+    assert.ok(!text.includes("_") && !ADVICE.test(text), text);
+  }
+  assert.equal(nudgeLabel("brand_new"), "Nudge");
+});

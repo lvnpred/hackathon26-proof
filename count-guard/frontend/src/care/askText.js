@@ -46,3 +46,28 @@ export function answerHow(heardText, currentText, heardBy) {
 // The patient's own words go to the doctor only; other roles see a fixed line.
 export const QUESTION_HIDDEN = "Question from the patient";
 export const questionText = (role, question) => (role === "doctor" ? question.text : QUESTION_HIDDEN);
+
+// The source line under a doctor's answer: only a voice answer was heard by a model.
+export function answerSourceLine(answer) {
+  if (answer.source === "doctor") return answer.via === "voice" && answer.heard_by ? sourceLabel(answer.heard_by) : "";
+  return answer.source ? sourceLabel(answer.source) : "";
+}
+
+// The patient's note on a healing photo goes to the doctor only, like the question text.
+export const NOTE_HIDDEN = "A note from the patient";
+export const noteText = (role, review) => (!review.note ? "" : role === "doctor" ? review.note : NOTE_HIDDEN);
+
+// Plain words for the nudge kinds the server raises (backend/app/journey/nudges.py).
+export const NUDGE_LABEL = {
+  strip_not_prescribed: "Strip not on the prescription",
+  strip_strength_differs: "Strip strength differs",
+  dose_not_ordered: "Dose not ordered",
+  dose_logged_early: "Dose logged early",
+  dose_overdue: "Dose overdue",
+  obs_past_limit: "Observation past its limit",
+  obs_overdue: "Observations overdue",
+  count_open: "Count still open",
+  help_requested: "Patient asked for help",
+  warning_sign_ticked: "Warning sign ticked",
+};
+export const nudgeLabel = (kind) => NUDGE_LABEL[kind] || "Nudge";

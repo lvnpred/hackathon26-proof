@@ -54,7 +54,7 @@ def seed_ward(store, raise_nudges: Callable) -> dict:
     board = store.create_episode(BOARD_LABEL)["id"]
 
     iyer = made[1]["id"]
-    admitted = {"from": None, "to": "ward", "by": DOCTOR, "reason": "Admitted the day before (seed)"}
+    admitted = {"from": None, "to": "ward", "by": DOCTOR, "reason": "Admitted the day before"}
     store.append(iyer, "patient.state", admitted, ts_ms=0)
     store.append(iyer, "rx.ordered", from_document(IYER_DOCUMENT, source="demo"), ts_ms=0)
     obs = {

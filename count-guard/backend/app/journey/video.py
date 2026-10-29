@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.journey.procedures import SETUP_TEMPLATES
 
 NOT_CHECKED = "The clip was not checked: no model key and no prepared result for this clip."
-NO_ANSWER = "The clip was not checked: the video model did not answer."
+NO_ANSWER = "The clip was not checked: the model did not answer."
 UNREADABLE = "The clip could not be read."
 NO_FRAMES = " No frames could be cut from the clip."
 OK_WHY = "Every planned item was seen in the clip."

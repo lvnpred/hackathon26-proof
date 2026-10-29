@@ -54,7 +54,7 @@ CARE_TEMPLATES = {
             "Wound red, swollen or leaking",
             "Pain not eased by the prescribed medicine",
             "Cannot pass urine",
-            "Vomiting that does not stop",
+            "Vomiting that keeps going",
         ],
         "wound_care": "Keep the dressing dry for 48 hours.",
         "help_line": "Ward 4 nurses' desk, 044 0000 0000 (synthetic)",
@@ -69,6 +69,13 @@ def clock(ts_ms: int) -> str:
     day += minutes // (24 * 60)
     minutes %= 24 * 60
     return f"Day {day} {minutes // 60:02d}:{minutes % 60:02d}"
+
+
+# Plain words for the patient states. Local on purpose: states.py imports this module.
+STATE_WORDS = {
+    "clinic": "the clinic", "clinic_done": "the end of the clinic visit", "admitting": "admission",
+    "ward": "the ward", "theatre": "theatre", "discharging": "discharge", "home": "home",
+}
 
 
 def plain(event: dict) -> str:
@@ -102,8 +109,8 @@ def plain(event: dict) -> str:
     if kind == "patient.state":
         said = f" Reason: {p.get('reason')}" if p.get("reason") else ""
         if p.get("from") is None:
-            return f"{p.get('by')} admitted the patient to the {p.get('to')}.{said}"
-        return f"{p.get('by')} moved the patient from {p.get('from')} to {p.get('to')}.{said}"
+            return f"{p.get('by')} admitted the patient to {STATE_WORDS.get(p.get('to'), p.get('to'))}.{said}"
+        return f"{p.get('by')} moved the patient from {STATE_WORDS.get(p.get('from'), p.get('from'))} to {STATE_WORDS.get(p.get('to'), p.get('to'))}.{said}"
     if kind == "order.signed":
         return f"{p.get('by')} signed {len(p.get('items') or [])} orders."
     if kind == "order.drafted":
@@ -131,7 +138,7 @@ def plain(event: dict) -> str:
         return f"{short_name(p.get('by'))} sent a question to the doctor."
     if kind == "question.answered":
         if p.get("source") == "doctor":
-            return f"{p.get('by')} answered the question ({p.get('via')})."
+            return f"{p.get('by')} answered the question{ {'voice': ' (by voice)', 'text': ' (typed)'}.get(p.get('via'), '') }."
         if p.get("found"):
             return f"The record bot answered from {len(p.get('sources') or [])} lines of the record."
         return "The record bot found nothing in the record for this question."

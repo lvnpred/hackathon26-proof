@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { itemsToRows, MATCH_LABEL, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL } from "./drafts.js";
+import { draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL } from "./drafts.js";
 import { orderRowsToItems } from "./orders.js";
 
 // The Task 2 Kumar draft, in the shape orderRowsToItems emits (P2-R9).
@@ -58,4 +58,27 @@ test("labels are the specified strings", () => {
   assert.equal(MATCH_LABEL.ok, "Photo matches the task");
   assert.equal(SOURCE_LABEL["muse-spark-1.3"], "Muse Spark");
   assert.equal(SOURCE_LABEL["muse-voice-transcribe"], "Muse Voice");
+});
+
+test("draftChanged is true only when a draft with a new id appears", () => {
+  assert.equal(draftChanged(null, null), false);
+  assert.equal(draftChanged(null, undefined), false);
+  assert.equal(draftChanged(null, { id: "a" }), true);
+  assert.equal(draftChanged("a", { id: "a" }), false);
+  assert.equal(draftChanged("a", { id: "b" }), true);
+  assert.equal(draftChanged("a", null), false);
+});
+
+test("photoCheckLabel gives every backend match a plain label", () => {
+  assert.equal(photoCheckLabel(null), "");
+  assert.equal(photoCheckLabel({ match: "ok" }), MATCH_LABEL.ok);
+  assert.equal(photoCheckLabel({ match: "none" }), MATCH_LABEL.none);
+  assert.equal(photoCheckLabel({ match: "weird" }), MATCH_LABEL.none);
+});
+
+test("sourceLabel falls back to the raw source, never a blank", () => {
+  assert.equal(sourceLabel("typed"), "Typed");
+  assert.equal(sourceLabel("none"), "Not read");
+  assert.equal(sourceLabel("odd-model"), "odd-model");
+  assert.equal(sourceLabel(undefined), "Not read");
 });

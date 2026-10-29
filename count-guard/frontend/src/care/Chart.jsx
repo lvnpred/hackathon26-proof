@@ -6,6 +6,7 @@ import { useCareWard } from "./CareShell";
 import { label } from "./clock";
 import { taskDue } from "./derive";
 import { lensFor } from "./lens";
+import Photos from "./Photos";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
 import Timeline, { LENSES } from "./Timeline";
@@ -48,6 +49,8 @@ export default function Chart() {
   }
 
   const act = (path, body) => ward.act(episodeId, path, body);
+  const upload = (path, file, fields) => ward.upload(episodeId, path, file, fields);
+  const ask = (path, file, fields) => ward.ask(episodeId, path, file, fields);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
   const tasks = view.tasks || [];
   const orders = view.order_list || [];
@@ -56,7 +59,9 @@ export default function Chart() {
     <>
       <StateHeader patient={patient} view={view} />
 
-      <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
+      <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
+
+      <Photos view={view} />
 
       <section className="card">
         <p className="label">Orders and tasks</p>

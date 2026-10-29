@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import { Banner, Mark } from "../App";
+import { call } from "../journey";
 import { label, skipTargets } from "./clock";
 import { waitingPills } from "./derive";
 import { useWard } from "./ward";
@@ -70,6 +72,16 @@ function ClockBar({ ward }) {
   );
 }
 
+// "Models: live" when a key is set; otherwise prepared results. Unknown until the server answers.
+function ModelsChip() {
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    call("/journey/models").then((m) => setLive(Boolean(m.live))).catch(() => setLive(null));
+  }, []);
+  if (live === null) return null;
+  return <span className={`pill ${live ? "ready" : "info"}`}>{live ? "Models: live" : "Models: prepared (no key)"}</span>;
+}
+
 export default function CareShell({ ward, children }) {
   const navigate = useNavigate();
   const tabs = ward.role === "patient" ? PATIENT_TABS : STAFF_TABS;
@@ -100,6 +112,7 @@ export default function CareShell({ ward, children }) {
         <nav className="nav" aria-label="Main">
           {tabs.map(([to, name]) => <NavLink key={to} to={to}>{name}</NavLink>)}
         </nav>
+        <ModelsChip />
         <Banner />
       </div>
       {ward.role !== "patient" && <Strip ward={ward} />}

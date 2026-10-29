@@ -15,6 +15,23 @@ export const SOURCE_LABEL = {
   "muse-voice-transcribe": "Muse Voice",
 };
 
+// A source of "none" (a photo kept without a read) has no entry in SOURCE_LABEL.
+export function sourceLabel(source) {
+  if (!source || source === "none") return "Not read";
+  return SOURCE_LABEL[source] || source;
+}
+
+// The plain line for a photo's proof check; an unknown match reads as "kept, not checked".
+export function photoCheckLabel(check) {
+  if (!check) return "";
+  return MATCH_LABEL[check.match] || MATCH_LABEL.none;
+}
+
+// True when a draft with an id we have not loaded yet has appeared (drives the prefill effects).
+export function draftChanged(prevId, draft) {
+  return Boolean(draft?.id) && draft.id !== prevId;
+}
+
 const text = (value) => (value === null || value === undefined ? "" : String(value));
 
 // The inverse of orderRowsToItems: numbers become the strings a form holds.

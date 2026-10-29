@@ -1,20 +1,36 @@
 import { useState } from "react";
+import { draftChanged, itemsToRows, sourceLabel } from "./drafts";
 import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 
-// Rows of orders; Sign orders posts the filled rows through onSign(items), which resolves to the new view or null.
-export default function OrderForm({ busy, onSign }) {
+// Rows of orders; Sign orders posts the filled rows through onSign(items, draftId), which resolves to the new view or null.
+// A dictated draft fills the rows once per draft id; draftId is sent only while the rows still came from that draft.
+export default function OrderForm({ busy, onSign, draft }) {
   const [rows, setRows] = useState([]);
+  const [draftId, setDraftId] = useState(null);
+  if (draftChanged(draftId, draft)) {
+    setDraftId(draft.id);
+    setRows(itemsToRows(draft.items || []));
+  }
   const set = (index, patch) => setRows((all) => all.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   const { items, errors } = orderRowsToItems(rows);
   const invalid = Object.keys(errors).length > 0;
 
   async function sign() {
-    if (await onSign(items)) setRows([]);
+    if (await onSign(items, draftId)) {
+      setRows([]);
+      setDraftId(null);
+    }
   }
 
   return (
     <section className="card" aria-label="Orders">
       <p className="label">Orders</p>
+      {draftId && (
+        <p className="note small" role="status">
+          Draft from dictation · {sourceLabel(draft?.source)}. Check each row, then sign.
+          {draft?.transcript && <> Heard: “{draft.transcript}”</>}
+        </p>
+      )}
       <div className="row">
         <button type="button" onClick={() => setRows([...rows, PREFILL.dose()])}>Add dose</button>
         <button type="button" onClick={() => setRows([...rows, PREFILL.obs()])}>Add observation</button>
@@ -50,6 +66,12 @@ export default function OrderForm({ busy, onSign }) {
               <select value={row.mode} onChange={(e) => set(index, { mode: e.target.value })}>
                 <option value="tick">One tick</option>
                 <option value="start_end">Begin and end</option>
+              </select>
+            </label>
+            <label className="field">Proof
+              <select value={row.proof} onChange={(e) => set(index, { proof: e.target.value })}>
+                <option value="none">None</option>
+                <option value="photo">Photo</option>
               </select>
             </label>
             {row.kind === "obs" && (

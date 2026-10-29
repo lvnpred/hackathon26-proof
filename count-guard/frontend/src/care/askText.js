@@ -19,8 +19,8 @@ export const latestMedicines = (view) => newest(view?.ask?.medicines);
 
 // Who answered, and how: the bot names its source; the doctor says typed or by voice.
 export function answerByLine(answer) {
-  if (answer.source && answer.source !== "doctor" && !answer.via) return `Record bot · ${sourceLabel(answer.source)}`;
-  return `${answer.by}, ${answer.via === "voice" ? "by voice" : "typed"}`;
+  if (answer.source === "doctor") return `${answer.by}, ${answer.via === "voice" ? "by voice" : "typed"}`;
+  return `Record bot · ${sourceLabel(answer.source)}`;
 }
 
 // A prescribed strip reads as its schedule; any flagged strip shows its whole reason.

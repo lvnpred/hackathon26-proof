@@ -1,7 +1,7 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { CareHome, CareRoutes } from "./care/CareShell";
 import Chart from "./care/Chart";
-import Ask from "./care/Ask.jsx";
+import Ask from "./care/Ask";
 import MyCare from "./care/MyCare";
 import Patients from "./care/Patients";
 import Queue from "./care/Queue";

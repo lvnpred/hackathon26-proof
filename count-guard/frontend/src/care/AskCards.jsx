@@ -3,7 +3,7 @@ import { label } from "./clock";
 import {
   ASK_DOCTOR, NOT_FOUND, PHOTO_CLOSED, answerByLine, botQuestions, doctorQuestions, latestMedicines,
   latestReview, medicineLine, photoAskOpen, questionProblem,
-} from "./ask.js";
+} from "./askText.js";
 import { sourceLabel } from "./drafts";
 
 const WAITING = "Waiting for Dr. Rao";

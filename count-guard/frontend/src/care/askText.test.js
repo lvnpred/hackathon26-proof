@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   ASK_DOCTOR, NOT_FOUND, PHOTO_CLOSED, PHOTO_STATES, answerByLine, botQuestions, doctorQuestions,
   latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem,
-} from "./ask.js";
+} from "./askText.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const view = {
@@ -37,10 +37,14 @@ test("latestReview and latestMedicines pick the newest, or null", () => {
 });
 
 test("answerByLine names the bot with its source label, and the doctor with how it was given", () => {
-  assert.equal(answerByLine({ by: "Record bot", source: "rules" }), "Record bot · Rules (no model)");
+  assert.equal(answerByLine({ by: "Record bot", source: "rules", via: "" }), "Record bot · Rules (no model)");
   assert.equal(answerByLine({ by: "Record bot", source: "muse-spark-1.3" }), "Record bot · Muse Spark");
   assert.equal(answerByLine({ by: "Dr. A. Rao (synthetic)", source: "doctor", via: "voice" }), "Dr. A. Rao (synthetic), by voice");
   assert.equal(answerByLine({ by: "Dr. A. Rao (synthetic)", source: "doctor", via: "text" }), "Dr. A. Rao (synthetic), typed");
+});
+
+test("answerByLine reads a bot answer with an empty source as the bot, not the doctor", () => {
+  assert.equal(answerByLine({ by: "Record bot", source: "", via: "" }), "Record bot · Not read");
 });
 
 test("medicineLine shows the schedule, and the whole why for any flagged row", () => {
@@ -61,8 +65,8 @@ test("questionProblem checks the text bounds", () => {
 test("no fixed text or helper output reads as advice", () => {
   const texts = [
     NOT_FOUND, ASK_DOCTOR, PHOTO_CLOSED, questionProblem(""), questionProblem("x".repeat(301)),
-    answerByLine({ by: "Record bot", source: "rules" }), answerByLine({ by: "Dr. Rao", via: "voice" }),
-    answerByLine({ by: "Dr. Rao", via: "text" }),
+    answerByLine({ by: "Record bot", source: "rules" }), answerByLine({ by: "Dr. Rao", source: "doctor", via: "voice" }),
+    answerByLine({ by: "Dr. Rao", source: "doctor", via: "text" }),
   ];
   assert.equal(NOT_FOUND, "I can't find that in your record.");
   for (const text of texts) assert.doesNotMatch(text, ADVICE);

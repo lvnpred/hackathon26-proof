@@ -7,6 +7,7 @@ plain reason before anything is written.
 
 from __future__ import annotations
 
+from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient
 from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
@@ -181,6 +182,14 @@ def _latest_happening(events: list[dict]) -> str | None:
             verb = "began" if kind == "task.began" else "finished"
             title = titles.get(p["task_id"], "a task")
             text, rank = f"{p['by']} {verb} {title} at {clock(e['ts_ms'])}.", 0
+        elif kind == "question.asked" and p["to"] == "doctor":
+            text, rank = f"{short_name(p['by'])} sent a question to the doctor at {clock(e['ts_ms'])}.", 0
+        elif kind == "question.answered" and p.get("source") == "doctor":
+            text, rank = f"{p['by']} answered the question at {clock(e['ts_ms'])}.", 0
+        elif kind == "review.requested":
+            text, rank = f"{short_name(p['by'])} sent a healing photo at {clock(e['ts_ms'])}.", 0
+        elif kind == "review.answered":
+            text, rank = f"{p['by']} reviewed the healing photo at {clock(e['ts_ms'])}: {p['label']}.", 0
         else:
             continue
         key = (e["ts_ms"], rank, index)
@@ -203,6 +212,12 @@ def now_next(events: list[dict]) -> dict:
         tray = tray_state(events)
         if tray["planned"] and not tray["latest"]:
             next_ = "Nurse checks the tray by video, then records the surgery and the count."
+    if state in PHOTO_STATES:
+        waiting = open_for_doctor(events)
+        if waiting["reviews"]:
+            next_ = "The doctor reviews the healing photo."
+        elif waiting["questions"]:
+            next_ = "The doctor answers the question."
     return {"now": now, "next": next_}
 
 
@@ -226,5 +241,6 @@ def flow_view(events: list[dict]) -> dict:
         "photos": photos_view(visible_events(events)),
         "tray": tray_state(events),
         "video_checks": checks_view(events),
+        "ask": ask_view(events),
         "tray_templates": {key: tray_plan(key) for key in PROCEDURE_TEMPLATES},
     }

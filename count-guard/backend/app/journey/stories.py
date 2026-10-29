@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.journey.ask import short_name
 from app.morning.guide import explain_event
 
 DAY_MS = 24 * 3_600_000
@@ -116,6 +117,20 @@ def plain(event: dict) -> str:
         return f"Tray check by video: {p.get('why')}"
     if kind == "setup.checked":
         return f"Set-up check by video: {p.get('why')}"
+    if kind == "question.asked":
+        if p.get("to") == "bot":
+            return f"{short_name(p.get('by'))} asked the record bot a question."
+        return f"{short_name(p.get('by'))} sent a question to the doctor."
+    if kind == "question.answered":
+        if p.get("source") == "doctor":
+            return f"{p.get('by')} answered the question ({p.get('via')})."
+        if p.get("found"):
+            return f"The record bot answered from {len(p.get('sources') or [])} lines of the record."
+        return "The record bot found nothing in the record for this question."
+    if kind == "review.requested":
+        return f"{short_name(p.get('by'))} sent a healing photo for review."
+    if kind == "review.answered":
+        return f"{p.get('by')} reviewed the healing photo: {p.get('label')}."
     if kind == "photo.added" and p.get("purpose") == "frame":
         clip = "set-up" if p.get("video") == "setup" else p.get("video")
         return f"A frame from the {clip} clip was kept as proof."

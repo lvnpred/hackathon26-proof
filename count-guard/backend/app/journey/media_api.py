@@ -152,6 +152,29 @@ def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated:
     return {"read": "", "match": "none", "why": proof.NO_READING, "source": "none"}
 
 
+def read_upload_photo(file: UploadFile) -> tuple[bytes, str]:
+    """The bytes and image type of an uploaded photo, or a 400 for a wrong type, size or magic bytes."""
+    kind = (file.content_type or "").split(";")[0].strip().lower()
+    if kind not in PHOTO_TYPES:
+        raise HTTPException(status_code=400, detail="The photo must be a JPEG, PNG or WebP image.")
+    raw = file.file.read(MAX_PHOTO_BYTES + 1)
+    if not raw or len(raw) > MAX_PHOTO_BYTES:
+        raise HTTPException(status_code=400, detail="The photo is empty or larger than 8 MB.")
+    if not MAGIC[kind](raw):
+        raise HTTPException(status_code=400, detail="The file is not a real JPEG, PNG or WebP image.")
+    return raw, kind
+
+
+def write_photo(settings, store, episode_id: str, raw: bytes, kind: str, added: dict, ts: int) -> dict:
+    """Save the photo under journey_media/<episode>/ with a server name and append `photo.added`."""
+    folder = settings.data_dir / "journey_media" / episode_id
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{uuid.uuid4().hex}{PHOTO_TYPES[kind]}"
+    path.write_bytes(raw)
+    payload = {**added, "path": str(path.relative_to(settings.data_dir))}
+    return store.append(episode_id, "photo.added", payload, ts_ms=ts)
+
+
 @media_router.post("/photos")
 def add_photo(
     episode_id: str,
@@ -168,14 +191,7 @@ def add_photo(
     _require(request, episode_id)
     if (purpose == "proof") != (task_id is not None):
         raise HTTPException(status_code=422, detail="A proof photo names a task; a reference photo names none.")
-    kind = (file.content_type or "").split(";")[0].strip().lower()
-    if kind not in PHOTO_TYPES:
-        raise HTTPException(status_code=400, detail="The photo must be a JPEG, PNG or WebP image.")
-    raw = file.file.read(MAX_PHOTO_BYTES + 1)
-    if not raw or len(raw) > MAX_PHOTO_BYTES:
-        raise HTTPException(status_code=400, detail="The photo is empty or larger than 8 MB.")
-    if not MAGIC[kind](raw):
-        raise HTTPException(status_code=400, detail="The file is not a real JPEG, PNG or WebP image.")
+    raw, kind = read_upload_photo(file)
     store, settings = _store(request), request.app.state.settings
     task = None
     if task_id is not None:
@@ -184,15 +200,11 @@ def add_photo(
             raise HTTPException(status_code=404, detail="Task not found")
         if task["status"] not in ("open", "running"):
             raise HTTPException(status_code=409, detail=f"This task is {task['status']}; a proof photo goes with an open task.")
-    folder = settings.data_dir / "journey_media" / episode_id
-    folder.mkdir(parents=True, exist_ok=True)
-    path = folder / f"{uuid.uuid4().hex}{PHOTO_TYPES[kind]}"
-    path.write_bytes(raw)
-    ts = _at(store, episode_id, at_ms)
-    added = {"purpose": purpose, "path": str(path.relative_to(settings.data_dir)), "by": by}
+    added = {"purpose": purpose, "by": by}
     if task_id is not None:
         added["task_id"] = task_id
-    photo = store.append(episode_id, "photo.added", added, ts_ms=ts)
+    ts = _at(store, episode_id, at_ms)
+    photo = write_photo(settings, store, episode_id, raw, kind, added, ts)
     if task is not None:
         stated = {k: v for k, v in (("sbp", sbp), ("dbp", dbp), ("hr", hr)) if v is not None}
         checked = _check_photo(settings, task, raw, file.filename or "", kind, stated)

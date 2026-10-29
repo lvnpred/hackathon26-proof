@@ -55,6 +55,13 @@ def bot_prompt(lines: list[dict]) -> str:
     return f"{BOT_PROMPT}{rows}\nQuestion: "
 
 
+def _w(key: str, **fields) -> str | None:
+    """A wrapper filled in, or None when any field is missing or empty (no 'None' line can be cited)."""
+    if not all(isinstance(v, str) and v.strip() for v in fields.values()):
+        return None
+    return WRAPPERS[key].format(**fields)
+
+
 def _latest_ids(events: list[dict], kind: str) -> set[str]:
     rows = [e["id"] for e in events if e["event_type"] == kind]
     return set(rows[-1:])
@@ -64,41 +71,41 @@ def _sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", text or "") if s.strip()]
 
 
-def _event_lines(event: dict, ctx: dict) -> list[tuple[str, str]]:
+def _event_lines(event: dict, ctx: dict) -> list[tuple[str, str | None]]:
     """(kind, text) pairs for one event. The wrapper is fixed; the content is the record's own."""
     kind, p = event["event_type"], event.get("payload") or {}
     when = clock(event["ts_ms"])
     if kind == "rx.ordered" and event["id"] in ctx["rx"]:
         by = p.get("by")
         rows = [
-            ("prescription", WRAPPERS["prescription"].format(by=by, medicine=row["medicine"], schedule=schedule_text(row)))
+            ("prescription", _w("prescription", by=by, medicine=row["medicine"], schedule=schedule_text(row)))
             for row in build(p)
         ]
-        notes = [("prescription", WRAPPERS["advice"].format(by=by, item=item)) for item in p.get("advice") or []]
+        notes = [("prescription", _w("advice", by=by, item=item)) for item in p.get("advice") or []]
         review = p.get("review")
-        return rows + notes + ([("prescription", WRAPPERS["review"].format(review=review))] if review else [])
+        return rows + notes + ([("prescription", _w("review", review=review))] if review else [])
     if kind == "order.signed":
-        return [("order", WRAPPERS["order"].format(by=p.get("by"), clock=when, text=i.get("text", ""))) for i in p.get("items") or []]
+        return [("order", _w("order", by=p.get("by"), clock=when, text=i.get("text", ""))) for i in p.get("items") or []]
     if kind == "task.done" and event["id"] in ctx["done"]:
         title = ctx["titles"].get(p.get("task_id"))
-        return [("task", WRAPPERS["task"].format(title=title, by=p.get("by"), clock=when))] if title else []
+        return [("task", _w("task", title=title, by=p.get("by"), clock=when))] if title else []
     if kind == "discharge.signed":
-        return [("discharge", WRAPPERS["discharge"].format(by=p.get("by"), sentence=s)) for s in _sentences(p.get("summary"))]
+        return [("discharge", _w("discharge", by=p.get("by"), sentence=s)) for s in _sentences(p.get("summary"))]
     if kind == "discharge.card" and event["id"] in ctx["card"]:
-        out = [("card", WRAPPERS["wound"].format(wound_care=p.get("wound_care", "")))]
-        out += [("card", WRAPPERS["sign"].format(sign=sign)) for sign in p.get("warning_signs") or []]
-        out.append(("card", WRAPPERS["card_review"].format(review=p.get("review", ""))))
-        out.append(("card", WRAPPERS["help"].format(help_line=p.get("help_line", ""))))
+        out = [("card", _w("wound", wound_care=p.get("wound_care", "")))]
+        out += [("card", _w("sign", sign=sign)) for sign in p.get("warning_signs") or []]
+        out.append(("card", _w("card_review", review=p.get("review", ""))))
+        out.append(("card", _w("help", help_line=p.get("help_line", ""))))
         return out
     if kind == "patient.state":
         if p.get("from") is None:
             return [("stay", WRAPPERS["admitted"])]
         did = DID.get(p.get("to"))
-        return [("stay", WRAPPERS["moved"].format(by=p.get("by"), did=did, clock=when))] if did else []
+        return [("stay", _w("moved", by=p.get("by"), did=did, clock=when))] if did else []
     if kind == "question.answered" and p.get("source") == "doctor":
-        return [("answer", WRAPPERS["answer"].format(by=p.get("by"), answer=p.get("answer", "")))]
+        return [("answer", _w("answer", by=p.get("by"), answer=p.get("answer", "")))]
     if kind == "review.answered":
-        return [("review", WRAPPERS["photo_review"].format(by=p.get("by"), clock=when, label=p.get("label", "")))]
+        return [("review", _w("photo_review", by=p.get("by"), clock=when, label=p.get("label", "")))]
     return []
 
 
@@ -118,6 +125,8 @@ def record_lines(events: list[dict]) -> list[dict]:
     lines = []
     for event in shown:
         for kind, text in _event_lines(event, ctx):
+            if text is None:
+                continue
             lines.append({"id": f"L{len(lines) + 1}", "kind": kind, "text": text[:MAX_LINE], "event_id": event["id"]})
     return lines
 

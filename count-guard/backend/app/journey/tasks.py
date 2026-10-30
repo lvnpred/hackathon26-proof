@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from app.journey import proof
 from app.journey.dictation import draft_refusal
+from app.journey.live import HEARERS
 from app.journey.procedures import setup_for
 from app.journey.rx import key_of
 from app.journey.states import current_state
@@ -257,6 +258,8 @@ def complete_task(
     values: dict | None = None,
     transcript: str = "",
     proof_id: str | None = None,
+    heard_by: str = "",
+    calls: list[dict] | None = None,
 ) -> int:
     payload, view = _task(store, episode_id, task_id)
     _refuse_if_closed(view)
@@ -266,7 +269,8 @@ def complete_task(
         raise TaskError(409, "Begin the task before marking it done.")
     if payload["kind"] == "obs" and not values:
         raise TaskError(422, "Observation values are needed to finish this task.")
-    done = {"task_id": task_id, "by": by, "via": via, "note": note, "transcript": transcript}
+    heard_by = heard_by if heard_by in HEARERS else ""
+    done = {"task_id": task_id, "by": by, "via": via, "note": note, "transcript": transcript, "heard_by": heard_by, "calls": calls or []}
     if proof_id:
         done.update(proof_id=proof_id, **_proof_match(store, episode_id, payload, task_id, proof_id, values))
     if values:

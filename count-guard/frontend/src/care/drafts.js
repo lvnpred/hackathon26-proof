@@ -85,10 +85,11 @@ export function newestPhoto(view, taskId) {
 }
 
 // The body for POST /tasks/{id}/done (without `by`), or { error }. Mirrors the server's DoneIn rules.
-export function doneBody({ task, via, transcript, form, photo }) {
+export function doneBody({ task, via, transcript, form, photo, heardBy }) {
   const said = (transcript || "").trim();
   if (via === "voice" && !said) return { error: "A completion by voice needs what was said." };
   const body = { via, transcript: said, note: "" };
+  if (via === "voice" && heardBy) body.heard_by = heardBy;
   if (task.kind === "obs") {
     const out = obsValues(form || {});
     if (out.error) return { error: out.error };

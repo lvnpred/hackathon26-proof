@@ -177,6 +177,7 @@ def add_video(
         **({"unchecked": unchecked_for_tray(planned)} if check == "tray" else {}),
         **{k: result[k] for k in ("match", "why")},
         "source": found["source"],
+        "calls": found["calls"],
         "clip": filename.lower() if live.safe_stem(filename) else "",
         "frame_ids": frame_ids,
         "by": by,

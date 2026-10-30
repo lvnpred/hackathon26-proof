@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field, field_validator, model_validator
 
-from app.journey import states, tasks
+from app.journey import live, states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
 from app.journey.dictation import draft_refusal
 from app.journey.doctor_status import theatre_payload
@@ -112,6 +112,7 @@ class DoneIn(At):
     values: Values | None = None
     transcript: str = Field(default="", max_length=2000)
     proof_id: str | None = Field(default=None, min_length=1, max_length=64)
+    heard_by: str = Field(default="", max_length=40)
 
     @model_validator(mode="after")
     def _voice_needs_words(self):
@@ -162,7 +163,8 @@ def begin(episode_id: str, task_id: str, body: BeginIn, request: Request) -> dic
 @flow_router.post("/tasks/{task_id}/done")
 def done(episode_id: str, task_id: str, body: DoneIn, request: Request) -> dict:
     values = body.values.model_dump(exclude_none=True) if body.values else None
-    extra = {"transcript": body.transcript.strip(), "proof_id": body.proof_id}
+    extra = {"transcript": body.transcript.strip(), "proof_id": body.proof_id, "heard_by": body.heard_by}
+    extra["calls"] = live.spoken_calls(request.app.state.settings, body.via, body.heard_by)
     return _write(
         request,
         episode_id,

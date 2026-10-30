@@ -19,6 +19,11 @@ ORDERS_TEXT = (
 )
 
 
+def bare(result: dict) -> dict:
+    """A model result without its `calls` list (covered in test_ai_calls.py)."""
+    return {k: v for k, v in result.items() if k != "calls"}
+
+
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     def refuse(*a, **k):
@@ -58,7 +63,7 @@ def test_safe_stem_rejects_paths_and_odd_names():
 
 def test_no_key_uses_prepared_transcript(tmp_path):
     out = live.transcribe(_no_key(tmp_path), b"x", "kumar-orders.wav", "audio/wav")
-    assert out == {"text": ORDERS_TEXT, "source": "prepared"}
+    assert bare(out) == {"text": ORDERS_TEXT, "source": "prepared"}
 
 
 def test_no_key_unknown_audio_is_409_with_type_hint(tmp_path):
@@ -78,7 +83,7 @@ def test_key_calls_faked_voice_adapter(tmp_path, monkeypatch):
         ],
     )
     out = live.transcribe(_keyed(tmp_path), b"x", "recording.webm", "audio/webm")
-    assert out == {"text": "Paracetamol one gram given to bed 4", "source": "muse-voice-transcribe"}
+    assert bare(out) == {"text": "Paracetamol one gram given to bed 4", "source": "muse-voice-transcribe"}
 
 
 def test_key_adapter_error_is_502(tmp_path, monkeypatch):
@@ -100,7 +105,7 @@ def test_read_photo_prepared_and_unknown(tmp_path):
     assert out["text"] == '{"strips": [{"name": "Paracetamol", "strength": "500 mg"}]}'
     out = live.read_photo(s, "monitor", b"x", "monitor-88-54.png", "image/png")
     assert out["text"] == '{"sbp": 88, "dbp": 54, "hr": 112}'
-    assert live.read_photo(s, "strip", b"x", "IMG_0001.jpg", "image/jpeg") == {
+    assert bare(live.read_photo(s, "strip", b"x", "IMG_0001.jpg", "image/jpeg")) == {
         "text": None, "source": "none",
     }
 
@@ -108,14 +113,14 @@ def test_read_photo_prepared_and_unknown(tmp_path):
 def test_read_photo_key_uses_faked_spark(tmp_path, monkeypatch):
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_monitor", lambda self, url: "seen:" + url[:15])
     out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "m.png", "image/png")
-    assert out == {"text": "seen:data:image/png;", "source": "muse-spark-1.3"}
+    assert bare(out) == {"text": "seen:data:image/png;", "source": "muse-spark-1.3"}
 
     def boom(self, url):
         raise httpx.ConnectError("down")
 
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_strips", boom)
     out = live.read_photo(_keyed(tmp_path), "strip", b"x", "s.png", "image/png")
-    assert out == {"text": None, "source": "failed"}
+    assert bare(out) == {"text": None, "source": "failed"}
 
 
 def test_spark_text(tmp_path, monkeypatch):

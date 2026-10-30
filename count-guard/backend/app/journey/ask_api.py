@@ -72,7 +72,7 @@ def _asked(request: Request, episode_id: str, body: QuestionIn, to: str) -> tupl
 def ask_bot(episode_id: str, body: QuestionIn, request: Request) -> dict:
     asked, events, ts = _asked(request, episode_id, body, "bot")
     lines = record_lines(events)  # this episode's events only
-    result, source = _structure(
+    result, source, calls = _structure(
         request.app.state.settings, bot_prompt(lines), body.text,
         lambda reply, question: answer_from_reply(reply, lines), lambda question: rules_answer(question, lines),
     )
@@ -80,7 +80,7 @@ def ask_bot(episode_id: str, body: QuestionIn, request: Request) -> dict:
     question = store.append(episode_id, "question.asked", asked, ts_ms=ts)
     answer = {
         "question_id": question["id"], "answer": result["answer"], "sources": result["sources"],
-        "found": result["found"], "source": source, "by": BOT,
+        "found": result["found"], "source": source, "by": BOT, "calls": calls,
     }
     store.append(episode_id, "question.answered", answer, ts_ms=ts)
     raise_nudges(store, episode_id, ts)
@@ -127,6 +127,7 @@ def answer_question(episode_id: str, question_id: str, body: AnswerIn, request: 
     answer = {
         "question_id": question_id, "answer": body.text, "by": body.by, "via": body.via,
         "heard_by": body.heard_by, "sources": [], "found": True, "source": "doctor",
+        "calls": live.spoken_calls(request.app.state.settings, body.via, body.heard_by),
     }
     return _write(request, episode_id, [("question.answered", answer)], _at(_store(request), episode_id, body.at_ms))
 
@@ -182,7 +183,7 @@ def ask_medicines(
     read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
     matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses,
                              ward=states.current_state(events) in WARD_VIEW)
-    return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "by": by})], ts)
+    return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "calls": read["calls"], "by": by})], ts)
 
 
 @ask_router.post("/checkins/{checkin_id}/seen")

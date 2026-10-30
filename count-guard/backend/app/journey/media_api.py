@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from typing import Literal
 
@@ -23,7 +24,7 @@ MAGIC = {
     "image/png": lambda b: b.startswith(b"\x89PNG"),
     "image/webp": lambda b: b[:4] == b"RIFF" and b[8:12] == b"WEBP",
 }
-HEARERS = ("prepared", "muse-voice-transcribe", "prepared (live call failed)")
+HEARERS = live.HEARERS
 NOTHING = "Nothing to draft was heard. Type the {what} instead."
 
 
@@ -34,15 +35,18 @@ def models(request: Request) -> dict:
 
 
 def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = "") -> dict:
-    """What was said, as {"text", "source"}: typed text, or a recording heard or prepared.
+    """What was said, as {"text", "source", "calls"}: typed text, or a recording heard or prepared.
 
-    Text the page took from an earlier hearing keeps that hearer, if it is one the server names. Else it is typed."""
+    Text the page took from an earlier hearing keeps that hearer, if it is one the server names. Else it is typed.
+    Such text records the voice call with no time: the hearing was in an earlier request (R4)."""
     if (file is None) == (text is None):
         raise HTTPException(status_code=422, detail="Send either a recording or typed text, not both and not neither.")
     if text is not None:
         if not text.strip():
             raise HTTPException(status_code=422, detail="The typed text is empty.")
-        return {"text": text.strip(), "source": heard_by if heard_by in HEARERS else "typed"}
+        if heard_by in HEARERS:
+            return {"text": text.strip(), "source": heard_by, "calls": [live.call_of("voice", settings, heard_by, None)]}
+        return {"text": text.strip(), "source": "typed", "calls": []}
     kind = (file.content_type or "").split(";")[0].strip().lower()
     if not (kind.startswith("audio/") or kind == "video/webm"):
         raise HTTPException(status_code=400, detail="The recording must be an audio file.")
@@ -56,26 +60,33 @@ def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = 
 
 
 def _structure(settings, prompt: str, transcript: str, from_reply, from_rules):
-    """Model first, rules as the fallback. Returns (result, source). One place for the source wording."""
+    """Model first, rules as the fallback. Returns (result, source, calls). One place for the source wording.
+
+    `rules` (no key) is no model call; a reply that could not be used is a failed Spark call (R5)."""
+    start = time.monotonic()
     reply = live.spark_text(settings, prompt + dictation.digits(transcript))
+    ms = round((time.monotonic() - start) * 1000)
     got = from_reply(reply, transcript)
     if got is not None:
-        return got, SPARK
-    return from_rules(transcript), ("rules (model reply not usable)" if settings.spark_configured else "rules")
+        return got, SPARK, [live.call_of("spark", settings, SPARK, ms)]
+    if settings.spark_configured:
+        source = "rules (model reply not usable)"
+        return from_rules(transcript), source, [live.call_of("spark", settings, source, ms)]
+    return from_rules(transcript), "rules", []
 
 
 def _dictate(request, episode_id, allowed, refusal, file, text, prompt, from_reply, from_rules, what, empty, heard_by=""):
-    """Shared by both routes: state check, what was heard, then the draft content. Returns (result, heard, source)."""
+    """Shared by both routes: state check, what was heard, then the draft content. Returns (result, meta)."""
     _require(request, episode_id)
     state = states.current_state(_store(request).events(episode_id))
     if state not in allowed:
         raise HTTPException(status_code=409, detail=refusal.format(state=state))
     settings = request.app.state.settings
     heard = _heard(settings, file, text, heard_by)
-    result, source = _structure(settings, prompt, heard["text"], from_reply, from_rules)
+    result, source, structure_calls = _structure(settings, prompt, heard["text"], from_reply, from_rules)
     if empty(result):
         raise HTTPException(status_code=422, detail=NOTHING.format(what=what))
-    return result, {"transcript": heard["text"], "heard_by": heard["source"], "source": source}
+    return result, {"transcript": heard["text"], "heard_by": heard["source"], "source": source, "calls": heard["calls"] + structure_calls}
 
 
 @media_router.post("/dictate/orders")
@@ -154,13 +165,13 @@ def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated:
     if task["kind"] == "dose":
         read = live.read_photo(settings, "strip", raw, name, kind)
         strips = strips_from(read["text"] or "")
-        return {**proof.check_strip(strips, task), "source": read["source"]}
+        return {**proof.check_strip(strips, task), "source": read["source"], "calls": read["calls"]}
     if task["kind"] == "obs":
         read = live.read_photo(settings, "monitor", raw, name, kind)
         values_read = proof.parse_monitor_text(read["text"] or "")
         # values_read is kept so that Confirm can compare the photo with the values the nurse confirms.
-        return {**proof.check_monitor(values_read, stated), "source": read["source"], "values_read": values_read}
-    return {"read": "", "match": "none", "why": proof.NO_READING, "source": "none"}
+        return {**proof.check_monitor(values_read, stated), "source": read["source"], "values_read": values_read, "calls": read["calls"]}
+    return {"read": "", "match": "none", "why": proof.NO_READING, "source": "none", "calls": []}
 
 
 def read_upload_photo(file: UploadFile) -> tuple[bytes, str]:

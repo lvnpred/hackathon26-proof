@@ -17,6 +17,11 @@ from app.media_pipeline import cut_frames
 ADVICE = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
 
 
+def bare(result: dict) -> dict:
+    """A model result without its `calls` list (covered in test_ai_calls.py)."""
+    return {k: v for k, v in result.items() if k != "calls"}
+
+
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     def refuse(*a, **k):
@@ -122,7 +127,7 @@ def test_segment_clip_no_key(tmp_path):
     got = live.segment_clip(settings, tmp_path / "x.mp4", "tray-hernia.mp4", ["needle holder"])
     assert got["source"] == "prepared" and got["detections"]["needle holder"]["count"] == 2
     for name in ("IMG_0001.mov", "../../x.mp4"):
-        assert live.segment_clip(settings, tmp_path / "x.mp4", name, ["needle holder"]) == {
+        assert bare(live.segment_clip(settings, tmp_path / "x.mp4", name, ["needle holder"])) == {
             "detections": None, "source": "none"}
 
 
@@ -141,7 +146,7 @@ def test_segment_clip_live_faked(tmp_path, monkeypatch):
 
     monkeypatch.setattr(SamAdapter, "segment_video", fake)
     got = live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "tray-hernia.mp4", ["needle holder"])
-    assert got == {"detections": {"needle holder": {"count": 2, "at_s": 0.0}}, "source": "sam-3.1"}
+    assert bare(got) == {"detections": {"needle holder": {"count": 2, "at_s": 0.0}}, "source": "sam-3.1"}
     # live_ok False skips the adapter (P3-R6)
     calls.clear()
     got = live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "tray-hernia.mp4", ["needle holder"], live_ok=False)
@@ -159,7 +164,7 @@ def test_segment_clip_keyed_failure_falls_back(tmp_path, monkeypatch, exc):
     keyed = _keyed(tmp_path)
     got = live.segment_clip(keyed, tmp_path / "c.mp4", "tray-hernia.mp4", ["needle holder"])
     assert got["source"] == live.FALLBACK and got["detections"]["needle holder"]["count"] == 2
-    assert live.segment_clip(keyed, tmp_path / "c.mp4", "IMG_0001.mov", ["needle holder"]) == {
+    assert bare(live.segment_clip(keyed, tmp_path / "c.mp4", "IMG_0001.mov", ["needle holder"])) == {
         "detections": None, "source": "failed"}
 
 
@@ -169,7 +174,7 @@ def test_segment_clip_unreadable_clip_and_too_long(tmp_path, monkeypatch):
 
     monkeypatch.setattr(live, "clip_seconds", unreadable)
     got = live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "IMG_1.mov", ["scissors"])
-    assert got == {"detections": None, "source": "unreadable"}
+    assert bare(got) == {"detections": None, "source": "unreadable"}
     _fake_media(monkeypatch, seconds=300)
     with pytest.raises(live.NotHeard) as err:
         live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "tray-hernia.mp4", ["scissors"])
@@ -225,7 +230,7 @@ def test_unreadable_clip_is_not_prepared_and_not_a_model_failure(tmp_path, monke
 
     monkeypatch.setattr(live, "clip_seconds", probe)
     got = live.segment_clip(_keyed(tmp_path), tmp_path / "c.mp4", "tray-hernia.mp4", ["scissors"])
-    assert got == {"detections": None, "source": "unreadable"}
+    assert bare(got) == {"detections": None, "source": "unreadable"}
     why = video.compare([{"concept": "scissors", "names": ["S"], "planned": 1}], None, got["source"])["why"]
     assert why == "The clip could not be read."
 

@@ -8,6 +8,7 @@ import logging
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Literal
 
@@ -30,6 +31,48 @@ FALLBACK = "prepared (live call failed)"
 MAX_LIVE_SECONDS = 120
 LONG_CLIP = "The clip is longer than 2 minutes. Trim it, then upload it again."
 UNREACHABLE = "The transcriber did not answer. Type what was said in the box."
+
+
+MODEL_IDS = {"voice": "voice_model", "spark": "spark_model", "sam": "sam_model", "spark-open": "spark_open_model"}
+_LIVE = ("muse-voice-transcribe", "muse-spark-1.3", "sam-3.1")
+_FAILED = (FALLBACK, "failed", "unreadable", "rules (model reply not usable)")
+
+
+def call_of(model: str, settings: Settings, source: str, ms: int | None) -> dict:
+    """One model call as the record keeps it: the card key, the model id, the source word and the time."""
+    return {"model": model, "model_id": getattr(settings, MODEL_IDS[model]), "source": source, "ms": ms}
+
+
+def mode_of(source: str) -> str | None:
+    """live, prepared or failed for a source word; None when no model was asked (rules, typed, none)."""
+    if source in _LIVE:
+        return "live"
+    if source == "prepared":
+        return "prepared"
+    return "failed" if source in _FAILED else None
+
+
+HEARERS = ("prepared", "muse-voice-transcribe", "prepared (live call failed)")
+
+
+def spoken_calls(settings: Settings, via: str, heard_by: str) -> list[dict]:
+    """The voice call of a spoken confirmation made in a later request: the hearer the server named, no time (R4)."""
+    if via == "voice" and heard_by in HEARERS:
+        return [call_of("voice", settings, heard_by, None)]
+    return []
+
+
+def _since(start: float) -> int:
+    return round((time.monotonic() - start) * 1000)
+
+
+def _calls(model: str, settings: Settings, source: str, ms: int | None) -> list[dict]:
+    """The calls of a result: none when nothing was read, else the one model asked."""
+    return [] if source == "none" else [call_of(model, settings, source, ms)]
+
+
+def _prepared_ms(found: dict | None) -> int | None:
+    return found.get("ms") if found else None
 
 
 class NotHeard(Exception):
@@ -74,6 +117,7 @@ def _reason(exc: Exception, key: str) -> str:
 
 def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str) -> dict:
     if settings.voice_configured:
+        start = time.monotonic()
         try:
             wav = to_wav(raw, content_type)
             with tempfile.TemporaryDirectory() as tmp:
@@ -84,15 +128,16 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
             log.warning("Voice transcription failed: %s", _reason(exc, settings.meta_api_key))
             found = prepared(filename)
             if found and found.get("transcript"):
-                return {"text": found["transcript"], "source": FALLBACK}
+                return {"text": found["transcript"], "source": FALLBACK, "calls": [call_of("voice", settings, FALLBACK, _since(start))]}
             raise NotHeard(502, UNREACHABLE) from exc
+        ms = _since(start)
         text = " ".join(t["text"] for t in turns).strip()
         if not text:
             raise NotHeard(409, NO_SPEECH)
-        return {"text": text, "source": "muse-voice-transcribe"}
+        return {"text": text, "source": "muse-voice-transcribe", "calls": [call_of("voice", settings, "muse-voice-transcribe", ms)]}
     found = prepared(filename)
     if found and found.get("transcript"):
-        return {"text": found["transcript"], "source": "prepared"}
+        return {"text": found["transcript"], "source": "prepared", "calls": [call_of("voice", settings, "prepared", _prepared_ms(found))]}
     raise NotHeard(409, NO_KEY)
 
 
@@ -117,31 +162,33 @@ def read_photo(
         kind = content_type if (content_type or "").startswith("image/") else "image/jpeg"
         data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
         adapter = SparkAdapter(settings)
+        start = time.monotonic()
         try:
             text = adapter.read_strips(data_url) if reader == "strip" else adapter.read_monitor(data_url)
         except (httpx.HTTPError, RuntimeError, ValueError):
+            ms = _since(start)
             found = prepared(filename)
             if found and found.get("text"):
-                return {"text": found["text"], "source": FALLBACK}
-            return {"text": None, "source": "failed"}
-        return {"text": text, "source": "muse-spark-1.3"}
+                return {"text": found["text"], "source": FALLBACK, "calls": _calls("spark", settings, FALLBACK, ms)}
+            return {"text": None, "source": "failed", "calls": _calls("spark", settings, "failed", ms)}
+        return {"text": text, "source": "muse-spark-1.3", "calls": _calls("spark", settings, "muse-spark-1.3", _since(start))}
     found = prepared(filename)
     if found and found.get("text"):
-        return {"text": found["text"], "source": "prepared"}
-    return {"text": None, "source": "none"}
+        return {"text": found["text"], "source": "prepared", "calls": _calls("spark", settings, "prepared", _prepared_ms(found))}
+    return {"text": None, "source": "none", "calls": []}
 
 
-def _stored_or(stored: dict | None, failed: str) -> dict:
+def _stored_or(settings: Settings, stored: dict | None, failed: str, ms: int | None) -> dict:
     """A live call did not work: the prepared detections under the fallback label, else `failed`."""
-    if stored:
-        return {"detections": stored, "source": FALLBACK}
-    return {"detections": None, "source": failed}
+    source = FALLBACK if stored else failed
+    return {"detections": stored or None, "source": source, "calls": _calls("sam", settings, source, ms)}
 
 
-def _prepared_or_none(stored: dict | None) -> dict:
+def _prepared_or_none(settings: Settings, found: dict | None) -> dict:
+    stored = found.get("detections") if found else None
     if stored:
-        return {"detections": stored, "source": "prepared"}
-    return {"detections": None, "source": "none"}
+        return {"detections": stored, "source": "prepared", "calls": _calls("sam", settings, "prepared", _prepared_ms(found))}
+    return {"detections": None, "source": "none", "calls": []}
 
 
 def segment_clip(
@@ -154,19 +201,21 @@ def segment_clip(
         try:
             seconds = clip_seconds(clip)
         except (SystemExit, OSError, ValueError):  # no ffprobe, ffprobe fails or prints N/A
-            return {"detections": None, "source": "unreadable"}
+            return {"detections": None, "source": "unreadable", "calls": _calls("sam", settings, "unreadable", None)}
         if seconds > MAX_LIVE_SECONDS:
             raise NotHeard(400, LONG_CLIP)
+        start = time.monotonic()
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 out = Path(tmp) / "clip.mp4"
                 to_sam_clip(clip, out, settings.sam_fps)
                 records = SamAdapter(settings).segment_video(out, concepts)
+            ms = _since(start)
             detections = summarize(records, settings.sam_fps, settings.low_confidence, concepts)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            return _stored_or(stored, "failed")
-        return {"detections": detections, "source": "sam-3.1"}
-    return _prepared_or_none(stored)
+            return _stored_or(settings, stored, "failed", _since(start))
+        return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms)}
+    return _prepared_or_none(settings, found)
 
 
 _IMAGE_TYPES = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
@@ -179,16 +228,18 @@ def segment_photos(
     found = prepared(filename)
     stored = found.get("detections") if found else None
     if settings.sam_configured and live_ok:
+        start = time.monotonic()
         try:
             urls = [
                 f"data:{_IMAGE_TYPES.get(p.suffix, 'image/jpeg')};base64,{base64.b64encode(p.read_bytes()).decode()}"
                 for p in paths
             ]
             records = SamAdapter(settings).segment_images(urls, concepts)
+            ms = _since(start)
             detections = summarize(records, 1, settings.low_confidence, concepts)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            return _stored_or(stored, "failed")
+            return _stored_or(settings, stored, "failed", _since(start))
         for cell in detections.values():
             cell["at_s"] = None  # a photo has no time
-        return {"detections": detections, "source": "sam-3.1"}
-    return _prepared_or_none(stored)
+        return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms)}
+    return _prepared_or_none(settings, found)

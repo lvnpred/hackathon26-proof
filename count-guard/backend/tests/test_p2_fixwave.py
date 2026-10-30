@@ -21,6 +21,11 @@ JPEG = b"\xff\xd8\xff\xe0fake"
 WEBP = b"RIFF\x00\x00\x00\x00WEBPfake"
 
 
+def bare(result: dict) -> dict:
+    """A model result without its `calls` list (covered in test_ai_calls.py)."""
+    return {k: v for k, v in result.items() if k != "calls"}
+
+
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     def refuse(*a, **k):
@@ -137,7 +142,7 @@ def test_failed_read_photo_falls_back_to_prepared(tmp_path, monkeypatch):
     out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "monitor-88-54.png", "image/png")
     assert out["source"] == "prepared (live call failed)"
     assert json.loads(out["text"])["sbp"] == 88
-    assert live.read_photo(_keyed(tmp_path), "monitor", b"x", "IMG_1.png", "image/png") == {"text": None, "source": "failed"}
+    assert bare(live.read_photo(_keyed(tmp_path), "monitor", b"x", "IMG_1.png", "image/png")) == {"text": None, "source": "failed"}
 
 
 # 6a. the bytes must be the declared image type

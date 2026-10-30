@@ -7,10 +7,13 @@ that the template does not already contain. Otherwise the template is used.
 
 from __future__ import annotations
 
+import time
+
 import httpx
 
 from app.adapters.spark import SparkAdapter
 from app.agent.verifier import ADVICE
+from app.journey.live import call_of
 from app.journey.nudges import HOUR_MS, hours, open_nudges
 from app.journey.stories import clock
 from app.morning.discharge import visible_events
@@ -117,9 +120,14 @@ def checked(text: str | None, lines: list[dict]) -> tuple[bool, str]:
 def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, use_model=True, write=None) -> dict:
     lines = template_lines(events, since_ms=since_ms, at_ms=at_ms, patient=patient)
     text, why = (None, "model not asked")
+    calls: list[dict] = []
     if use_model:
+        start = time.monotonic()
         text, why = reword(lines, settings, write)
+        ms = round((time.monotonic() - start) * 1000)
     ok, problem = checked(text, lines) if text else (False, why)
+    if use_model:
+        calls = [call_of("spark", settings, "muse-spark-1.3" if ok else "failed", ms)]
     return {
         "from": from_nurse,
         "to": to_nurse,
@@ -130,4 +138,5 @@ def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, u
         "wording": "muse-spark-1.3" if ok else "template",
         "model_note": "" if ok else problem,
         "by": from_nurse,
+        "calls": calls,
     }

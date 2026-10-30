@@ -110,6 +110,13 @@ test("doneBody by voice needs a transcript and keeps it", () => {
   assert.equal(body.transcript, "dose given");
 });
 
+test("doneBody names the hearer only for a spoken completion", () => {
+  const spoken = doneBody({ task: DOSE, via: "voice", transcript: "x", heardBy: "prepared" }).body;
+  assert.equal(spoken.heard_by, "prepared");
+  const tapped = doneBody({ task: DOSE, via: "tap", transcript: "", heardBy: "prepared" }).body;
+  assert.equal("heard_by" in tapped, false);
+});
+
 test("doneBody errors carry no advice words", () => {
   const errors = [
     doneBody({ task: OBS, via: "tap", transcript: "", form: {}, photo: null }).error,

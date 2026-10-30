@@ -27,7 +27,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       if (await act(`/tasks/${task.id}/begin`, { by })) onClear();
       return;
     }
-    const out = doneBody({ task, via: session.via, transcript: session.transcript, form, photo });
+    const out = doneBody({ task, via: session.via, transcript: session.transcript, form, photo, heardBy: session.heardBy });
     if (out.error) return setError(out.error);
     setError("");
     if (await act(`/tasks/${task.id}/done`, { by, ...out.body })) onClear();

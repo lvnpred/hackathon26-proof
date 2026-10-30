@@ -269,7 +269,7 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 
 | Beat | Model calls and label change |
 |---|---|
-| `intro` | No model call. The header reads Models: live, not offline, when a key is set. |
+| `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The header reads Models: live, not offline, when a key is set. |
 | `das-ask` | 1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by Or type what was said. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |

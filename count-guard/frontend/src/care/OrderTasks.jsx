@@ -1,7 +1,7 @@
 import { label } from "./clock";
 import { dueLabel, taskDue } from "./derive";
 import { MATCH_LABEL, proofOf, sourceLabel } from "./drafts";
-import { orderLines } from "./tasklist";
+import { orderLines, orderStatus } from "./tasklist";
 import { taskVideoLabel } from "./video";
 
 // The staff "Orders and tasks" card: one line per order item, with its task's state when it has one.
@@ -13,8 +13,7 @@ export default function OrderTasks({ orders, tasks, photos, nowMs, state }) {
       {orders.map((order) => (
         <div key={order.id} data-order={order.id}>
           <p className="small">
-            Signed by {order.by} at {label(order.at_ms)} ·{" "}
-            {order.acknowledged_by ? `Acknowledged by ${order.acknowledged_by}` : "Waiting for the nurse"}
+            Signed by {order.by} at {label(order.at_ms)} · {orderStatus(order, state)}
           </p>
           <ul className="task-list">
             {orderLines(order, tasks).map(({ key, text, task }) => {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
+import { doctorOpenItems } from "./askText";
 import ActionBar from "./ActionBar";
 import { actionsFor, panelOpen, toggled } from "./actions";
 import Dictate from "./Dictate";
@@ -233,5 +234,6 @@ export default function DoctorActions({ state, view, act, upload, busy }) {
   if (state === "theatre") {
     return <Theatre view={view} busy={busy} act={act} />;
   }
+  if (doctorOpenItems(view) > 0) return null;
   return <p className="empty small">Nothing to do from this state. The chart below is the record.</p>;
 }

@@ -66,3 +66,7 @@ def test_timeline_items_carry_both_texts():
     item = timeline_items(events)[1]
     assert item == {"id": "d1", "when": "Day 0 09:02", "type": "task.done",
                     "plain": "Nurse Meena (synthetic) finished a task.", "patient": "Nurse Meena gave paracetamol."}
+
+def test_ward_orders_and_rx_counts_are_singular():
+    assert plain(ev("ward.orders_set", by="D", doses=[{}], obs_every_h=4)) == "Ward orders from D: 1 dose, observations every 4 h."
+    assert plain(ev("rx.ordered", by="D", rows=[{}], source="demo")) == "Prescription from D: 1 medicine (demo)."

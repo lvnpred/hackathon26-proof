@@ -17,6 +17,12 @@ export const doctorQuestions = (view) => asked(view, "doctor");
 export const latestReview = (view) => newest(view?.ask?.reviews);
 export const latestMedicines = (view) => newest(view?.ask?.medicines);
 
+// What waits on the doctor: unanswered questions to the doctor, unanswered reviews, nudges to the doctor.
+export const doctorOpenItems = (view) =>
+  doctorQuestions(view).filter((q) => !q.answer).length
+  + (view?.ask?.reviews || []).filter((r) => !r.answer).length
+  + (view?.nudges || []).filter((n) => n.to === "doctor").length;
+
 // Who answered, and how: the bot names its source; the doctor says typed or by voice.
 export function answerByLine(answer) {
   if (answer.source === "doctor") return `${answer.by}, ${answer.via === "voice" ? "by voice" : "typed"}`;

@@ -86,9 +86,9 @@ def plain(event: dict) -> str:
     kind = event["event_type"]
     p = event.get("payload") or {}
     if kind == "rx.ordered":
-        return f"Prescription from {p.get('by')}: {len(p.get('rows') or [])} medicines ({p.get('source')})."
+        return f"Prescription from {p.get('by')}: {count_of(len(p.get('rows') or []), 'medicine')} ({p.get('source')})."
     if kind == "ward.orders_set":
-        return f"Ward orders from {p.get('by')}: {len(p.get('doses') or [])} doses, observations every {p.get('obs_every_h') or 0:g} h."
+        return f"Ward orders from {p.get('by')}: {count_of(len(p.get('doses') or []), 'dose')}, observations every {p.get('obs_every_h') or 0:g} h."
     if kind == "dose.given":
         return f"{p.get('by')} logged {p.get('name')} {p.get('amount') or ''}.".replace(" .", ".")
     if kind == "obs.recorded":

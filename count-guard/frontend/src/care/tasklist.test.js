@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues, orderLines, patientTaskStatus } from "./tasklist.js";
+import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus } from "./tasklist.js";
 import { M } from "./clock.js";
 
 const NOW = 10 * 60 * M;
@@ -88,4 +88,12 @@ test("patientTaskStatus words pass the no-advice scan", () => {
   const dose = { kind: "dose", every_h: 6, status: "open", due_ms: at(16), done: [{ at_ms: at(10) }] };
   const cases = [dose, { ...dose, status: "closed" }, { ...dose, status: "running" }, { ...dose, kind: "obs" }, { ...dose, done: [], due_ms: at(9) }, { ...dose, status: "done" }];
   for (const task of cases) for (const state of ["ward", "theatre", "home"]) assert.doesNotMatch(patientTaskStatus(task, state, at(12)), ADVICE);
+});
+
+test("orderStatus says what happens to a clinic order", () => {
+  const o = { acknowledged_by: null };
+  assert.equal(orderStatus(o, "clinic"), "Starts when the patient is admitted");
+  assert.equal(orderStatus(o, "clinic_done"), "Not started: the visit was closed.");
+  assert.equal(orderStatus(o, "ward"), "Waiting for the nurse");
+  assert.equal(orderStatus({ acknowledged_by: "Nurse Meena" }, "clinic_done"), "Acknowledged by Nurse Meena");
 });

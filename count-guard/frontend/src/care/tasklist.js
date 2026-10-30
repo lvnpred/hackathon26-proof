@@ -63,6 +63,14 @@ export function orderLines(order, tasks) {
   return lines;
 }
 
+// What happens to an order: its acknowledgement, or what the visit state means for it.
+export function orderStatus(order, state) {
+  if (order.acknowledged_by) return `Acknowledged by ${order.acknowledged_by}`;
+  if (state === "clinic") return "Starts when the patient is admitted";
+  if (state === "clinic_done") return "Not started: the visit was closed.";
+  return "Waiting for the nurse";
+}
+
 // The patient's wording for a task: never "To do", times as HH:MM.
 export function patientTaskStatus(task, state, nowMs) {
   if (task.status === "closed") return "Finished";

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ASK_DOCTOR, NOT_FOUND, PHOTO_CLOSED, PHOTO_STATES, answerByLine, botQuestions, doctorQuestions,
-  latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem,
+  latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem, doctorOpenItems,
 } from "./askText.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -110,4 +110,11 @@ test("nudgeLabel covers every kind the server raises, in plain words", () => {
     assert.ok(!text.includes("_") && !ADVICE.test(text), text);
   }
   assert.equal(nudgeLabel("brand_new"), "Nudge");
+});
+
+test("doctorOpenItems counts what waits on the doctor", () => {
+  const v = { ask: { questions: [{ to: "doctor", answer: null }, { to: "bot", answer: null }, { to: "doctor", answer: {} }],
+    reviews: [{ answer: null }] }, nudges: [{ to: "doctor" }, { to: "nurse" }] };
+  assert.equal(doctorOpenItems(v), 3);
+  assert.equal(doctorOpenItems({}), 0);
 });

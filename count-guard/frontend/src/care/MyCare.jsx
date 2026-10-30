@@ -7,7 +7,7 @@ import StateHeader from "./StateHeader";
 import { findPatient } from "./Patients";
 import Timeline from "./Timeline";
 import VideoChecks from "./VideoChecks";
-import { orderLines, patientTaskStatus } from "./tasklist";
+import { orderLines, orderStatus, patientTaskStatus } from "./tasklist";
 import Photos from "./Photos";
 import { taskCheckLine } from "./video";
 
@@ -26,7 +26,7 @@ export default function MyCare() {
         {(view.order_list || []).length === 0 && <p className="empty small">No orders yet.</p>}
         {(view.order_list || []).map((order) => (
           <div key={order.id}>
-            <p className="small">Ordered by {order.by}{order.acknowledged_by ? `, acknowledged by ${order.acknowledged_by}` : ""}</p>
+            <p className="small">Ordered by {order.by} · {orderStatus(order, view.state)}</p>
             <ul className="task-list">
               {orderLines(order, view.tasks || []).map(({ key, text, task }) => {
                 if (!task) return <li key={key}><span>{text}</span></li>;

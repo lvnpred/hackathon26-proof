@@ -1,3 +1,5 @@
+import { hhmm } from "./clock.js";
+import { displayName } from "./names.js";
 import { checkLabel } from "./video.js";
 
 // The four theatre steps as the doctor sees them: one line each, read from this theatre stay only.
@@ -12,14 +14,53 @@ export function theatreSteps(view) {
   const opened = last("count.pack_opened");
   const closing = last("count.closing");
   const ended = last("surgery.ended");
+  const clock = (line) => (line ? line.when.slice(-5) : "");
+  const noTray = !view.tray?.planned;
   return [
-    { title: "Tray check", done: Boolean(tray), says: tray ? checkLabel(tray) : "Not checked yet" },
-    { title: "Surgery began", done: Boolean(began), says: began ? `Began ${began.when}` : "Not yet" },
+    noTray
+      ? { key: "tray", title: "Tray check", done: true, says: "No tray planned", at: "", open: false }
+      : { key: "tray", title: "Tray check", done: Boolean(tray), says: tray ? checkLabel(tray) : "Not checked yet", at: tray?.at_ms != null ? hhmm(tray.at_ms) : "", open: false },
+    { key: "began", title: "Surgery began", done: Boolean(began), says: began ? `Began ${began.when}` : "Not yet", at: clock(began), open: false },
     {
+      key: "count",
       title: "Swab count",
       done: Boolean(closing),
       says: closing ? closing.plain : opened ? "Pack opened; closing count not recorded yet" : "Not started",
+      at: clock(closing),
+      open: (view.count?.missing ?? 0) > 0,
     },
-    { title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${ended.when}` : "Not yet" },
+    { key: "ended", title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${ended.when}` : "Not yet", at: clock(ended), open: false },
   ];
+}
+
+const WAIT = { began: "after the tray check", count: "after surgery began", ended: "after the count" };
+
+// Where each step stands: done, open (a count with swabs missing), current (the next to do) or later.
+export function checklistState(steps) {
+  let current = false;
+  return steps.map((step) => {
+    if (step.done) return { ...step, status: step.open ? "open" : "done", wait: "" };
+    if (!current) {
+      current = true;
+      return { ...step, status: "current", wait: "" };
+    }
+    return { ...step, status: "later", wait: WAIT[step.key] || "" };
+  });
+}
+
+// The three swab numbers; "–" until a figure exists.
+export function swabFigures(count) {
+  const figure = (value) => (value == null ? "–" : value);
+  const missing = count?.missing;
+  return {
+    opened: figure(count?.opened),
+    back: figure(count?.returned),
+    missing: figure(missing),
+    tone: missing == null ? "" : missing > 0 ? "red" : "green",
+  };
+}
+
+export function packLine(count) {
+  if (count?.opened == null) return "";
+  return `Pack opened ${hhmm(count.opened_at_ms)} by ${displayName(count.opened_by)}`;
 }

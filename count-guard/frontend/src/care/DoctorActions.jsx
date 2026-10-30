@@ -9,6 +9,7 @@ import NextCard from "./NextCard";
 import Dictate from "./Dictate";
 import { draftChanged, heardLine, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
+import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
 import { TrayPreview } from "./VideoCheck";
 
@@ -169,28 +170,15 @@ function SendToTheatre({ view, busy, act }) {
   );
 }
 
-function Theatre({ view, busy, act }) {
+function Theatre({ view, busy, act, upload }) {
   const [reason, setReason] = useState("");
-  const steps = theatreSteps(view);
-  const [, began, , ended] = steps;
+  const ended = theatreSteps(view)[3].done;
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
   return (
-    <section className="card" aria-label="Theatre steps">
-      <p className="label">In theatre</p>
-      <p className="small muted">The theatre nurse records the tray check and the swab count from the Nurse view. You can record when surgery began and ended.</p>
-      <ol className="theatre-steps">
-        {steps.map((step, i) => (
-          <li key={step.title}>
-            <b>Step {i + 1} of 4 · {step.title}:</b> <span className={step.done ? "" : "muted"}>{step.says}</span>
-          </li>
-        ))}
-      </ol>
-      <div className="row">
-        <button type="button" disabled={busy || began.done} onClick={() => act("/surgery", { step: "began", by: DOCTOR })}>Surgery began</button>
-        <button type="button" disabled={busy || !began.done || ended.done} onClick={() => act("/surgery", { step: "ended", by: DOCTOR })}>Surgery ended</button>
-      </div>
+    <>
+      <TheatreChecklist role="doctor" view={view} busy={busy} act={act} upload={upload} />
       {move && (
-        <>
+        <section className="card">
           <label className="field">
             Reason for leaving the count open
             <input value={reason} onChange={(event) => setReason(event.target.value)} />
@@ -201,14 +189,14 @@ function Theatre({ view, busy, act }) {
           <button
             type="button"
             className="primary"
-            disabled={busy || !ended.done || !reason.trim()}
+            disabled={busy || !ended || !reason.trim()}
             onClick={() => act("/state", { to: "ward", by: DOCTOR, reason: reason.trim(), checklist: {} })}
           >
             Back to ward
           </button>
-        </>
+        </section>
       )}
-    </section>
+    </>
   );
 }
 
@@ -234,7 +222,7 @@ export default function DoctorActions({ state, card, view, act, upload, ask, bus
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
       {below.map((key) => primary[key])}
       {state === "clinic" && <Clinic view={view} busy={busy} act={act} />}
-      {state === "theatre" && <Theatre view={view} busy={busy} act={act} />}
+      {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} />}
       {!["clinic", "admitting", "ward", "theatre"].includes(state) && (
         <p className={doctorOpenItems(view) > 0 ? "note" : "empty small"} role="status">{doctorWaiting(view)}</p>
       )}

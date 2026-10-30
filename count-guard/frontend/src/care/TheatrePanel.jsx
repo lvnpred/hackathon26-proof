@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { packLine, swabFigures } from "./theatre";
 import { swabTotal } from "./video";
 
 const NURSE = "Nurse Asha (synthetic)";
 
 // The Theatre count: pack opened, closing count, a correction, and the door to the camera count.
-export default function TheatrePanel({ episodeId, view, busy, act, replaced, step = "" }) {
+export default function TheatrePanel({ episodeId, view, busy, act, replaced, onNote }) {
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
   const [detail, setDetail] = useState("");
   const [by, setBy] = useState(NURSE);
-  const [note, setNote] = useState("");
+  const [changing, setChanging] = useState(false);
 
   const open = (view?.nudges || []).find((nudge) => nudge.kind === "count_open");
   const corrected = open && replaced?.has(open.fact_id);
@@ -20,7 +21,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, ste
   const back = Number(returned);
 
   async function post(body) {
-    setNote("");
+    onNote("");
     return act("/count", { ...body, by: by.trim() });
   }
 
@@ -30,7 +31,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, ste
     if (await post(body)) {
       setReturned("");
       setDetail("");
-      setNote(supersedesId ? "Correction recorded." : "Closing count recorded.");
+      onNote(supersedesId ? "Correction recorded." : "Closing count recorded.");
     }
   }
 
@@ -44,26 +45,41 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, ste
   }
 
   const validBack = returned !== "" && Number.isInteger(back) && back >= 0;
+  const figures = swabFigures(view.count);
+  const packed = view.count?.opened != null;
+  const askPack = !packed || changing;
 
   return (
-    <section className="card">
-      <p className="label">{step && `${step} `}Swab count</p>
-      <div className="row">
-        <label className="field" style={{ flex: "1 1 120px" }}>
-          Pack opened
-          <input inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
-        </label>
-        <label className="field" style={{ flex: "1 1 160px" }}>
-          By
-          <input value={by} onChange={(event) => setBy(event.target.value)} />
-        </label>
-        <button
-          disabled={!ready || !Number.isInteger(opened) || opened < 1}
-          onClick={async () => (await post({ step: "opened", quantity: opened })) && setNote("Pack opened recorded.")}
-        >
-          Record pack opened
-        </button>
+    <div className="swab-panel">
+      <div className={`swab-figures tone-${figures.tone}`}>
+        {[["opened", "Opened"], ["back", "Back"], ["missing", "Missing"]].map(([key, name]) => (
+          <p key={key}><span className="swab-number">{figures[key]}</span><span className="small muted">{name}</span></p>
+        ))}
       </div>
+      {packed && <p className="small">{packLine(view.count)} {!changing && <button type="button" className="quiet" onClick={() => setChanging(true)}>change</button>}</p>}
+      {askPack && (
+        <div className="row">
+          <label className="field" style={{ flex: "1 1 120px" }}>
+            Pack opened
+            <input inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+          </label>
+          <label className="field" style={{ flex: "1 1 160px" }}>
+            By
+            <input value={by} onChange={(event) => setBy(event.target.value)} />
+          </label>
+          <button
+            disabled={!ready || !Number.isInteger(opened) || opened < 1}
+            onClick={async () => {
+              if (await post({ step: "opened", quantity: opened })) {
+                setChanging(false);
+                onNote("Pack opened recorded.");
+              }
+            }}
+          >
+            Record pack opened
+          </button>
+        </div>
+      )}
       <div className="row">
         <label className="field" style={{ flex: "1 1 120px" }}>
           Closing count (returned)
@@ -82,7 +98,6 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, ste
         <button onClick={camera}>Count by camera</button>
         <span className="small muted">Opens the camera count. Its result is filed on this patient.</span>
       </div>
-      {note && <p className="note" role="status">{note}</p>}
-    </section>
+    </div>
   );
 }

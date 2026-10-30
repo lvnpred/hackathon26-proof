@@ -50,7 +50,6 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
   .demo-toggle[aria-expanded="true"] { background: var(--sun-soft); color: var(--sun-text); border-color: var(--sun); }
   .app:not(.demo-open) .demo-fold { display: none; }
 }
-.theatre-steps { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 6px; }
 
 /* Dictate: one box that takes a mic, an audio file or typing */
 .dictate-box { position: relative; }
@@ -81,3 +80,17 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .task-row .row.between { align-items: center; gap: 8px; }
 .mic-button { min-width: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
 .order-fold summary { cursor: pointer; font-weight: 600; }
+
+/* Theatre checklist and swab count */
+.checklist { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.checklist .step { display: grid; gap: 6px; }
+.checklist .step-line { margin: 0; }
+.checklist .step.current, .checklist .step.open { padding: 10px; border: 1px solid var(--sun); border-radius: 10px; background: var(--sun-soft); }
+.checklist .step .card { margin: 0; }
+.drop-zone { display: flex; align-items: center; justify-content: center; min-height: 88px; padding: 12px; border: 2px dashed var(--line-control); border-radius: 12px; text-align: center; }
+.swab-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.swab-figures p { margin: 0; display: grid; }
+.swab-number { font-size: 2rem; font-weight: 800; line-height: 1.1; }
+.swab-figures.tone-red .swab-number { color: var(--record); }
+.swab-figures.tone-green .swab-number { color: var(--ready-text, var(--leaf)); }
+button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--action); text-decoration: underline; font: inherit; cursor: pointer; }

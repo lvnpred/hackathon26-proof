@@ -17,7 +17,7 @@ export default function VideoCheck({ title, kind, check, busy, onFile, hideUploa
     <section className="card" aria-label={title}>
       <p className="label">{step && `${step} `}{title}</p>
       {!hideUpload && (
-        <label className="field">
+        <label className={kind === "tray" ? "field drop-zone" : "field"}>
           {kind === "tray" ? "Upload tray video or photos" : "Add video or photo check"}
           <input type="file" accept="video/*,image/*" multiple disabled={busy} onChange={pick} />
         </label>

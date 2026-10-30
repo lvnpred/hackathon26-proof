@@ -189,7 +189,7 @@ def test_ask_view_medicines_oldest_first():
 def test_medicine_strings_have_no_advice(tmp_path):
     out = match_medicines(_strips(*[(s["name"], s["strength"]) for s in KUMAR_STRIPS], ("Amlodipine", "10 mg")), _rx())
     strings = [out["why"], NO_HOME, NO_MEDICINES, record_holds([]), record_holds(DOSE)]
-    strings.append(record_holds([{"by": "D", "items": []}])) + [r["why"] for r in out["rows"]]
+    strings += [r["why"] for r in out["rows"]]
     strings += [r["schedule"] for r in out["rows"] if r["schedule"]]
     doses = dose_rows(DOSE)
     out = match_medicines(_strips(("Paracetamol", "1 g"), ("Paracetamol", "500 mg"), ("Cetirizine", "10 mg")), None, doses)

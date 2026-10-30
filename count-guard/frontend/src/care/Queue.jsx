@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { PageLead } from "../App";
 import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
+import Fault from "./Fault";
+import { NUDGE_SCOPES, STATUS } from "./faults";
 import { queueRows } from "./derive";
 import { StateBadge } from "./Patients";
 import { STATUS_CHOICES } from "./status";
@@ -26,6 +28,7 @@ function QueueRow({ row, ward, open, toggle }) {
         <tr>
           <td colSpan={5}>
             <Nudge nudge={nudge} busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} />
+            <Fault fault={ward.fault} episodeId={row.episodeId} only={NUDGE_SCOPES} />
           </td>
         </tr>
       )}
@@ -48,6 +51,7 @@ export default function Queue() {
           {STATUS_CHOICES.map((choice) => (
             <button key={choice.id} type="button" disabled={ward.busy} onClick={() => ward.setDoctorStatus(choice)}>{choice.label}</button>
           ))}
+          <Fault fault={ward.fault} episodeId={null} only={[STATUS]} />
         </div>
       )}
       {rows.length ? (

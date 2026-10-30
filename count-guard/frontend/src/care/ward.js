@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { call, getJourney, postJourney, uploadJourney } from "../journey";
 import { afterRun } from "./clock";
+import { CLOCK, STATUS, makeFault } from "./faults";
 import { statusBody, statusQuery } from "./status";
 
 const ROSTER = "cg-ward-roster";
@@ -77,7 +78,8 @@ export function useWard() {
   const [board, setBoard] = useState("");
   const [patientBed, setPatientBedState] = useState(() => read(PATIENT) || "4");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [fault, setFault] = useState(null);
+  const [loadError, setLoadError] = useState("");
   const [doctorStatus, setDoctorStatus] = useState(null);
   const statusSeq = useRef(0); // a reply to a read that began before a newer one or a POST is dropped
 
@@ -88,7 +90,7 @@ export function useWard() {
         setNowMs(ward.nowMs);
         setBoard(ward.board);
       })
-      .catch((exc) => setError(exc.message));
+      .catch((exc) => setLoadError(exc.message));
   }, []);
 
   // The chip follows the ward: ask again whenever a record or the clock changes. An error keeps the last status.
@@ -102,8 +104,10 @@ export function useWard() {
     return () => { live = false; };
   }, [board, patients, nowMs]);
 
+  const clearFault = () => setFault(null);
+
   async function chooseDoctorStatus(choice) {
-    setError("");
+    setFault(null);
     statusSeq.current += 1;
     try {
       const body = statusBody(choice, nowMs, board, patients.map((p) => p.id));
@@ -113,7 +117,7 @@ export function useWard() {
       statusSeq.current += 1; // reads that began before this reply must not overwrite it
       setDoctorStatus(reply);
     } catch (exc) {
-      setError(exc.message);
+      setFault(makeFault(null, STATUS, exc.message));
     }
   }
 
@@ -131,8 +135,8 @@ export function useWard() {
     setPatients((list) => list.map((p) => (p.id === id ? { ...p, view } : p)));
   }
 
-  async function run(id, send) {
-    setError("");
+  async function run(id, send, scope) {
+    setFault(null);
     setBusy(true);
     try {
       const next = await send();
@@ -142,25 +146,25 @@ export function useWard() {
       write(NOW, String(stepped));
       return next;
     } catch (exc) {
-      setError(exc.message);
+      setFault(makeFault(id, scope, exc.message));
       return null;
     } finally {
       setBusy(false);
     }
   }
 
-  const act = (id, path, body) => run(id, () => postJourney(id, path, { ...body, at_ms: nowMs }));
+  const act = (id, path, body, scope = path) => run(id, () => postJourney(id, path, { ...body, at_ms: nowMs }), scope);
   const send = (id, path, file, fields) => uploadJourney(id, path, file, { ...fields, at_ms: nowMs });
-  const upload = (id, path, file, fields) => run(id, () => send(id, path, file, fields));
+  const upload = (id, path, file, fields, scope = path) => run(id, () => send(id, path, file, fields), scope);
 
   // Like upload, but returns the JSON without swapping the view (a proposal is not a record).
-  async function ask(id, path, file, fields) {
-    setError("");
+  async function ask(id, path, file, fields, scope = path) {
+    setFault(null);
     setBusy(true);
     try {
       return await send(id, path, file, fields);
     } catch (exc) {
-      setError(exc.message);
+      setFault(makeFault(id, scope, exc.message));
       return null;
     } finally {
       setBusy(false);
@@ -171,7 +175,7 @@ export function useWard() {
     if (ms <= nowMs || !patients.length) return;
     setNowMs(ms);
     write(NOW, String(ms));
-    setError("");
+    setFault(null);
     setBusy(true);
     try {
       const results = await Promise.allSettled(patients.map((p) => postJourney(p.id, "/tick", { at_ms: ms })));
@@ -182,14 +186,14 @@ export function useWard() {
         else failed.push(`${patients[i].name}: ${res.reason?.message || "failed"}`);
       });
       setPatients((list) => list.map((p) => (views.has(p.id) ? { ...p, view: views.get(p.id) } : p)));
-      if (failed.length) setError(`The time moved, but ${failed.join("; ")}`);
+      if (failed.length) setFault(makeFault(null, CLOCK, `The time moved, but ${failed.join("; ")}`));
     } finally {
       setBusy(false);
     }
   }
 
   async function reset() {
-    setError("");
+    setFault(null);
     setBusy(true);
     try {
       const ward = await seed();
@@ -197,7 +201,7 @@ export function useWard() {
       setNowMs(ward.nowMs);
       setBoard(ward.board);
     } catch (exc) {
-      setError(exc.message);
+      setFault(makeFault(null, CLOCK, exc.message));
     } finally {
       setBusy(false);
     }
@@ -205,5 +209,5 @@ export function useWard() {
 
   const find = (id) => patients.find((p) => p.id === id);
 
-  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, error, act, upload, ask, jump, reset, find };
+  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, fault, loadError, clearFault, act, upload, ask, jump, reset, find };
 }

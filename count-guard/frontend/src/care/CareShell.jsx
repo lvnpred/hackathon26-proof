@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Outlet, useMatch, useNavigate, useOutletContext } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from "react-router-dom";
 import { Banner, Mark } from "../App";
 import { call } from "../journey";
 import { stripPills } from "./alerts";
 import { label, skipTargets } from "./clock";
 import { waitingPills } from "./derive";
+import Fault from "./Fault";
+import { CLOCK } from "./faults";
 import { findPatient } from "./Patients";
 import { chipClass } from "./status";
 import { useWard } from "./ward";
@@ -72,6 +74,7 @@ function ClockBar({ ward }) {
         </button>
       ))}
       <button type="button" disabled={ward.busy} onClick={ward.reset}>Reset</button>
+      <Fault fault={ward.fault} episodeId={null} only={[CLOCK]} />
     </div>
   );
 }
@@ -95,6 +98,11 @@ function DoctorChip({ status }) {
 export default function CareShell({ ward, children }) {
   const navigate = useNavigate();
   const tabs = ward.role === "patient" ? PATIENT_TABS : STAFF_TABS;
+  const { pathname } = useLocation();
+  const { clearFault } = ward;
+
+  // A fault belongs to the screen it happened on.
+  useEffect(() => { clearFault(); }, [pathname, ward.role, ward.patientBed]);
 
   function pick(role) {
     ward.setRole(role);
@@ -138,7 +146,6 @@ export default function CareShell({ ward, children }) {
       {ward.role !== "patient" && <Strip ward={ward} />}
       {DEMO && <ClockBar ward={ward} />}
       <main className="page">
-        {ward.error && <p className="note" role="alert">{ward.error}</p>}
         {children}
       </main>
       <footer className="care-foot">

@@ -6,6 +6,8 @@ import { useCareWard } from "./CareShell";
 import { alertNow } from "./alerts";
 import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
+import Fault from "./Fault";
+import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
 import { trayOnNurseCard } from "./derive";
 import { lensFor } from "./lens";
 import OrderTasks from "./OrderTasks";
@@ -47,14 +49,14 @@ export default function Chart() {
     if (target) target.scrollIntoView({ block: "center" });
   }, [line, Boolean(view)]);
 
-  if (!ward.patients.length) return <p className="empty">{ward.error || "Loading the ward…"}</p>;
+  if (!ward.patients.length) return <p className="empty">{ward.loadError || "Loading the ward…"}</p>;
   if (!patient) {
     return <p className="empty">No patient with that id. <Link to="/patients">Back to patients</Link></p>;
   }
 
-  const act = (path, body) => ward.act(episodeId, path, body);
-  const upload = (path, file, fields) => ward.upload(episodeId, path, file, fields);
-  const ask = (path, file, fields) => ward.ask(episodeId, path, file, fields);
+  const act = (path, body, scope) => ward.act(episodeId, path, body, scope);
+  const upload = (path, file, fields, scope) => ward.upload(episodeId, path, file, fields, scope);
+  const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
   const tasks = view.tasks || [];
   const orders = view.order_list || [];
@@ -64,12 +66,14 @@ export default function Chart() {
       <StateHeader patient={patient} view={view} alert={alertNow(view)} />
 
       <AlertBanner view={view} role={ward.role} line={line} busy={ward.busy} act={act} />
+      <Fault fault={ward.fault} episodeId={episodeId} only={NUDGE_SCOPES} />
 
       <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
+      <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES]} />
 
       <Photos view={view} />
 
-      <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} />
+      <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} fault={ward.fault} episodeId={episodeId} />
 
       <VideoChecks view={view} hideTray={trayOnNurseCard(ward.role, view.state)} />
 

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { label } from "./clock";
 import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
+import Fault from "./Fault";
+import { INBOX_SCOPES } from "./faults";
 import { sourceLabel } from "./drafts";
 import { answerHow, answerSourceLine, noteText, questionText } from "./askText";
 
@@ -27,7 +29,7 @@ function QuestionItem({ q, role, busy, act, ask }) {
       setText(typed);
       return true;
     }
-    const result = await ask("/ask/hear", file, { by: DOCTOR });
+    const result = await ask("/ask/hear", file, { by: DOCTOR }, `/questions/${q.id}/answer`);
     if (!result) return false;
     setText(result.text);
     setHeard({ text: result.text, by: result.heard_by });
@@ -91,7 +93,7 @@ function ReviewItem({ r, role, busy, act, references }) {
 }
 
 // Questions to the doctor and healing photos on the chart. Only the doctor can answer; others see answered items.
-export default function AskInbox({ view, role, busy, act, ask }) {
+export default function AskInbox({ view, role, busy, act, ask, fault, episodeId }) {
   const shown = (item) => role === "doctor" || item.answer;
   const questions = (view.ask?.questions || []).filter((q) => q.to === "doctor").filter(shown);
   const reviews = (view.ask?.reviews || []).filter(shown);
@@ -100,6 +102,7 @@ export default function AskInbox({ view, role, busy, act, ask }) {
   return (
     <section className="card" aria-label="Ask inbox">
       <p className="label">Questions and photos for the doctor</p>
+      <Fault fault={fault} episodeId={episodeId} only={INBOX_SCOPES} />
       {questions.map((q) => <QuestionItem key={q.id} q={q} role={role} busy={busy} act={act} ask={ask} />)}
       {reviews.map((r) => <ReviewItem key={r.id} r={r} role={role} busy={busy} act={act} references={references} />)}
     </section>

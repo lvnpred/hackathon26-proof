@@ -15,7 +15,7 @@ import { taskCheckLine } from "./video";
 export default function MyCare() {
   const ward = useCareWard();
   const patient = findPatient(ward.patients, ward.patientBed);
-  if (!patient) return <p className="empty">{ward.error || "Loading your care…"}</p>;
+  if (!patient) return <p className="empty">{ward.loadError || "Loading your care…"}</p>;
   const { view } = patient;
   return (
     <Fragment key={patient.id}>

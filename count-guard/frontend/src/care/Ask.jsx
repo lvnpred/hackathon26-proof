@@ -11,8 +11,10 @@ function AskBody({ ward, patient }) {
   const props = {
     view: patient.view,
     busy: ward.busy,
-    act: (path, body) => ward.act(patient.id, path, body),
-    upload: (path, file, fields) => ward.upload(patient.id, path, file, fields),
+    act: (path, body, scope) => ward.act(patient.id, path, body, scope),
+    upload: (path, file, fields, scope) => ward.upload(patient.id, path, file, fields, scope),
+    fault: ward.fault,
+    episodeId: patient.id,
   };
   return (
     <>
@@ -30,6 +32,6 @@ function AskBody({ ward, patient }) {
 export default function Ask() {
   const ward = useCareWard();
   const patient = findPatient(ward.patients, ward.patientBed);
-  if (!patient) return <p className="empty">{ward.error || "Loading your questions…"}</p>;
+  if (!patient) return <p className="empty">{ward.loadError || "Loading your questions…"}</p>;
   return <AskBody key={patient.id} ward={ward} patient={patient} />;
 }

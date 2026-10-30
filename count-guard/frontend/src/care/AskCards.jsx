@@ -5,6 +5,7 @@ import {
   latestReview, medicineLine, photoAskOpen, questionProblem,
 } from "./askText.js";
 import { sourceLabel } from "./drafts";
+import Fault from "./Fault";
 
 const WAITING = "Waiting for Dr. Rao";
 
@@ -24,7 +25,7 @@ function QuestionForm({ title, button, busy, text, setText, onSend, hint }) {
   );
 }
 
-export function BotCard({ view, busy, act, onAskDoctor }) {
+export function BotCard({ view, busy, act, onAskDoctor, fault, episodeId }) {
   const [text, setText] = useState("");
   async function send() {
     const next = await act("/ask/bot", { text: text.trim() });
@@ -36,6 +37,7 @@ export function BotCard({ view, busy, act, onAskDoctor }) {
         title="Ask your record" button="Ask the record" busy={busy} text={text} setText={setText} onSend={send}
         hint="The record bot quotes lines from your own record."
       />
+      <Fault fault={fault} episodeId={episodeId} only={["/ask/bot"]} />
       {botQuestions(view).map((q) => (
         <div key={q.id} className="stack">
           <p className="small"><b>{q.text}</b></p>
@@ -55,7 +57,7 @@ export function BotCard({ view, busy, act, onAskDoctor }) {
   );
 }
 
-export function DoctorCard({ view, busy, act, fill }) {
+export function DoctorCard({ view, busy, act, fill, fault, episodeId }) {
   const [text, setText] = useState("");
   // A question the bot could not find is copied here once per request.
   useEffect(() => { if (fill.id) setText(fill.text); }, [fill.id]);
@@ -66,6 +68,7 @@ export function DoctorCard({ view, busy, act, fill }) {
   return (
     <section className="card" aria-label="Ask the doctor">
       <QuestionForm title="Ask Dr. Rao" button="Send to Dr. Rao" busy={busy} text={text} setText={setText} onSend={send} />
+      <Fault fault={fault} episodeId={episodeId} only={["/ask/doctor"]} />
       {doctorQuestions(view).map((q) => (
         <div key={q.id} className="stack">
           <p className="small"><b>{q.text}</b> <span className="muted">{label(q.at_ms)}</span></p>
@@ -92,12 +95,13 @@ function PhotoInput({ title, busy, onFile, children }) {
   );
 }
 
-export function ReviewCard({ view, busy, upload }) {
+export function ReviewCard({ view, busy, upload, fault, episodeId }) {
   const [note, setNote] = useState("");
   const review = latestReview(view);
   return (
     <section className="card" aria-label="Healing photo">
       <p className="label">Healing photo</p>
+      <Fault fault={fault} episodeId={episodeId} only={["/ask/review"]} />
       {photoAskOpen(view.state) ? (
         <>
           <label className="field">
@@ -123,11 +127,12 @@ export function ReviewCard({ view, busy, upload }) {
   );
 }
 
-export function MedicinesCard({ view, busy, upload }) {
+export function MedicinesCard({ view, busy, upload, fault, episodeId }) {
   const read = latestMedicines(view);
   return (
     <section className="card" aria-label="Medicine photo">
       <p className="label">Medicines photo</p>
+      <Fault fault={fault} episodeId={episodeId} only={["/ask/medicines"]} />
       {photoAskOpen(view.state)
         ? <PhotoInput title="Photograph your medicines" busy={busy} onFile={(file) => upload("/ask/medicines", file)} />
         : <p className="empty small">{PHOTO_CLOSED}</p>}

@@ -123,6 +123,7 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
             with tempfile.TemporaryDirectory() as tmp:
                 path = Path(tmp) / "heard.wav"
                 path.write_bytes(wav)
+                start = time.monotonic()
                 turns = VoiceAdapter(settings).transcribe(path, 0, "audio/wav")
         except (httpx.HTTPError, subprocess.SubprocessError, OSError, ValueError) as exc:
             log.warning("Voice transcription failed: %s", _reason(exc, settings.meta_api_key))
@@ -209,6 +210,7 @@ def segment_clip(
             with tempfile.TemporaryDirectory() as tmp:
                 out = Path(tmp) / "clip.mp4"
                 to_sam_clip(clip, out, settings.sam_fps)
+                start = time.monotonic()
                 records = SamAdapter(settings).segment_video(out, concepts)
             ms = _since(start)
             detections = summarize(records, settings.sam_fps, settings.low_confidence, concepts)
@@ -234,6 +236,7 @@ def segment_photos(
                 f"data:{_IMAGE_TYPES.get(p.suffix, 'image/jpeg')};base64,{base64.b64encode(p.read_bytes()).decode()}"
                 for p in paths
             ]
+            start = time.monotonic()
             records = SamAdapter(settings).segment_images(urls, concepts)
             ms = _since(start)
             detections = summarize(records, 1, settings.low_confidence, concepts)

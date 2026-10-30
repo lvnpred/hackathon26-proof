@@ -19,6 +19,8 @@ from app.journey.stories import clock
 from app.morning.discharge import visible_events
 from app.morning.vitals import wording_ok
 
+NO_KEY = "no Meta Model API key"
+
 PROMPT = (
     "You help a ward nurse hand over a shift. Regroup the numbered facts below for the incoming nurse "
     "under these headings, in this order, leaving out a heading with no facts: Patient, Doses given, "
@@ -96,7 +98,7 @@ def reword(lines: list[dict], settings, write=None) -> tuple[str | None, str]:
     """
     if write is None:
         if not settings.spark_configured:
-            return None, "no Meta Model API key"
+            return None, NO_KEY
         write = SparkAdapter(settings).write
     facts = "\n".join(f"{n}. {line['text']}" for n, line in enumerate(lines, 1))
     try:
@@ -126,7 +128,7 @@ def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, u
         text, why = reword(lines, settings, write)
         ms = round((time.monotonic() - start) * 1000)
     ok, problem = checked(text, lines) if text else (False, why)
-    if use_model:
+    if use_model and why != NO_KEY:  # no key: the adapter was never reached, so no call (R5)
         calls = [call_of("spark", settings, "muse-spark-1.3" if ok else "failed", ms)]
     return {
         "from": from_nurse,

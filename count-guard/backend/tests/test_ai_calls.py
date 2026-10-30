@@ -109,3 +109,90 @@ def test_handover_records_one_spark_call_only_when_asked(tmp_path):
     lines_text = draft([], use_model=False, **kwargs)["lines"][0]["text"]
     used = draft([], write=lambda prompt: lines_text, **kwargs)
     assert [(c["model"], c["model_id"], c["source"]) for c in used["calls"]] == [("spark", "muse-spark-1.3", "muse-spark-1.3")]
+
+
+def _pairs(calls):
+    return [(c["model"], c["source"]) for c in calls]
+
+
+def test_keyless_handover_asked_for_the_model_records_no_call(tmp_path):
+    out = draft([], patient="P", since_ms=0, at_ms=1, from_nurse="A", to_nurse="B", settings=_no_key(tmp_path))
+    assert out["calls"] == [] and out["wording"] == "template"
+
+
+def test_segment_photos_calls(tmp_path, monkeypatch):
+    from app.adapters.sam import SamAdapter
+
+    photo = tmp_path / "a.png"
+    photo.write_bytes(b"\x89PNG")
+    prepared = live.segment_photos(_no_key(tmp_path), [photo], ["retractor"], "tray-hernia.png")
+    assert _pairs(prepared["calls"]) == [("sam", "prepared")]
+    assert live.segment_photos(_no_key(tmp_path), [photo], ["retractor"], "unknown.png")["calls"] == []
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
+    keyed = live.segment_photos(_keyed(tmp_path), [photo], ["retractor"], "unknown.png")
+    assert _pairs(keyed["calls"]) == [("sam", "sam-3.1")] and keyed["calls"][0]["ms"] >= 0
+
+
+def test_tray_and_setup_checks_record_the_sam_call(tmp_path):
+    from tests.test_p3_setup import SALINE, _ward
+    from tests.test_p3_tray import _to_theatre
+    from tests.test_p4_photo_checks import _checked, _photos
+
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    assert _photos(client, eid).status_code == 200
+    assert _pairs(_checked(client, eid, "tray.checked")["calls"]) == [("sam", "prepared")]
+    client, eid = _new(tmp_path / "setup")
+    task = _ward(client, eid, [SALINE])[SALINE["text"]]
+    assert _photos(client, eid, ("saline-setup.png",), check="setup", task_id=task).status_code == 200
+    assert _pairs(_checked(client, eid, "setup.checked")["calls"]) == [("sam", "prepared")]
+
+
+def test_proof_check_records_the_spark_call(tmp_path):
+    from tests.test_p2_photos import _photo, _ward as _ward_tasks
+
+    client, eid = _new(tmp_path)
+    task = _ward_tasks(client, eid, [DOSE])[0]
+    assert _photo(client, eid, task_id=task["id"]).status_code == 200
+    assert _pairs(_last(client, eid, "proof.checked")["payload"]["calls"]) == [("spark", "prepared")]
+
+
+def test_medicines_photo_records_the_spark_call(tmp_path):
+    from tests.test_care_demo import _client
+    from tests.test_p4_ask import _home, _patients
+    from tests.test_p4_medicines import _post
+
+    client = _client(tmp_path)
+    kumar = _patients(client)["4"]
+    _home(client, kumar)
+    assert _post(client, kumar).status_code == 200
+    assert _pairs(_last(client, kumar, "medicines.read")["payload"]["calls"]) == [("spark", "prepared")]
+
+
+def test_doctor_answer_by_voice_records_one_untimed_voice_call(tmp_path):
+    from tests.test_care_demo import _client
+    from tests.test_p4_ask import _ask, _patients
+
+    client = _client(tmp_path)
+    kumar = _patients(client)["4"]
+    assert _ask(client, kumar, "When is my review?", to="doctor").status_code == 200
+    qid = _last(client, kumar, "question.asked")["id"]
+    body = {"text": "Next week.", "by": DOC, "via": "voice", "heard_by": "prepared", "at_ms": 2000}
+    assert client.post(_url(kumar, f"questions/{qid}/answer"), json=body).status_code == 200
+    assert _last(client, kumar, "question.answered")["payload"]["calls"] == [
+        {"model": "voice", "model_id": "muse-voice-transcribe-1.0", "source": "prepared", "ms": None}]
+
+
+def test_keyed_bot_answer_records_a_timed_spark_call(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    from tests.test_care_demo import _client
+    from tests.test_p4_ask import _ask, _patients
+
+    client = _client(tmp_path)
+    kumar = _patients(client)["4"]
+    client.app.state.settings = replace(client.app.state.settings, meta_api_key="test-key")
+    monkeypatch.setattr(live, "spark_text", lambda settings, prompt: "unusable reply")
+    assert _ask(client, kumar, "What did the doctor say?").status_code == 200
+    calls = _last(client, kumar, "question.answered")["payload"]["calls"]
+    assert _pairs(calls) == [("spark", "rules (model reply not usable)")] and calls[0]["ms"] >= 0

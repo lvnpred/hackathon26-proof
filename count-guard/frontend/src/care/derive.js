@@ -5,7 +5,7 @@ const DOCTOR = "Dr. A. Rao";
 const ROLE_NAME = { nurse: "Nurse", patient: "Patient", doctor: DOCTOR };
 
 // "2 h 20 min", "2 h", "5 min".
-function waitedText(ms) {
+export function waitedText(ms) {
   const total = Math.max(0, Math.floor(ms / M));
   const h = Math.floor(total / 60);
   const m = total % 60;

@@ -1,3 +1,5 @@
+import { hhmm } from "./clock.js";
+import { displayName } from "./names.js";
 import { blankRow } from "./orders.js";
 import { obsValues } from "./tasklist.js";
 
@@ -100,4 +102,28 @@ export function doneBody({ task, via, transcript, form, photo }) {
 export function proofOf(done, photos) {
   const photo = done.proof_id ? (photos || []).find((p) => p.id === done.proof_id) || null : null;
   return { voice: done.via === "voice", typed: done.via === "text", photo, flagged: done.match === "mismatch" };
+}
+
+// The muted line under a task row: its last completion, who did it and how, with the photo match.
+export function lastDoneLine(task, photos) {
+  const d = (task.done || []).slice(-1)[0];
+  if (!d) return null;
+  const proof = proofOf(d, photos);
+  const how = proof.voice ? "by voice" : proof.typed ? "typed" : "by tap";
+  return {
+    text: `Last done ${hhmm(d.at_ms)} by ${displayName(d.by)}, ${how}`,
+    match: d.match ? MATCH_LABEL[d.match] || MATCH_LABEL.none : null,
+    flagged: proof.flagged,
+  };
+}
+
+// A row's spoken completion is pinned to that row's task; only an observation keeps spoken values.
+export function rowSession(proposal, task) {
+  return {
+    proposal: { candidates: [task], values: task.kind === "obs" ? proposal.values || {} : {} },
+    via: proposal.heard_by === "typed" ? "text" : "voice",
+    transcript: proposal.transcript || "",
+    source: proposal.source,
+    heardBy: proposal.heard_by,
+  };
 }

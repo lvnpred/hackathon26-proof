@@ -1,5 +1,6 @@
 import { hhmm } from "./clock.js";
-import { taskDue } from "./derive.js";
+import { taskDue, waitedText } from "./derive.js";
+import { displayName } from "./names.js";
 
 const ORDER = { overdue: 0, due: 1, running: 2, later: 3, paused: 3, done: 4, closed: 5 };
 
@@ -89,4 +90,36 @@ export function patientTaskStatus(task, state, nowMs) {
   if (task.every_h && last) return `${task.kind === "dose" ? "Given" : "Done"} ${last}${due ? ` \u00b7 next due ${due}` : ""}`;
   if (!due) return "";
   return nowMs != null && task.due_ms < nowMs ? `Due since ${due}` : `Due ${due}`;
+}
+
+// The words on a nurse's task pill. Lateness counts from the due time (R8).
+export function taskStatusText(task, nowMs, state) {
+  const due = taskDue(task, nowMs, state);
+  if (due === "overdue") return `${waitedText(nowMs - task.due_ms)} late`;
+  if (due === "due") return "due now";
+  if (due === "paused") return "paused while in theatre";
+  if (due === "later") return task.due_ms == null ? "no set time" : `next at ${hhmm(task.due_ms)}`;
+  return due;
+}
+
+// Due now: overdue, due, running. Later today: later, paused. Done and closed tasks leave the list.
+export function taskGroups(tasks, nowMs, state) {
+  const groups = { now: [], later: [] };
+  for (const task of sortTasks(tasks, nowMs)) {
+    const due = taskDue(task, nowMs, state);
+    if (due === "done" || due === "closed") continue;
+    groups[due === "later" || due === "paused" ? "later" : "now"].push({ task, due, status: taskStatusText(task, nowMs, state) });
+  }
+  return groups;
+}
+
+// The button a row gets. Observations save readings; a dose or task not yet due is marked early.
+export function rowMark(task, due) {
+  if (task.kind === "obs") return { label: "Save readings", primary: true };
+  if (due === "later") return { label: task.kind === "dose" ? "Given early" : "Mark done early", primary: false };
+  return { label: "Mark done", primary: true };
+}
+
+export function orderFoldTitle(order) {
+  return `Signed orders \u00b7 ${displayName(order.by)} ${hhmm(order.at_ms)} \u00b7 ${order.acknowledged_by ? "acknowledged" : "not acknowledged yet"}`;
 }

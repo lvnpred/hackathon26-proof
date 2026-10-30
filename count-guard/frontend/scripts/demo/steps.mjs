@@ -9,7 +9,6 @@ const KUMAR = "R. Kumar";
 const IYER = "S. Iyer";
 // A beat's "seen before" strings, asserted before the click that would change them.
 const before = async (H, id) => { for (const s of BEATS.find((b) => b.id === id).before) await H.waitText(s); };
-const VOICE = "Complete a task by voice";
 
 export const STEPS = {
   async intro(H) {
@@ -93,10 +92,11 @@ export const STEPS = {
     await H.click("Back to ward");
   },
   async "kumar-paracetamol"(H) {
-    await H.file(VOICE, "eval/p2/kumar-paracetamol.wav");
+    await H.say("Paracetamol");
+    await H.sayFile("Paracetamol", "eval/p2/kumar-paracetamol.wav");
     await H.click("Use this");
     await before(H, "kumar-paracetamol");
-    await H.file(VOICE, "eval/p2/strip-paracetamol.png");
+    await H.file("Confirm task", "eval/p2/strip-paracetamol.png");
     await H.click("Confirm");
   },
   async "kumar-mycare"(H) {
@@ -147,7 +147,8 @@ export const STEPS = {
   async "iyer-bp"(H) {
     await H.role("Nurse");
     await H.chart(IYER);
-    await H.file(VOICE, "eval/p2/iyer-bp.wav");
+    await H.say("BP and pulse");
+    await H.sayFile("BP and pulse", "eval/p2/iyer-bp.wav");
     await H.click("Use this");
     await before(H, "iyer-bp");
     await H.click("Confirm");
@@ -176,9 +177,9 @@ export const STEPS = {
   },
   async "iyer-recheck"(H) {
     await H.role("Nurse");
-    await H.fill("What was said", "BP 112 over 70, pulse 84, bed 7.", VOICE);
+    await H.say("BP and pulse every 1 h");
+    await H.sayText("BP and pulse every 1 h", "BP 112 over 70, pulse 84, bed 7.");
     await H.click("Use this");
-    await H.page.getByLabel("BP and pulse every 1 h", { exact: true }).check();
     await H.click("Confirm");
     const flag = H.page.locator(".card.sunk").filter({ hasText: "is below the limit of 90" }).first();
     await flag.getByLabel("What you did or saw").fill("Reading checked again at the bedside");

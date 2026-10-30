@@ -70,7 +70,7 @@ export default function Chart() {
 
       <VideoChecks view={view} hideTray={trayOnNurseCard(ward.role, view.state)} />
 
-      <OrderTasks orders={orders} tasks={tasks} photos={view.photos} nowMs={ward.nowMs} state={view.state} />
+      <OrderTasks orders={orders} tasks={tasks} photos={view.photos} nowMs={ward.nowMs} state={view.state} role={ward.role} />
 
       <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />
     </>

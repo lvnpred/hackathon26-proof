@@ -143,7 +143,7 @@ export const BEATS = [
   {
     id: "kumar-paracetamol", path: "kumar", role: "nurse", seconds: 7, film: true,
     say: "Nurse Meena records the paracetamol round by voice, adds the strip photo, and confirms.",
-    clicks: ['File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"', 'Button "Use this"', 'Button "Add photo" <- eval/p2/strip-paracetamol.png', 'Button "Confirm"'],
+    clicks: ['Button "Say it: Paracetamol…" on the Paracetamol row', 'File eval/p2/kumar-paracetamol.wav into that row', 'Button "Use this"', 'File eval/p2/strip-paracetamol.png into "Confirm task"', 'Button "Confirm"'],
     expect: ["Paracetamol 1 g given to bed 4.", HEARD, "Photo matches the task", "by voice"],
     before: ["Paracetamol 1 g given to bed 4.", HEARD],
     files: ["kumar-paracetamol.wav", "strip-paracetamol.png"],
@@ -199,7 +199,7 @@ export const BEATS = [
   {
     id: "iyer-bp", path: "iyer", role: "nurse", seconds: 6, film: true,
     say: "Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.",
-    clicks: ["Role Nurse", "Chart S. Iyer", 'File eval/p2/iyer-bp.wav into "Complete a task by voice"', 'Button "Use this"', 'Button "Confirm"'],
+    clicks: ["Role Nurse", "Chart S. Iyer", 'Button "Say it: BP and pulse…" on the BP and pulse row', 'File eval/p2/iyer-bp.wav into that row', 'Button "Use this"', 'Button "Confirm"'],
     expect: ["BP 82 over 54, pulse 112, bed 7.", "is below the limit of 90"],
     before: ["BP 82 over 54, pulse 112, bed 7."],
     files: ["iyer-bp.wav"],
@@ -225,13 +225,13 @@ export const BEATS = [
     id: "iyer-end", path: "iyer", role: "nurse", seconds: 2, film: true,
     say: "The clock moves two hours and the nurse ends the saline task.",
     clicks: ['Button "+1 h" twice', 'Button "End"'],
-    expect: [`${SALINE} done`],
+    expect: [`finished ${SALINE} at`],
     keyed: "No model call.",
   },
   {
     id: "iyer-recheck", path: "iyer", role: "nurse", seconds: 5, film: true,
     say: "Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.",
-    clicks: ["Role Nurse", 'Textarea "What was said" in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Radio "BP and pulse every 1 h"', 'Button "Confirm"', 'Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside', 'Button "Answer" in that flag'],
+    clicks: ["Role Nurse", 'Button "Say it: BP and pulse every 1 h"', 'Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Button "Confirm"', 'Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside', 'Button "Answer" in that flag'],
     expect: ["logged BP 112/70, HR 84"],
     absent: "→ Systolic BP 82 is below the limit of 90",
     keyed: "1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch.",

@@ -54,6 +54,10 @@ export function helpers(page, root) {
       if (isSection) await box.locator("input[type=file]").first().setInputFiles(abs);
       else await page.getByLabel(scope, { exact: true }).setInputFiles(abs);
     },
+    // A task row's mic, its audio upload and its text box. rowText picks the row.
+    say: (rowText) => page.locator("li.task-row").filter({ hasText: rowText }).getByRole("button", { name: /^Say it: / }).click(),
+    sayFile: (rowText, rel) => page.locator("li.task-row").filter({ hasText: rowText }).locator('input[type=file][accept="audio/*"]').setInputFiles(resolve(root, rel)),
+    sayText: (rowText, text) => page.locator("li.task-row").filter({ hasText: rowText }).getByLabel("What was said").fill(text),
     text: async () => collapse(await page.locator(".app").innerText()),
     waitText: (s, ms) => waitText(page, s, ms),
   };

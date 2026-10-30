@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { heardLine, photoPurposeLabel, doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL } from "./drafts.js";
+import { heardLine, photoPurposeLabel, doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL, lastDoneLine, rowSession } from "./drafts.js";
 import { orderRowsToItems } from "./orders.js";
 
 // The Task 2 Kumar draft, in the shape orderRowsToItems emits (P2-R9).
@@ -150,4 +150,21 @@ test("heardLine: a typed draft says Typed with no Heard by; a heard draft names 
   assert.equal(heardLine({ transcript: "bp every 4 h", heard_by: "muse-voice-transcribe" }), "Heard: \u201cbp every 4 h\u201d \u00b7 Heard by: Muse Voice");
   assert.equal(heardLine({ heard_by: "typed" }), "");
   assert.doesNotMatch(heardLine({ transcript: "x", heard_by: "typed" }), /Heard by/);
+});
+
+test("lastDoneLine names time, who and how, with the photo match", () => {
+  const task = { done: [{ at_ms: 96 * 60000, by: "Nurse Meena (synthetic)", via: "voice", transcript: "x", match: "ok", proof_id: "p1" }] };
+  const line = lastDoneLine(task, [{ id: "p1", check: { match: "ok" } }]);
+  assert.equal(line.text, "Last done 10:36 by Nurse Meena, by voice");
+  assert.equal(line.match, MATCH_LABEL.ok);
+  assert.equal(lastDoneLine({ done: [] }, []), null);
+});
+test("rowSession pins the row's task and keeps obs values only", () => {
+  const obs = { id: "o", kind: "obs" };
+  const s = rowSession({ heard_by: "prepared", transcript: "BP", source: "rules", values: { sbp: 82 }, candidates: [{ id: "x" }] }, obs);
+  assert.deepEqual(s.proposal, { candidates: [obs], values: { sbp: 82 } });
+  assert.equal(s.via, "voice");
+  const typed = rowSession({ heard_by: "typed", values: { sbp: 1 } }, { id: "d", kind: "dose" });
+  assert.deepEqual(typed.proposal.values, {});
+  assert.equal(typed.via, "text");
 });

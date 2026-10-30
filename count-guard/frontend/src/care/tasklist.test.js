@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone } from "./tasklist.js";
-import { M } from "./clock.js";
+import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone, taskStatusText, taskGroups, rowMark, orderFoldTitle } from "./tasklist.js";
+import { H, M } from "./clock.js";
+import { ADVICE } from "../../scripts/demo/beats.mjs";
 
 const NOW = 10 * 60 * M;
 const t = (id, over) => ({ id, status: "open", due_ms: NOW - 5 * M, ...over });
@@ -103,4 +104,35 @@ test("markDone: due work is primary, later work is early", () => {
   assert.deepEqual(markDone("overdue"), { label: "Mark done", primary: true });
   assert.deepEqual(markDone("due"), { label: "Mark done", primary: true });
   assert.deepEqual(markDone("later"), { label: "Mark done early", primary: false });
+});
+
+const k = (o) => ({ id: "t", title: "BP", kind: "obs", status: "open", due_ms: 60 * M, ...o });
+test("taskStatusText words", () => {
+  assert.equal(taskStatusText(k({}), 60 * M + 34 * M, "ward"), "34 min late");
+  assert.equal(taskStatusText(k({}), 60 * M + 94 * M, "ward"), "1 h 34 min late");
+  assert.equal(taskStatusText(k({}), 60 * M + 5 * M, "ward"), "due now");
+  assert.equal(taskStatusText(k({ due_ms: 6 * H + 10 * M }), 0, "ward"), "next at 15:10");
+  assert.equal(taskStatusText(k({ due_ms: null }), 0, "ward"), "no set time");
+  assert.equal(taskStatusText(k({}), 0, "theatre"), "paused while in theatre");
+  assert.equal(taskStatusText(k({ status: "running" }), 0, "ward"), "running");
+});
+test("taskGroups splits due now from later and drops done", () => {
+  const g = taskGroups([k({ id: "a" }), k({ id: "b", due_ms: 9 * H }), k({ id: "c", status: "done" }), k({ id: "d", status: "running" })], 61 * M, "ward");
+  assert.deepEqual(g.now.map((r) => r.task.id), ["a", "d"]);
+  assert.deepEqual(g.later.map((r) => r.task.id), ["b"]);
+  assert.deepEqual(taskGroups([], 0, "ward"), { now: [], later: [] });
+  assert.deepEqual(taskGroups([k({})], 0, "theatre").later.map((r) => r.status), ["paused while in theatre"]);
+});
+test("rowMark labels", () => {
+  assert.deepEqual(rowMark(k({}), "due"), { label: "Save readings", primary: true });
+  assert.deepEqual(rowMark(k({ kind: "dose" }), "later"), { label: "Given early", primary: false });
+  assert.deepEqual(rowMark(k({ kind: "task" }), "later"), { label: "Mark done early", primary: false });
+  assert.deepEqual(rowMark(k({ kind: "dose" }), "overdue"), { label: "Mark done", primary: true });
+});
+test("orderFoldTitle", () => {
+  assert.equal(orderFoldTitle({ by: "Dr. A. Rao (synthetic)", at_ms: 2 * M, acknowledged_by: "Nurse Meena" }), "Signed orders \u00b7 Dr. A. Rao 09:02 \u00b7 acknowledged");
+  assert.equal(orderFoldTitle({ by: "D", at_ms: 0, acknowledged_by: null }), "Signed orders \u00b7 D 09:00 \u00b7 not acknowledged yet");
+});
+test("M2 copy has no advice words", () => {
+  for (const s of ["Given early", "Save readings", "due now", "paused while in theatre", "Due now", "Later today", "Signed orders"]) assert.doesNotMatch(s, ADVICE);
 });

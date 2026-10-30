@@ -144,7 +144,7 @@ On screen: `On the ward` · `Dr. A. Rao: Available`
 > Surgery ends and he returns to the ward; Dr. Rao shows as available again.
 
 #### `kumar-paracetamol` · 1:22 · nurse · 7 s
-Clicks: 1) File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"; 2) Button "Use this"; 3) Button "Add photo" <- eval/p2/strip-paracetamol.png; 4) Button "Confirm"
+Clicks: 1) Button "Say it: Paracetamol…" on the Paracetamol row; 2) File eval/p2/kumar-paracetamol.wav into that row; 3) Button "Use this"; 4) File eval/p2/strip-paracetamol.png into "Confirm task"; 5) Button "Confirm"
 
 On screen: `Paracetamol 1 g given to bed 4.` · `Heard by: Prepared demo result` · `Photo matches the task` · `by voice`
 
@@ -196,7 +196,7 @@ On screen: `The wound looks as expected for day 3.` · `No visit needed`
 ### Path 3: Ms. Iyer, low blood pressure and saline (all three roles)
 
 #### `iyer-bp` · 2:14 · nurse · 6 s
-Clicks: 1) Role Nurse; 2) Chart S. Iyer; 3) File eval/p2/iyer-bp.wav into "Complete a task by voice"; 4) Button "Use this"; 5) Button "Confirm"
+Clicks: 1) Role Nurse; 2) Chart S. Iyer; 3) Button "Say it: BP and pulse…" on the BP and pulse row; 4) File eval/p2/iyer-bp.wav into that row; 5) Button "Use this"; 6) Button "Confirm"
 
 On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 
@@ -219,12 +219,12 @@ On screen: `Set-up matches the list` · `Saline 1 litre over 2 hours, video chec
 #### `iyer-end` · 2:35 · nurse · 2 s
 Clicks: 1) Button "+1 h" twice; 2) Button "End"
 
-On screen: `Saline 1 litre over 2 hours, video check of the set-up done`
+On screen: `finished Saline 1 litre over 2 hours, video check of the set-up at`
 
 > The clock moves two hours and the nurse ends the saline task.
 
 #### `iyer-recheck` · 2:37 · nurse · 5 s
-Clicks: 1) Role Nurse; 2) Textarea "What was said" in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.; 3) Button "Use this"; 4) Radio "BP and pulse every 1 h"; 5) Button "Confirm"; 6) Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside; 7) Button "Answer" in that flag
+Clicks: 1) Role Nurse; 2) Button "Say it: BP and pulse every 1 h"; 3) Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.; 4) Button "Use this"; 5) Button "Confirm"; 6) Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside; 7) Button "Answer" in that flag
 
 On screen: `logged BP 112/70, HR 84` · the waiting strip no longer shows `→ Systolic BP 82 is below the limit of 90`
 

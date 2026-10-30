@@ -1,12 +1,8 @@
-import { useState } from "react";
 import Checklist from "./Checklist";
 import NextCard from "./NextCard";
-import ObsForm from "./ObsForm";
-import TaskProof from "./TaskProof";
+import NurseTasks from "./NurseTasks";
 import TheatrePanel from "./TheatrePanel";
-import { taskDue } from "./derive";
-import { latestCheck, taskVideoLabel } from "./video";
-import { markDone, sortTasks, surgeryNow } from "./tasklist";
+import { surgeryNow } from "./tasklist";
 import VideoCheck from "./VideoCheck";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
@@ -33,58 +29,6 @@ function Orders({ orders, by, busy, act }) {
       <button type="button" className="primary" disabled={busy} onClick={() => act(`/orders/${order.id}/ack`, { by })}>Acknowledge</button>
     </div>
   ));
-}
-
-function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
-  const done = (body = {}) => act(`/tasks/${task.id}/done`, { by, via: "tap", note: "", ...body });
-  const mark = markDone(due);
-  return (
-    <li>
-      <div className="row between">
-        <span>{task.title}</span>
-        <span className={`pill ${due === "overdue" ? "sun" : due === "done" ? "ready" : "info"}`}>{due}</span>
-      </div>
-      {due !== "done" && task.proof === "photo" && (
-        <button type="button" disabled={busy} onClick={() => onProof(task)}>Add photo proof</button>
-      )}
-      {taskVideoLabel(task) && !(due !== "done" && task.proof === "video" && task.has_setup) && <p className="small muted">{taskVideoLabel(task)}</p>}
-      {due !== "done" && task.proof === "video" && task.has_setup && (
-        <VideoCheck
-          title="Set-up check"
-          kind="setup"
-          check={latestCheck(view, "setup", task.id)}
-          busy={busy}
-          onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
-        />
-      )}
-      {due !== "done" && task.kind === "obs" && <ObsForm busy={busy} due={due} onSave={(values) => done({ values })} />}
-      {due !== "done" && task.kind !== "obs" && task.mode === "start_end" && (
-        task.status === "running"
-          ? <button type="button" className="primary" disabled={busy} onClick={() => done()}>End</button>
-          : <button type="button" disabled={busy} onClick={() => act(`/tasks/${task.id}/begin`, { by })}>Begin</button>
-      )}
-      {due !== "done" && task.kind !== "obs" && task.mode !== "start_end" && (
-        <button type="button" className={mark.primary ? "primary" : undefined} disabled={busy} onClick={() => done()}>{mark.label}</button>
-      )}
-    </li>
-  );
-}
-
-function Ward({ view, nowMs, by, busy, act, upload, ask }) {
-  const [preset, setPreset] = useState(null);
-  const tasks = sortTasks(view.tasks || [], nowMs).filter((task) => task.status !== "done");
-  return (
-    <>
-      <TaskProof view={view} tasks={view.tasks || []} by={by} busy={busy} act={act} upload={upload} ask={ask} preset={preset} onClear={() => setPreset(null)} />
-      <section className="card">
-        <p className="label">Tasks</p>
-        {tasks.length === 0 && <p className="empty small">No open tasks.</p>}
-        <ul className="task-list">
-          {tasks.map((task) => <TaskRow key={task.id} view={view} task={task} due={taskDue(task, nowMs)} by={by} busy={busy} act={act} upload={upload} onProof={setPreset} />)}
-        </ul>
-      </section>
-    </>
-  );
 }
 
 function Theatre({ episodeId, view, busy, act, upload, replaced }) {
@@ -160,7 +104,7 @@ export default function NurseActions({ state, card, view, act, upload, ask, busy
   return (
     <>
       <NextCard card={card}>{card.actions.map((key) => primary[key])}</NextCard>
-      {state === "ward" && <Ward view={view} nowMs={nowMs} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
+      {(state === "ward" || state === "theatre") && <NurseTasks view={view} nowMs={nowMs} state={state} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
       {!["admitting", "ward", "theatre", "discharging"].includes(state) && <p className="empty small">Nothing for the nurse to do from this state.</p>}
     </>
   );

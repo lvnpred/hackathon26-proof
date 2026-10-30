@@ -74,3 +74,10 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 @media (max-width: 640px) {
   .journey { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* Nurse task list */
+.task-row { display: grid; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); }
+.task-row:first-child { border-top: 0; }
+.task-row .row.between { align-items: center; gap: 8px; }
+.mic-button { min-width: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
+.order-fold summary { cursor: pointer; font-weight: 600; }

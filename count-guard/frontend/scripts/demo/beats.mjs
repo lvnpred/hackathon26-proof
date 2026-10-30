@@ -176,7 +176,7 @@ export const BEATS = [
     id: "kumar-ask", path: "kumar", role: "patient", seconds: 12, film: true,
     say: "At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says who is waiting.",
     clicks: ["Role Patient", "Pick R. Kumar", "Tab Ask", 'Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?', 'Button "Send to Dr. Rao"', 'Text input in "Healing photo" <- Day 3', 'File input in "Healing photo" <- eval/p4/wound-day3.png'],
-    expect: ["Waiting for Dr. Rao", "The doctor reviews the healing photo."],
+    expect: ["Waiting for Dr. Rao", "The doctor reviews your healing photo."],
     files: ["wound-day3.png"],
     keyed: "No model call.",
   },

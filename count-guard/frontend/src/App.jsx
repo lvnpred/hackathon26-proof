@@ -1,5 +1,6 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { CareHome, CareRoutes } from "./care/CareShell";
+import AiDashboard from "./care/AiDashboard.jsx";
 import Chart from "./care/Chart";
 import Ask from "./care/Ask";
 import MyCare from "./care/MyCare";
@@ -174,6 +175,7 @@ export default function App() {
         <Route path="/today" element={<Today />} />
         <Route path="/my-care" element={<MyCare />} />
         <Route path="/ask" element={<Ask />} />
+        <Route path="/ai" element={<AiDashboard />} />
       </Route>
       <Route path="/steps" element={<Home />} />
       <Route path="/older" element={<Older />} />

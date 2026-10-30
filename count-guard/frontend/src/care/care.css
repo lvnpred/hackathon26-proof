@@ -142,3 +142,12 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .ev-sparks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px }
 .ev-sparks p { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 }
 @media (max-width: 640px) { .ev-sparks { grid-template-columns: minmax(0, 1fr) } }
+
+/* AI at work */
+.demo-dock .dock-body a { color: var(--surface); text-decoration: underline; min-height: 44px; display: inline-flex; align-items: center; }
+.model-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px }
+.model-card { min-width: 0; display: grid; gap: 6px; align-content: start; }
+.model-card h3 { margin: 0; }
+.pipelines { margin: 8px 0; padding-left: 20px; }
+.recent-ai { list-style: none; padding: 0; display: grid; gap: 8px; }
+.recent-ai button.linklike { min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Banner } from "../App";
 import { call } from "../journey";
 import { label, skipTargets } from "./clock";
@@ -49,6 +49,7 @@ export default function DemoDock({ ward, showClock, pick }) {
             <Fault fault={ward.fault} episodeId={null} only={[CLOCK]} />
           </div>
         )}
+        <Link to="/ai">AI at work</Link>
         <span>{modelsText(live)}</span>
       </div>
       <Banner />

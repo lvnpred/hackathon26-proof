@@ -97,7 +97,7 @@ export default function Dictate({ label, field = "What was said", verb, busy, ma
         </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
-      {heard && <p className="small muted">Heard by: {sourceLabel(heard.by)}</p>}
+      {heard && heard.text === text && <p className="small muted">Heard by: {sourceLabel(heard.by)}</p>}
       <label className="dictate-upload">
         Upload audio
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />

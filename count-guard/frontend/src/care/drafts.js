@@ -92,5 +92,5 @@ export function doneBody({ task, via, transcript, form, photo }) {
 // What a done entry shows: spoken or tapped, its photo (if still on the chart) and whether it was flagged.
 export function proofOf(done, photos) {
   const photo = done.proof_id ? (photos || []).find((p) => p.id === done.proof_id) || null : null;
-  return { voice: done.via === "voice", photo, flagged: done.match === "mismatch" };
+  return { voice: done.via === "voice", typed: done.via === "text", photo, flagged: done.match === "mismatch" };
 }

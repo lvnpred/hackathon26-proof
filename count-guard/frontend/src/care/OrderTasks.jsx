@@ -27,7 +27,7 @@ export default function OrderTasks({ orders, tasks, photos, nowMs, state }) {
                     const proof = proofOf(d, photos);
                     return (
                       <span className="small muted" key={d.at_ms}>
-                        {" "}· Done by {d.by}, {proof.voice ? "by voice" : "by tap"}
+                        {" "}· Done by {d.by}, {proof.voice ? "by voice" : proof.typed ? "typed" : "by tap"}
                         {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
                       </span>
                     );

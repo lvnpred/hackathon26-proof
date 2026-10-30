@@ -166,6 +166,17 @@ def test_voice_done_needs_transcript(tmp_path):
     assert _done(client, eid, dose["id"], via="voice", transcript="x" * 2000).status_code == 200
 
 
+def test_typed_done_is_stored_as_typed_and_the_story_says_so(tmp_path):
+    client, eid = _new(tmp_path)
+    dose = _ward(client, eid, [PARA])[0]
+    view = _done(client, eid, dose["id"], via="text", transcript="gave it at nine").json()
+    entry = next(t for t in view["tasks"] if t["id"] == dose["id"])["done"][0]
+    assert (entry["via"], entry["transcript"]) == ("text", "gave it at nine")
+    event = next(e for e in client.app.state.morning.events(eid) if e["event_type"] == "task.done")
+    assert plain(event) == f"{NURSE} finished a task (typed)."
+    assert not ADVICE.search(plain(event))
+
+
 def test_done_with_proof_records_match(tmp_path):
     client, eid = _new(tmp_path)
     dose, obs = _ward(client, eid, [PARA, OBS])

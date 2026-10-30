@@ -44,7 +44,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
     if (!proposal) return false;
     const { choices, pick } = proposalChoices(proposal, tasks);
     open(
-      { proposal, via: "voice", transcript: proposal.transcript || "", source: proposal.source, heardBy: proposal.heard_by },
+      { proposal, via: proposal.heard_by === "typed" ? "text" : "voice", transcript: proposal.transcript || "", source: proposal.source, heardBy: proposal.heard_by },
       pick ? "" : choices[0].id,
       proposal.values,
     );
@@ -79,7 +79,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
   return (
     <section className="card" aria-label="Complete a task by voice">
       <p className="label">Complete a task by voice</p>
-      {session.via === "voice" && (
+      {session.transcript && (
         <p className="small">
           “{session.transcript}” <span className="muted">· {sourceLabel(session.source)}</span>
           {session.heardBy && <span className="muted"> · Heard by: {sourceLabel(session.heardBy)}</span>}

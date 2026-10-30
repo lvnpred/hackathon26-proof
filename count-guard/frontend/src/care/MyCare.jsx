@@ -39,7 +39,7 @@ export default function MyCare() {
                       const proof = proofOf(d, view.photos);
                       return (
                         <p className="small muted" key={`${task.id}:${index}`}>
-                          Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}
+                          Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
                           {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
                           {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
                         </p>

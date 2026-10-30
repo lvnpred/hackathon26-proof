@@ -107,7 +107,7 @@ class Values(Strict):
 
 class DoneIn(At):
     by: str = Field(min_length=1, max_length=80)
-    via: Literal["tap", "voice"] = "tap"
+    via: Literal["tap", "voice", "text"] = "tap"
     note: str = Field(default="", max_length=300)
     values: Values | None = None
     transcript: str = Field(default="", max_length=2000)

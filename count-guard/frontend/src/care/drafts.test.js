@@ -125,6 +125,7 @@ test("proofOf finds the photo, the voice flag and the mismatch flag", () => {
   assert.deepEqual([a.voice, a.photo.url, a.flagged], [true, "/u/p1", true]);
   const b = proofOf({ via: "tap", proof_id: null, match: null }, photos);
   assert.deepEqual([b.voice, b.photo, b.flagged], [false, null, false]);
+  assert.equal(proofOf({ via: "text", proof_id: null, match: null }, photos).typed, true);
   assert.equal(proofOf({ via: "tap", proof_id: "gone", match: "ok" }, photos).photo, null);
 });
 

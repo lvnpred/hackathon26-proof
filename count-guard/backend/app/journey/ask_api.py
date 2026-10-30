@@ -16,7 +16,8 @@ from app.journey.api import At, _at, _require, _store, raise_nudges, view
 from app.journey import live
 from app.journey.ask import DECISIONS, PHOTO_STATES
 from app.journey.media_api import _heard, _structure, read_upload_photo, strips_from, write_photo
-from app.journey.medicines import match_medicines
+from app.journey.medicines import dose_rows, match_medicines, record_holds
+from app.journey.tasks import orders_list
 from app.journey.record import BOT, answer_from_reply, bot_prompt, record_lines, rules_answer
 
 ask_router = APIRouter(prefix="/journey/episodes/{episode_id}")
@@ -26,7 +27,7 @@ ANSWERED = "This question is answered already."
 REVIEWED = "This photo is reviewed already."
 PHOTO_REFUSED = "A healing photo is sent once the visit is closed or you are home."
 MEDICINES_REFUSED = "A medicines photo is checked once the visit is closed or you are home."
-NO_RX = "There is no prescription on your record yet, so the medicines cannot be matched."
+NO_MEDICINES = "There is no prescription or signed dose order on your record yet, so the medicines cannot be matched."
 MEDICINES_LIVE = True  # D3 second cut: False makes the medicine photo always use the prepared result
 
 
@@ -159,18 +160,20 @@ def ask_medicines(
     file: UploadFile = File(...),
     at_ms: int | None = Form(None, ge=0),
 ) -> dict:
-    """The strips in a medicine photo, each matched to the prescription. The photo is kept."""
+    """The strips in a medicine photo, each matched to the prescription or signed dose orders. The photo is kept."""
     episode = _require(request, episode_id)
     store, settings = _store(request), request.app.state.settings
     events = store.events(episode_id)
     if states.current_state(events) not in PHOTO_STATES:
         raise HTTPException(status_code=409, detail=MEDICINES_REFUSED)
     ordered = [e for e in events if e["event_type"] == "rx.ordered"]
-    if not ordered:
-        raise HTTPException(status_code=409, detail=NO_RX)
+    orders = orders_list(events)
+    doses = dose_rows(orders)
+    if not ordered and not doses:
+        raise HTTPException(status_code=409, detail=f"{NO_MEDICINES} {record_holds(orders)}")
     raw, kind = read_upload_photo(file)
     ts, by = _at(store, episode_id, at_ms), episode["label"]
     photo = write_photo(settings, store, episode_id, raw, kind, {"purpose": "medicines", "by": by}, ts)
     read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
-    matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"])
+    matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses)
     return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "by": by})], ts)

@@ -10,15 +10,16 @@ import pytest
 
 from app.adapters import spark as spark_mod
 from app.journey import ask_api, proof
+from app.journey.ask_api import NO_MEDICINES
 from app.journey.ask import ask_view
 from app.journey.stories import plain
-from app.journey.medicines import match_medicines
+from app.journey.medicines import dose_rows, match_medicines, record_holds
 from app.journey.rx import document_for, from_document
 from app.main import create_app
 from app.morning.strips import parse_strip_text
 from tests.test_care_demo import _client
 from tests.test_flow_states import DISCHARGE_CHECKS, _move
-from tests.test_flow_tasks import DOC, _url
+from tests.test_flow_tasks import DOC, _ack, _sign, _url
 from tests.test_p2_live import _keyed
 from tests.test_p4_ask import _home, _patients
 
@@ -30,7 +31,9 @@ KUMAR_STRIPS = [
 ]
 WHY_KUMAR = "3 of 4 medicines in the photo are on your prescription. Flagged: Cetirizine 10 mg."
 NO_HOME = "A medicines photo is checked once the visit is closed or you are home."
-NO_RX = "There is no prescription on your record yet, so the medicines cannot be matched."
+NONE_HELD = " Your record holds no orders yet."
+DOSE = [{"by": "Dr. A. Rao (synthetic)", "items": [
+    {"kind": "dose", "name": "Paracetamol", "amount": "1 g", "every_h": 6, "text": "Paracetamol 1 g every 6 h"}]}]
 
 
 @pytest.fixture(autouse=True)
@@ -127,7 +130,7 @@ def test_route_refusals(tmp_path):
     assert refused.status_code == 409 and refused.json()["detail"] == NO_HOME
     assert _move(client, das, "clinic_done").status_code == 200
     refused = _post(client, das)
-    assert refused.status_code == 409 and refused.json()["detail"] == NO_RX
+    assert refused.status_code == 409 and refused.json()["detail"] == NO_MEDICINES + NONE_HELD
     _home(client, kumar)
     got = _post(client, kumar, "IMG_0001.png").json()["ask"]["medicines"][-1]
     assert got["match"] == "none" and got["source"] == "none" and got["rows"] == []
@@ -185,7 +188,86 @@ def test_ask_view_medicines_oldest_first():
 
 def test_medicine_strings_have_no_advice(tmp_path):
     out = match_medicines(_strips(*[(s["name"], s["strength"]) for s in KUMAR_STRIPS], ("Amlodipine", "10 mg")), _rx())
-    strings = [out["why"], NO_HOME, NO_RX] + [r["why"] for r in out["rows"]]
+    strings = [out["why"], NO_HOME, NO_MEDICINES, record_holds([]), record_holds(DOSE)] + [r["why"] for r in out["rows"]]
     strings += [r["schedule"] for r in out["rows"] if r["schedule"]]
+    doses = dose_rows(DOSE)
+    out = match_medicines(_strips(("Paracetamol", "1 g"), ("Paracetamol", "500 mg"), ("Cetirizine", "10 mg")), None, doses)
+    strings += [out["why"]] + [r["why"] for r in out["rows"]] + [r["schedule"] for r in out["rows"] if r["schedule"]]
+    strings.append(match_medicines(_strips(("Cetirizine", "10 mg")), _rx(), doses)["rows"][0]["why"])
     for text in strings:
         assert not ADVICE.search(text), text
+
+
+def test_dose_order_matches_without_a_prescription():
+    got = match_medicines(_strips(("Paracetamol", "1 g")), None, dose_rows(DOSE))
+    row = got["rows"][0]
+    assert row["prescribed"] and row["medicine"] == "Paracetamol 1 g" and row["schedule"] == "every 6 h"
+    assert row["why"] == "On your signed orders from Dr. A. Rao (synthetic): Paracetamol 1 g, every 6 h."
+    assert got["why"] == "1 of 1 medicines in the photo are on your signed orders."
+
+
+def test_dose_order_without_interval_reads_as_ordered():
+    items = [{"kind": "dose", "name": "Ondansetron", "amount": "4 mg", "every_h": None, "text": "Ondansetron 4 mg"}]
+    assert dose_rows([{"by": "D", "items": items}])[0]["schedule"] == "as ordered"
+
+
+def test_dose_rows_skip_items_without_a_dose_name():
+    items = [{"kind": "obs", "text": "BP every 1 h", "every_h": 1}, {"kind": "dose", "name": "", "text": "Rest"}]
+    assert dose_rows([{"by": "D", "items": items}]) == []
+
+
+def test_prescription_wins_over_a_dose_order():
+    got = match_medicines(_strips(("Paracetamol", "650 mg")), _rx(), dose_rows(DOSE))
+    assert got["rows"][0]["schedule"] == "as needed; As needed for pain; Max 3 times daily"
+
+
+def test_dose_order_strength_differs_is_flagged():
+    got = match_medicines(_strips(("Paracetamol", "500 mg")), None, dose_rows(DOSE))
+    row = got["rows"][0]
+    assert row["flag"] == "strength_differs" and row["why"] == "The strip reads Paracetamol 500 mg. Your signed orders say Paracetamol 1 g."
+    assert got["match"] == "mismatch" and got["why"].endswith("Flagged: Paracetamol 500 mg.")
+
+
+def test_not_matched_names_where_it_looked():
+    strips = _strips(("Cetirizine", "10 mg"))
+    only_doses = match_medicines(strips, None, dose_rows(DOSE))
+    assert only_doses["rows"][0]["why"] == "Cetirizine 10 mg is not on your signed orders. Ask Dr. Rao about it."
+    both = match_medicines(strips, _rx(), dose_rows(DOSE))
+    assert both["rows"][0]["why"] == (
+        "Cetirizine 10 mg is not on your prescription from Dr. A. Rao (synthetic) or your signed orders. Ask Dr. Rao about it.")
+    assert both["why"] == "0 of 1 medicines in the photo are on your prescription or signed orders. Flagged: Cetirizine 10 mg."
+
+
+def test_record_holds_lists_name_and_amount_never_free_text():
+    items = [{"kind": "dose", "name": "Paracetamol", "amount": "1 g", "text": "Paracetamol 1 g, patient asks for more"},
+             {"kind": "dose", "name": "Ondansetron", "amount": "", "text": "secret free text"}]
+    got = record_holds([{"by": "D", "items": items}])
+    assert got == "Your record holds signed orders for: Paracetamol 1 g; Ondansetron."
+    assert record_holds([]) == "Your record holds no orders yet."
+
+
+def test_409_lists_signed_non_dose_orders_without_their_free_text(tmp_path):
+    client = _client(tmp_path)
+    das = _patients(client)["9"]
+    item = {"kind": "procedure", "name": "Wound dressing", "text": "Wound dressing, call family first"}
+    assert _sign(client, das, [item]).status_code == 200
+    assert _move(client, das, "clinic_done").status_code == 200
+    refused = _post(client, das)
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == f"{NO_MEDICINES} Your record holds signed orders for: Wound dressing."
+
+
+def test_route_signed_dose_orders_match_without_a_prescription(tmp_path):
+    client = _client(tmp_path)
+    das = _patients(client)["9"]
+    assert _move(client, das, "admitting", reason="Hernia repair").status_code == 200
+    checks = {"band": True, "allergies": True, "baseline_obs": True, "consent": True}
+    assert _move(client, das, "ward", checklist=checks).status_code == 200
+    doses = [{"kind": "dose", "name": s["name"], "amount": s["strength"], "every_h": 8, "text": f"{s['name']} {s['strength']}"} for s in KUMAR_STRIPS]
+    order = _sign(client, das, doses).json()["order_list"][0]
+    assert _ack(client, das, order["id"]).status_code == 200
+    _iyer_home(client, das)
+    got = _post(client, das).json()["ask"]["medicines"][-1]
+    assert got["match"] == "ok" and len(got["rows"]) == 4
+    assert got["rows"][0]["why"] == "On your signed orders from Dr. A. Rao (synthetic): Metoprolol 25 mg, every 8 h."
+    assert got["why"] == "4 of 4 medicines in the photo are on your signed orders."

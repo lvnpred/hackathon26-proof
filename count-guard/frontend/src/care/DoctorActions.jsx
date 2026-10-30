@@ -5,6 +5,7 @@ import { answerHow, doctorOpenItems, doctorWaiting } from "./askText";
 import ActionBar from "./ActionBar";
 import { panelOpen, toggled } from "./actions";
 import { quietActions } from "./journey";
+import NextCard from "./NextCard";
 import Dictate from "./Dictate";
 import { draftChanged, heardLine, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
@@ -61,7 +62,8 @@ function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   );
 }
 
-function Clinic({ view, busy, act, upload, ask, signOrders, open }) {
+// Primary action for the clinic card: admit the patient or close the visit.
+function Admit({ view, busy, act }) {
   const [reason, setReason] = useState("");
   const [reasonDraftId, setReasonDraftId] = useState(null);
   const draft = view.drafts?.order;
@@ -71,40 +73,42 @@ function Clinic({ view, busy, act, upload, ask, signOrders, open }) {
   }
   return (
     <>
+      <label className="field">
+        Reason for admission
+        <input value={reason} onChange={(e) => setReason(e.target.value)} />
+      </label>
+      <div className="row">
+        <button type="button" className="primary" disabled={busy || !reason.trim()} onClick={() => act("/state", { to: "admitting", by: DOCTOR, reason: reason.trim() })}>Admit</button>
+        <button type="button" disabled={busy} onClick={() => act("/state", { to: "clinic_done", by: DOCTOR })}>Close visit</button>
+      </div>
+    </>
+  );
+}
+
+// The clinic cards that sit below the quiet row (R25).
+function Clinic({ view, busy, act }) {
+  return (
+    <>
       <section className="card">
         <p className="label">Prescription</p>
         <RxImport busy={busy} act={act} />
         <RxTable rx={view.rx} />
       </section>
-      {open("photo") && <PhotoCard title="Reference photo" busy={busy} upload={upload} />}
-      {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       <StripCheck busy={busy} act={act} />
-      <section className="card">
-        <p className="label">Visit</p>
-        <label className="field">
-          Reason for admission
-          <input value={reason} onChange={(e) => setReason(e.target.value)} />
-        </label>
-        <div className="row">
-          <button type="button" className="primary" disabled={busy || !reason.trim()} onClick={() => act("/state", { to: "admitting", by: DOCTOR, reason: reason.trim() })}>Admit</button>
-          <button type="button" disabled={busy} onClick={() => act("/state", { to: "clinic_done", by: DOCTOR })}>Close visit</button>
-        </div>
-      </section>
     </>
   );
 }
 
-function Ward({ view, busy, act, upload, ask, showDischarge }) {
-  const [procedure, setProcedure] = useState("");
+// Primary action for the ward card: dictate the discharge, then sign it. The form keeps its text while closed.
+function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
   const [summary, setSummary] = useState("");
   const [summaryDraftId, setSummaryDraftId] = useState(null);
+  const [template, setTemplate] = useState("hernia-repair");
   const draft = view.drafts?.discharge;
   if (draftChanged(summaryDraftId, draft)) {
     setSummaryDraftId(draft.id);
     setSummary(sectionsToSummary(draft.sections || []));
   }
-  const [template, setTemplate] = useState("hernia-repair");
-  const procedures = Object.entries(view.procedures || {});
   const templates = Object.entries(view.templates || {});
   async function signDischarge() {
     const done = await act("/discharge/sign", { summary: summary.trim(), template, by: DOCTOR, draft_id: summaryDraftId || undefined });
@@ -115,10 +119,11 @@ function Ward({ view, busy, act, upload, ask, showDischarge }) {
   }
   return (
     <>
-      {showDischarge && (
+      <button type="button" aria-expanded={open} onClick={onToggle}>Dictate discharge</button>
+      {open && (
         <>
           <Dictate label="Dictate discharge" verb="Draft discharge" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />
-          <section className="card">
+          <div>
             <p className="label">Discharge</p>
             {summaryDraftId && (
               <p className="note small" role="status">
@@ -138,22 +143,29 @@ function Ward({ view, busy, act, upload, ask, showDischarge }) {
               </select>
             </label>
             <button type="button" className="primary" disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
-          </section>
+          </div>
         </>
       )}
-      <section className="card">
-        <p className="label">Theatre</p>
-        <label className="field">
-          Procedure
-          <select value={procedure} onChange={(e) => setProcedure(e.target.value)}>
-            <option value="">Choose a procedure</option>
-            {procedures.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
-          </select>
-        </label>
-        <TrayPreview plan={view.tray_templates?.[procedure]} />
-        <button type="button" className="primary" disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
-      </section>
     </>
+  );
+}
+
+// Primary action for the ward card: pick the procedure and send the patient to theatre.
+function SendToTheatre({ view, busy, act }) {
+  const [procedure, setProcedure] = useState("");
+  const procedures = Object.entries(view.procedures || {});
+  return (
+    <div>
+      <label className="field">
+        Procedure
+        <select value={procedure} onChange={(e) => setProcedure(e.target.value)}>
+          <option value="">Choose a procedure</option>
+          {procedures.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
+        </select>
+      </label>
+      <TrayPreview plan={view.tray_templates?.[procedure]} />
+      <button type="button" className="primary" disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
+    </div>
   );
 }
 
@@ -202,40 +214,28 @@ function Theatre({ view, busy, act }) {
 
 const sign = (act) => (items, draftId) => act("/orders/sign", { items, by: DOCTOR, draft_id: draftId || undefined });
 
-// The doctor's actions for the patient's current state.
-export default function DoctorActions({ state, view, act, upload, ask, busy }) {
+// The doctor's actions for the patient's current state: the card, the quiet row, the open panels, the rest.
+export default function DoctorActions({ state, card, view, act, upload, ask, busy }) {
   const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
-  const bar = <ActionBar actions={[...quietActions(state, "doctor"), ...(state === "ward" ? [["discharge", "Dictate discharge"]] : [])]} isOpen={open} onToggle={(id) => setChosen((current) => toggled(current, id))} />;
-  if (state === "clinic") {
-    return (
-      <>
-        {bar}
-        <Clinic view={view} busy={busy} act={act} upload={upload} ask={ask} signOrders={signOrders} open={open} />
-      </>
-    );
-  }
-  if (state === "admitting") {
-    return (
-      <>
-        <p className="note" role="status">Waiting for the nurse to complete admission.</p>
-        <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />
-      </>
-    );
-  }
-  if (state === "ward") {
-    return (
-      <>
-        {bar}
-        {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
-        {open("photo") && <PhotoCard title="Wound photo" busy={busy} upload={upload} />}
-        <Ward view={view} busy={busy} act={act} upload={upload} ask={ask} showDischarge={open("discharge")} />
-      </>
-    );
-  }
-  if (state === "theatre") {
-    return <Theatre view={view} busy={busy} act={act} />;
-  }
-  return <p className={doctorOpenItems(view) > 0 ? "note" : "empty small"} role="status">{doctorWaiting(view)}</p>;
+  const toggle = (id) => setChosen((current) => toggled(current, id));
+  const primary = {
+    admit: <Admit key="admit" view={view} busy={busy} act={act} />,
+    theatre: <SendToTheatre key="theatre" view={view} busy={busy} act={act} />,
+    discharge: <Discharge key="discharge" view={view} busy={busy} act={act} upload={upload} ask={ask} open={open("discharge")} onToggle={() => toggle("discharge")} />,
+  };
+  return (
+    <>
+      <NextCard card={card}>{card.actions.map((key) => primary[key])}</NextCard>
+      <ActionBar actions={quietActions(state, "doctor")} isOpen={open} onToggle={toggle} />
+      {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
+      {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
+      {state === "clinic" && <Clinic view={view} busy={busy} act={act} />}
+      {state === "theatre" && <Theatre view={view} busy={busy} act={act} />}
+      {!["clinic", "admitting", "ward", "theatre"].includes(state) && (
+        <p className={doctorOpenItems(view) > 0 ? "note" : "empty small"} role="status">{doctorWaiting(view)}</p>
+      )}
+    </>
+  );
 }

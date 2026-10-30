@@ -38,9 +38,9 @@ export function helpers(page, root) {
     },
     tab: (name) => nav.getByRole("link", { name, exact: true }).click(),
     click: (name, scope) => (scope ? region(scope) : page).getByRole("button", { name, exact: true }).first().click(),
-    // Open an action-bar panel; leaves it open if it already is.
+    // Open a quiet-row or card panel; leaves it open if it already is.
     async open(name) {
-      const button = page.getByRole("group", { name: "Doctor actions" }).getByRole("button", { name, exact: true });
+      const button = page.getByRole("button", { name, exact: true }).first();
       if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
     },
     clock: (name) => page.getByRole("group", { name: "Demo clock" }).getByRole("button", { name, exact: true }).click(),

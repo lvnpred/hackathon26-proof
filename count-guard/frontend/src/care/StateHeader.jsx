@@ -1,20 +1,16 @@
-import { STATE_LABEL } from "./derive";
+import JourneyBar from "./JourneyBar";
+import NextCard from "./NextCard";
+import { nextCard } from "./journey";
 
-// The patient's one state, with what is happening now and what comes next.
-// `you` makes NOW and NEXT address the patient (the patient pages).
-export default function StateHeader({ patient, view, alert, you = false }) {
-  const { now, next, you_now: youNow, you_next: youNext } = view.now_next || {};
+// Who the patient is and where they are. `you` adds the patient's own next-step card (the patient pages);
+// staff charts show the card in the action panel instead.
+export default function StateHeader({ patient, view, you = false }) {
   return (
     <header className="page-head state-head">
       <p className="label">Bed {patient.bed}</p>
       <h1>{patient.name}</h1>
-      <p><span className="pill info state-badge">{STATE_LABEL[view.state] || view.state}</span></p>
-      <dl className="now-next">
-        <dt>Now</dt>
-        <dd>{alert || (you ? youNow : now) || "Nothing recorded"}</dd>
-        <dt>Next</dt>
-        <dd>{(you ? youNext || next : next) || "Nothing queued"}</dd>
-      </dl>
+      <JourneyBar state={view.state} visited={view.visited} />
+      {you && <NextCard card={nextCard(view, "patient", { you: true })} />}
     </header>
   );
 }

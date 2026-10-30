@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Checklist from "./Checklist";
+import NextCard from "./NextCard";
 import ObsForm from "./ObsForm";
 import TaskProof from "./TaskProof";
 import TheatrePanel from "./TheatrePanel";
@@ -25,19 +26,13 @@ const DISCHARGE = [
 
 function Orders({ orders, by, busy, act }) {
   const fresh = orders.filter((order) => !order.acknowledged_by);
-  if (!fresh.length) return null;
-  return (
-    <section className="card">
-      <p className="label">New orders</p>
-      {fresh.map((order) => (
-        <div key={order.id}>
-          <p className="small">From {order.by}</p>
-          <ul>{(order.items || []).map((item, i) => <li key={i}>{item.text}</li>)}</ul>
-          <button type="button" className="primary" disabled={busy} onClick={() => act(`/orders/${order.id}/ack`, { by })}>Acknowledge</button>
-        </div>
-      ))}
-    </section>
-  );
+  return fresh.map((order) => (
+    <div key={order.id}>
+      <p className="label">New orders from {order.by}</p>
+      <ul>{(order.items || []).map((item, i) => <li key={i}>{item.text}</li>)}</ul>
+      <button type="button" className="primary" disabled={busy} onClick={() => act(`/orders/${order.id}/ack`, { by })}>Acknowledge</button>
+    </div>
+  ));
 }
 
 function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
@@ -142,27 +137,30 @@ function Theatre({ episodeId, view, busy, act, upload, replaced }) {
   );
 }
 
-// The nurse's actions for the patient's current state: orders first, then one branch per state.
-export default function NurseActions({ state, view, act, upload, ask, busy, nowMs, episodeId, replaced }) {
+// The nurse's actions for the patient's current state: the card holds the step, the ward tasks follow.
+export default function NurseActions({ state, card, view, act, upload, ask, busy, nowMs, episodeId, replaced }) {
   const by = state === "theatre" ? THEATRE_NURSE : WARD_NURSE;
   const move = (to, checklist) => act("/state", { to, by, reason: "", checklist });
+  const primary = {
+    ack: <Orders key="ack" orders={view.order_list || []} by={by} busy={busy} act={act} />,
+    admission: (
+      <div key="admission">
+        <p className="label">Admission checklist</p>
+        <Checklist items={ADMISSION} busy={busy} button="Complete admission" onDone={(c) => move("ward", c)} />
+      </div>
+    ),
+    theatre: <Theatre key="theatre" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} />,
+    discharge: (
+      <div key="discharge">
+        <p className="label">Discharge checklist</p>
+        <Checklist items={DISCHARGE} busy={busy} button="Complete discharge" onDone={(c) => move("home", c)} />
+      </div>
+    ),
+  };
   return (
     <>
-      <Orders orders={["admitting", "ward"].includes(state) ? view.order_list || [] : []} by={by} busy={busy} act={act} />
-      {state === "admitting" && (
-        <section className="card">
-          <p className="label">Admission checklist</p>
-          <Checklist items={ADMISSION} busy={busy} button="Complete admission" onDone={(c) => move("ward", c)} />
-        </section>
-      )}
+      <NextCard card={card}>{card.actions.map((key) => primary[key])}</NextCard>
       {state === "ward" && <Ward view={view} nowMs={nowMs} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
-      {state === "theatre" && <Theatre episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} />}
-      {state === "discharging" && (
-        <section className="card">
-          <p className="label">Discharge checklist</p>
-          <Checklist items={DISCHARGE} busy={busy} button="Complete discharge" onDone={(c) => move("home", c)} />
-        </section>
-      )}
       {!["admitting", "ward", "theatre", "discharging"].includes(state) && <p className="empty small">Nothing for the nurse to do from this state.</p>}
     </>
   );

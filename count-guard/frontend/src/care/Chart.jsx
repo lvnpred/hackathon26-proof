@@ -1,23 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getAudit } from "../journey";
-import { AuditTable } from "../screens/Audit";
 import { useCareWard } from "./CareShell";
-import { alertNow } from "./alerts";
 import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
 import Fault from "./Fault";
+import History from "./History";
 import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
 import { trayOnNurseCard } from "./derive";
-import { lensFor } from "./lens";
 import OrderTasks from "./OrderTasks";
 import Photos from "./Photos";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
-import Timeline, { LENSES } from "./Timeline";
 import VideoChecks from "./VideoChecks";
-
-const LENS_CHIPS = [["nurse", "Nurse"], ["doctor", "Doctor"], ["patient", "Patient"], ["everyone", "Everyone (audit)"]];
 
 export default function Chart() {
   const { episodeId } = useParams();
@@ -26,10 +21,8 @@ export default function Chart() {
   const patient = ward.find(episodeId);
   const view = patient?.view;
   const line = params.get("line");
-  const [picked, setPicked] = useState(null);
   const [rows, setRows] = useState([]);
   const [rowsError, setRowsError] = useState("");
-  const lens = lensFor(ward.role, picked);
   const stamp = view?.timeline.length;
 
   // Audit rows feed the struck lines and the Everyone lens; refetch when the record grows.
@@ -63,7 +56,7 @@ export default function Chart() {
 
   return (
     <>
-      <StateHeader patient={patient} view={view} alert={alertNow(view)} />
+      <StateHeader patient={patient} view={view} />
 
       <AlertBanner view={view} role={ward.role} line={line} busy={ward.busy} act={act} />
       <Fault fault={ward.fault} episodeId={episodeId} only={NUDGE_SCOPES} />
@@ -79,29 +72,7 @@ export default function Chart() {
 
       <OrderTasks orders={orders} tasks={tasks} photos={view.photos} nowMs={ward.nowMs} state={view.state} />
 
-      <p className="label">History</p>
-      <div className="row" role="group" aria-label="Lens">
-        {LENS_CHIPS.map(([id, name]) => (
-          <button key={id} type="button" className="pill" aria-pressed={lens === id} onClick={() => setPicked({ role: ward.role, lens: id })}>{name}</button>
-        ))}
-      </div>
-
-      <section className="card">
-        <p className="label">Timeline</p>
-        {lens === "everyone" ? (
-          rowsError ? <p className="error" role="alert">Could not load the audit lines: {rowsError}</p>
-          : rows.length ? <AuditTable rows={rows} /> : <p className="empty small">Nothing recorded for this patient yet.</p>
-        ) : (
-          <Timeline
-            lines={view.timeline}
-            nudges={view.nudges}
-            replaced={replaced}
-            lens={lens in LENSES ? lens : "nurse"}
-            role={ward.role}
-            line={line}
-          />
-        )}
-      </section>
+      <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />
     </>
   );
 }

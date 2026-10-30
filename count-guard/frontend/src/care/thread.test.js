@@ -72,3 +72,11 @@ test("opened time survives and failures read as null", () => {
 test("thread copy has no advice words", () => {
   for (const s of ["My messages", "Question to your record", "Question to Dr. Rao", "Checked against your prescription", "Not in your record", "Sent 09:06 · not seen yet", "Nothing sent yet. Ask your record or Dr. Rao above.", "Dr. Rao reviewed your healing photo", "Dr. Rao marked your medicines photo", "Answered (2)"]) assert.doesNotMatch(s, ADVICE);
 });
+
+test("a brown-bag mark is unread until Ask is opened", () => {
+  const marked = { ask: { ...view.ask, questions: [], reviews: [], medicines: [{ id: "m1", at_ms: M, marks: [{ row: 3, mark: "noted", by: "Dr. A. Rao", at_ms: 70 * M }] }] } };
+  assert.equal(unreadCount(marked, 69 * M), 1);
+  assert.equal(unreadCount(marked, 70 * M), 0);
+  assert.equal(unreadLine(marked, null), "Dr. Rao marked your medicines photo");
+  assert.doesNotMatch(unreadLine(marked, null), ADVICE);
+});

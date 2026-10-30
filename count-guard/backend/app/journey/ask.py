@@ -42,6 +42,11 @@ def ask_view(events: list[dict]) -> dict:
             by_list = seen.setdefault(e["payload"]["checkin_id"], [])
             if all(row["by"] != e["payload"]["by"] for row in by_list):
                 by_list.append({"by": e["payload"]["by"], "at_ms": e["ts_ms"]})
+    marks: dict[str, dict[int, dict]] = {}
+    for e in events:
+        if e["event_type"] == "brownbag.marked":
+            p = e["payload"]
+            marks.setdefault(p["read_id"], {})[p["row"]] = {"row": p["row"], "mark": p["mark"], "by": p["by"], "at_ms": e["ts_ms"]}
     questions, reviews, medicines, checkins = [], [], [], []
     for e in events:
         p = e["payload"]
@@ -76,6 +81,7 @@ def ask_view(events: list[dict]) -> dict:
                     "photo": {"id": p["photo_id"], "url": f"/journey/episodes/{e['episode_id']}/photos/{p['photo_id']}"},
                     "rows": p["rows"], "match": p["match"], "why": p["why"], "source": p["source"], "at_ms": e["ts_ms"],
                     "regions": p.get("regions") or [], "evidence_id": p.get("evidence_id"),
+                    "marks": sorted(marks.get(e["id"], {}).values(), key=lambda m: m["row"]),
                 }
             )
         elif e["event_type"] == "checkin.recorded":

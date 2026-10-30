@@ -13,6 +13,7 @@ from app.adapters.spark import SparkAdapter
 from app.config import BANNER
 from app.journey import nudges as rules
 from app.journey.handover import draft as draft_handover
+from app.journey.medicines import day_plan
 from app.journey.play import play_journey
 from app.journey.rx import document_for, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
@@ -168,6 +169,7 @@ def view(request: Request, episode_id: str) -> dict:
         "stories": build_stories(events),
         "rx": rx["payload"] if rx else None,
         "schedule": build_schedule(rx["payload"]) if rx else [],
+        "day_plan": day_plan(rx["payload"], (_latest(events, "medicines.read") or {}).get("payload")) if rx else None,
         "orders": orders["payload"] if orders else None,
         "card": card["payload"] if card else None,
         "handover": handover,

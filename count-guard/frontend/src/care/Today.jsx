@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { DoctorChip, useCareWard } from "./CareShell";
 import { findPatient } from "./Patients";
 import { answerByLine, doctorQuestions } from "./askText";
@@ -7,7 +7,8 @@ import { greeting, nextWords, todayFolds, whereWords } from "./today.js";
 import { displayName } from "./names";
 import { checkinStatusLine, readOpened, unreadLine } from "./thread.js";
 import { CheckIn, MyCard, NeedHelp } from "../screens/PatientCard";
-import { Medicines, Nudges, Reminders, Strips } from "../screens/TodayPanel";
+import { Nudges, Reminders, Strips } from "../screens/TodayPanel";
+import DayPlan from "./DayPlan.jsx";
 
 function Answered({ view }) {
   const answered = doctorQuestions(view).filter((q) => q.answer);
@@ -36,7 +37,9 @@ export default function Today() {
 function TodayBody({ ward, patient }) {
   const [checkingIn, setCheckingIn] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const navigate = useNavigate();
   const { view } = patient;
+  const read = (view.ask?.medicines || []).at(-1);
   const home = view.state === "home";
   const common = {
     view,
@@ -53,7 +56,10 @@ function TodayBody({ ward, patient }) {
     card: <MyCard card={view.card} />,
     medicines: (
       <>
-        <Medicines schedule={view.schedule || []} />
+        <DayPlan
+          plan={view.day_plan} regions={read?.regions || []} onAsk={(ask) => navigate("/ask", { state: { ask } })}
+          photoUrl={view.day_plan?.photo_id ? `/journey/episodes/${patient.id}/photos/${view.day_plan.photo_id}` : ""}
+        />
         <Reminders {...common} />
       </>
     ),

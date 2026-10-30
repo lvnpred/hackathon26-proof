@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import { findPatient } from "./Patients";
@@ -21,6 +22,12 @@ function AskBody({ ward, patient }) {
   // Opening Ask marks every answer so far as read (R21).
   useEffect(() => { markOpened(patient.id, ward.nowMs); }, [patient.id]);
   const askDoctor = (text) => setToDoctor({ id: `${Date.now()}`, text });
+  // A question sent from the day plan fills the doctor box once; the patient presses send (R30).
+  const prefill = useLocation().state?.ask;
+  const filled = useRef(false);
+  useEffect(() => {
+    if (prefill && !filled.current) { filled.current = true; askDoctor(prefill); }
+  }, [prefill]);
   return (
     <>
       <PageLead kicker={patient.name} title="Ask" body="Ask your record, ask the doctor, or send a photo. Answers come from your record or from Dr. Rao." />

@@ -71,14 +71,14 @@ def _sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", text or "") if s.strip()]
 
 
-def _event_lines(event: dict, ctx: dict) -> list[tuple[str, str | None]]:
-    """(kind, text) pairs for one event. The wrapper is fixed; the content is the record's own."""
+def _event_lines(event: dict, ctx: dict) -> list[tuple]:
+    """(kind, text) pairs for one event; a prescription row adds its key. The wrapper is fixed; the content is the record's own."""
     kind, p = event["event_type"], event.get("payload") or {}
     when = clock(event["ts_ms"])
     if kind == "rx.ordered" and event["id"] in ctx["rx"]:
         by = p.get("by")
         rows = [
-            ("prescription", _w("prescription", by=by, medicine=row["medicine"], schedule=schedule_text(row)))
+            ("prescription", _w("prescription", by=by, medicine=row["medicine"], schedule=schedule_text(row)), row["key"])
             for row in build(p)
         ]
         notes = [("prescription", _w("advice", by=by, item=item)) for item in p.get("advice") or []]
@@ -124,10 +124,11 @@ def record_lines(events: list[dict]) -> list[dict]:
     }
     lines = []
     for event in shown:
-        for kind, text in _event_lines(event, ctx):
+        for kind, text, *key in _event_lines(event, ctx):
             if text is None:
                 continue
-            lines.append({"id": f"L{len(lines) + 1}", "kind": kind, "text": text[:MAX_LINE], "event_id": event["id"]})
+            line = {"id": f"L{len(lines) + 1}", "kind": kind, "text": text[:MAX_LINE], "event_id": event["id"]}
+            lines.append({**line, "key": key[0]} if key else line)
     return lines
 
 
@@ -153,6 +154,26 @@ def rules_answer(question: str, lines: list[dict]) -> dict:
         return {"answer": NOT_FOUND, "sources": [], "found": False}
     top = [line for line, score in zip(lines, scored) if score == best]
     return {"answer": FOUND, "sources": top[:3], "found": True}
+
+
+def _windows(question: str) -> set[str]:
+    """`key_of` of every word and every pair of neighbouring words in the question."""
+    words = re.findall(r"[a-z]+", question.lower())
+    return {key_of(" ".join(words[i:i + n])) for n in (1, 2) for i in range(len(words) - n + 1)}
+
+
+def medicine_answer(question: str, lines: list[dict], read_rows: list[dict]) -> dict | None:
+    """R27: a medicine named in the question, by key equality. The prescription row is quoted; nothing is added.
+
+    A medicine read from the patient's photo but not prescribed gets one fixed sentence. Else None."""
+    asked = _windows(question)
+    rows = [line for line in lines if line.get("key") in asked]
+    if rows:
+        return {"answer": FOUND, "sources": rows[:3], "found": True}
+    for row in read_rows:
+        if row.get("flag") == "not_prescribed" and row.get("key") in asked:
+            return {"answer": f"{row['name'].capitalize()} is not on your prescription. Ask Dr. Rao.", "sources": [], "found": False}
+    return None
 
 
 def answer_from_reply(reply: str | None, lines: list[dict]) -> dict | None:

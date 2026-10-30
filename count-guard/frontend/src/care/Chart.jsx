@@ -8,6 +8,7 @@ import Fault from "./Fault";
 import History from "./History";
 import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
 import { trayOnNurseCard } from "./derive";
+import MedicinesFromHome from "./MedicinesFromHome.jsx";
 import OrderTasks from "./OrderTasks";
 import Photos from "./Photos";
 import StateHeader from "./StateHeader";
@@ -82,6 +83,8 @@ export default function Chart() {
       <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES]} />
 
       <Photos view={view} />
+
+      <MedicinesFromHome view={view} role={ward.role} act={act} busy={ward.busy} />
 
       <VideoChecks view={view} hideTray={trayOnNurseCard(ward.role, view.state)} />
 

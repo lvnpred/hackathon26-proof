@@ -63,7 +63,7 @@ export const BEATS = [
     say: "Mr. Das asks his own record about his tablet, and the answer comes from the record, with its source named.",
     clicks: ["Role Patient", "Pick A. Das", "Tab Ask", 'Textarea in "Ask your record" <- When do I take amlodipine?', 'Button "Ask the record"'],
     expect: ["Here is what your record says.", "Amlodipine", "Rules (no model)"],
-    keyed: "1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch.",
+    keyed: "No model call: a medicine question is answered by quoting the prescription row. The label reads Rules (no model) with or without a key.",
   },
   {
     id: "das-mycare", path: "das", role: "patient", seconds: 6, film: true,
@@ -256,7 +256,7 @@ export const BEATS = [
     id: "iyer-meds", path: "iyer", role: "patient", seconds: 10, film: true,
     say: "Ms. Iyer photographs her medicines; the page flags one row and names each medicine with its schedule.",
     clicks: ["Role Patient", "Pick S. Iyer", "Tab Ask", 'File input in "Medicines photo" <- eval/p4/meds-iyer.png'],
-    expect: ["Ibuprofen", "Pantoprazole 40 mg:"],
+    expect: ["Ibuprofen", "Pantoprazole 40 mg:", "Ibuprofen 400 mg · not prescribed"],
     files: ["meds-iyer.png"],
     keyed: "1 SAM 3.1 image call (strip regions) and 1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE.",
   },

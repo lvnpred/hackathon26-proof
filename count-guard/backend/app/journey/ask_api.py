@@ -18,7 +18,7 @@ from app.journey.ask import DECISIONS, PHOTO_STATES
 from app.journey.media_api import _heard, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
 from app.journey.medicines import dose_rows, match_medicines, record_holds
 from app.journey.tasks import orders_list
-from app.journey.record import BOT, answer_from_reply, bot_prompt, record_lines, rules_answer
+from app.journey.record import BOT, answer_from_reply, bot_prompt, medicine_answer, record_lines, rules_answer
 
 ask_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 
@@ -29,6 +29,7 @@ PHOTO_REFUSED = "A healing photo is sent once the visit is closed or you are hom
 MEDICINES_REFUSED = "A medicines photo is checked once the visit is closed or you are home."
 NO_MEDICINES = "There is no prescription or signed medicine order on your record yet, so the medicines cannot be matched."
 WARD_VIEW = ("discharging", "home")  # states in which a dose order is a ward order, not a home one
+DOCTOR_ONLY = "Only the doctor marks medicines from home."
 MEDICINES_LIVE = True  # D3 second cut: False makes the medicine photo always use the prepared result
 
 
@@ -46,6 +47,12 @@ class AnswerIn(At):
 class DecisionIn(At):
     decision: Literal["no_visit", "come_in", "call"]
     note: str = Field(default="", max_length=300)
+    by: str = Field(min_length=1, max_length=80)
+
+
+class MarkIn(At):
+    row: int = Field(ge=0)
+    mark: Literal["noted", "discuss"]
     by: str = Field(min_length=1, max_length=80)
 
 
@@ -72,10 +79,13 @@ def _asked(request: Request, episode_id: str, body: QuestionIn, to: str) -> tupl
 def ask_bot(episode_id: str, body: QuestionIn, request: Request) -> dict:
     asked, events, ts = _asked(request, episode_id, body, "bot")
     lines = record_lines(events)  # this episode's events only
-    result, source, calls = _structure(
-        request.app.state.settings, bot_prompt(lines), body.text,
-        lambda reply, question: answer_from_reply(reply, lines), lambda question: rules_answer(question, lines),
-    )
+    read = [e["payload"] for e in events if e["event_type"] == "medicines.read"]
+    result, source, calls = medicine_answer(body.text, lines, read[-1]["rows"] if read else []), "rules", []
+    if result is None:  # a medicine named in the question is answered by the rule, with no model call (R27)
+        result, source, calls = _structure(
+            request.app.state.settings, bot_prompt(lines), body.text,
+            lambda reply, question: answer_from_reply(reply, lines), lambda question: rules_answer(question, lines),
+        )
     store = _store(request)
     question = store.append(episode_id, "question.asked", asked, ts_ms=ts)
     answer = {
@@ -185,6 +195,22 @@ def ask_medicines(
                              ward=states.current_state(events) in WARD_VIEW)
     kept = keep_photo_evidence(settings, episode_id, "medicines", photo["id"], read, read["regions"])
     return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "calls": read["calls"], **kept, "by": by})], ts)
+
+
+@ask_router.post("/medicines/{read_id}/mark")
+def mark_medicine(episode_id: str, read_id: str, body: MarkIn, request: Request) -> dict:
+    """The doctor notes a medicine from home, or marks it to discuss. A record mark, not an order (R28, R33)."""
+    if not body.by.startswith("Dr. "):
+        raise HTTPException(status_code=403, detail=DOCTOR_ONLY)
+    read, _ = _find(request, episode_id, "medicines.read", read_id, "Medicines photo not found")
+    rows = read["payload"]["rows"]
+    if body.row >= len(rows):
+        raise HTTPException(status_code=422, detail="No such row in that photo.")
+    marked = {
+        "read_id": read_id, "row": body.row, "mark": body.mark, "name": rows[body.row].get("name") or rows[body.row]["read"],
+        "read": rows[body.row]["read"], "by": body.by,
+    }
+    return _write(request, episode_id, [("brownbag.marked", marked)], _at(_store(request), episode_id, body.at_ms))
 
 
 @ask_router.post("/checkins/{checkin_id}/seen")

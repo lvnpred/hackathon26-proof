@@ -5,10 +5,12 @@ The app names each strip, restates the doctor's schedule and flags a difference.
 
 from __future__ import annotations
 
+import re
+
 from app.journey.nudges import _norm
 from app.journey.proof import NO_STRIP
 from app.journey.rx import key_of
-from app.journey.schedule import build, schedule_text
+from app.journey.schedule import SLOTS, build, schedule_text
 
 
 def dose_rows(orders: list[dict]) -> list[dict]:
@@ -30,10 +32,10 @@ def record_holds(orders: list[dict]) -> str:
     return "Your record holds signed orders, but none is a medicine."
 
 
-def _matched(read: str, differs: bool, medicine: str, schedule: str, why: str) -> dict:
+def _matched(read: str, differs: bool, medicine: str, schedule: str, why: str, rx_strength: str) -> dict:
     return {
         "read": read, "prescribed": True, "medicine": medicine, "schedule": schedule,
-        "flag": "strength_differs" if differs else None, "why": why,
+        "flag": "strength_differs" if differs else None, "why": why, "rx_strength": rx_strength,
     }
 
 
@@ -68,7 +70,7 @@ def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = (),
                 f"The strip reads {read}. The prescription says {row['medicine']}."
                 if differs else f"On your prescription: {row['medicine']}, {text}."
             )
-            out.append(_matched(read, differs, row["medicine"], text, why))
+            out.append(_matched(read, differs, row["medicine"], text, why, prescribed))
         elif key in dose_by_key:
             row = dose_by_key[key]
             differs = bool(strip["strength"] and row["strength"] and _norm(strip["strength"]) != _norm(row["strength"]))
@@ -82,14 +84,16 @@ def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = (),
                     f"The strip reads {read}. Your signed orders say {row['medicine']}."
                     if differs else f"On your signed orders from {row['by']}: {row['medicine']}, {row['schedule']}."
                 )
-            out.append(_matched(read, differs, row["medicine"], row["schedule"], why))
+            out.append(_matched(read, differs, row["medicine"], row["schedule"], why, row["strength"]))
         else:
             out.append(
                 {
                     "read": read, "prescribed": False, "medicine": None, "schedule": None, "flag": "not_prescribed",
-                    "why": f"{read} is not on {where}. Ask Dr. Rao about it.",
+                    "rx_strength": "", "why": f"{read} is not on {where}. Ask Dr. Rao about it.",
                 }
             )
+    for row, strip in zip(out, strips):
+        row["name"], row["key"] = strip["name_as_read"], key_of(strip["name_as_read"])
     flagged = [r["read"] for r in out if r["flag"]]
     if not out:
         return {"rows": out, "match": "none", "why": NO_STRIP}
@@ -98,3 +102,46 @@ def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = (),
     if flagged:
         why += f" Flagged: {', '.join(flagged)}."
     return {"rows": out, "match": "mismatch" if flagged else "ok", "why": why}
+
+
+_AS_NEEDED = re.compile(r"^(sos|prn|as needed)$", re.I)
+
+
+def _region_of(read: dict | None, match) -> int | None:
+    """The index of the first region whose row is a read row that `match` accepts."""
+    rows = (read or {}).get("rows") or []
+    for index, region in enumerate((read or {}).get("regions") or []):
+        row = region.get("row")
+        if isinstance(row, int) and 0 <= row < len(rows) and match(rows[row]):
+            return index
+    return None
+
+
+def day_plan(rx: dict | None, read: dict | None) -> dict | None:
+    """The patient's day, restated from the prescription only. `read` is the latest medicines.read or None."""
+    if not rx:
+        return None
+    plan = {
+        "slots": {slot: [] for slot in SLOTS}, "as_needed": [], "as_written": [], "not_prescribed": [],
+        "photo_id": (read or {}).get("photo_id"), "evidence_id": (read or {}).get("evidence_id"),
+    }
+    for row, source in zip(build(rx), rx.get("rows") or []):
+        item = {
+            "key": row["key"], "medicine": row["medicine"], "text": schedule_text(row),
+            "region": _region_of(read, lambda r, key=row["key"]: r.get("key") == key and r.get("prescribed")),
+        }
+        if not row["as_needed"]:
+            for slot, amount in row["slots"].items():
+                if amount:
+                    plan["slots"][slot].append(item)
+        elif _AS_NEEDED.match((source.get("dose") or "").strip()):
+            plan["as_needed"].append(item)
+        else:
+            days_text = f"for {row['days']} days" if row["days"] else ""
+            parts = (source.get("dose") or "", row["timing"], days_text, row["note"])
+            plan["as_written"].append({**item, "text": "; ".join(part for part in parts if part)})
+    for row in (read or {}).get("rows") or []:
+        if row.get("flag") == "not_prescribed":
+            region = _region_of(read, lambda r, row=row: r is row)
+            plan["not_prescribed"].append({"name": row.get("name") or row["read"], "read": row["read"], "region": region})
+    return plan

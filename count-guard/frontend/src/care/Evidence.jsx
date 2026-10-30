@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { call } from "../journey";
+import { TONE_COLOUR, stripLabel, stripMatch, stripTone } from "./brownbag.js";
 import { boxLabel, boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, evidenceView, itemName, nudgeLabels, regionLabel, seenCell, startImage } from "./evidence.js";
 
 const cache = new Map();
@@ -27,7 +28,7 @@ const EDGE = "#888";
 
 // Draw boxes (normalised [x, y, w, h]) over the image's displayed size. Kept: solid colour. Ignored: dashed grey.
 // A white outer stroke keeps a box visible on any picture; each label sits on a filled pill, nudged clear of the last.
-function draw(canvas, img, boxes, regions, labels) {
+function draw(canvas, img, boxes, regions, labels, rows) {
   if (!canvas || !img) return;
   const w = img.clientWidth;
   const h = img.clientHeight;
@@ -43,7 +44,9 @@ function draw(canvas, img, boxes, regions, labels) {
   ctx.font = `${FONT}px sans-serif`;
   const items = [
     ...boxes.map((o) => ({ bbox: o.bbox, colour: o.kept ? colourFor(o.label) : EDGE, dashed: !o.kept, text: boxLabel(o) })),
-    ...(regions || []).filter((r) => r.bbox).map((r) => ({ bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r) })),
+    ...(regions || []).filter((r) => r.bbox).map((r) => (rows
+      ? { bbox: r.bbox, colour: TONE_COLOUR[stripTone(stripMatch(rows[r.row]))], dashed: false, text: stripLabel(r, rows) }
+      : { bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r) })),
   ];
   for (const it of items) {
     const [x, y, bw, bh] = it.bbox;
@@ -72,11 +75,11 @@ function draw(canvas, img, boxes, regions, labels) {
   });
 }
 
-function Stage({ image, boxes, regions, labels = true, ...rest }) {
+function Stage({ image, boxes, regions, labels = true, rows, ...rest }) {
   const img = useRef(null);
   const canvas = useRef(null);
   const paint = useRef(null);
-  paint.current = () => draw(canvas.current, img.current, boxes, regions, labels);
+  paint.current = () => draw(canvas.current, img.current, boxes, regions, labels, rows);
   useEffect(() => {
     const again = () => paint.current();
     window.addEventListener("resize", again);
@@ -130,7 +133,7 @@ function CountTable({ rows }) {
 
 // The inline viewer (R32): boxes on the frame, a scrubber, counts, a plain explanation and the raw output.
 // linkLines false is the patient lens: no event codes, no raw output, no links to the staff chart.
-export function Evidence({ episodeId, evidenceId, check, sample, linkLines = true, version = 0, model }) {
+export function Evidence({ episodeId, evidenceId, check, sample, linkLines = true, version = 0, model, rows }) {
   const fetched = useEvidence(episodeId, evidenceId, Boolean(sample), version);
   const data = sample || fetched.data;
   const [picked, setPicked] = useState(null);
@@ -156,7 +159,7 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
   return (
     <section className="evidence" aria-label="Evidence">
       <p className="label">{view.title}{(model ? chipText(data.calls, data.handmade, model) : view.chip) && ` · ${model ? chipText(data.calls, data.handmade, model) : view.chip}`}</p>
-      {image && <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} />}
+      {image && <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} rows={rows} />}
       {view.images.length > 1 && (
         <div className="row">
           {view.images.map((im, i) => {
@@ -182,7 +185,7 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
         </div>
       )}
       {view.regions && (
-        <ul className="small">{view.regions.map((r, i) => <li key={i}>{regionLabel(r)}</li>)}</ul>
+        <ul className="small">{view.regions.map((r, i) => <li key={i}>{rows ? stripLabel(r, rows) : regionLabel(r)}</li>)}</ul>
       )}
       <p className="small">Why: {view.sentences.join(" ")}</p>
       {linkLines && <details><summary>Raw output</summary><pre>{JSON.stringify(view.raw, null, 2)}</pre></details>}

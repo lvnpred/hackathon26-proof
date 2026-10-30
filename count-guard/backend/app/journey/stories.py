@@ -136,6 +136,8 @@ def plain(event: dict) -> str:
         return f"{doctor} is in theatre with {p.get('patient')}, free about {clock(p.get('until_ms') or 0)[-5:]}."
     if kind == "medicines.read":
         return f"Medicines photo: {p.get('why')}"
+    if kind == "brownbag.marked":
+        return f"{p.get('by')} marked {p.get('read')}: {'noted' if p.get('mark') == 'noted' else 'discuss with the patient'}."
     if kind == "tray.checked":
         return f"Tray check by {'photos' if p.get('media') == 'photos' else 'video'}: {p.get('why')}"
     if kind == "swabs.counted":
@@ -214,6 +216,9 @@ def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> s
         return f"A note for you: {p.get('says')}" if p.get("to") == "patient" else ""
     elif kind == "checkin.seen":
         return f"{short_name(p['by'])} saw your check-in."
+    elif kind == "brownbag.marked":
+        who = short_name(p.get("by"))
+        return f"{who} noted {p.get('read')}." if p.get("mark") == "noted" else f"{who} will talk to you about {p.get('name')}."
     elif kind == "surgery.began":
         return "Your operation began."
     elif kind == "surgery.ended":

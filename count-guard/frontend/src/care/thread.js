@@ -50,11 +50,15 @@ const unreadDoctor = (view, since) =>
 const unreadReviews = (view, since) =>
   (view?.ask?.reviews || []).filter((r) => r.answer && (since == null || r.answer.at_ms > since));
 
-export const unreadCount = (view, since) => unreadDoctor(view, since).length + unreadReviews(view, since).length;
+const unreadMarks = (view, since) =>
+  (view?.ask?.medicines || []).flatMap((m) => m.marks || []).filter((k) => since == null || k.at_ms > since);
+
+export const unreadCount = (view, since) => unreadDoctor(view, since).length + unreadReviews(view, since).length + unreadMarks(view, since).length;
 
 export function unreadLine(view, since) {
   if (unreadDoctor(view, since).length) return "Dr. Rao answered your question";
   if (unreadReviews(view, since).length) return "Dr. Rao reviewed your healing photo";
+  if (unreadMarks(view, since).length) return "Dr. Rao marked your medicines photo";
   return "";
 }
 

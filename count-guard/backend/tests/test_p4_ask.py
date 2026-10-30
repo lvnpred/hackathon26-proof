@@ -128,10 +128,10 @@ def test_bot_live_reply_used_and_rejected(tmp_path, monkeypatch):
                 raise reply
         else:
             def write(self, prompt):
-                assert "Amlodipine 5 mg" in prompt and "Question: When do I take amlodipine?" in prompt
+                assert "Amlodipine 5 mg" in prompt and "Question: What is my prescription?" in prompt
                 return reply
         monkeypatch.setattr(spark_mod.SparkAdapter, "write", write)
-        return _ask(client, das, "When do I take amlodipine?").json()["ask"]["questions"][-1]["answer"]
+        return _ask(client, das, "What is my prescription?").json()["ask"]["questions"][-1]["answer"]
 
     used = ask(json.dumps({"answer": GOOD, "sources": [lid]}))
     assert used["source"] == "muse-spark-1.3" and used["text"] == GOOD and used["sources"][0]["id"] == lid

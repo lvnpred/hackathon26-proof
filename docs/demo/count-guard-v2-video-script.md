@@ -247,7 +247,7 @@ On screen: `Home`
 #### `iyer-meds` · 2:47 · patient · 10 s
 Clicks: 1) Role Patient; 2) Pick S. Iyer; 3) Tab Ask; 4) File input in "Medicines photo" <- eval/p4/meds-iyer.png
 
-On screen: `Ibuprofen` · `Pantoprazole 40 mg:`
+On screen: `Ibuprofen` · `Pantoprazole 40 mg:` · `Ibuprofen 400 mg · not prescribed`
 
 > Ms. Iyer photographs her medicines; the page flags one row and names each medicine with its schedule.
 
@@ -270,7 +270,7 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 | Beat | Model calls and label change |
 |---|---|
 | `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The dock reads models: live, not offline, when a key is set. |
-| `das-ask` | 1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch. |
+| `das-ask` | No model call: a medicine question is answered by quoting the prescription row. The label reads Rules (no model) with or without a key. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
 | `kumar-count` | SAM 3.1 video call for the swab camera count. The label reads SAM 3.1. Switch: SWABS_LIVE. |

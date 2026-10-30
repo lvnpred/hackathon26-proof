@@ -61,3 +61,9 @@ test("care.css styles the patient thread rows and the unread dot", () => {
   assert.match(css, /\.thread-row/);
   assert.match(css, /\.dot \{/);
 });
+
+test("the evidence viewer stage is positioned and the thumb is 48 px", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.ev-stage \{[^}]*position:\s*relative/);
+  assert.match(css, /\.ev-thumb \{[^}]*48px/);
+});

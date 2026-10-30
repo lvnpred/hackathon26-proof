@@ -1,10 +1,11 @@
 import { ASK_DOCTOR, NOT_FOUND, answerByLine, medicineLine } from "./askText.js";
+import { Evidence } from "./Evidence.jsx";
 import { sourceLabel } from "./drafts";
 import { threadItems, threadStatus } from "./thread.js";
 
 const THUMB = { objectFit: "cover", borderRadius: 6 };
 
-function Answer({ item, onAskDoctor }) {
+function Answer({ item, onAskDoctor, episodeId }) {
   const { kind, answer, raw } = item;
   if (kind === "record" && answer) {
     return (
@@ -40,6 +41,7 @@ function Answer({ item, onAskDoctor }) {
           {raw.rows.map((row, i) => <li key={i}><span className={row.flag ? "pill sun" : ""}>{medicineLine(row)}</span></li>)}
         </ul>
         <p className="small">{raw.why} <span className="muted">({sourceLabel(raw.source)})</span></p>
+        {raw.evidence_id && <Evidence episodeId={episodeId} evidenceId={raw.evidence_id} linkLines={false} />}
       </>
     );
   }
@@ -60,7 +62,7 @@ export default function Thread({ view, nowMs, onAskDoctor }) {
             <li className="thread-row" data-line={item.id} key={item.id}>
               <p className="small"><b>{item.title}</b> <span className="pill">{threadStatus(item, nowMs)}</span></p>
               {item.said && <p className="quote">{"“"}{item.said}{"”"}</p>}
-              <Answer item={item} onAskDoctor={onAskDoctor} />
+              <Answer item={item} onAskDoctor={onAskDoctor} episodeId={view.episode?.id} />
             </li>
           ))}
         </ul>

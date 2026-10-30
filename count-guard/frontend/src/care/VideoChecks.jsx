@@ -1,5 +1,6 @@
 import { label } from "./clock";
 import { sourceLabel } from "./drafts";
+import { EvidenceThumb } from "./Evidence.jsx";
 import { checkLabel, patientCheckLine, shownChecks, taskLineCheckIds } from "./video";
 
 // Every tray and set-up clip on the chart, oldest first, with the frames the check looked at.
@@ -23,7 +24,8 @@ export default function VideoChecks({ view, hideTray = false, patient = false })
             </p>
           )}
           {!patient && c.why && <p className="small muted">{c.why}</p>}
-          {(c.frames || []).length > 0 && (
+          {c.evidence_id && !patient && <EvidenceThumb episodeId={view.episode?.id} evidenceId={c.evidence_id} check={c} />}
+          {(c.frames || []).length > 0 && !(c.evidence_id && !patient) && (
             <div className="row">
               {c.frames.map((f) => <img key={f.id} src={f.url} alt="Frame from the clip" width={96} style={{ borderRadius: 6 }} />)}
             </div>

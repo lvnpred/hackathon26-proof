@@ -125,7 +125,7 @@ Filming note: `kumar-free-soon` is not in the film. The check moves the clock on
 #### `kumar-tray` · 1:03 · nurse · 6 s
 Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "Tray check"
 
-On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `needle holder` · `2 (missing)` · `Prepared demo result`
+On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `needle holder` · `2 (missing)` · `Saw 2 of 3 needle holders.` · `Prepared demo result`
 
 > Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon.
 

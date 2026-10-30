@@ -124,3 +124,18 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .thread-row { border-top: 1px solid var(--line); padding: 8px 0 }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--sun); margin-left: 4px }
 .answered-fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600 }
+
+/* Evidence viewer (Task 6) */
+.evidence { margin: 8px 0; display: grid; gap: 6px; }
+.ev-stage { position: relative; max-width: 640px }
+.ev-stage img { width: 100%; display: block }
+.ev-stage canvas { position: absolute; inset: 0; width: 100%; height: 100% }
+.ev-frame { padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer }
+.ev-frame[aria-pressed="true"] { border-color: var(--action) }
+.ev-frame img { display: block; object-fit: cover; border-radius: 4px }
+.ev-spark { vertical-align: middle; background: var(--surface-sunk); border-radius: 4px }
+.ev-thumb { position: relative; width: 48px; height: 48px; padding: 0; overflow: hidden; border: 1px solid var(--line-control); border-radius: 6px; background: var(--surface-sunk); cursor: pointer }
+.ev-thumb-stage { position: relative; width: 100%; height: 100% }
+.ev-thumb-stage img { width: 100%; height: 100%; object-fit: fill; display: block }
+.ev-thumb-stage canvas { position: absolute; inset: 0; width: 100%; height: 100% }
+.evidence pre { max-height: 240px; overflow: auto; font-size: 12px }

@@ -1,3 +1,4 @@
+import { EvidenceThumb } from "./Evidence.jsx";
 import { label } from "./clock";
 import { photoCheckLabel, photoPurposeLabel, sourceLabel } from "./drafts";
 
@@ -11,7 +12,11 @@ export default function Photos({ view }) {
       <ul className="task-list">
         {photos.map((photo) => (
           <li key={photo.id}>
-            <img src={photo.url} alt={`${photo.purpose} photo by ${photo.by}`} width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />
+            {photo.check?.evidence_id ? (
+              <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} />
+            ) : (
+              <img src={photo.url} alt={`${photo.purpose} photo by ${photo.by}`} width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />
+            )}
             <span className="small">
               {photoPurposeLabel(photo.purpose)} · {photo.by} · {label(photo.at_ms)}
               {photo.check && (

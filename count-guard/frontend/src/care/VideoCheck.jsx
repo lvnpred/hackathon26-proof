@@ -1,9 +1,11 @@
 import { sourceLabel } from "./drafts";
 import { checkLabel, toUpload, videoProblem } from "./video";
 import { useState } from "react";
+import { Evidence } from "./Evidence.jsx";
+import { seenCell } from "./evidence.js";
 
 // A tray or set-up clip: pick it, and the result shows beside the planned list. A flag never blocks.
-export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "" }) {
+export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "", episodeId }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
     const files = Array.from(event.target.files || []);
@@ -23,19 +25,21 @@ export default function VideoCheck({ title, kind, check, busy, onFile, hideUploa
         </label>
       )}
       {problem && <p className="note" role="alert">{problem}</p>}
-      {check && <CheckResult check={check} />}
+      {check && <CheckResult check={check} episodeId={episodeId} />}
     </section>
   );
 }
 
-function CheckResult({ check }) {
+function CheckResult({ check, episodeId }) {
+  const proved = Boolean(check.evidence_id && episodeId);
   return (
     <div>
       <p className="small">
         <span className={`pill ${check.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span>{" "}
         <span className="muted">({sourceLabel(check.source)})</span> {check.why}
       </p>
-      {(check.rows || []).length > 0 && (
+      {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} />}
+      {!proved && (check.rows || []).length > 0 && (
         <table className="small">
           <thead><tr><th>Item</th><th>Planned</th><th>Seen</th></tr></thead>
           <tbody>
@@ -43,14 +47,14 @@ function CheckResult({ check }) {
               <tr key={row.concept}>
                 <td>{(row.names || [row.concept]).join(", ")}</td>
                 <td>{row.planned}</td>
-                <td>{row.seen === null || row.seen === undefined ? "not checked" : row.seen < row.planned ? `${row.seen} (missing)` : row.seen}</td>
+                <td>{seenCell(row)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
       {(check.unchecked || []).length > 0 && <p className="small muted">Not checked here: {check.unchecked.join(", ")}</p>}
-      {(check.frames || []).length > 0 && (
+      {!proved && (check.frames || []).length > 0 && (
         <div className="row">
           {check.frames.map((frame) => (
             <img key={frame.id} src={frame.url} alt={check.media === "photos" ? "Photo from the check" : "Frame from the clip"} width={96} style={{ borderRadius: 6 }} />

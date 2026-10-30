@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EvidenceThumb } from "./Evidence.jsx";
 import ObsForm from "./ObsForm";
 import { doneBody, MATCH_LABEL, newestPhoto, sourceLabel } from "./drafts";
 import { obsValues } from "./tasklist";
@@ -55,6 +56,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
           {photo.check?.why}
         </p>
       )}
+      {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} />}
       {error && <p className="error small" role="alert">{error}</p>}
       <div className="row">
         <button type="button" className="primary" disabled={busy} onClick={confirm}>Confirm</button>

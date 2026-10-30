@@ -25,6 +25,7 @@ export default function Patients() {
               <span className="num">Bed {patient.bed}</span>
               <span>{patient.name}</span>
               <StateBadge patient={patient} />
+              <span className="open-cue">Open →</span>
             </Link>
           </li>
         ))}

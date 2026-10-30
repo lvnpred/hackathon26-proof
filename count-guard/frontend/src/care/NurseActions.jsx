@@ -5,7 +5,7 @@ import TaskProof from "./TaskProof";
 import TheatrePanel from "./TheatrePanel";
 import { taskDue } from "./derive";
 import { latestCheck, taskVideoLabel } from "./video";
-import { sortTasks, surgeryNow } from "./tasklist";
+import { markDone, sortTasks, surgeryNow } from "./tasklist";
 import VideoCheck from "./VideoCheck";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
@@ -42,6 +42,7 @@ function Orders({ orders, by, busy, act }) {
 
 function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
   const done = (body = {}) => act(`/tasks/${task.id}/done`, { by, via: "tap", note: "", ...body });
+  const mark = markDone(due);
   return (
     <li>
       <div className="row between">
@@ -61,14 +62,14 @@ function TaskRow({ view, task, due, by, busy, act, upload, onProof }) {
           onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
         />
       )}
-      {due !== "done" && task.kind === "obs" && <ObsForm busy={busy} onSave={(values) => done({ values })} />}
+      {due !== "done" && task.kind === "obs" && <ObsForm busy={busy} due={due} onSave={(values) => done({ values })} />}
       {due !== "done" && task.kind !== "obs" && task.mode === "start_end" && (
         task.status === "running"
           ? <button type="button" className="primary" disabled={busy} onClick={() => done()}>End</button>
           : <button type="button" disabled={busy} onClick={() => act(`/tasks/${task.id}/begin`, { by })}>Begin</button>
       )}
       {due !== "done" && task.kind !== "obs" && task.mode !== "start_end" && (
-        <button type="button" className="primary" disabled={busy} onClick={() => done()}>Mark done</button>
+        <button type="button" className={mark.primary ? "primary" : undefined} disabled={busy} onClick={() => done()}>{mark.label}</button>
       )}
     </li>
   );

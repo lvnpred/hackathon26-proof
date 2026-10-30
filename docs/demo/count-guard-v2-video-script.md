@@ -62,7 +62,7 @@ On screen: `Clinic visit closed` · `The visit is closed. No further steps.`
 > Dr. Rao closes the visit, and the record says nothing more is due.
 
 #### `das-ask` · 0:16 · patient · 12 s
-Clicks: 1) Role Patient; 2) Pick A. Das; 3) Tab Ask; 4) Textarea in "Ask the record" <- When do I take amlodipine?; 5) Button "Ask the record"
+Clicks: 1) Role Patient; 2) Pick A. Das; 3) Tab Ask; 4) Textarea in "Ask your record" <- When do I take amlodipine?; 5) Button "Ask the record"
 
 On screen: `Here is what your record says.` · `Amlodipine` · `Rules (no model)`
 
@@ -172,7 +172,7 @@ On screen: `Home`
 > The nurse completes the discharge checks and he goes home.
 
 #### `kumar-ask` · 1:47 · patient · 12 s
-Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask the doctor" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Day 3; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
+Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Day 3; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
 
 On screen: `Waiting for Dr. Rao` · `The doctor reviews the healing photo.`
 
@@ -245,7 +245,7 @@ On screen: `Home`
 > The discharge checks are ticked and she goes home.
 
 #### `iyer-meds` · 2:47 · patient · 10 s
-Clicks: 1) Role Patient; 2) Pick S. Iyer; 3) Tab Ask; 4) File input in "Medicine photo" <- eval/p4/meds-iyer.png
+Clicks: 1) Role Patient; 2) Pick S. Iyer; 3) Tab Ask; 4) File input in "Medicines photo" <- eval/p4/meds-iyer.png
 
 On screen: `Ibuprofen` · `Pantoprazole 40 mg:`
 

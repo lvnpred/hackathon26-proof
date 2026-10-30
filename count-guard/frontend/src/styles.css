@@ -238,7 +238,8 @@ button.primary:hover, .button.primary:hover { opacity: 0.9; background: var(--ac
 button.quiet { background: transparent; border-color: transparent; color: var(--sky); text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; align-self: flex-start; }
 button.quiet:hover { background: var(--sky-soft); }
 button.block { width: 100%; }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:disabled, button.primary:disabled, .button.primary:disabled,
+button:disabled:hover, button.primary:disabled:hover { background: transparent; border-color: var(--line); color: var(--ink-muted); opacity: 1; cursor: not-allowed; }
 .mic {
   width: 96px;
   height: 96px;

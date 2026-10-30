@@ -31,7 +31,7 @@ export const STEPS = {
     await H.role("Patient");
     await H.pick("A. Das");
     await H.tab("Ask");
-    await H.fill("Your question", "When do I take amlodipine?", "Ask the record");
+    await H.fill("Your question", "When do I take amlodipine?", "Ask your record");
     await H.click("Ask the record");
   },
   async "das-mycare"(H) {
@@ -125,7 +125,7 @@ export const STEPS = {
     await H.role("Patient");
     await H.pick(KUMAR);
     await H.tab("Ask");
-    await H.fill("Your question", "Is the swelling normal on day 3?", "Ask the doctor");
+    await H.fill("Your question", "Is the swelling normal on day 3?", "Ask Dr. Rao");
     await H.click("Send to Dr. Rao");
     await H.fill("Note for the doctor (optional)", "Day 3", "Healing photo");
     await H.file("Healing photo", "eval/p4/wound-day3.png");
@@ -200,7 +200,7 @@ export const STEPS = {
     await H.role("Patient");
     await H.pick(IYER);
     await H.tab("Ask");
-    await H.file("Medicine photo", "eval/p4/meds-iyer.png");
+    await H.file("Medicines photo", "eval/p4/meds-iyer.png");
   },
   async close(H) {
     await H.role("Doctor");

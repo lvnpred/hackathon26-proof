@@ -8,7 +8,11 @@
 .clock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 24px; background: var(--surface-sunk); border-bottom: 1px solid var(--line); font-size: 14px; }
 .clock-now { font-weight: 800; margin-right: 4px; }
 .clock-bar button { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-control); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
-.clock-bar button:disabled { opacity: 0.5; cursor: default; }
+.clock-bar button:disabled { background: transparent; border-color: var(--line); color: var(--ink-muted); opacity: 1; cursor: not-allowed; }
+.row-link { cursor: pointer; }
+.row-link:hover td, .row-link:focus-visible td { background: var(--sky-soft); }
+.row-link:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
+.open-cue { margin-left: auto; color: var(--sky); font-weight: 600; }
 .patient-list { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .patient-list a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-decoration: none; }
 .care-foot { display: flex; gap: 16px; padding: 16px 24px; font-size: 14px; }

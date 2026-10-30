@@ -32,7 +32,7 @@ export function BotCard({ view, busy, act, onAskDoctor, fault, episodeId }) {
     if (next) setText("");
   }
   return (
-    <section className="card" aria-label="Ask the record">
+    <section className="card" aria-label="Ask your record">
       <QuestionForm
         title="Ask your record" button="Ask the record" busy={busy} text={text} setText={setText} onSend={send}
         hint="The record bot quotes lines from your own record."
@@ -66,7 +66,7 @@ export function DoctorCard({ view, busy, act, fill, fault, episodeId }) {
     if (next) setText("");
   }
   return (
-    <section className="card" aria-label="Ask the doctor">
+    <section className="card" aria-label="Ask Dr. Rao">
       <QuestionForm title="Ask Dr. Rao" button="Send to Dr. Rao" busy={busy} text={text} setText={setText} onSend={send} />
       <Fault fault={fault} episodeId={episodeId} only={["/ask/doctor"]} />
       {doctorQuestions(view).map((q) => (
@@ -130,7 +130,7 @@ export function ReviewCard({ view, busy, upload, fault, episodeId }) {
 export function MedicinesCard({ view, busy, upload, fault, episodeId }) {
   const read = latestMedicines(view);
   return (
-    <section className="card" aria-label="Medicine photo">
+    <section className="card" aria-label="Medicines photo">
       <p className="label">Medicines photo</p>
       <Fault fault={fault} episodeId={episodeId} only={["/ask/medicines"]} />
       {photoAskOpen(view.state)

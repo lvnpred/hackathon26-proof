@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PageLead } from "../App";
 import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
@@ -8,15 +8,22 @@ import LoadError from "./LoadError";
 import { NUDGE_SCOPES, STATUS } from "./faults";
 import { queueRows } from "./derive";
 import { StateBadge } from "./Patients";
+import { opensRow } from "./rows";
 import { STATUS_CHOICES } from "./status";
 
 function QueueRow({ row, ward, open, toggle }) {
   const patient = ward.find(row.episodeId);
   const nudge = (patient?.view.nudges || []).find((n) => n.id === row.lineId);
   const to = `/chart/${row.episodeId}${row.lineId ? `?line=${row.lineId}` : ""}`;
+  const navigate = useNavigate();
   return (
     <>
-      <tr>
+      <tr
+        className="row-link"
+        tabIndex={0}
+        onClick={(e) => opensRow(e.target) && navigate(to)}
+        onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && navigate(to)}
+      >
         <td className="num">Bed {row.bed}</td>
         <td className="left">{row.name}</td>
         <td>{row.says}</td>
@@ -97,6 +104,7 @@ export default function Queue() {
               <span className="num">Bed {p.bed}</span>
               <span>{p.name}</span>
               <StateBadge patient={p} />
+              <span className="open-cue">Open →</span>
             </Link>
           </li>
         ))}

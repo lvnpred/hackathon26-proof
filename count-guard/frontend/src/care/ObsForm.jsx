@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { OBS_FIELDS, obsValues } from "./tasklist";
+import { OBS_FIELDS, markDone, obsValues } from "./tasklist";
 
 // Observation inputs. With `onChange` and no `onSave`, the parent owns the button (TaskProof).
-export default function ObsForm({ busy, onSave, onChange, initial = {} }) {
+export default function ObsForm({ busy, due, onSave, onChange, initial = {} }) {
+  const mark = markDone(due);
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
   const edit = (next) => { setForm(next); onChange?.(next); };
@@ -20,7 +21,7 @@ export default function ObsForm({ busy, onSave, onChange, initial = {} }) {
           <input inputMode="decimal" value={form[key] || ""} onChange={(event) => edit({ ...form, [key]: event.target.value })} />
         </label>
       ))}
-      {onSave && <button type="button" className="primary" disabled={busy} onClick={save}>Mark done</button>}
+      {onSave && <button type="button" className={mark.primary ? "primary" : undefined} disabled={busy} onClick={save}>{mark.label}</button>}
       {error && <p className="error small" role="alert">{error}</p>}
     </div>
   );

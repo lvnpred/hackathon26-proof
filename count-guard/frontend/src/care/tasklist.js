@@ -9,6 +9,12 @@ export function sortTasks(tasks, nowMs) {
   return [...tasks].sort((a, b) => ORDER[taskDue(a, nowMs)] - ORDER[taskDue(b, nowMs)] || key(a) - key(b));
 }
 
+// Due work gets the main button; work not yet due can still be marked, as "early".
+export function markDone(due) {
+  const early = due === "later";
+  return { label: early ? "Mark done early" : "Mark done", primary: !early };
+}
+
 // Server bounds for an observation set; required fields first.
 export const OBS_FIELDS = [
   ["sbp", "SBP", 30, 300, true],

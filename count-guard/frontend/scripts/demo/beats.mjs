@@ -60,7 +60,7 @@ export const BEATS = [
   {
     id: "das-ask", path: "das", role: "patient", seconds: 12, film: true,
     say: "Mr. Das asks his own record about his tablet, and the answer comes from the record, with its source named.",
-    clicks: ["Role Patient", "Pick A. Das", "Tab Ask", 'Textarea in "Ask the record" <- When do I take amlodipine?', 'Button "Ask the record"'],
+    clicks: ["Role Patient", "Pick A. Das", "Tab Ask", 'Textarea in "Ask your record" <- When do I take amlodipine?', 'Button "Ask the record"'],
     expect: ["Here is what your record says.", "Amlodipine", "Rules (no model)"],
     keyed: "1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch.",
   },
@@ -175,7 +175,7 @@ export const BEATS = [
   {
     id: "kumar-ask", path: "kumar", role: "patient", seconds: 12, film: true,
     say: "At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says who is waiting.",
-    clicks: ["Role Patient", "Pick R. Kumar", "Tab Ask", 'Textarea in "Ask the doctor" <- Is the swelling normal on day 3?', 'Button "Send to Dr. Rao"', 'Text input in "Healing photo" <- Day 3', 'File input in "Healing photo" <- eval/p4/wound-day3.png'],
+    clicks: ["Role Patient", "Pick R. Kumar", "Tab Ask", 'Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?', 'Button "Send to Dr. Rao"', 'Text input in "Healing photo" <- Day 3', 'File input in "Healing photo" <- eval/p4/wound-day3.png'],
     expect: ["Waiting for Dr. Rao", "The doctor reviews the healing photo."],
     files: ["wound-day3.png"],
     keyed: "No model call.",
@@ -253,7 +253,7 @@ export const BEATS = [
   {
     id: "iyer-meds", path: "iyer", role: "patient", seconds: 10, film: true,
     say: "Ms. Iyer photographs her medicines; the page flags one row and names each medicine with its schedule.",
-    clicks: ["Role Patient", "Pick S. Iyer", "Tab Ask", 'File input in "Medicine photo" <- eval/p4/meds-iyer.png'],
+    clicks: ["Role Patient", "Pick S. Iyer", "Tab Ask", 'File input in "Medicines photo" <- eval/p4/meds-iyer.png'],
     expect: ["Ibuprofen", "Pantoprazole 40 mg:"],
     files: ["meds-iyer.png"],
     keyed: "1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE.",

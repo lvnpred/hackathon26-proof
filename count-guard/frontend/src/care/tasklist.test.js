@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus } from "./tasklist.js";
+import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone } from "./tasklist.js";
 import { M } from "./clock.js";
 
 const NOW = 10 * 60 * M;
@@ -96,4 +96,10 @@ test("orderStatus says what happens to a clinic order", () => {
   assert.equal(orderStatus(o, "clinic_done"), "Not started: the visit was closed.");
   assert.equal(orderStatus(o, "ward"), "Waiting for the nurse");
   assert.equal(orderStatus({ acknowledged_by: "Nurse Meena" }, "clinic_done"), "Acknowledged by Nurse Meena");
+});
+
+test("markDone: due work is primary, later work is early", () => {
+  assert.deepEqual(markDone("overdue"), { label: "Mark done", primary: true });
+  assert.deepEqual(markDone("due"), { label: "Mark done", primary: true });
+  assert.deepEqual(markDone("later"), { label: "Mark done early", primary: false });
 });

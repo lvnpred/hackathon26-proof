@@ -179,7 +179,7 @@ On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.`
 > At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says who is waiting.
 
 #### `kumar-review` · 1:59 · doctor · 9 s
-Clicks: 1) Role Doctor; 2) Tab "My queue"; 3) Link "Open →" in the row with "Healing photo to review"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
+Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
 
 On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send answer) · `by voice · Prepared demo result` · `No visit needed`
 
@@ -203,7 +203,7 @@ On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 > Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.
 
 #### `iyer-orders` · 2:20 · doctor · 7 s
-Clicks: 1) Role Doctor; 2) Tab "My queue" (row shows "is below the limit of 90"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Draft orders"; 7) Button "Sign orders"
+Clicks: 1) Role Doctor; 2) Tab "My patients" (row reads "Observation past its limit"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Draft orders"; 7) Button "Sign orders"
 
 On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao (synthetic).`
 
@@ -255,11 +255,11 @@ On screen: `Ibuprofen` · `Pantoprazole 40 mg:`
 ### Close
 
 #### `close` · 2:57 · none · 3 s
-Clicks: 1) Role Doctor; 2) Tab "My queue"
+Clicks: 1) Role Doctor; 2) Tab "My patients"
 
 On screen: `Dr. A. Rao: Available`
 
-> Back in the doctor's queue, Dr. Rao shows as available and every step above has a record.
+> Back on My patients, Dr. Rao shows as available and every step above has a record.
 
 ## Keyed variant
 

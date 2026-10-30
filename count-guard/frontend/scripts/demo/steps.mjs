@@ -132,8 +132,9 @@ export const STEPS = {
   },
   async "kumar-review"(H) {
     await H.role("Doctor");
-    await H.tab("My queue");
-    await H.page.locator("tr").filter({ hasText: "Healing photo to review" }).getByRole("link", { name: /Open/ }).click();
+    await H.tab("My patients");
+    await H.page.locator(".patient-list a.waiting").filter({ hasText: KUMAR }).click();
+    await H.page.locator("h1", { hasText: KUMAR }).waitFor();
     await H.file(/^Your answer to /, "eval/p2/rao-answer.wav");
     await before(H, "kumar-review");
     await H.click("Send to R. Kumar");
@@ -155,7 +156,7 @@ export const STEPS = {
   },
   async "iyer-orders"(H) {
     await H.role("Doctor");
-    await H.tab("My queue");
+    await H.tab("My patients");
     await H.chart(IYER);
     await H.open("Dictate orders");
     await H.file("Dictate orders", "eval/p2/iyer-saline.wav");
@@ -205,6 +206,6 @@ export const STEPS = {
   },
   async close(H) {
     await H.role("Doctor");
-    await H.tab("My queue");
+    await H.tab("My patients");
   },
 };

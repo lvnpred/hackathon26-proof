@@ -5,11 +5,9 @@ import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
 import Fault from "./Fault";
 import LoadError from "./LoadError";
-import { NUDGE_SCOPES, STATUS } from "./faults";
+import { NUDGE_SCOPES } from "./faults";
 import { queueRows } from "./derive";
-import { StateBadge } from "./Patients";
 import { opensOnKey, opensRow } from "./rows";
-import { STATUS_CHOICES } from "./status";
 
 function QueueRow({ row, ward, open, toggle }) {
   const patient = ward.find(row.episodeId);
@@ -55,15 +53,6 @@ export default function Queue() {
     <>
       <PageLead kicker="Ward" title="My queue" body="What is waiting on you, longest wait first." />
       <LoadError patients={patients} error={ward.loadError} />
-      {role === "doctor" && (
-        <div className="row" role="group" aria-label="My status">
-          <span className="label">My status</span>
-          {STATUS_CHOICES.map((choice) => (
-            <button key={choice.id} type="button" disabled={ward.busy} onClick={() => ward.setDoctorStatus(choice)}>{choice.label}</button>
-          ))}
-          <Fault fault={ward.fault} episodeId={null} only={[STATUS]} />
-        </div>
-      )}
       {rows.length ? (
         <div className="card table-box">
           <table>
@@ -97,19 +86,6 @@ export default function Queue() {
           <Link to={`/chart/${p.id}`}>Handover: Bed {p.bed}, {p.name} →</Link>
         </div>
       ))}
-      <h2>My patients</h2>
-      <ul className="patient-list">
-        {patients.map((p) => (
-          <li key={p.id}>
-            <Link to={`/chart/${p.id}`}>
-              <span className="num">Bed {p.bed}</span>
-              <span>{p.name}</span>
-              <StateBadge patient={p} />
-              <span className="open-cue">Open →</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </>
   );
 }

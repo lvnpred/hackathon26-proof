@@ -144,7 +144,7 @@ function nurseRows(patient, nowMs) {
 }
 
 // Every row for a role. Patients get nudges only; their queue page stays empty (Today / My care).
-function rowsFor(patient, role, nowMs) {
+export function rowsFor(patient, role, nowMs) {
   const nudges = nudgeRows(patient, nowMs).filter((r) => r.to === role);
   if (role === "doctor") {
     const seen = new Set();

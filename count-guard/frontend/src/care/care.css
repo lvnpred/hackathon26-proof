@@ -96,3 +96,10 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--action); text-decoration: underline; font: inherit; cursor: pointer; }
 .inbox-card { margin-bottom: 12px; }
 .quote { margin: 4px 0 8px; font-size: 1.05rem; }
+
+/* My patients (doctor home) */
+.patient-list a.waiting { border-left: 4px solid var(--sun); }
+.patient-list a.quiet { color: var(--ink-muted); }
+.status-menu { align-self: flex-end; }
+.status-menu summary { cursor: pointer; list-style: none; }
+.status-menu[open] { padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }

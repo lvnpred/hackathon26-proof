@@ -19,7 +19,10 @@ const ROLES = [
   ["patient", "Patient"],
 ];
 
-const STAFF_TABS = [["/queue", "My queue"], ["/patients", "Patients"]];
+const STAFF_TABS = {
+  doctor: [["/patients", "My patients"]],
+  nurse: [["/queue", "My queue"], ["/patients", "Patients"]],
+};
 const PATIENT_TABS = [["/today", "Today"], ["/my-care", "My care"], ["/ask", "Ask"]];
 
 export const DEMO = import.meta.env.VITE_DEMO !== "0";
@@ -41,7 +44,7 @@ export function useCareWard() {
 // "/" lands on each role's first tab.
 export function CareHome() {
   const { role } = useCareWard();
-  return <Navigate to={role === "patient" ? "/today" : "/queue"} replace />;
+  return <Navigate to={role === "patient" ? "/today" : role === "doctor" ? "/patients" : "/queue"} replace />;
 }
 
 function Strip({ ward }) {
@@ -116,7 +119,7 @@ function DoctorChip({ status }) {
 
 export default function CareShell({ ward, children }) {
   const navigate = useNavigate();
-  const tabs = ward.role === "patient" ? PATIENT_TABS : STAFF_TABS;
+  const tabs = ward.role === "patient" ? PATIENT_TABS : STAFF_TABS[ward.role];
   const { pathname } = useLocation();
   const { clearFault } = ward;
   const [demoOpen, setDemoOpen] = useState(false);
@@ -129,7 +132,7 @@ export default function CareShell({ ward, children }) {
   function pick(role) {
     ward.setRole(role);
     if (role === "patient") navigate("/today");
-    else if (ward.role === "patient") navigate("/queue");
+    else if (ward.role === "patient" || pathname === "/queue" || pathname === "/patients") navigate(role === "doctor" ? "/patients" : "/queue");
   }
 
   return (

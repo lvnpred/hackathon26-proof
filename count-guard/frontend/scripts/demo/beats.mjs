@@ -183,7 +183,7 @@ export const BEATS = [
   {
     id: "kumar-review", path: "kumar", role: "doctor", seconds: 9, film: true,
     say: "Dr. Rao opens the healing photo beside the reference photo and answers by voice.",
-    clicks: ["Role Doctor", 'Tab "My queue"', 'Link "Open →" in the row with "Healing photo to review"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send to R. Kumar"', 'Button "No visit needed"'],
+    clicks: ["Role Doctor", 'Tab "My patients"', 'Row "R. Kumar" under "Waiting on you"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send to R. Kumar"', 'Button "No visit needed"'],
     expect: ["Healing photo", "Reference", "by voice · Prepared demo result", "No visit needed"],
     before: [HEARD],
     files: ["rao-answer.wav"],
@@ -208,7 +208,7 @@ export const BEATS = [
   {
     id: "iyer-orders", path: "iyer", role: "doctor", seconds: 7, film: true,
     say: "Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them.",
-    clicks: ["Role Doctor", 'Tab "My queue" (row shows "is below the limit of 90")', "Chart S. Iyer", 'Button "Dictate orders"', 'File eval/p2/iyer-saline.wav into "Dictate orders"', 'Button "Draft orders"', 'Button "Sign orders"'],
+    clicks: ["Role Doctor", 'Tab "My patients" (row reads "Observation past its limit")', "Chart S. Iyer", 'Button "Dictate orders"', 'File eval/p2/iyer-saline.wav into "Dictate orders"', 'Button "Draft orders"', 'Button "Sign orders"'],
     expect: ["Draft from dictation", "Nurse acknowledges the new orders from Dr. A. Rao (synthetic)."],
     files: ["iyer-saline.wav"],
     keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by typing in the box.",
@@ -260,8 +260,8 @@ export const BEATS = [
   },
   {
     id: "close", path: "close", role: "none", seconds: 3, film: true,
-    say: "Back in the doctor's queue, Dr. Rao shows as available and every step above has a record.",
-    clicks: ["Role Doctor", 'Tab "My queue"'],
+    say: "Back on My patients, Dr. Rao shows as available and every step above has a record.",
+    clicks: ["Role Doctor", 'Tab "My patients"'],
     expect: ["Dr. A. Rao: Available"],
     keyed: "No model call.",
   },

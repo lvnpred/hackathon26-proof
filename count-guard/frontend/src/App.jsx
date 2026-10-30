@@ -3,8 +3,7 @@ import { CareHome, CareRoutes } from "./care/CareShell";
 import Chart from "./care/Chart";
 import Ask from "./care/Ask";
 import MyCare from "./care/MyCare";
-import Patients from "./care/Patients";
-import Queue from "./care/Queue";
+import { PatientsRoute, QueueRoute } from "./care/MyPatients";
 import Today from "./care/Today";
 import Audit from "./screens/Audit";
 import Close from "./screens/Close";
@@ -169,8 +168,8 @@ export default function App() {
     <Routes>
       <Route element={<CareRoutes />}>
         <Route path="/" element={<CareHome />} />
-        <Route path="/queue" element={<Queue />} />
-        <Route path="/patients" element={<Patients />} />
+        <Route path="/queue" element={<QueueRoute />} />
+        <Route path="/patients" element={<PatientsRoute />} />
         <Route path="/chart/:episodeId" element={<Chart />} />
         <Route path="/today" element={<Today />} />
         <Route path="/my-care" element={<MyCare />} />

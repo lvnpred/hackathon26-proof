@@ -25,9 +25,9 @@ export function helpers(page, root) {
   return {
     page,
     role: (name) => page.getByRole("group", { name: "Role" }).getByRole("button", { name, exact: true }).click(),
-    // Staff open a chart through the Patients tab.
+    // Staff open a chart through the Patients tab ("My patients" for the doctor).
     async chart(who) {
-      await nav.getByRole("link", { name: "Patients", exact: true }).click();
+      await nav.getByRole("link", { name: /^(My )?patients$/i }).click();
       await page.locator(".patient-list a").filter({ hasText: who }).first().click();
       await page.locator("h1", { hasText: who }).waitFor();
     },

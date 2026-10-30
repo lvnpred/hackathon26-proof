@@ -1,10 +1,10 @@
 import { label } from "./clock";
 import { sourceLabel } from "./drafts";
-import { checkLabel, patientCheckLine, shownChecks } from "./video";
+import { checkLabel, patientCheckLine, shownChecks, taskLineCheckIds } from "./video";
 
 // Every tray and set-up clip on the chart, oldest first, with the frames the check looked at.
 export default function VideoChecks({ view, hideTray = false, patient = false }) {
-  const checks = shownChecks(view?.video_checks || [], { hideTray, patient });
+  const checks = shownChecks(view?.video_checks || [], { hideTray, patient, onTaskLines: patient ? taskLineCheckIds(view) : [] });
   if (checks.length === 0) return null;
   const titleOf = (id) => (view.tasks || []).find((t) => t.id === id)?.title || "task";
   return (

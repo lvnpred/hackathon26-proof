@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, shownChecks, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
+import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, shownChecks, taskCheckLine, taskLineCheckIds, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const file = (type, mb) => ({ type, size: mb * 1024 * 1024 });
@@ -109,4 +109,22 @@ test("patientCheckLine", () => {
   assert.equal(patientCheckLine({ check: "setup", match: "mismatch" }), "Checked from a video: something planned was not seen; the nurse was told.");
   assert.equal(patientCheckLine({ check: "setup", match: "ok", media: "photos" }), "Checked from photos: everything planned was seen.");
   assert.equal(patientCheckLine({ check: "setup", match: null }), "A video was kept; it was not checked.");
+});
+test("unchecked photos read in the plural; every patient line is free of advice words", () => {
+  assert.equal(patientCheckLine({ check: "setup", match: null, media: "photos" }), "Photos were kept; they were not checked.");
+  for (const match of ["ok", "mismatch", null, "none"]) {
+    for (const media of ["video", "photos", undefined]) {
+      assert.doesNotMatch(patientCheckLine({ check: "setup", match, media }), ADVICE);
+    }
+  }
+});
+test("a task's set-up line takes its media from the check; the list skips checks shown on task lines", () => {
+  const view = {
+    tasks: [{ id: "t1", video: { id: "c1", match: "ok" } }, { id: "t2" }],
+    video_checks: [{ id: "c1", check: "setup", task_id: "t1", media: "photos" }, { id: "c2", check: "setup", task_id: "t3" }],
+  };
+  assert.equal(taskCheckLine(view, view.tasks[0]), "Checked from photos: everything planned was seen.");
+  assert.equal(taskCheckLine(view, view.tasks[1]), "");
+  assert.deepEqual(taskLineCheckIds(view), ["c1"]);
+  assert.deepEqual(shownChecks(view.video_checks, { patient: true, onTaskLines: taskLineCheckIds(view) }).map((c) => c.id), ["c2"]);
 });

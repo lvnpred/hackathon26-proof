@@ -9,7 +9,7 @@ import Timeline from "./Timeline";
 import VideoChecks from "./VideoChecks";
 import { orderLines, patientTaskStatus } from "./tasklist";
 import Photos from "./Photos";
-import { patientCheckLine } from "./video";
+import { taskCheckLine } from "./video";
 
 // The same record as Today, read-only: no forms, no actions.
 export default function MyCare() {
@@ -34,7 +34,7 @@ export default function MyCare() {
                 return (
                   <li key={key}>
                     <span>{task.title}</span>{status && <> <span className="pill info">{status}</span></>}
-                    {task.video && <p className="small muted">{patientCheckLine({ check: "setup", match: task.video.match, media: task.video.media })}</p>}
+                    {task.video && <p className="small muted">{taskCheckLine(view, task)}</p>}
                     {(task.done || []).map((d, index) => {
                       const proof = proofOf(d, view.photos);
                       return (

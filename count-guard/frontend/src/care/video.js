@@ -70,8 +70,22 @@ export function taskVideoLabel(task) {
 
 // Checks to list on a chart. The tray result stays off the patient's page and off the nurse's theatre
 // screen, where her Tray check card already shows it.
-export function shownChecks(checks, { hideTray = false, patient = false } = {}) {
-  return hideTray || patient ? checks.filter((c) => c.check !== "tray") : checks;
+// `onTaskLines` ids are checks already shown on a task line, so the list skips them.
+export function shownChecks(checks, { hideTray = false, patient = false, onTaskLines = [] } = {}) {
+  const noTray = hideTray || patient ? checks.filter((c) => c.check !== "tray") : checks;
+  return noTray.filter((c) => !onTaskLines.includes(c.id));
+}
+
+// The ids of the set-up checks that the patient's task lines already show.
+export function taskLineCheckIds(view) {
+  return (view?.tasks || []).map((t) => t.video?.id).filter(Boolean);
+}
+
+// The patient's line for a task's set-up clip; the media (video or photos) comes from the check.
+export function taskCheckLine(view, task) {
+  if (!task?.video) return "";
+  const media = (view?.video_checks || []).find((c) => c.id === task.video.id)?.media;
+  return patientCheckLine({ check: "setup", match: task.video.match, media });
 }
 
 // The patient's line for a clip: what was seen, in plain words.
@@ -79,5 +93,5 @@ export function patientCheckLine(check) {
   const photos = check?.media === "photos";
   if (check?.match === "ok") return `Checked from ${photos ? "photos" : "a video"}: everything planned was seen.`;
   if (check?.match === "mismatch") return `Checked from ${photos ? "photos" : "a video"}: something planned was not seen; the nurse was told.`;
-  return `${photos ? "Photos" : "A video"} was kept; it was not checked.`;
+  return photos ? "Photos were kept; they were not checked." : "A video was kept; it was not checked.";
 }

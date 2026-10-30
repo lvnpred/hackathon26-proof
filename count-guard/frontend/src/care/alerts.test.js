@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { showTrayFlag } from "./derive.js";
-import { SAFETY, alertNow, bannerAlerts, stripPills, surname } from "./alerts.js";
+import { SAFETY, alertNow, bannerAlerts, bannerClass, stripPills, surname } from "./alerts.js";
 
 const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "Day 0 10:00" });
 const pill = (episodeId, name, who, what) => ({ key: `${episodeId}:${what}`, episodeId, name, who, what });
@@ -34,4 +34,19 @@ test("showTrayFlag shows the flag only while in theatre, and not to the nurse (h
   assert.equal(showTrayFlag("doctor", "ward"), false);
   assert.equal(showTrayFlag("nurse", "ward"), false);
   assert.equal(showTrayFlag("doctor", "home"), false);
+});
+
+test("on a chart the strip drops pills the banner already shows", () => {
+  const pills = [{ ...pill("e4", "R. Kumar", "Nurse", "BP low"), nudgeKind: "obs_past_limit" }, pill("e4", "R. Kumar", "Nurse", "Handover waiting")];
+  assert.deepEqual(stripPills(pills, "e4").map((p) => p.text), ["Nurse → Handover waiting"]);
+  assert.equal(stripPills(pills, undefined).length, 2);
+});
+test("stripPills with no name leaves no stray separator", () => {
+  assert.equal(stripPills([pill("e4", "", "Nurse", "y")], undefined)[0].text, "Nurse → y");
+});
+test("the banner frame is red only while a safety alert is open", () => {
+  const view = (...ns) => ({ nudges: ns });
+  assert.equal(bannerClass(bannerAlerts(view(n("a", "obs_past_limit", "nurse", 1)), "nurse")), "alert-banner");
+  assert.equal(bannerClass(bannerAlerts(view(n("o", "obs_overdue", "nurse", 1)), "nurse")), "alert-banner alert-calm");
+  assert.equal(bannerClass([]), "alert-banner alert-calm");
 });

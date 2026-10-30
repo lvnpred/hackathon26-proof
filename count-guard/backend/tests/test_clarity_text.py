@@ -1,3 +1,5 @@
+import re
+
 from app.journey.stories import count_of, patient_line, plain, timeline_items
 
 def ev(kind, eid="e1", ts=0, /, **p):
@@ -15,6 +17,32 @@ def test_order_counts_are_singular_and_plural():
 TASKS = {"t1": {"title": "Paracetamol 1 g every 6 h", "name": "Paracetamol", "kind": "dose"},
          "t2": {"title": "BP and pulse every 1 h", "name": "", "kind": "obs"},
          "t3": {"title": "Saline 1 litre over 2 hours", "name": "", "kind": "procedure"}}
+
+def test_patient_nudge_and_discharge_wording():
+    to_patient = ev("nudge.raised", to="patient", says="This strip reads amlodipine 10 mg.")
+    assert patient_line(to_patient, {}) == "A note for you: This strip reads amlodipine 10 mg."
+    to_nurse = ev("nudge.raised", to="nurse", says="BP 82/54 is past the limit.")
+    line = patient_line(to_nurse, {})
+    assert line == "" and "Nudge" not in line and "nurse" not in line.lower()
+    moved = ev("patient.state", by="D", to="discharging", **{"from": "ward"})
+    assert patient_line(moved, {}) == "You are getting ready to go home."
+    assert patient_line(moved, {}) != patient_line(ev("discharge.signed", by="D"), {})
+
+
+def test_patient_lines_pass_the_no_advice_scan():
+    advice = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
+    state = lambda frm, to: ev("patient.state", by="D", to=to, **{"from": frm})
+    events = [state(None, "ward"), state("clinic", "admitting"), state("admitting", "ward"), state("ward", "theatre"),
+              state("theatre", "ward"), state("ward", "discharging"), state("discharging", "home"), state("ward", "clinic_done"),
+              ev("surgery.began", by="N"), ev("surgery.ended", by="N"), ev("discharge.signed", by="D"),
+              ev("order.signed", by="D", items=[{}]), ev("nudge.raised", to="patient", says="Photo flagged."),
+              ev("nudge.raised", to="nurse", says="BP low.")]
+    for event in events:
+        assert not advice.search(patient_line(event, {})), patient_line(event, {})
+    for tid in ("t1", "t2", "t3"):
+        task_done = ev("task.done", by="Nurse Meena (synthetic)", task_id=tid)
+        assert not advice.search(patient_line(task_done, TASKS))
+
 
 def test_patient_wording():
     s = lambda frm, to: ev("patient.state", by="D", to=to, **{"from": frm})

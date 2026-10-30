@@ -100,7 +100,7 @@ function Theatre({ episodeId, view, busy, act, upload, replaced }) {
       {view.tray?.planned && (
         <VideoCheck
           title="Tray check"
-          step="①"
+          step="Step 1 of 4 ·"
           kind="tray"
           check={view.tray.latest}
           busy={busy}
@@ -109,15 +109,15 @@ function Theatre({ episodeId, view, busy, act, upload, replaced }) {
         />
       )}
       <section className="card">
-        <p className="label">② Surgery began</p>
+        <p className="label">Step 2 of 4 · Surgery began</p>
         <div className="row">
           <button type="button" disabled={busy || began} onClick={() => act("/surgery", { step: "began", by: THEATRE_NURSE })}>Surgery began</button>
           {began && <span className="small muted">Began {began}</span>}
         </div>
       </section>
-      <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} step="③" />
+      <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} step="Step 3 of 4 ·" />
       <section className="card">
-        <p className="label">④ Surgery ended</p>
+        <p className="label">Step 4 of 4 · Surgery ended</p>
         <div className="row">
           <button type="button" disabled={busy || !began || ended} onClick={() => act("/surgery", { step: "ended", by: THEATRE_NURSE })}>Surgery ended</button>
         </div>

@@ -1,5 +1,5 @@
 import { Nudge } from "../screens/WardPanel";
-import { bannerAlerts } from "./alerts";
+import { bannerAlerts, bannerClass } from "./alerts";
 import { showTrayFlag } from "./derive";
 import { trayFlag } from "./video";
 
@@ -9,9 +9,9 @@ export default function AlertBanner({ view, role, line, busy, act }) {
   const flag = showTrayFlag(role, view.state) ? trayFlag(view) : null;
   if (!alerts.length && !flag) return null;
   return (
-    <section className="alert-banner" aria-label="Open alerts">
+    <section className={bannerClass(alerts)} aria-label="Open alerts">
       {alerts.map(({ nudge, safety, canAnswer }) => (
-        <div key={nudge.id} data-line={nudge.id} className={`alert-item${safety ? " alert-safety" : ""}`}>
+        <div key={nudge.id} data-line={nudge.id} className={`alert-item${safety ? " alert-safety" : ""}${nudge.id === line ? " line-hit" : ""}`}>
           {canAnswer ? (
             <Nudge nudge={nudge} busy={busy} act={act} />
           ) : (

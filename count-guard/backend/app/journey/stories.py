@@ -179,7 +179,7 @@ def plain(event: dict) -> str:
 
 
 PATIENT_STATE = {"admitting": "You were admitted.", "theatre": "You went to theatre.", "clinic_done": "Your clinic visit was closed.",
-                 "discharging": "Your discharge was signed.", "home": "You went home."}
+                 "discharging": "You are getting ready to go home.", "home": "You went home."}
 
 
 def patient_line(event: dict, tasks: dict[str, dict]) -> str:
@@ -194,6 +194,9 @@ def patient_line(event: dict, tasks: dict[str, dict]) -> str:
             return "You are on the ward." if frm == "admitting" else "You are back on the ward."
         if to in PATIENT_STATE:
             return PATIENT_STATE[to]
+    elif kind == "nudge.raised":
+        # A note for staff has no patient wording; the timeline hides an empty line from the patient.
+        return f"A note for you: {p.get('says')}" if p.get("to") == "patient" else ""
     elif kind == "surgery.began":
         return "Your operation began."
     elif kind == "surgery.ended":

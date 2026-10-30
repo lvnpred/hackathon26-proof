@@ -11,6 +11,7 @@ export default function Timeline({ lines, nudges, replaced, lens, role, line }) 
   const open = Object.fromEntries(nudges.map((nudge) => [nudge.id, nudge]));
   const prefixes = LENSES[lens] || [];
   const shown = lines.filter((item) => {
+    if (lens === "patient" && item.patient === "") return false; // staff-only wording
     const nudge = open[item.id];
     if (nudge && (nudge.to === role || nudge.id === line)) return true;
     return prefixes.some((prefix) => item.type.startsWith(prefix));
@@ -23,7 +24,7 @@ export default function Timeline({ lines, nudges, replaced, lens, role, line }) 
         const struck = replaced.has(item.id);
         return (
           <li key={item.id} id={item.id} data-line={item.id} className={`${struck ? "struck" : ""}${hit}`.trim() || undefined}>
-            <span className="tag">{item.when}</span> <span>{lens === "patient" ? item.patient || item.plain : item.plain}</span>
+            <span className="tag">{item.when}</span> <span>{lens === "patient" ? item.patient ?? item.plain : item.plain}</span>
             {struck && <> <span className="tag">corrected</span></>}
           </li>
         );

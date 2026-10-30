@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues, taskStatusLabel, TASK_STATUS_LABEL, orderLines, patientTaskStatus } from "./tasklist.js";
+import { sortTasks, obsValues, orderLines, patientTaskStatus } from "./tasklist.js";
 import { M } from "./clock.js";
 
 const NOW = 10 * 60 * M;
@@ -50,15 +50,6 @@ test("needsReason follows the server's list, so a corrected count asks for none"
   assert.equal(needsReason(undefined), false);
 });
 
-test("taskStatusLabel gives plain words, and keeps an unknown word as is", () => {
-  assert.equal(taskStatusLabel("open"), "To do");
-  assert.equal(taskStatusLabel("running"), "Running");
-  assert.equal(taskStatusLabel("done"), "Done");
-  assert.equal(taskStatusLabel("closed"), "Stay ended");
-  assert.equal(taskStatusLabel("paused"), "paused");
-  assert.equal(TASK_STATUS_LABEL.closed, "Stay ended");
-});
-
 test("orderLines shows each item once and an item with no task without one", () => {
   const order = { id: "o1", items: [{ text: "Paracetamol 1 g every 6 h" }, { text: "Check wound" }] };
   const tasks = [{ id: "t1", order_id: "o1", title: "Paracetamol 1 g every 6 h" }, { id: "t9", order_id: "o2", title: "Check wound" }];
@@ -81,4 +72,20 @@ test("patientTaskStatus", () => {
   assert.equal(patientTaskStatus({ kind: "check", every_h: null, status: "done", due_ms: null, done: [{ at_ms: at(10, 5) }] }, "ward"), "Done 10:05");
   assert.equal(patientTaskStatus({ ...dose, status: "running" }, "ward"), "Running");
   assert.equal(patientTaskStatus(dose, "theatre"), "Paused (in theatre)");
+});
+
+test("patientTaskStatus says Due since once a never-done task is past due", () => {
+  const at = (h, m = 0) => (h - 9) * 60 * M + m * M;
+  const task = { kind: "obs", every_h: 1, status: "open", due_ms: at(9, 18), done: [] };
+  assert.equal(patientTaskStatus(task, "ward", at(10, 40)), "Due since 09:18");
+  assert.equal(patientTaskStatus(task, "ward", at(9, 0)), "Due 09:18");
+  assert.equal(patientTaskStatus(task, "ward"), "Due 09:18");
+});
+
+test("patientTaskStatus words pass the no-advice scan", () => {
+  const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
+  const at = (h) => (h - 9) * 60 * M;
+  const dose = { kind: "dose", every_h: 6, status: "open", due_ms: at(16), done: [{ at_ms: at(10) }] };
+  const cases = [dose, { ...dose, status: "closed" }, { ...dose, status: "running" }, { ...dose, kind: "obs" }, { ...dose, done: [], due_ms: at(9) }, { ...dose, status: "done" }];
+  for (const task of cases) for (const state of ["ward", "theatre", "home"]) assert.doesNotMatch(patientTaskStatus(task, state, at(12)), ADVICE);
 });

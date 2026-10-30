@@ -4,9 +4,9 @@ import { taskDue } from "./derive.js";
 const ORDER = { overdue: 0, due: 1, running: 2, later: 3, paused: 3, done: 4, closed: 5 };
 
 // Overdue, due, running, later, done. Within a group the earliest due time comes first.
-export function sortTasks(tasks, nowMs, state) {
+export function sortTasks(tasks, nowMs) {
   const key = (task) => task.due_ms ?? Infinity;
-  return [...tasks].sort((a, b) => ORDER[taskDue(a, nowMs, state)] - ORDER[taskDue(b, nowMs, state)] || key(a) - key(b));
+  return [...tasks].sort((a, b) => ORDER[taskDue(a, nowMs)] - ORDER[taskDue(b, nowMs)] || key(a) - key(b));
 }
 
 // Server bounds for an observation set; required fields first.
@@ -49,11 +49,6 @@ export function needsReason(move) {
   return (move?.needs || []).some((need) => need.startsWith("reason"));
 }
 
-export const TASK_STATUS_LABEL = { open: "To do", running: "Running", done: "Done", closed: "Stay ended" };
-
-// A status the table does not know shows as the raw word.
-export const taskStatusLabel = (status) => TASK_STATUS_LABEL[status] || status;
-
 // One line per order item, in order. An item takes the first unused task of the same order
 // with the same title (null when none). A task left over is appended.
 export function orderLines(order, tasks) {
@@ -69,7 +64,7 @@ export function orderLines(order, tasks) {
 }
 
 // The patient's wording for a task: never "To do", times as HH:MM.
-export function patientTaskStatus(task, state) {
+export function patientTaskStatus(task, state, nowMs) {
   if (task.status === "closed") return "Finished";
   if (state === "theatre" && task.status === "open") return "Paused (in theatre)";
   if (task.status === "running") return "Running";
@@ -78,5 +73,6 @@ export function patientTaskStatus(task, state) {
   if (task.status === "done") return last ? `Done ${last}` : "Done";
   const due = task.due_ms == null ? null : hhmm(task.due_ms);
   if (task.every_h && last) return `${task.kind === "dose" ? "Given" : "Done"} ${last}${due ? ` \u00b7 next due ${due}` : ""}`;
-  return due ? `Due ${due}` : "";
+  if (!due) return "";
+  return nowMs != null && task.due_ms < nowMs ? `Due since ${due}` : `Due ${due}`;
 }

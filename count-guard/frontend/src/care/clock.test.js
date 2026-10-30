@@ -37,6 +37,13 @@ test("Next due leaves out closed tasks and patients whose stay has ended", () =>
   assert.deepEqual(skipTargets(26 * H, [closed, home]).map((t) => t.id), ["plus15", "plus60"]);
 });
 
+test("Next due leaves out a patient in theatre, whose tasks are paused", () => {
+  const theatre = { id: "e1", view: { state: "theatre", tasks: [task("a", "open", 27 * H)] } };
+  const ward = { id: "e2", view: { state: "ward", tasks: [task("b", "open", 29 * H)] } };
+  assert.equal(skipTargets(26 * H, [theatre, ward]).find((t) => t.id === "next-due").atMs, 29 * H);
+  assert.deepEqual(skipTargets(26 * H, [theatre]).map((t) => t.id), ["plus15", "plus60"]);
+});
+
 test("hhmm", () => assert.equal(hhmm(H + 5 * M), "10:05"));
 
 test("each recorded action moves the clock 2 minutes", () => {

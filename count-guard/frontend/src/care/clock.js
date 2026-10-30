@@ -26,6 +26,7 @@ export const afterAction = (nowMs) => nowMs + STEP_MS;
 // An ask (a proposal) and a clock jump never come through here.
 export const afterRun = (nowMs, result) => (result ? afterAction(nowMs) : nowMs);
 
+// Tasks of a patient in theatre are paused, so they are never a target.
 const STAY_OVER = ["discharging", "home", "clinic_done"];
 
 // Skip-ahead buttons. "Next due" is the earliest open task still in the future.
@@ -35,7 +36,7 @@ export function skipTargets(nowMs, patients) {
     { id: "plus60", label: "+1 h", atMs: nowMs + H },
   ];
   const dues = patients
-    .filter((patient) => !STAY_OVER.includes(patient.view?.state))
+    .filter((patient) => !STAY_OVER.includes(patient.view?.state) && patient.view?.state !== "theatre")
     .flatMap((patient) => patient.view?.tasks || [])
     .filter((task) => task.status === "open" && task.due_ms != null && task.due_ms > nowMs)
     .map((task) => task.due_ms);

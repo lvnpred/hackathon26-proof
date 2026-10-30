@@ -8,10 +8,11 @@ export function surname(name) {
 }
 
 // On a chart keep that patient's pills; elsewhere each pill leads with the patient's surname.
+// On a chart the banner owns every alert (a pill with nudgeKind), so the strip drops those.
 export function stripPills(pills, episodeId) {
   const arrow = (p) => `${p.who} → ${p.what}`;
-  if (episodeId) return pills.filter((p) => p.episodeId === episodeId).map((p) => ({ ...p, text: arrow(p) }));
-  return pills.map((p) => ({ ...p, text: `${surname(p.name)} · ${arrow(p)}` }));
+  if (episodeId) return pills.filter((p) => p.episodeId === episodeId && !p.nudgeKind).map((p) => ({ ...p, text: arrow(p) }));
+  return pills.map((p) => ({ ...p, text: p.name ? `${surname(p.name)} · ${arrow(p)}` : arrow(p) }));
 }
 
 // The newest open safety nudge, as the NOW line.
@@ -31,3 +32,6 @@ export function bannerAlerts(view, role, line) {
   }));
   return [...items.filter((i) => i.safety), ...items.filter((i) => !i.safety)];
 }
+
+// The banner frame is red only while a safety alert is open; otherwise a neutral card.
+export const bannerClass = (alerts) => `alert-banner${alerts.some((a) => a.safety) ? "" : " alert-calm"}`;

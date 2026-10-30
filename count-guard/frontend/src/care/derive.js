@@ -183,6 +183,7 @@ export function waitingPills(patients, nowMs) {
     episodeId: r.episodeId,
     lineId: r.lineId,
     stage: r.stage,
+    nudgeKind: r.nudgeKind,
   }));
 }
 

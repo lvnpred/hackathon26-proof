@@ -137,11 +137,9 @@ export function useWard() {
     try {
       const next = await send();
       swap(id, next);
-      setNowMs((ms) => {
-        const stepped = afterRun(ms, next);
-        write(NOW, String(stepped));
-        return stepped;
-      });
+      const stepped = afterRun(nowMs, next);
+      setNowMs(stepped);
+      write(NOW, String(stepped));
       return next;
     } catch (exc) {
       setError(exc.message);

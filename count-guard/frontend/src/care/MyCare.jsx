@@ -30,7 +30,7 @@ export default function MyCare() {
             <ul className="task-list">
               {orderLines(order, view.tasks || []).map(({ key, text, task }) => {
                 if (!task) return <li key={key}><span>{text}</span></li>;
-                const status = patientTaskStatus(task, view.state);
+                const status = patientTaskStatus(task, view.state, ward.nowMs);
                 return (
                   <li key={key}>
                     <span>{task.title}</span>{status && <> <span className="pill info">{status}</span></>}

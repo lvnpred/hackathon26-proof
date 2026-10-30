@@ -192,7 +192,7 @@ export default function DoctorActions({ state, view, act, upload, busy }) {
   const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
-  const bar = <ActionBar actions={actionsFor(state)} isOpen={open} onToggle={(id) => setChosen(toggled(chosen, id))} />;
+  const bar = <ActionBar actions={actionsFor(state)} isOpen={open} onToggle={(id) => setChosen((current) => toggled(current, id))} />;
   if (state === "clinic") {
     return (
       <>

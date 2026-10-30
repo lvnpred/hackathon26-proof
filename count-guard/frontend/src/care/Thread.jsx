@@ -5,7 +5,7 @@ import { threadItems, threadStatus } from "./thread.js";
 
 const THUMB = { objectFit: "cover", borderRadius: 6 };
 
-function Answer({ item, onAskDoctor, episodeId }) {
+function Answer({ item, onAskDoctor, episodeId, version }) {
   const { kind, answer, raw } = item;
   if (kind === "record" && answer) {
     return (
@@ -41,7 +41,7 @@ function Answer({ item, onAskDoctor, episodeId }) {
           {raw.rows.map((row, i) => <li key={i}><span className={row.flag ? "pill sun" : ""}>{medicineLine(row)}</span></li>)}
         </ul>
         <p className="small">{raw.why} <span className="muted">({sourceLabel(raw.source)})</span></p>
-        {raw.evidence_id && <Evidence episodeId={episodeId} evidenceId={raw.evidence_id} linkLines={false} />}
+        {raw.evidence_id && <Evidence episodeId={episodeId} evidenceId={raw.evidence_id} linkLines={false} version={version} />}
       </>
     );
   }
@@ -62,7 +62,7 @@ export default function Thread({ view, nowMs, onAskDoctor }) {
             <li className="thread-row" data-line={item.id} key={item.id}>
               <p className="small"><b>{item.title}</b> <span className="pill">{threadStatus(item, nowMs)}</span></p>
               {item.said && <p className="quote">{"“"}{item.said}{"”"}</p>}
-              <Answer item={item} onAskDoctor={onAskDoctor} episodeId={view.episode?.id} />
+              <Answer item={item} onAskDoctor={onAskDoctor} episodeId={view.episode?.id} version={view.timeline?.length} />
             </li>
           ))}
         </ul>

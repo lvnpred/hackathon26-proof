@@ -52,7 +52,7 @@ export default function MyCare() {
           </div>
         ))}
       </section>
-      <Photos view={view} />
+      <Photos view={view} patient />
       <VideoChecks view={view} patient />
       <section className="card">
         <p className="label">Timeline</p>

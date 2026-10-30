@@ -56,7 +56,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
           {photo.check?.why}
         </p>
       )}
-      {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} />}
+      {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} version={view.timeline?.length} fallback={<img src={photo.url} alt="Proof photo" width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />} />}
       {error && <p className="error small" role="alert">{error}</p>}
       <div className="row">
         <button type="button" className="primary" disabled={busy} onClick={confirm}>Confirm</button>

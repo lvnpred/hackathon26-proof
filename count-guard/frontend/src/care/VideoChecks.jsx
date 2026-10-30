@@ -11,7 +11,13 @@ export default function VideoChecks({ view, hideTray = false, patient = false })
   return (
     <section className="card" aria-label={patient ? "Checks from a video" : "Video checks"}>
       <p className="label">{patient ? "Checks from a video" : "Video checks"}</p>
-      {checks.map((c) => (
+      {checks.map((c) => {
+        const frames = (c.frames || []).length > 0 && (
+          <div className="row">
+            {c.frames.map((f) => <img key={f.id} src={f.url} alt="Frame from the clip" width={96} style={{ borderRadius: 6 }} />)}
+          </div>
+        );
+        return (
         <div key={c.id}>
           {patient ? (
             <p className="small">{patientCheckLine(c)}</p>
@@ -24,14 +30,12 @@ export default function VideoChecks({ view, hideTray = false, patient = false })
             </p>
           )}
           {!patient && c.why && <p className="small muted">{c.why}</p>}
-          {c.evidence_id && !patient && <EvidenceThumb episodeId={view.episode?.id} evidenceId={c.evidence_id} check={c} />}
-          {(c.frames || []).length > 0 && !(c.evidence_id && !patient) && (
-            <div className="row">
-              {c.frames.map((f) => <img key={f.id} src={f.url} alt="Frame from the clip" width={96} style={{ borderRadius: 6 }} />)}
-            </div>
-          )}
+          {c.evidence_id && !patient ? (
+            <EvidenceThumb episodeId={view.episode?.id} evidenceId={c.evidence_id} check={c} version={view.timeline?.length} fallback={frames} />
+          ) : frames}
         </div>
-      ))}
+        );
+      })}
     </section>
   );
 }

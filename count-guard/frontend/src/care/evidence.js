@@ -40,7 +40,7 @@ export function boxesAt(frames, at, showIgnored) {
 export function countSeries(frames, concept) {
   return (frames || []).map((f) => ({
     t: f.t ?? f.index,
-    n: new Set(f.objects.filter((o) => o.kept && o.label === concept).map((o) => o.id)).size,
+    n: new Set((f.objects || []).filter((o) => o.kept && o.label === concept).map((o) => o.id)).size,
   }));
 }
 
@@ -127,4 +127,39 @@ export function evidenceView(sidecar, check) {
     raw: sidecar.raw,
     cited: sidecar.cited_by || [],
   };
+}
+
+// The row the viewer opens on: the first short row with a best frame, else the first row with one (spec 2.2).
+export function startImage(images, rows) {
+  const list = rows || [];
+  const row = list.find((r) => known(r.seen) && r.seen < r.planned && known(r.at_s)) || list.find((r) => known(r.at_s));
+  if (!row) return 0;
+  let best = 0;
+  (images || []).forEach((im, i) => {
+    if (known(im.t) && (!known((images[best] || {}).t) || Math.abs(im.t - row.at_s) < Math.abs(images[best].t - row.at_s))) best = i;
+  });
+  return best;
+}
+
+// One vocabulary: the tray item name, with the model's concept beside it when they differ.
+export function itemName(row) {
+  const names = (row.names || []).join(", ");
+  if (!names) return row.concept;
+  return names.toLowerCase() === String(row.concept).toLowerCase() ? names : `${names} (${row.concept})`;
+}
+
+// Move each label rect down until it no longer overlaps an earlier one. Rects are {x, y, w, h}.
+export function nudgeLabels(rects) {
+  const placed = [];
+  for (const r of rects) {
+    let y = r.y;
+    for (let again = true, guard = 0; again && guard < 50; guard += 1) {
+      again = false;
+      for (const q of placed) {
+        if (r.x < q.x + q.w && q.x < r.x + r.w && y < q.y + q.h && q.y < y + r.h) { y = q.y + q.h; again = true; }
+      }
+    }
+    placed.push({ ...r, y });
+  }
+  return placed;
 }

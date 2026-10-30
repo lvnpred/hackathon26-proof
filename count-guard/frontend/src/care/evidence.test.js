@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   PALETTE, boxLabel, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
-  regionLabel, seenCell,
+  regionLabel, seenCell, startImage, itemName, nudgeLabels,
 } from "./evidence.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -107,4 +107,31 @@ test("capturedLine", () => {
 
 test("viewer copy has no advice words", () => {
   for (const s of ["Expected", "Seen", "Status", "Why:", "Raw output", "Show ignored", "Captured to record: tray.checked · 09:18 · Nurse Asha", "Nothing found above confidence 0.45.", "The best frame was 3.5 s.", "2 detections under confidence 0.45 were ignored.", "Read 3 values from 3 regions."]) assert.doesNotMatch(s, ADVICE);
+});
+
+test("startImage opens on the best frame of the first short row", () => {
+  const images = [{ t: 0.5, index: 0 }, { t: 1, index: 1 }, { t: 1.5, index: 2 }];
+  const rows = [{ concept: "a", planned: 2, seen: 2, at_s: 0.5 }, { concept: "b", planned: 3, seen: 2, at_s: 1.4 }];
+  assert.equal(startImage(images, rows), 2);
+  assert.equal(startImage(images, [{ concept: "a", planned: 2, seen: 2, at_s: 1 }]), 1);
+  assert.equal(startImage(images, [{ concept: "a", planned: 2, seen: 0, at_s: null }]), 0);
+  assert.equal(startImage([{ t: null, index: 0 }], rows), 0);
+  assert.equal(startImage([], rows), 0);
+});
+
+test("itemName shows the tray name with the model concept beside it", () => {
+  assert.equal(itemName({ concept: "scalpel handle", names: ["Knife handle"] }), "Knife handle (scalpel handle)");
+  assert.equal(itemName({ concept: "needle holder", names: ["Needle holder"] }), "Needle holder");
+  assert.equal(itemName({ concept: "towel clip" }), "towel clip");
+});
+
+test("nudgeLabels moves an overlapping label down and leaves clear ones", () => {
+  const out = nudgeLabels([{ x: 10, y: 10, w: 60, h: 14 }, { x: 40, y: 12, w: 60, h: 14 }, { x: 200, y: 10, w: 40, h: 14 }]);
+  assert.equal(out[0].y, 10);
+  assert.equal(out[1].y, 24);
+  assert.equal(out[2].y, 10);
+});
+
+test("countSeries tolerates a frame with no objects list", () => {
+  assert.deepEqual(countSeries([{ t: 0, index: 0 }], "x"), [{ t: 0, n: 0 }]);
 });

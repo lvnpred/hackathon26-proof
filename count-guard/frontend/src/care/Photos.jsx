@@ -3,20 +3,20 @@ import { label } from "./clock";
 import { photoCheckLabel, photoPurposeLabel, sourceLabel } from "./drafts";
 
 // Every photo on the chart, for every role. A mismatch is flagged, never hidden.
-export default function Photos({ view }) {
+export default function Photos({ view, patient = false }) {
   const photos = view.photos || [];
   if (!photos.length) return null;
   return (
     <section className="card" aria-label="Photos">
       <p className="label">Photos</p>
       <ul className="task-list">
-        {photos.map((photo) => (
+        {photos.map((photo) => {
+          const plain = <img src={photo.url} alt={`${photo.purpose} photo by ${photo.by}`} width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />;
+          return (
           <li key={photo.id}>
             {photo.check?.evidence_id ? (
-              <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} />
-            ) : (
-              <img src={photo.url} alt={`${photo.purpose} photo by ${photo.by}`} width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />
-            )}
+              <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} linkLines={!patient} version={view.timeline?.length} fallback={plain} />
+            ) : plain}
             <span className="small">
               {photoPurposeLabel(photo.purpose)} · {photo.by} · {label(photo.at_ms)}
               {photo.check && (
@@ -29,7 +29,8 @@ export default function Photos({ view }) {
               )}
             </span>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );

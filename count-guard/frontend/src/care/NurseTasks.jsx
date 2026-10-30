@@ -55,6 +55,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           title="Set-up check"
           kind="setup"
           episodeId={view.episode?.id}
+          version={view.timeline?.length}
           check={latestCheck(view, "setup", task.id)}
           busy={busy}
           onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}

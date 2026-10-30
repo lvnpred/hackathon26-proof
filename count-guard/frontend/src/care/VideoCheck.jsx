@@ -5,7 +5,7 @@ import { Evidence } from "./Evidence.jsx";
 import { seenCell } from "./evidence.js";
 
 // A tray or set-up clip: pick it, and the result shows beside the planned list. A flag never blocks.
-export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "", episodeId }) {
+export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "", episodeId, version = 0 }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
     const files = Array.from(event.target.files || []);
@@ -25,12 +25,12 @@ export default function VideoCheck({ title, kind, check, busy, onFile, hideUploa
         </label>
       )}
       {problem && <p className="note" role="alert">{problem}</p>}
-      {check && <CheckResult check={check} episodeId={episodeId} />}
+      {check && <CheckResult check={check} episodeId={episodeId} version={version} />}
     </section>
   );
 }
 
-function CheckResult({ check, episodeId }) {
+function CheckResult({ check, episodeId, version }) {
   const proved = Boolean(check.evidence_id && episodeId);
   return (
     <div>
@@ -38,7 +38,7 @@ function CheckResult({ check, episodeId }) {
         <span className={`pill ${check.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span>{" "}
         <span className="muted">({sourceLabel(check.source)})</span> {check.why}
       </p>
-      {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} />}
+      {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} version={version} />}
       {!proved && (check.rows || []).length > 0 && (
         <table className="small">
           <thead><tr><th>Item</th><th>Planned</th><th>Seen</th></tr></thead>

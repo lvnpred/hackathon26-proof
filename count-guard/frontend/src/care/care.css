@@ -139,3 +139,6 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .ev-thumb-stage img { width: 100%; height: 100%; object-fit: fill; display: block }
 .ev-thumb-stage canvas { position: absolute; inset: 0; width: 100%; height: 100% }
 .evidence pre { max-height: 240px; overflow: auto; font-size: 12px }
+.ev-sparks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px }
+.ev-sparks p { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 }
+@media (max-width: 640px) { .ev-sparks { grid-template-columns: minmax(0, 1fr) } }

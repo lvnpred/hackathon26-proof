@@ -103,3 +103,12 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .status-menu { align-self: flex-end; }
 .status-menu summary { cursor: pointer; list-style: none; }
 .status-menu[open] { padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+
+/* Patient Today (M6) */
+.greeting-row { align-items: center; flex-wrap: wrap; }
+.greeting-row h1 { margin: 0; }
+.fold > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.fold[open] > summary { margin-bottom: 8px; }
+.help-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--line); z-index: 5; }
+.page:has(.help-bar) { padding-bottom: 96px; }
+.help-sheet { position: fixed; left: 0; right: 0; bottom: 68px; max-height: 60vh; overflow: auto; z-index: 5; border-radius: 12px 12px 0 0; }

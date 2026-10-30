@@ -112,7 +112,7 @@ function ModelsChip() {
 }
 
 // The doctor's status, on every screen. Nothing until the server has answered.
-function DoctorChip({ status }) {
+export function DoctorChip({ status }) {
   if (!status) return null;
   return <span className={`pill ${chipClass(status.status)}`}>{status.text}</span>;
 }

@@ -1,6 +1,7 @@
 import { PageLead, Shell } from "../App";
 import { subtitle, uploadJourney, useJourney } from "../journey";
-import TodayPanel from "./TodayPanel";
+import { Medicines, Nudges, Reminders, Strips } from "./TodayPanel";
+import { CheckIn, MyCard, NeedHelp } from "./PatientCard";
 
 export default function Patient() {
   const { view, setView, error, setError, busy, setBusy, act } = useJourney();
@@ -18,6 +19,7 @@ export default function Patient() {
     }
   }
 
+  const common = { view, busy: busy || !view, act };
   return (
     <Shell subtitle={subtitle(view)}>
       <div className="phone">
@@ -28,7 +30,26 @@ export default function Patient() {
         />
         {error && <p className="error" role="alert">{error}</p>}
 
-        <TodayPanel view={view} busy={busy} act={act} upload={upload} />
+        <>
+              <Nudges {...common} />
+              <section className="card">
+                <p className="label">My medicines</p>
+                <Medicines schedule={view?.schedule || []} />
+                <Reminders {...common} />
+              </section>
+              <section className="card">
+                <p className="label">Check my strips</p>
+                <Strips {...common} upload={upload} />
+              </section>
+              <section className="card">
+                <p className="label">My discharge card</p>
+                <MyCard card={view?.card} />
+              </section>
+              <CheckIn card={view?.card} busy={common.busy} act={act} />
+              <section className="card">
+                <NeedHelp busy={common.busy} act={act} />
+              </section>
+        </>
       </div>
     </Shell>
   );

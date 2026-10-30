@@ -4,7 +4,7 @@ import Chart from "./care/Chart";
 import Ask from "./care/Ask";
 import MyCare from "./care/MyCare";
 import { PatientsRoute, QueueRoute } from "./care/MyPatients";
-import Today from "./care/Today";
+import Today from "./care/Today.jsx";
 import Audit from "./screens/Audit";
 import Close from "./screens/Close";
 import Doctor from "./screens/Doctor";

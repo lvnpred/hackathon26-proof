@@ -1,30 +1,11 @@
 import { useState } from "react";
 import Fault from "../care/Fault";
 
-// The signed discharge card in plain words, plus the "Need help" button.
-export function MyCard({ card, busy, act, fault, episodeId }) {
-  const [says, setSays] = useState("");
-  const [sent, setSent] = useState("");
-
-  async function help() {
-    const text = says.trim() || "I need help.";
-    if (await act("/help", { says: text })) {
-      setSays("");
-      setSent("Your message is recorded for the ward. If it is an emergency, call the help line now.");
-    }
-  }
-
-  if (!card) {
-    return (
-      <section className="card">
-        <p className="label">My discharge card</p>
-        <p className="empty small">Your card appears here when the doctor signs it.</p>
-      </section>
-    );
-  }
+// The signed discharge card in plain words.
+export function MyCard({ card }) {
+  if (!card) return <p className="empty small">Your card appears here when the doctor signs it.</p>;
   return (
-    <section className="card">
-      <p className="label">My discharge card</p>
+    <div className="stack">
       <h2>{card.title}</h2>
       <div className="stack">
         <p><b>Call if you notice</b></p>
@@ -36,6 +17,25 @@ export function MyCard({ card, busy, act, fault, episodeId }) {
       {card.help_line && <p><b>Help line:</b> {card.help_line}</p>}
       {card.review && <p><b>Next visit:</b> {card.review}</p>}
       <p className="small muted">Signed by {card.by}</p>
+    </div>
+  );
+}
+
+// The "Need help" message box and button.
+export function NeedHelp({ busy, act, fault, episodeId }) {
+  const [says, setSays] = useState("");
+  const [sent, setSent] = useState("");
+
+  async function help() {
+    const text = says.trim() || "I need help.";
+    if (await act("/help", { says: text })) {
+      setSays("");
+      setSent("Your message is recorded for the ward. If it is an emergency, call the help line now.");
+    }
+  }
+
+  return (
+    <div className="stack">
       <label className="field">
         What is happening (optional)
         <input value={says} onChange={(event) => setSays(event.target.value)} placeholder="My wound is leaking" />
@@ -45,7 +45,7 @@ export function MyCard({ card, busy, act, fault, episodeId }) {
       </button>
       {sent && <p className="note" role="status">{sent}</p>}
       <Fault fault={fault} episodeId={episodeId} only={["/help"]} />
-    </section>
+    </div>
   );
 }
 

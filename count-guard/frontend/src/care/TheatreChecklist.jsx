@@ -1,6 +1,6 @@
 import { useState } from "react";
 import TheatrePanel from "./TheatrePanel";
-import { checklistState, theatreSteps } from "./theatre";
+import { canRecord, checklistState, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
 
 const NURSE = "Nurse Asha (synthetic)";
@@ -46,12 +46,12 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
       <ol className="checklist">
         {steps.map((step) => (
           <li key={step.key} className={`step ${step.status}`}>
-            {step.status === "later" && <p className="step-line muted">{step.title} · {step.wait}</p>}
             {(step.status === "done" || step.status === "open") && <Line step={step} />}
-            {step.key === "tray" && step.done && flagged && (
+            {!step.done && !canRecord(view, step.key) && <p className="step-line muted">{step.title} · {step.wait}</p>}
+            {step.key === "tray" && step.done && flagged && !canRecord(view, "tray") && (
               <VideoCheck title="Tray check" kind="tray" check={view.tray.latest} busy={busy} hideUpload onFile={() => {}} />
             )}
-            {(step.status === "current" || step.status === "open") && (
+            {canRecord(view, step.key) && (
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} />
             )}
           </li>

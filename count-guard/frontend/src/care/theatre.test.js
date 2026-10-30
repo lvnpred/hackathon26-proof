@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { theatreSteps, checklistState, swabFigures, packLine } from "./theatre.js";
+import { theatreSteps, checklistState, swabFigures, packLine, canRecord } from "./theatre.js";
 import { M } from "./clock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -56,7 +56,7 @@ const base = { tray: { planned: [{}], latest: null }, timeline: [IN_THEATRE], co
 test("first not-done step is current; later steps say why they wait", () => {
   const s = checklistState(theatreSteps(base));
   assert.deepEqual(s.map((x) => x.status), ["current", "later", "later", "later"]);
-  assert.deepEqual(s.map((x) => x.wait), ["", "after the tray check", "after surgery began", "after the count"]);
+  assert.deepEqual(s.map((x) => x.wait), ["", "after the tray check", "after surgery began", "after surgery began"]);
 });
 test("an open count stays expanded and does not block surgery ended", () => {
   const view = { ...base, tray: { planned: [{}], latest: { check: "tray", match: "ok", at_ms: 22 * M } },
@@ -78,4 +78,20 @@ test("swab figures and the pack line", () => {
 });
 test("checklist copy has no advice words", () => {
   for (const s of ["after the tray check", "after surgery began", "after the count", "after step 4", "Upload tray video or photos", "No tray planned"]) assert.doesNotMatch(s, ADVICE);
+});
+
+test("controls follow the backend rules, not the list order", () => {
+  assert.equal(canRecord(base, "began"), true, "began without a tray check");
+  assert.equal(canRecord(base, "tray"), true);
+  assert.equal(canRecord(base, "count"), true, "pack opened before surgery began");
+  assert.equal(canRecord(base, "ended"), false, "ended waits for began");
+  const began = { ...base, timeline: [IN_THEATRE, line("surgery.began", "Day 0 09:24")] };
+  assert.equal(canRecord(began, "began"), false);
+  assert.equal(canRecord(began, "tray"), false, "tray upload is hidden once surgery began");
+  assert.equal(canRecord(began, "ended"), true, "ended without a closing count");
+  const checked = { ...base, tray: { planned: [{}], latest: { check: "tray", match: "mismatch", at_ms: 22 * M } } };
+  assert.equal(canRecord(checked, "tray"), true, "re-upload after a flagged check");
+  assert.equal(canRecord({ ...base, tray: { planned: null } }, "tray"), false);
+  const over = { ...began, timeline: [...began.timeline, line("surgery.ended", "Day 0 10:00")] };
+  assert.equal(canRecord(over, "ended"), false);
 });

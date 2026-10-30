@@ -33,7 +33,7 @@ export function theatreSteps(view) {
   ];
 }
 
-const WAIT = { began: "after the tray check", count: "after surgery began", ended: "after the count" };
+const WAIT = { began: "after the tray check", count: "after surgery began", ended: "after surgery began" };
 
 // Where each step stands: done, open (a count with swabs missing), current (the next to do) or later.
 export function checklistState(steps) {
@@ -63,4 +63,17 @@ export function swabFigures(count) {
 export function packLine(count) {
   if (count?.opened == null) return "";
   return `Pack opened ${hhmm(count.opened_at_ms)} by ${displayName(count.opened_by)}`;
+}
+
+// Which controls a step offers, by the backend's rules and not by list order: the tray can be
+// (re)checked until surgery begins, surgery ends once it began, the count needs nothing before it.
+export function canRecord(view, key) {
+  const done = Object.fromEntries(checklistState(theatreSteps(view)).map((step) => [step.key, step]));
+  switch (key) {
+    case "tray": return Boolean(view.tray?.planned) && !done.began.done;
+    case "began": return !done.began.done;
+    case "count": return !done.count.done || done.count.open;
+    case "ended": return done.began.done && !done.ended.done;
+    default: return false;
+  }
 }

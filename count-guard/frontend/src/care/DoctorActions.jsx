@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
-import { doctorOpenItems } from "./askText";
+import { answerHow, doctorOpenItems } from "./askText";
 import ActionBar from "./ActionBar";
 import { actionsFor, panelOpen, toggled } from "./actions";
 import Dictate from "./Dictate";
@@ -28,7 +28,10 @@ function StripCheck({ busy, act }) {
   );
 }
 
-const dictate = (upload, path) => ({ file, text }) => upload(path, file, { text, by: DOCTOR });
+// Hear a recording as text to check, then draft from that text. heard_by keeps who heard it.
+const hearing = (ask, path) => (file) => ask("/ask/hear", file, { by: DOCTOR }, path);
+const drafting = (upload, path) => ({ text, heard }) =>
+  upload(path, undefined, { text, by: DOCTOR, heard_by: answerHow(heard?.text, text, heard?.by).heard_by });
 
 function PhotoCard({ title, busy, upload }) {
   async function pick(event) {
@@ -48,16 +51,16 @@ function PhotoCard({ title, busy, upload }) {
 }
 
 // Dictation, the order form that loads its draft, and the reference photo input.
-function OrdersDictation({ view, busy, upload, signOrders }) {
+function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   return (
     <>
-      <Dictate label="Dictate orders" busy={busy} onSend={dictate(upload, "/dictate/orders")} />
+      <Dictate label="Dictate orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />
       <OrderForm busy={busy} onSign={signOrders} draft={view.drafts?.order} />
     </>
   );
 }
 
-function Clinic({ view, busy, act, upload, signOrders, open }) {
+function Clinic({ view, busy, act, upload, ask, signOrders, open }) {
   const [reason, setReason] = useState("");
   const [reasonDraftId, setReasonDraftId] = useState(null);
   const draft = view.drafts?.order;
@@ -73,7 +76,7 @@ function Clinic({ view, busy, act, upload, signOrders, open }) {
         <RxTable rx={view.rx} />
       </section>
       {open("photo") && <PhotoCard title="Reference photo" busy={busy} upload={upload} />}
-      {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />}
+      {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       <StripCheck busy={busy} act={act} />
       <section className="card">
         <p className="label">Visit</p>
@@ -90,7 +93,7 @@ function Clinic({ view, busy, act, upload, signOrders, open }) {
   );
 }
 
-function Ward({ view, busy, act, upload, showDischarge }) {
+function Ward({ view, busy, act, upload, ask, showDischarge }) {
   const [procedure, setProcedure] = useState("");
   const [summary, setSummary] = useState("");
   const [summaryDraftId, setSummaryDraftId] = useState(null);
@@ -113,7 +116,7 @@ function Ward({ view, busy, act, upload, showDischarge }) {
     <>
       {showDischarge && (
         <>
-          <Dictate label="Dictate discharge" busy={busy} onSend={dictate(upload, "/dictate/discharge")} />
+          <Dictate label="Dictate discharge" verb="Draft discharge" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />
           <section className="card">
             <p className="label">Discharge</p>
             {summaryDraftId && (
@@ -200,7 +203,7 @@ function Theatre({ view, busy, act }) {
 const sign = (act) => (items, draftId) => act("/orders/sign", { items, by: DOCTOR, draft_id: draftId || undefined });
 
 // The doctor's actions for the patient's current state.
-export default function DoctorActions({ state, view, act, upload, busy }) {
+export default function DoctorActions({ state, view, act, upload, ask, busy }) {
   const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
@@ -209,7 +212,7 @@ export default function DoctorActions({ state, view, act, upload, busy }) {
     return (
       <>
         {bar}
-        <Clinic view={view} busy={busy} act={act} upload={upload} signOrders={signOrders} open={open} />
+        <Clinic view={view} busy={busy} act={act} upload={upload} ask={ask} signOrders={signOrders} open={open} />
       </>
     );
   }
@@ -217,7 +220,7 @@ export default function DoctorActions({ state, view, act, upload, busy }) {
     return (
       <>
         <p className="note" role="status">Waiting for the nurse to complete admission.</p>
-        <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />
+        <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />
       </>
     );
   }
@@ -225,9 +228,9 @@ export default function DoctorActions({ state, view, act, upload, busy }) {
     return (
       <>
         {bar}
-        {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />}
+        {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
         {open("photo") && <PhotoCard title="Wound photo" busy={busy} upload={upload} />}
-        <Ward view={view} busy={busy} act={act} upload={upload} showDischarge={open("discharge")} />
+        <Ward view={view} busy={busy} act={act} upload={upload} ask={ask} showDischarge={open("discharge")} />
       </>
     );
   }

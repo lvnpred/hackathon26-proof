@@ -1,13 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { sourceLabel } from "./drafts";
 import { audioName, micStatus, pickMime } from "./recorder";
 
-// Record, choose an audio file, or type what was said. onSend({ file } | { text }) returns a promise.
-export default function Dictate({ label, busy, onSend }) {
+const MIC = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <rect x="9" y="3" width="6" height="12" rx="3" />
+    <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+  </svg>
+);
+
+// One voice-first box: record with the mic, upload audio, or type. A recording is heard first and its text
+// fills the box to check. onHear(file) -> { text, heard_by } | null. onSend({ text, heard }) -> truthy when done.
+export default function Dictate({ label, field = "What was said", verb, busy, maxLength = 2000, onHear, onSend }) {
+  const boxId = useId();
   const [recording, setRecording] = useState(false);
-  const [typed, setTyped] = useState("");
+  const [text, setText] = useState("");
+  const [heard, setHeard] = useState(null);
   const [message, setMessage] = useState("");
   const recorder = useRef(null);
   const stream = useRef(null);
+  const hearRef = useRef(onHear);
+  hearRef.current = onHear;
 
   const release = () => {
     stream.current?.getTracks().forEach((track) => track.stop());
@@ -17,6 +30,13 @@ export default function Dictate({ label, busy, onSend }) {
     if (recorder.current?.state === "recording") recorder.current.onstop = null;
     release();
   }, []);
+
+  async function hear(file) {
+    const result = await hearRef.current(file);
+    if (!result) return;
+    setText(result.text);
+    setHeard({ text: result.text, by: result.heard_by });
+  }
 
   async function start() {
     const hasMediaDevices = Boolean(navigator.mediaDevices?.getUserMedia);
@@ -35,7 +55,7 @@ export default function Dictate({ label, busy, onSend }) {
     rec.onstop = () => {
       release();
       setRecording(false);
-      onSend({ file: new File(chunks, audioName(mime), { type: mime }) });
+      hear(new File(chunks, audioName(mime), { type: mime }));
     };
     recorder.current = rec;
     rec.start();
@@ -48,31 +68,41 @@ export default function Dictate({ label, busy, onSend }) {
   async function chooseFile(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) await onSend({ file });
+    if (file) await hear(file);
   }
 
-  async function sendText() {
-    if (await onSend({ text: typed.trim() })) setTyped("");
+  async function send() {
+    if (await onSend({ text: text.trim(), heard })) {
+      setText("");
+      setHeard(null);
+    }
   }
 
   return (
     <section className="card" aria-label={label}>
       <p className="label">{label}</p>
-      <div className="row">
-        {recording
-          ? <button type="button" className="primary" onClick={finish}>Finish recording</button>
-          : <button type="button" disabled={busy} onClick={start}>Record</button>}
+      <div className="field">
+        <label htmlFor={boxId}>{field}</label>
+        <div className="dictate-box">
+          <textarea id={boxId} rows={3} maxLength={maxLength} value={text} onChange={(e) => setText(e.target.value)} />
+          <button
+            type="button"
+            className={`dictate-mic${recording ? " primary" : ""}`}
+            aria-label={recording ? "Finish recording" : "Record"}
+            disabled={busy && !recording}
+            onClick={recording ? finish : start}
+          >
+            {MIC}
+          </button>
+        </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
-      <label className="field">
-        Or choose an audio file
-        <input type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />
+      {heard && <p className="small muted">Heard by: {sourceLabel(heard.by)}</p>}
+      <label className="dictate-upload">
+        Upload audio
+        <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />
       </label>
-      <label className="field">
-        Or type what was said
-        <textarea rows={2} value={typed} onChange={(e) => setTyped(e.target.value)} />
-      </label>
-      <button type="button" disabled={busy || recording || !typed.trim()} onClick={sendText}>Use this text</button>
+      <button type="button" className="primary" disabled={busy || recording || !text.trim()} onClick={send}>{verb}</button>
     </section>
   );
 }

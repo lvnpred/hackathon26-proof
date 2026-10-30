@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { answerHow } from "./askText";
 import Dictate from "./Dictate";
 import ObsForm from "./ObsForm";
 import { doneBody, MATCH_LABEL, newestPhoto, proposalChoices, sourceLabel } from "./drafts";
@@ -36,8 +37,10 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
     if (preset) open({ proposal: { candidates: [preset], values: {} }, via: "tap", transcript: "", source: null }, preset.id, {});
   }, [preset]);
 
-  async function listen({ file, text }) {
-    const proposal = await ask("/dictate/task", file, { text, by });
+  const hear = (file) => ask("/ask/hear", file, { by }, "/dictate/task");
+
+  async function listen({ text, heard }) {
+    const proposal = await ask("/dictate/task", undefined, { text, by, heard_by: answerHow(heard?.text, text, heard?.by).heard_by });
     if (!proposal) return false;
     const { choices, pick } = proposalChoices(proposal, tasks);
     open(
@@ -48,7 +51,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
     return true;
   }
 
-  if (!session) return <Dictate label="Complete a task by voice" busy={busy} onSend={listen} />;
+  if (!session) return <Dictate label="Complete a task by voice" verb="Use this" busy={busy} onHear={hear} onSend={listen} />;
 
   const { choices, pick } = proposalChoices(session.proposal, tasks);
   const task = tasks.find((t) => t.id === pickId) || choices.find((c) => c.id === pickId) || null;

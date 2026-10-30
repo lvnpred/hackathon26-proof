@@ -75,10 +75,10 @@ export const BEATS = [
   {
     id: "kumar-orders", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao dictates admission orders for Mr. Kumar, and a draft appears with its source named.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'Button "Dictate orders"', 'File eval/p2/kumar-orders.wav into "Dictate orders"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'Button "Dictate orders"', 'File eval/p2/kumar-orders.wav into "Dictate orders"', 'Button "Draft orders"'],
     expect: ["Draft from dictation · Rules (no model)", HEARD, "Paracetamol"],
     files: ["kumar-orders.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by Or type what was said.",
+    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box.",
   },
   {
     id: "kumar-admit", path: "kumar", role: "doctor", seconds: 4, film: true,
@@ -143,7 +143,7 @@ export const BEATS = [
   {
     id: "kumar-paracetamol", path: "kumar", role: "nurse", seconds: 7, film: true,
     say: "Nurse Meena records the paracetamol round by voice, adds the strip photo, and confirms.",
-    clicks: ['File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"', 'Button "Add photo" <- eval/p2/strip-paracetamol.png', 'Button "Confirm"'],
+    clicks: ['File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"', 'Button "Use this"', 'Button "Add photo" <- eval/p2/strip-paracetamol.png', 'Button "Confirm"'],
     expect: ["Paracetamol 1 g given to bed 4.", HEARD, "Photo matches the task", "by voice"],
     before: ["Paracetamol 1 g given to bed 4.", HEARD],
     files: ["kumar-paracetamol.wav", "strip-paracetamol.png"],
@@ -159,11 +159,11 @@ export const BEATS = [
   {
     id: "kumar-discharge", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Sign discharge"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Button "Sign discharge"'],
     expect: ["Reference", "15 of 15", HEARD, "Being discharged"],
     before: ["15 of 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by Or type what was said.",
+    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box.",
   },
   {
     id: "kumar-home", path: "kumar", role: "nurse", seconds: 3, film: true,
@@ -183,7 +183,7 @@ export const BEATS = [
   {
     id: "kumar-review", path: "kumar", role: "doctor", seconds: 9, film: true,
     say: "Dr. Rao opens the healing photo beside the reference photo and answers by voice.",
-    clicks: ["Role Doctor", 'Tab "My queue"', 'Link "Open →" in the row with "Healing photo to review"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Answer by voice"', 'Button "Send answer"', 'Button "No visit needed"'],
+    clicks: ["Role Doctor", 'Tab "My queue"', 'Link "Open →" in the row with "Healing photo to review"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"', 'Button "Send answer"', 'Button "No visit needed"'],
     expect: ["Healing photo", "Reference", "by voice · Prepared demo result", "No visit needed"],
     before: [HEARD],
     files: ["rao-answer.wav"],
@@ -199,7 +199,7 @@ export const BEATS = [
   {
     id: "iyer-bp", path: "iyer", role: "nurse", seconds: 6, film: true,
     say: "Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.",
-    clicks: ["Role Nurse", "Chart S. Iyer", 'File eval/p2/iyer-bp.wav into "Complete a task by voice"', 'Button "Confirm"'],
+    clicks: ["Role Nurse", "Chart S. Iyer", 'File eval/p2/iyer-bp.wav into "Complete a task by voice"', 'Button "Use this"', 'Button "Confirm"'],
     expect: ["BP 82 over 54, pulse 112, bed 7.", "is below the limit of 90"],
     before: ["BP 82 over 54, pulse 112, bed 7."],
     files: ["iyer-bp.wav"],
@@ -208,10 +208,10 @@ export const BEATS = [
   {
     id: "iyer-orders", path: "iyer", role: "doctor", seconds: 7, film: true,
     say: "Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them.",
-    clicks: ["Role Doctor", 'Tab "My queue" (row shows "is below the limit of 90")', "Chart S. Iyer", 'Button "Dictate orders"', 'File eval/p2/iyer-saline.wav into "Dictate orders"', 'Button "Sign orders"'],
+    clicks: ["Role Doctor", 'Tab "My queue" (row shows "is below the limit of 90")', "Chart S. Iyer", 'Button "Dictate orders"', 'File eval/p2/iyer-saline.wav into "Dictate orders"', 'Button "Draft orders"', 'Button "Sign orders"'],
     expect: ["Draft from dictation", "Nurse acknowledges the new orders from Dr. A. Rao (synthetic)."],
     files: ["iyer-saline.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by Or type what was said.",
+    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by typing in the box.",
   },
   {
     id: "iyer-setup", path: "iyer", role: "nurse", seconds: 8, film: true,
@@ -231,7 +231,7 @@ export const BEATS = [
   {
     id: "iyer-recheck", path: "iyer", role: "nurse", seconds: 5, film: true,
     say: "Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.",
-    clicks: ["Role Nurse", 'Textarea in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this text"', 'Radio "BP and pulse every 1 h"', 'Button "Confirm"', 'Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside', 'Button "Answer" in that flag'],
+    clicks: ["Role Nurse", 'Textarea "What was said" in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Radio "BP and pulse every 1 h"', 'Button "Confirm"', 'Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside', 'Button "Answer" in that flag'],
     expect: ["logged BP 112/70, HR 84"],
     absent: "→ Systolic BP 82 is below the limit of 90",
     keyed: "1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch.",

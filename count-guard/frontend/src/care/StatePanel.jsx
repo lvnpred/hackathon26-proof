@@ -5,7 +5,7 @@ import NurseActions from "./NurseActions";
 export default function StatePanel({ state, role, view, act, upload, ask, busy, nowMs, episodeId, replaced }) {
   switch (role) {
     case "doctor":
-      return <DoctorActions key={state} state={state} view={view} act={act} upload={upload} busy={busy} />;
+      return <DoctorActions key={state} state={state} view={view} act={act} upload={upload} ask={ask} busy={busy} />;
     case "nurse":
       return <NurseActions state={state} view={view} act={act} upload={upload} ask={ask} busy={busy} nowMs={nowMs} episodeId={episodeId} replaced={replaced} />;
     default:

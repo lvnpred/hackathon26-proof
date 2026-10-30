@@ -23,6 +23,7 @@ MAGIC = {
     "image/png": lambda b: b.startswith(b"\x89PNG"),
     "image/webp": lambda b: b[:4] == b"RIFF" and b[8:12] == b"WEBP",
 }
+HEARERS = ("prepared", "muse-voice-transcribe", "prepared (live call failed)")
 NOTHING = "Nothing to draft was heard. Type the {what} instead."
 
 
@@ -32,14 +33,16 @@ def models(request: Request) -> dict:
     return {"live": settings.spark_configured, "voice": settings.voice_configured}
 
 
-def _heard(settings, file: UploadFile | None, text: str | None) -> dict:
-    """What was said, as {"text", "source"}: typed text, or a recording heard or prepared."""
+def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = "") -> dict:
+    """What was said, as {"text", "source"}: typed text, or a recording heard or prepared.
+
+    Text the page took from an earlier hearing keeps that hearer, if it is one the server names. Else it is typed."""
     if (file is None) == (text is None):
         raise HTTPException(status_code=422, detail="Send either a recording or typed text, not both and not neither.")
     if text is not None:
         if not text.strip():
             raise HTTPException(status_code=422, detail="The typed text is empty.")
-        return {"text": text.strip(), "source": "typed"}
+        return {"text": text.strip(), "source": heard_by if heard_by in HEARERS else "typed"}
     kind = (file.content_type or "").split(";")[0].strip().lower()
     if not (kind.startswith("audio/") or kind == "video/webm"):
         raise HTTPException(status_code=400, detail="The recording must be an audio file.")
@@ -61,14 +64,14 @@ def _structure(settings, prompt: str, transcript: str, from_reply, from_rules):
     return from_rules(transcript), ("rules (model reply not usable)" if settings.spark_configured else "rules")
 
 
-def _dictate(request, episode_id, allowed, refusal, file, text, prompt, from_reply, from_rules, what, empty):
+def _dictate(request, episode_id, allowed, refusal, file, text, prompt, from_reply, from_rules, what, empty, heard_by=""):
     """Shared by both routes: state check, what was heard, then the draft content. Returns (result, heard, source)."""
     _require(request, episode_id)
     state = states.current_state(_store(request).events(episode_id))
     if state not in allowed:
         raise HTTPException(status_code=409, detail=refusal.format(state=state))
     settings = request.app.state.settings
-    heard = _heard(settings, file, text)
+    heard = _heard(settings, file, text, heard_by)
     result, source = _structure(settings, prompt, heard["text"], from_reply, from_rules)
     if empty(result):
         raise HTTPException(status_code=422, detail=NOTHING.format(what=what))
@@ -82,13 +85,14 @@ def dictate_orders(
     by: str = Form(..., min_length=1, max_length=80),
     at_ms: int | None = Form(None, ge=0),
     text: str | None = Form(None, min_length=1, max_length=2000),
+    heard_by: str = Form("", max_length=40),
     file: UploadFile | None = File(None),
 ) -> dict:
     result, meta = _dictate(
         request, episode_id, tasks.ORDER_STATES,
         "Orders are dictated in clinic, admitting or ward. The patient is in {state}.",
         file, text, dictation.ORDER_PROMPT, dictation.items_from_reply, dictation.parse_order_text,
-        "orders", lambda r: not r["items"] and not r["reason"],
+        "orders", lambda r: not r["items"] and not r["reason"], heard_by,
     )
     return _act(request, episode_id, "order.drafted", {**meta, **result, "by": by}, at_ms)
 
@@ -100,13 +104,14 @@ def dictate_discharge(
     by: str = Form(..., min_length=1, max_length=80),
     at_ms: int | None = Form(None, ge=0),
     text: str | None = Form(None, min_length=1, max_length=2000),
+    heard_by: str = Form("", max_length=40),
     file: UploadFile | None = File(None),
 ) -> dict:
     result, meta = _dictate(
         request, episode_id, ("ward",),
         "The discharge is dictated while the patient is on the ward. The patient is in {state}.",
         file, text, dictation.DISCHARGE_PROMPT, dictation.sections_from_reply, dictation.discharge_sections,
-        "discharge summary", lambda r: not r,
+        "discharge summary", lambda r: not r, heard_by,
     )
     return _act(request, episode_id, "discharge.drafted", {**meta, "sections": result, "by": by}, at_ms)
 
@@ -118,6 +123,7 @@ def dictate_task(
     by: str = Form(..., min_length=1, max_length=80),
     at_ms: int | None = Form(None, ge=0),
     text: str | None = Form(None, min_length=1, max_length=2000),
+    heard_by: str = Form("", max_length=40),
     file: UploadFile | None = File(None),
 ) -> dict:
     """Which open tasks the nurse's sentence is about, and the values she stated. Writes nothing (D10)."""
@@ -128,7 +134,7 @@ def dictate_task(
         "A finished task is spoken in the ward. The patient is in {state}.",
         file, text, spoken.task_prompt(open_tasks), lambda reply, said: spoken.completion_from_reply(reply, open_tasks, said),
         lambda said: {"task_ids": spoken.match_tasks(said, open_tasks), "values": spoken.parse_values(said)},
-        "task", lambda r: False,
+        "task", lambda r: False, heard_by,
     )
     chosen = [t for t in open_tasks if t["id"] in result["task_ids"]]
     candidates = [{k: t[k] for k in ("id", "title", "kind", "mode", "status")} for t in chosen]

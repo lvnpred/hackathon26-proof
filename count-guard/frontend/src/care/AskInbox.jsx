@@ -4,7 +4,6 @@ import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import { INBOX_SCOPES } from "./faults";
-import { sourceLabel } from "./drafts";
 import { answerHow, answerSourceLine, noteText, questionText } from "./askText";
 
 // The three fixed review decisions, as the server names them.
@@ -22,37 +21,15 @@ function Answered({ answer, text }) {
 }
 
 function QuestionItem({ q, role, busy, act, ask }) {
-  const [text, setText] = useState("");
-  const [heard, setHeard] = useState({ text: "", by: "" });
-  async function hear({ file, text: typed }) {
-    if (!file) {
-      setText(typed);
-      return true;
-    }
-    const result = await ask("/ask/hear", file, { by: DOCTOR }, `/questions/${q.id}/answer`);
-    if (!result) return false;
-    setText(result.text);
-    setHeard({ text: result.text, by: result.heard_by });
-    return true;
-  }
-  async function send() {
-    const done = await act(`/questions/${q.id}/answer`, { text: text.trim(), by: DOCTOR, ...answerHow(heard.text, text, heard.by) });
-    if (done) setText("");
-  }
+  const path = `/questions/${q.id}/answer`;
+  const hear = (file) => ask("/ask/hear", file, { by: DOCTOR }, path);
+  const send = ({ text, heard }) => act(path, { text, by: DOCTOR, ...answerHow(heard?.text, text, heard?.by) });
   return (
     <div data-line={q.id}>
       <p><b>{q.by}</b> asked at {label(q.at_ms)}: {questionText(role, q)}</p>
       {q.answer && <Answered answer={q.answer} text={q.answer.text} />}
       {!q.answer && role === "doctor" && (
-        <>
-          <Dictate label="Answer by voice" busy={busy} onSend={hear} />
-          <label className="field">
-            Your answer (check it before sending)
-            <textarea rows={3} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
-          </label>
-          {heard.text && <p className="small muted">Heard by: {sourceLabel(heard.by)}</p>}
-          <button type="button" className="primary" disabled={busy || !text.trim()} onClick={send}>Send answer</button>
-        </>
+        <Dictate label="Your answer" field="Your answer (check it before sending)" verb="Send answer" maxLength={1000} busy={busy} onHear={hear} onSend={send} />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import Fault from "./Fault";
 import { CLOCK } from "./faults";
 import { findPatient } from "./Patients";
 import { chipClass } from "./status";
+import "./care.css";
 import { useWard } from "./ward";
 
 const ROLES = [

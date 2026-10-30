@@ -96,7 +96,7 @@ def hear_answer(
     file: UploadFile = File(...),
     at_ms: int | None = Form(None, ge=0),
 ) -> dict:
-    """What the doctor said, as text to check. Writes nothing."""
+    """What was said, as text to check. Any role. Writes nothing."""
     _require(request, episode_id)
     heard = _heard(request.app.state.settings, file, None)
     return {"text": heard["text"], "heard_by": heard["source"]}

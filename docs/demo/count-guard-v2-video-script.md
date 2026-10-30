@@ -79,7 +79,7 @@ On screen: `Clinic visit closed`
 ### Path 2: Mr. Kumar, hernia repair (all three roles)
 
 #### `kumar-orders` · 0:34 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) Button "Dictate orders"; 5) File eval/p2/kumar-orders.wav into "Dictate orders"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) Button "Dictate orders"; 5) File eval/p2/kumar-orders.wav into "Dictate orders"; 6) Button "Draft orders"
 
 On screen: `Draft from dictation · Rules (no model)` · `Heard by: Prepared demo result` · `Paracetamol`
 
@@ -144,7 +144,7 @@ On screen: `On the ward` · `Dr. A. Rao: Available`
 > Surgery ends and he returns to the ward; Dr. Rao shows as available again.
 
 #### `kumar-paracetamol` · 1:22 · nurse · 7 s
-Clicks: 1) File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"; 2) Button "Add photo" <- eval/p2/strip-paracetamol.png; 3) Button "Confirm"
+Clicks: 1) File eval/p2/kumar-paracetamol.wav into "Complete a task by voice"; 2) Button "Use this"; 3) Button "Add photo" <- eval/p2/strip-paracetamol.png; 4) Button "Confirm"
 
 On screen: `Paracetamol 1 g given to bed 4.` · `Heard by: Prepared demo result` · `Photo matches the task` · `by voice`
 
@@ -158,7 +158,7 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:36 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Sign discharge"
 
 On screen: `Reference` · `15 of 15` · `Heard by: Prepared demo result` · `Being discharged`
 
@@ -179,7 +179,7 @@ On screen: `Waiting for Dr. Rao` · `The doctor reviews the healing photo.`
 > At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says who is waiting.
 
 #### `kumar-review` · 1:59 · doctor · 9 s
-Clicks: 1) Role Doctor; 2) Tab "My queue"; 3) Link "Open →" in the row with "Healing photo to review"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Answer by voice"; 5) Button "Send answer"; 6) Button "No visit needed"
+Clicks: 1) Role Doctor; 2) Tab "My queue"; 3) Link "Open →" in the row with "Healing photo to review"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send answer"; 6) Button "No visit needed"
 
 On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send answer) · `by voice · Prepared demo result` · `No visit needed`
 
@@ -196,14 +196,14 @@ On screen: `The wound looks as expected for day 3.` · `No visit needed`
 ### Path 3: Ms. Iyer, low blood pressure and saline (all three roles)
 
 #### `iyer-bp` · 2:14 · nurse · 6 s
-Clicks: 1) Role Nurse; 2) Chart S. Iyer; 3) File eval/p2/iyer-bp.wav into "Complete a task by voice"; 4) Button "Confirm"
+Clicks: 1) Role Nurse; 2) Chart S. Iyer; 3) File eval/p2/iyer-bp.wav into "Complete a task by voice"; 4) Button "Use this"; 5) Button "Confirm"
 
 On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 
 > Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.
 
 #### `iyer-orders` · 2:20 · doctor · 7 s
-Clicks: 1) Role Doctor; 2) Tab "My queue" (row shows "is below the limit of 90"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Sign orders"
+Clicks: 1) Role Doctor; 2) Tab "My queue" (row shows "is below the limit of 90"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Draft orders"; 7) Button "Sign orders"
 
 On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao (synthetic).`
 
@@ -224,7 +224,7 @@ On screen: `Saline 1 litre over 2 hours, video check of the set-up done`
 > The clock moves two hours and the nurse ends the saline task.
 
 #### `iyer-recheck` · 2:37 · nurse · 5 s
-Clicks: 1) Role Nurse; 2) Textarea in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.; 3) Button "Use this text"; 4) Radio "BP and pulse every 1 h"; 5) Button "Confirm"; 6) Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside; 7) Button "Answer" in that flag
+Clicks: 1) Role Nurse; 2) Textarea "What was said" in "Complete a task by voice" <- BP 112 over 70, pulse 84, bed 7.; 3) Button "Use this"; 4) Radio "BP and pulse every 1 h"; 5) Button "Confirm"; 6) Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside; 7) Button "Answer" in that flag
 
 On screen: `logged BP 112/70, HR 84` · the waiting strip no longer shows `→ Systolic BP 82 is below the limit of 90`
 
@@ -265,19 +265,19 @@ On screen: `Dr. A. Rao: Available`
 
 Answer first: keyed changes the labels and turns prepared answers into live ones. Every other beat is the same as offline. Beats with no model call are not listed.
 
-Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels read `Muse Voice`, `Muse Spark` or `SAM 3.1`, and answers are prose. Live speech can use Record, or the WAV files, or `Or type what was said`.
+Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels read `Muse Voice`, `Muse Spark` or `SAM 3.1`, and answers are prose. Live speech can use the mic button, the WAV files, or typing in the box.
 
 | Beat | Model calls and label change |
 |---|---|
 | `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The header reads Models: live, not offline, when a key is set. |
 | `das-ask` | 1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch. |
-| `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by Or type what was said. |
+| `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
 | `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch. |
-| `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by Or type what was said. |
+| `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-review` | 1 Voice call (hear). Heard by reads Muse Voice. No switch. |
 | `iyer-bp` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. No switch. |
-| `iyer-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by Or type what was said. |
+| `iyer-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by typing in the box. |
 | `iyer-recheck` | 1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch. |
 | `iyer-setup` | SAM 3.1 video call. The label reads SAM 3.1. Switch: SETUP_LIVE. |
 | `iyer-meds` | 1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE. |

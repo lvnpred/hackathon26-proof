@@ -39,8 +39,9 @@ def _upload(client, eid, tail, name, **form):
     return client.post(_url(eid, tail), data={"by": DOC, "at_ms": 0, **form}, files=files)
 
 
-def _typed(client, eid, tail, text):
-    return client.post(_url(eid, tail), data={"by": DOC, "at_ms": 0, "text": text})
+def _typed(client, eid, tail, text, heard_by=None):
+    extra = {} if heard_by is None else {"heard_by": heard_by}
+    return client.post(_url(eid, tail), data={"by": DOC, "at_ms": 0, "text": text, **extra})
 
 
 def _keyed_client(tmp_path):
@@ -98,6 +99,25 @@ def test_typed_text_and_exactly_one_input(tmp_path):
     )
     assert both.status_code == 422
     assert client.post(_url(eid, "dictate/orders"), data={"by": DOC}).status_code == 422
+
+
+@pytest.mark.parametrize("hearer", ["prepared", "muse-voice-transcribe", "prepared (live call failed)"])
+def test_typed_text_keeps_the_hearer_it_was_heard_by(tmp_path, hearer):
+    client, eid = _new(tmp_path)
+    view = _typed(client, eid, "dictate/orders", ORDERS_TEXT, heard_by=hearer).json()
+    assert view["drafts"]["order"]["heard_by"] == hearer
+
+
+def test_a_forged_hearer_is_stored_as_typed(tmp_path):
+    client, eid = _new(tmp_path)
+    view = _typed(client, eid, "dictate/orders", ORDERS_TEXT, heard_by="a doctor signed this").json()
+    assert view["drafts"]["order"]["heard_by"] == "typed"
+
+
+def test_hearer_is_ignored_with_a_recording(tmp_path):
+    client, eid = _new(tmp_path)
+    view = _upload(client, eid, "dictate/orders", "kumar-orders.wav", heard_by="forged").json()
+    assert view["drafts"]["order"]["heard_by"] == "prepared"
 
 
 def test_upload_checks(tmp_path):

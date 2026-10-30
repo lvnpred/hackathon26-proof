@@ -43,6 +43,7 @@ export const STEPS = {
     await H.click("Use the demo prescription");
     await H.open("Dictate orders");
     await H.file("Dictate orders", "eval/p2/kumar-orders.wav");
+    await H.click("Draft orders");
   },
   async "kumar-admit"(H) {
     await H.click("Sign orders");
@@ -93,6 +94,7 @@ export const STEPS = {
   },
   async "kumar-paracetamol"(H) {
     await H.file(VOICE, "eval/p2/kumar-paracetamol.wav");
+    await H.click("Use this");
     await before(H, "kumar-paracetamol");
     await H.file(VOICE, "eval/p2/strip-paracetamol.png");
     await H.click("Confirm");
@@ -109,6 +111,7 @@ export const STEPS = {
     await H.file("Add reference photo", "eval/p4/wound-day0.png");
     await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
+    await H.click("Draft discharge");
     await before(H, "kumar-discharge");
     await H.click("Sign discharge");
   },
@@ -131,7 +134,7 @@ export const STEPS = {
     await H.role("Doctor");
     await H.tab("My queue");
     await H.page.locator("tr").filter({ hasText: "Healing photo to review" }).getByRole("link", { name: /Open/ }).click();
-    await H.file("Answer by voice", "eval/p2/rao-answer.wav");
+    await H.file("Your answer", "eval/p2/rao-answer.wav");
     await before(H, "kumar-review");
     await H.click("Send answer");
     await H.click("No visit needed");
@@ -145,6 +148,7 @@ export const STEPS = {
     await H.role("Nurse");
     await H.chart(IYER);
     await H.file(VOICE, "eval/p2/iyer-bp.wav");
+    await H.click("Use this");
     await before(H, "iyer-bp");
     await H.click("Confirm");
   },
@@ -154,6 +158,7 @@ export const STEPS = {
     await H.chart(IYER);
     await H.open("Dictate orders");
     await H.file("Dictate orders", "eval/p2/iyer-saline.wav");
+    await H.click("Draft orders");
     await H.click("Sign orders");
   },
   async "iyer-setup"(H) {
@@ -171,8 +176,8 @@ export const STEPS = {
   },
   async "iyer-recheck"(H) {
     await H.role("Nurse");
-    await H.fill("Or type what was said", "BP 112 over 70, pulse 84, bed 7.", VOICE);
-    await H.click("Use this text");
+    await H.fill("What was said", "BP 112 over 70, pulse 84, bed 7.", VOICE);
+    await H.click("Use this");
     await H.page.getByLabel("BP and pulse every 1 h", { exact: true }).check();
     await H.click("Confirm");
     const flag = H.page.locator(".card.sunk").filter({ hasText: "is below the limit of 90" }).first();

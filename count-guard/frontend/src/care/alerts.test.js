@@ -4,18 +4,18 @@ import { showTrayFlag } from "./derive.js";
 import { SAFETY, alertNow, bannerAlerts, bannerClass, stripPills, surname } from "./alerts.js";
 
 const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "Day 0 10:00" });
-const pill = (episodeId, name, who, what) => ({ key: `${episodeId}:${what}`, episodeId, name, who, what });
+const pill = (episodeId, name, who, what, role = "nurse") => ({ key: `${episodeId}:${what}`, episodeId, name, who, what, role });
 
 test("surname", () => assert.equal(surname("R. Kumar, 58 M (synthetic)"), "Kumar"));
 test("SAFETY lists the two safety kinds", () => assert.deepEqual(SAFETY, ["obs_past_limit", "count_open"]));
 test("stripPills off a chart names each patient", () => {
-  const out = stripPills([pill("e9", "A. Das, 47 M (synthetic)", "Patient", "This strip reads …")], undefined);
+  const out = stripPills([pill("e9", "A. Das, 47 M (synthetic)", "Patient", "This strip reads …", "nurse")], undefined, "nurse").mine;
   assert.equal(out[0].text, "Das · Patient → This strip reads …");
 });
 test("stripPills on a chart keeps that patient's pills only", () => {
   const pills = [pill("e9", "A. Das", "Patient", "x"), pill("e4", "R. Kumar", "Nurse", "y")];
-  assert.deepEqual(stripPills(pills, "e4").map((p) => p.text), ["Nurse → y"]);
-  assert.deepEqual(stripPills(pills, "e7"), []);
+  assert.deepEqual(stripPills(pills, "e4", "nurse").mine.map((p) => p.text), ["Nurse → y"]);
+  assert.deepEqual(stripPills(pills, "e7", "nurse").mine, []);
 });
 test("alertNow picks the newest safety nudge", () => {
   const view = { nudges: [n("a", "obs_past_limit", "nurse", 1, "BP low."), n("b", "count_open", "nurse", 2, "Count open."), n("c", "obs_overdue", "nurse", 3)] };
@@ -38,15 +38,32 @@ test("showTrayFlag shows the flag only while in theatre, and not to the nurse (h
 
 test("on a chart the strip drops pills the banner already shows", () => {
   const pills = [{ ...pill("e4", "R. Kumar", "Nurse", "BP low"), nudgeKind: "obs_past_limit" }, pill("e4", "R. Kumar", "Nurse", "Handover waiting")];
-  assert.deepEqual(stripPills(pills, "e4").map((p) => p.text), ["Nurse → Handover waiting"]);
-  assert.equal(stripPills(pills, undefined).length, 2);
+  assert.deepEqual(stripPills(pills, "e4", "nurse").mine.map((p) => p.text), ["Nurse → Handover waiting"]);
+  assert.equal(stripPills(pills, undefined, "nurse").mine.length, 2);
 });
 test("stripPills with no name leaves no stray separator", () => {
-  assert.equal(stripPills([pill("e4", "", "Nurse", "y")], undefined)[0].text, "Nurse → y");
+  assert.equal(stripPills([pill("e4", "", "Nurse", "y")], undefined, "nurse").mine[0].text, "Nurse → y");
 });
 test("the banner frame is red only while a safety alert is open", () => {
   const view = (...ns) => ({ nudges: ns });
   assert.equal(bannerClass(bannerAlerts(view(n("a", "obs_past_limit", "nurse", 1)), "nurse")), "alert-banner");
   assert.equal(bannerClass(bannerAlerts(view(n("o", "obs_overdue", "nurse", 1)), "nurse")), "alert-banner alert-calm");
   assert.equal(bannerClass([]), "alert-banner alert-calm");
+});
+test("stripPills puts the role's own pills first and folds the rest", () => {
+  const pills = [pill("e4", "R. Kumar", "Nurse", "a", "nurse"), pill("e7", "S. Iyer", "Dr. A. Rao", "b", "doctor"), pill("e7", "S. Iyer", "Nurse", "c", "nurse")];
+  const out = stripPills(pills, undefined, "doctor");
+  assert.deepEqual(out.mine.map((p) => p.what), ["b"]);
+  assert.deepEqual(out.others.map((g) => g.text), ["+2 for nurse"]);
+  assert.deepEqual(out.others[0].pills.map((p) => p.what), ["a", "c"]);
+});
+test("stripPills with no own pills still shows the folded ones", () => {
+  const out = stripPills([pill("e4", "R. Kumar", "Nurse", "a", "nurse")], undefined, "doctor");
+  assert.equal(out.mine.length, 0);
+  assert.equal(out.others[0].text, "+1 for nurse");
+});
+test("folded groups follow the order nurse, doctor, patient", () => {
+  const pills = [pill("e4", "R", "x", "p", "patient"), pill("e4", "R", "x", "d", "doctor"), pill("e4", "R", "x", "n", "nurse")];
+  assert.deepEqual(stripPills(pills, undefined, "nurse").others.map((g) => g.role), ["doctor", "patient"]);
+  assert.deepEqual(stripPills(pills, undefined, "patient").others.map((g) => g.role), ["nurse", "doctor"]);
 });

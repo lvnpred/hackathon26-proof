@@ -7,12 +7,21 @@ export function surname(name) {
   return name.split(",")[0].trim().split(/\s+/).pop();
 }
 
+const ROLE_ORDER = ["nurse", "doctor", "patient"];
+
 // On a chart keep that patient's pills; elsewhere each pill leads with the patient's surname.
 // On a chart the banner owns every alert (a pill with nudgeKind), so the strip drops those.
-export function stripPills(pills, episodeId) {
+// The role's own pills come first (mine); the rest fold into one group per other role.
+export function stripPills(pills, episodeId, role) {
   const arrow = (p) => `${p.who} → ${p.what}`;
-  if (episodeId) return pills.filter((p) => p.episodeId === episodeId && !p.nudgeKind).map((p) => ({ ...p, text: arrow(p) }));
-  return pills.map((p) => ({ ...p, text: p.name ? `${surname(p.name)} · ${arrow(p)}` : arrow(p) }));
+  const shown = episodeId
+    ? pills.filter((p) => p.episodeId === episodeId && !p.nudgeKind).map((p) => ({ ...p, text: arrow(p) }))
+    : pills.map((p) => ({ ...p, text: p.name ? `${surname(p.name)} · ${arrow(p)}` : arrow(p) }));
+  const others = ROLE_ORDER.filter((r) => r !== role)
+    .map((r) => ({ role: r, pills: shown.filter((p) => p.role === r) }))
+    .filter((g) => g.pills.length)
+    .map((g) => ({ ...g, text: `+${g.pills.length} for ${g.role}` }));
+  return { mine: shown.filter((p) => p.role === role), others };
 }
 
 // The newest open safety nudge, as the NOW line.

@@ -179,6 +179,7 @@ export function waitingPills(patients, nowMs) {
     key: r.key,
     name: names[r.episodeId] || "",
     who: r.owner,
+    role: r.role,
     what: r.says,
     waited: r.waited,
     late: r.waitedMs >= H,

@@ -45,9 +45,14 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .header-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: nowrap; }
 .picker-slot { width: 240px; display: flex; justify-content: flex-end; }
 .picker-slot select { max-width: 100%; }
+.demo-toggle { display: none; }
+.fold-wrap { display: contents; }
 @media (max-width: 640px) {
   .header-controls { flex-wrap: wrap; }
   .picker-slot { width: auto; }
+  .demo-toggle { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--line-control); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+  .demo-toggle[aria-expanded="true"] { background: var(--sun-soft); color: var(--sun-text); border-color: var(--sun); }
+  .app:not(.demo-open) .demo-fold { display: none; }
 }
 .theatre-steps { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 6px; }
 

@@ -117,7 +117,9 @@ function askRows(patient, nowMs) {
 function nurseRows(patient, nowMs) {
   const { state, order_list: orders = [], tasks = [] } = patient.view;
   const rows = [];
-  for (const order of orders.filter((o) => !o.acknowledged_by)) {
+  // Orders signed in clinic wait for the admission; the server refuses an earlier acknowledgement.
+  const ackable = ["admitting", "ward"].includes(state) ? orders : [];
+  for (const order of ackable.filter((o) => !o.acknowledged_by)) {
     rows.push(row(patient, `order:${order.id}`, "order", `New orders from ${order.by}`, {
       ...timed(nowMs, order.at_ms), owner: "Nurse", role: "nurse", rank: RANK.order,
     }));

@@ -17,6 +17,7 @@ from app.morning.discharge import visible_events
 
 HOUR_MS = 3_600_000
 ORDER_STATES = ("clinic", "admitting", "ward")
+ACK_STATES = ("admitting", "ward")  # clinic orders wait for the admission
 CLOSED_STATES = ("discharging", "home", "clinic_done")  # tasks end with the stay
 PROGRESS = ("task.began", "task.done")
 OBS_FIELDS = ("sbp", "dbp", "hr", "spo2", "temp")
@@ -160,8 +161,11 @@ def acknowledge_order(store, episode_id: str, order_id: str, by: str, ts: int) -
     order = store.get_event(order_id)
     if order is None or order["episode_id"] != episode_id or order["event_type"] != "order.signed":
         raise TaskError(404, "Order not found")
-    if any(e["payload"]["order_id"] == order_id for e in _of(store.events(episode_id), "order.acknowledged")):
+    events = store.events(episode_id)
+    if any(e["payload"]["order_id"] == order_id for e in _of(events, "order.acknowledged")):
         raise TaskError(409, "This order is already acknowledged.")
+    if current_state(events) not in ACK_STATES:
+        raise TaskError(409, "Orders are acknowledged once the patient is admitted. The doctor admits the patient first.")
     store.append(episode_id, "order.acknowledged", {"order_id": order_id, "by": by}, ts_ms=ts)
     for index, item in enumerate(order["payload"]["items"]):
         payload = {

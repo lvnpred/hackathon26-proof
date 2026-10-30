@@ -231,3 +231,10 @@ test("ward tasks pause in theatre", () => {
   assert.equal(dueLabel("paused"), "paused (in theatre)");
   assert.equal(dueLabel("due"), "due");
 });
+
+test("nurse rows: orders signed in clinic wait for the admission", () => {
+  const clinic = patient("e1", "Bed 1", view({ state: "clinic", order_list: [order("o1", T - 10 * M)] }));
+  assert.deepEqual(queueRows([clinic], "nurse", T), []);
+  const admitting = patient("e1", "Bed 1", view({ state: "admitting", order_list: [order("o1", T - 10 * M)] }));
+  assert.ok(queueRows([admitting], "nurse", T).some((r) => r.says === "New orders from Dr. A. Rao"));
+});

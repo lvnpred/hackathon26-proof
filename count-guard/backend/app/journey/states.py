@@ -171,7 +171,7 @@ def _latest_happening(events: list[dict]) -> str | None:
         p, kind = e["payload"], e["event_type"]
         if kind == "patient.state":
             if p.get("from") is None:
-                text, rank = f"{p['by']} admitted the patient to the ward the day before.", 1
+                text, rank = f"{p['by']} admitted the patient to the ward the day before.", -1  # any real event at the same time wins
             else:
                 text, rank = f"{p['by']} {DID[p['to']]} at {clock(e['ts_ms'])}.", 0
         elif kind == "order.signed":

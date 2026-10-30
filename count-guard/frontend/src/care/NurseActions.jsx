@@ -147,7 +147,7 @@ export default function NurseActions({ state, view, act, upload, ask, busy, nowM
   const move = (to, checklist) => act("/state", { to, by, reason: "", checklist });
   return (
     <>
-      <Orders orders={["clinic", "admitting", "ward"].includes(state) ? view.order_list || [] : []} by={by} busy={busy} act={act} />
+      <Orders orders={["admitting", "ward"].includes(state) ? view.order_list || [] : []} by={by} busy={busy} act={act} />
       {state === "admitting" && (
         <section className="card">
           <p className="label">Admission checklist</p>

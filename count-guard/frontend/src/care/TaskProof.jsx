@@ -82,7 +82,7 @@ export default function TaskProof({ view, tasks, by, busy, act, upload, ask, pre
       {session.transcript && (
         <p className="small">
           “{session.transcript}” <span className="muted">· {sourceLabel(session.source)}</span>
-          {session.heardBy && <span className="muted"> · Heard by: {sourceLabel(session.heardBy)}</span>}
+          {session.heardBy && session.via === "voice" && <span className="muted"> · Heard by: {sourceLabel(session.heardBy)}</span>}
         </p>
       )}
       {pick && choices.length === 0 && <p className="empty small">No open tasks.</p>}

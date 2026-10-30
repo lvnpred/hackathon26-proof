@@ -1,3 +1,6 @@
+import { label } from "./clock.js";
+import { waitedText } from "./derive.js";
+import { shortName } from "./names.js";
 import { sourceLabel } from "./drafts.js";
 
 // Same copy as the server's not-found answer.
@@ -23,9 +26,26 @@ export const doctorOpenItems = (view) =>
   + (view?.ask?.reviews || []).filter((r) => !r.answer).length
   + (view?.nudges || []).filter((n) => n.to === "doctor").length;
 
-// What the doctor's action area says when nothing is theirs to start but something waits for an answer.
-export const doctorWaiting = (view) =>
-  doctorOpenItems(view) > 0 ? "Waiting for your answer above." : "Nothing to do from this state. The chart below is the record.";
+// The doctor's inbox: questions to the doctor and reviews. The doctor sees all; others see answered items.
+// Open items first, then answered, each oldest first (R22).
+export function inboxItems(view, role, nowMs) {
+  const make = (kind) => (item) => ({ kind, id: item.id, atMs: item.at_ms, open: !item.answer, waited: item.answer ? "" : waitedText(nowMs - item.at_ms) });
+  const all = [
+    ...((view?.ask?.questions) || []).filter((q) => q.to === "doctor").map(make("question")),
+    ...((view?.ask?.reviews) || []).map(make("review")),
+  ].filter((i) => role === "doctor" || !i.open);
+  const byTime = (a, b) => a.atMs - b.atMs;
+  return [...all.filter((i) => i.open).sort(byTime), ...all.filter((i) => !i.open).sort(byTime)];
+}
+
+export function inboxHeader(name, items) {
+  const n = items.filter((i) => i.open).length;
+  return n > 0 ? `From ${shortName(name)} · ${n} waiting` : `From ${shortName(name)}`;
+}
+
+// "Day 3": the demo-clock day of a photo (R23).
+export const photoDay = (atMs) => label(atMs).split(" ").slice(0, 2).join(" ");
+export const sendVerb = (name) => `Send to ${shortName(name)}`;
 
 // Who answered, and how: the bot names its source; the doctor says typed or by voice.
 export function answerByLine(answer) {

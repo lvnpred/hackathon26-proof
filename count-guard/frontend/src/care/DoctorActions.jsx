@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
-import { answerHow, doctorOpenItems, doctorWaiting } from "./askText";
+import { answerHow } from "./askText";
 import ActionBar from "./ActionBar";
 import { panelOpen, toggled } from "./actions";
 import { doctorBlocks, quietActions } from "./journey";
@@ -223,9 +223,6 @@ export default function DoctorActions({ state, card, view, act, upload, ask, bus
       {below.map((key) => primary[key])}
       {state === "clinic" && <Clinic view={view} busy={busy} act={act} />}
       {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} />}
-      {!["clinic", "admitting", "ward", "theatre"].includes(state) && (
-        <p className={doctorOpenItems(view) > 0 ? "note" : "empty small"} role="status">{doctorWaiting(view)}</p>
-      )}
     </>
   );
 }

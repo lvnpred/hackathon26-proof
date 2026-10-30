@@ -183,7 +183,7 @@ export const BEATS = [
   {
     id: "kumar-review", path: "kumar", role: "doctor", seconds: 9, film: true,
     say: "Dr. Rao opens the healing photo beside the reference photo and answers by voice.",
-    clicks: ["Role Doctor", 'Tab "My queue"', 'Link "Open →" in the row with "Healing photo to review"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send answer"', 'Button "No visit needed"'],
+    clicks: ["Role Doctor", 'Tab "My queue"', 'Link "Open →" in the row with "Healing photo to review"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send to R. Kumar"', 'Button "No visit needed"'],
     expect: ["Healing photo", "Reference", "by voice · Prepared demo result", "No visit needed"],
     before: [HEARD],
     files: ["rao-answer.wav"],

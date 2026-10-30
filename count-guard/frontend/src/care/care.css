@@ -94,3 +94,5 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .swab-figures.tone-red .swab-number { color: var(--record); }
 .swab-figures.tone-green .swab-number { color: var(--ready-text, var(--leaf)); }
 button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--action); text-decoration: underline; font: inherit; cursor: pointer; }
+.inbox-card { margin-bottom: 12px; }
+.quote { margin: 4px 0 8px; font-size: 1.05rem; }

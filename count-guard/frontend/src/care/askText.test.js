@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ASK_DOCTOR, NOT_FOUND, answerHow, PHOTO_CLOSED, PHOTO_STATES, answerByLine, botQuestions, doctorQuestions,
-  latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem, doctorOpenItems, doctorWaiting,
+  latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem, doctorOpenItems,
+  inboxItems, inboxHeader, photoDay, sendVerb,
 } from "./askText.js";
+import { H, M } from "./clock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const view = {
@@ -119,12 +121,24 @@ test("doctorOpenItems counts what waits on the doctor", () => {
   assert.equal(doctorOpenItems({}), 0);
 });
 
-test("doctorWaiting is a visible line either way and passes the no-advice scan", () => {
-  const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
-  const nudge = { ask: {}, nudges: [{ to: "doctor", kind: "help_requested" }] };
-  assert.equal(doctorWaiting(nudge), "Waiting for your answer above.");
-  assert.match(doctorWaiting({}), /^Nothing to do from this state/);
-  assert.doesNotMatch(doctorWaiting(nudge), ADVICE);
+const v = { ask: {
+  questions: [{ id: "q2", to: "doctor", at_ms: 20 * M, answer: null }, { id: "q1", to: "doctor", at_ms: 10 * M, answer: null }, { id: "b", to: "bot", at_ms: 0, answer: null }, { id: "q0", to: "doctor", at_ms: 0, answer: { text: "ok" } }],
+  reviews: [{ id: "r1", at_ms: 15 * M, answer: null }] } };
+test("inboxItems: open oldest first, then answered; others see answered only", () => {
+  assert.deepEqual(inboxItems(v, "doctor", 30 * M).map((i) => i.id), ["q1", "r1", "q2", "q0"]);
+  assert.equal(inboxItems(v, "doctor", 30 * M)[0].waited, "20 min");
+  assert.deepEqual(inboxItems(v, "nurse", 30 * M).map((i) => i.id), ["q0"]);
+  assert.deepEqual(inboxItems({}, "doctor", 0), []);
+});
+test("header, verb and photo day", () => {
+  const items = inboxItems(v, "doctor", 30 * M);
+  assert.equal(inboxHeader("R. Kumar, 58 M (synthetic)", items), "From R. Kumar \u00b7 3 waiting");
+  assert.equal(inboxHeader("R. Kumar, 58 M", []), "From R. Kumar");
+  assert.equal(sendVerb("R. Kumar, 58 M (synthetic)"), "Send to R. Kumar");
+  assert.equal(photoDay(3 * 24 * H + 5 * M), "Day 3");
+});
+test("inbox copy has no advice words", () => {
+  for (const s of ["Type or say your answer", "+ add a note", "After surgery", "From R. Kumar \u00b7 2 waiting"]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("answerHow compares trimmed text", () => {

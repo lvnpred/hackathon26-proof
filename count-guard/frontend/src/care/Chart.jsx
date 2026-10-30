@@ -61,7 +61,7 @@ export default function Chart() {
       <AlertBanner view={view} role={ward.role} line={line} busy={ward.busy} act={act} />
       <Fault fault={ward.fault} episodeId={episodeId} only={NUDGE_SCOPES} />
 
-      <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} fault={ward.fault} episodeId={episodeId} />
+      <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} name={patient.name} nowMs={ward.nowMs} busy={ward.busy} act={act} ask={ask} fault={ward.fault} episodeId={episodeId} />
 
       <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
       <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES]} />

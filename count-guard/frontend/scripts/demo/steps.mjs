@@ -136,7 +136,7 @@ export const STEPS = {
     await H.page.locator("tr").filter({ hasText: "Healing photo to review" }).getByRole("link", { name: /Open/ }).click();
     await H.file(/^Your answer to /, "eval/p2/rao-answer.wav");
     await before(H, "kumar-review");
-    await H.click("Send answer");
+    await H.click("Send to R. Kumar");
     await H.click("No visit needed");
   },
   async "kumar-answers"(H) {

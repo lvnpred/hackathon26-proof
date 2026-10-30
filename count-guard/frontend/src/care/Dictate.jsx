@@ -11,7 +11,7 @@ const MIC = (
 
 // One voice-first box: record with the mic, upload audio, or type. A recording is heard first and its text
 // fills the box to check. bare: no card or region of its own (the caller supplies them). onHear(file) -> { text, heard_by } | null. onSend({ text, heard }) -> truthy when done.
-export default function Dictate({ label, field = "What was said", verb, busy, maxLength = 2000, bare = false, onHear, onSend }) {
+export default function Dictate({ label, field = "What was said", verb, placeholder, busy, maxLength = 2000, bare = false, onHear, onSend }) {
   const boxId = useId();
   const [recording, setRecording] = useState(false);
   const [text, setText] = useState("");
@@ -86,7 +86,7 @@ export default function Dictate({ label, field = "What was said", verb, busy, ma
       <div className="field">
         <label htmlFor={boxId}>{field}</label>
         <div className="dictate-box">
-          <textarea id={boxId} rows={3} maxLength={maxLength} value={text} onChange={(e) => setText(e.target.value)} />
+          <textarea id={boxId} rows={3} maxLength={maxLength} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
           <button
             type="button"
             className={`dictate-mic${recording ? " primary" : ""}`}

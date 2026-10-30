@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { H, M, label, skipTargets } from "./clock.js";
+import { H, M, label, skipTargets, hhmm } from "./clock.js";
 
 test("label matches the backend clock", () => {
   assert.equal(label(0), "Day 0 09:00");
@@ -36,3 +36,5 @@ test("Next due leaves out closed tasks and patients whose stay has ended", () =>
   const home = { id: "e2", view: { state: "home", tasks: [task("c", "open", 29 * H)] } };
   assert.deepEqual(skipTargets(26 * H, [closed, home]).map((t) => t.id), ["plus15", "plus60"]);
 });
+
+test("hhmm", () => assert.equal(hhmm(H + 5 * M), "10:05"));

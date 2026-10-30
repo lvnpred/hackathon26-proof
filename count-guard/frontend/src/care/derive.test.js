@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { H, M } from "./clock.js";
-import { queueRows, todos, waitingPills, taskDue, STATE_LABEL } from "./derive.js";
+import { queueRows, todos, waitingPills, taskDue, dueLabel, STATE_LABEL } from "./derive.js";
 
 const nudge = (id, to, at_ms, says = "Observations are overdue.") => ({
   id, key: "obs_overdue", kind: "obs_overdue", to, says, at_ms, when: "Day 1 13:00",
@@ -221,4 +221,13 @@ test("the waiting strip names the doctor for a question", () => {
   const pill = waitingPills([p], 30 * H)[0];
   assert.equal(`${pill.who} → ${pill.what}`, "Dr. A. Rao → Question from the patient");
   assert.equal(pill.lineId, "q1");
+});
+
+test("ward tasks pause in theatre", () => {
+  const task = { status: "open", due_ms: 0 };
+  assert.equal(taskDue(task, 2 * H, "theatre"), "paused");
+  assert.equal(taskDue(task, 2 * H, "ward"), "overdue");
+  assert.equal(taskDue({ status: "done" }, 2 * H, "theatre"), "done");
+  assert.equal(dueLabel("paused"), "paused (in theatre)");
+  assert.equal(dueLabel("due"), "due");
 });

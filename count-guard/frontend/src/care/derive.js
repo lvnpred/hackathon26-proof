@@ -29,14 +29,19 @@ export const STATE_LABEL = {
 
 const GRACE = 30 * M;
 
-// "running" | "overdue" | "due" | "later" | "done" | "closed". Overdue starts 30 min after the due time (v1 grace).
-export function taskDue(task, nowMs) {
+// "running" | "overdue" | "due" | "later" | "done" | "closed" | "paused". Overdue starts 30 min after the due time (v1 grace).
+// An open ward task is "paused" while the patient is in theatre.
+export function taskDue(task, nowMs, state) {
   if (task.status === "closed") return "closed";
   if (task.status === "done") return "done";
   if (task.status === "running") return "running";
+  if (state === "theatre") return "paused";
   if (task.due_ms == null || task.due_ms > nowMs) return "later";
   return task.due_ms + GRACE < nowMs ? "overdue" : "due";
 }
+
+// The word on a task pill. Only "paused" reads differently from its key.
+export const dueLabel = (due) => (due === "paused" ? "paused (in theatre)" : due);
 
 // Lower rank sorts first; rows of equal rank sort by longest waited.
 const RANK = { overdue: 0, nudge: 1, ask: 2, order: 2, due: 3, running: 4, todo: 5 };

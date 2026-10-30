@@ -15,6 +15,9 @@ export function label(ms) {
   return `Day ${day} ${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 }
 
+// "HH:MM" of a demo time.
+export const hhmm = (ms) => label(ms).slice(-5);
+
 const STAY_OVER = ["discharging", "home", "clinic_done"];
 
 // Skip-ahead buttons. "Next due" is the earliest open task still in the future.

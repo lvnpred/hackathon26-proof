@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name
 from app.journey.dictation import open_drafts
-from app.journey.nudges import count_and_patient
+from app.journey.nudges import count_and_patient, in_theatre
 from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
 from app.journey.stories import clock
 from app.journey.video import checks_view, tray_state
@@ -152,7 +152,7 @@ def allowed_moves(events: list[dict]) -> list[dict]:
             needs = ["reason"]
         elif to == "theatre":
             needs = ["procedure"]
-        elif current_state(events) == "theatre":
+        elif in_theatre(events):
             open_count = count_open(events)
             needs = ["surgery ended"] if surgery_status(events) != "ended" else []
             if open_count:

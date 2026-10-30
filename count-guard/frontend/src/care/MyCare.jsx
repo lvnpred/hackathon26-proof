@@ -7,7 +7,7 @@ import StateHeader from "./StateHeader";
 import { findPatient } from "./Patients";
 import Timeline from "./Timeline";
 import VideoChecks from "./VideoChecks";
-import { taskStatusLabel } from "./tasklist";
+import { orderLines, patientTaskStatus } from "./tasklist";
 import Photos from "./Photos";
 import { taskVideoLabel } from "./video";
 
@@ -28,22 +28,26 @@ export default function MyCare() {
           <div key={order.id}>
             <p className="small">Ordered by {order.by}{order.acknowledged_by ? `, acknowledged by ${order.acknowledged_by}` : ""}</p>
             <ul className="task-list">
-              {(view.tasks || []).filter((task) => task.order_id === order.id).map((task) => (
-                <li key={task.id}>
-                  <span>{task.title}</span> <span className="pill info">{taskStatusLabel(task.status)}</span>
-                  {taskVideoLabel(task) && <p className="small muted">{taskVideoLabel(task)}</p>}
-                  {(task.done || []).map((d, index) => {
-                    const proof = proofOf(d, view.photos);
-                    return (
-                      <p className="small muted" key={`${task.id}:${index}`}>
-                        Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}
-                        {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
-                        {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
-                      </p>
-                    );
-                  })}
-                </li>
-              ))}
+              {orderLines(order, view.tasks || []).map(({ key, text, task }) => {
+                if (!task) return <li key={key}><span>{text}</span></li>;
+                const status = patientTaskStatus(task, view.state);
+                return (
+                  <li key={key}>
+                    <span>{task.title}</span>{status && <> <span className="pill info">{status}</span></>}
+                    {taskVideoLabel(task) && <p className="small muted">{taskVideoLabel(task)}</p>}
+                    {(task.done || []).map((d, index) => {
+                      const proof = proofOf(d, view.photos);
+                      return (
+                        <p className="small muted" key={`${task.id}:${index}`}>
+                          Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}
+                          {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
+                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
+                        </p>
+                      );
+                    })}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

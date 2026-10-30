@@ -4,18 +4,15 @@ import { getAudit } from "../journey";
 import { AuditTable } from "../screens/Audit";
 import { useCareWard } from "./CareShell";
 import { alertNow } from "./alerts";
-import { label } from "./clock";
 import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
-import { taskDue } from "./derive";
-import { MATCH_LABEL, proofOf, sourceLabel } from "./drafts";
 import { lensFor } from "./lens";
+import OrderTasks from "./OrderTasks";
 import Photos from "./Photos";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
 import Timeline, { LENSES } from "./Timeline";
 import VideoChecks from "./VideoChecks";
-import { taskVideoLabel } from "./video";
 
 const LENS_CHIPS = [["nurse", "Nurse"], ["doctor", "Doctor"], ["patient", "Patient"], ["everyone", "Everyone (audit)"]];
 
@@ -75,41 +72,7 @@ export default function Chart() {
 
       <VideoChecks view={view} />
 
-      <section className="card">
-        <p className="label">Orders and tasks</p>
-        {orders.length === 0 && <p className="empty small">No orders or tasks yet.</p>}
-        {orders.map((order) => (
-          <div key={order.id} data-order={order.id}>
-            <p className="small">
-              Signed by {order.by} at {label(order.at_ms)} ·{" "}
-              {order.acknowledged_by ? `Acknowledged by ${order.acknowledged_by}` : "Waiting for the nurse"}
-            </p>
-            <ul className="task-list">
-              {(order.items || []).map((item, i) => <li key={i}><span>{item.text}</span></li>)}
-            </ul>
-            <ul className="task-list">
-              {tasks.filter((task) => task.order_id === order.id).map((task) => {
-                const due = taskDue(task, ward.nowMs);
-                return (
-                  <li key={task.id}>
-                    <span>{task.title}</span> <span className={`pill ${due === "overdue" ? "sun" : due === "done" ? "ready" : "info"}`}>{due}</span>
-                    {taskVideoLabel(task) && <span className="small muted"> · {taskVideoLabel(task)}</span>}
-                    {(task.done || []).slice(-1).map((d) => {
-                      const proof = proofOf(d, view.photos);
-                      return (
-                        <span className="small muted" key={d.at_ms}>
-                          {" "}· Done by {d.by}, {proof.voice ? "by voice" : "by tap"}
-                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
-                        </span>
-                      );
-                    })}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </section>
+      <OrderTasks orders={orders} tasks={tasks} photos={view.photos} nowMs={ward.nowMs} state={view.state} />
 
       <p className="label">History</p>
       <div className="row" role="group" aria-label="Lens">

@@ -85,12 +85,19 @@ def _ward_clock(events: list[dict], at_ms: int) -> int:
     return min(at_ms, card["ts_ms"]) if card else at_ms
 
 
+def in_theatre(events: list[dict]) -> bool:
+    """True while the latest patient.state event moved the patient into theatre. Ward tasks pause then."""
+    last = _latest(events, "patient.state")
+    return bool(last) and last["payload"]["to"] == "theatre"
+
+
 def doses_vs_orders(events: list[dict], at_ms: int) -> list[dict]:
     """Overdue against the ordered interval, logged again too soon, or logged without an order."""
     orders = _latest(events, "ward.orders_set")
     if orders is None:
         return []
     at_ms = _ward_clock(events, at_ms)
+    paused = in_theatre(events)  # due times are held in theatre and resume unchanged on return
     given = [e for e in events if e["event_type"] == "dose.given"]
     out = []
     ordered = {order["key"]: order for order in orders["payload"]["doses"]}
@@ -111,7 +118,7 @@ def doses_vs_orders(events: list[dict], at_ms: int) -> list[dict]:
                 out.append(_nudge(f"dose-early:{after['id']}", "dose_logged_early", "nurse", says, orders, after, after["ts_ms"]))
         last = mine[-1] if mine else None
         since = last["ts_ms"] if last else orders["ts_ms"]
-        if at_ms - since > every + GRACE_MS:
+        if not paused and at_ms - since > every + GRACE_MS:
             what = f"The last dose was logged {span(at_ms - since)} ago." if last else f"No dose is logged in the {span(at_ms - since)} since the order."
             says = f"{order['name']} is ordered every {hours(order['every_h'])} h. {what}"
             anchor = last["id"] if last else orders["id"]
@@ -139,7 +146,7 @@ def obs_vs_limits(events: list[dict], at_ms: int) -> list[dict]:
                 out.append(_nudge(f"obs:{obs['id']}:{name}", "obs_past_limit", "nurse", says, orders, obs, obs["ts_ms"]))
     every_h = orders["payload"].get("obs_every_h")
     at_ms = _ward_clock(events, at_ms)
-    if every_h and readings:  # the round starts with the first ward set, not in theatre
+    if every_h and readings and not in_theatre(events):  # the round starts with the first ward set, not in theatre
         last = readings[-1]
         if at_ms - last["ts_ms"] > every_h * HOUR_MS + GRACE_MS:
             says = f"Observations are ordered every {hours(every_h)} h. The last set was logged {span(at_ms - last['ts_ms'])} ago."

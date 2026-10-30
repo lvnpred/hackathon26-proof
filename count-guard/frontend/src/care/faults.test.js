@@ -22,3 +22,8 @@ test("ward-wide faults have no episode", () => {
   assert.equal(faultText(makeFault(null, CLOCK, "m"), null, { only: [CLOCK] }), "m");
   assert.equal(faultText(makeFault(null, CLOCK, "m"), "e4"), "");
 });
+
+test("a fault with a non-string scope never throws and does not match", () => {
+  assert.equal(faultText(makeFault("e4", undefined, "m"), "e4", { only: ["/ask/"] }), "");
+  assert.equal(faultText(makeFault("e4", 7, "m"), "e4"), "");
+});

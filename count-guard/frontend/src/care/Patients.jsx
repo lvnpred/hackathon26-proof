@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
+import LoadError from "./LoadError";
 import { STATE_LABEL } from "./derive";
 
 // The patient the Patient role is looking at; a saved bed the roster lacks falls back to the first patient.
@@ -12,10 +13,11 @@ export function StateBadge({ patient }) {
 }
 
 export default function Patients() {
-  const { patients } = useCareWard();
+  const { patients, loadError } = useCareWard();
   return (
     <>
       <PageLead kicker="Ward" title="Patients" body="Open a chart to see the whole record." />
+      <LoadError patients={patients} error={loadError} />
       <ul className="patient-list">
         {patients.map((patient) => (
           <li key={patient.id}>

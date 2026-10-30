@@ -9,6 +9,7 @@ export const makeFault = (episodeId, scope, message) => ({ episodeId, scope, mes
 // The message when this fault belongs on this episode and action; otherwise "".
 export function faultText(fault, episodeId, { only = null, except = [] } = {}) {
   if (!fault || fault.episodeId !== episodeId) return "";
+  if (typeof fault.scope !== "string") return "";
   const starts = (prefix) => fault.scope.startsWith(prefix);
   if (only && !only.some(starts)) return "";
   if (except.some(starts)) return "";

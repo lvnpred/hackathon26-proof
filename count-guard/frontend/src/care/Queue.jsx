@@ -4,6 +4,7 @@ import { PageLead } from "../App";
 import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
 import Fault from "./Fault";
+import LoadError from "./LoadError";
 import { NUDGE_SCOPES, STATUS } from "./faults";
 import { queueRows } from "./derive";
 import { StateBadge } from "./Patients";
@@ -45,6 +46,7 @@ export default function Queue() {
   return (
     <>
       <PageLead kicker="Ward" title="My queue" body="What is waiting on you, longest wait first." />
+      <LoadError patients={patients} error={ward.loadError} />
       {role === "doctor" && (
         <div className="row" role="group" aria-label="My status">
           <span className="label">My status</span>

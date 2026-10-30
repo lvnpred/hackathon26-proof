@@ -311,6 +311,10 @@ The prepared results key on the file name stem. Keep these names when you replac
 - Offline, a check with several photos follows the first file. Upload the intended one first.
 - The prepared results are the JSON files in `count-guard/backend/app/journey/prepared/`, named by file stem (for example `tray-hernia.json`, `saline-setup.json`, `meds-iyer.json`).
 
+### Re-record the boxes (once)
+
+Export `MODEL_API_KEY` in your shell, then run `.venv/bin/python eval/record_fixtures.py --spend` from `count-guard/`. It prints the request count (about 41) and the `make cost` bill for the clips first, and refuses without `--spend`. A fixture whose live counts differ is left alone; the run writes `<stem>.live.json` beside it and exits 2. The run also prints how many regions SAM found per reader concept (`READER_CONCEPTS` in `journey/regions.py`). `swabs-closing` is skipped until its clip exists. Until you run it, the viewer labels results Sample.
+
 ### Keyed vs offline
 
 - Offline (the default, and what `make demo-check` runs): no model key, labels read `Rules (no model)` and `Prepared demo result`, no credits spent.

@@ -26,7 +26,7 @@ export default function MyCare() {
         {(view.order_list || []).length === 0 && <p className="empty small">No orders yet.</p>}
         {(view.order_list || []).map((order) => (
           <div key={order.id}>
-            <p className="small">Ordered by {order.by} · {orderStatus(order, view.state)}</p>
+            <p className="small">Ordered by {order.by} · {orderStatus(order, view.state, true)}</p>
             <ul className="task-list">
               {orderLines(order, view.tasks || []).map(({ key, text, task }) => {
                 if (!task) return <li key={key}><span>{text}</span></li>;

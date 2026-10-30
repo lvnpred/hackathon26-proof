@@ -148,7 +148,7 @@ def test_no_advice_words_in_now_next(tmp_path):
     seen.append(_move(client, eid, "home", checklist=DISCHARGE_CHECKS).json())
     for view in seen:
         n = view["now_next"]
-        assert not ADVICE.search(" ".join((n["now"], n["you_now"], n["next"])))
+        assert not ADVICE.search(" ".join((n["now"], n["you_now"], n["next"], n["you_next"])))
     assert len(seen) == 5
 
 
@@ -318,3 +318,17 @@ def test_seed_admission_reads_as_admitted_the_day_before_to_you(tmp_path):
     }
     assert _latest_happening([event], you=True) == "You were admitted to the ward the day before."
     assert _latest_happening([event]) == "Dr. A. Rao (synthetic) admitted the patient to the ward the day before."
+
+
+def test_patient_next_speaks_to_the_patient(tmp_path):
+    client, eid = _new(tmp_path)
+    nn = _view(client, eid)["now_next"]
+    assert nn["you_next"] == "The doctor admits you or closes the visit."
+    assert nn["next"] == "Doctor admits the patient or closes the visit."
+    from app.journey.states import NEXT, NEXT_YOU
+
+    assert NEXT_YOU.keys() == NEXT.keys()
+    assert NEXT_YOU["home"] == "You are home. No further steps."
+    assert not any(ADVICE.search(text) for text in NEXT_YOU.values())
+    for text in NEXT_YOU.values():
+        assert "the patient" not in text.lower()

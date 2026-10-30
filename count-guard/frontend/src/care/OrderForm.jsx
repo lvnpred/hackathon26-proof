@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { draftChanged, itemsToRows, sourceLabel } from "./drafts";
+import { draftChanged, heardLine, itemsToRows, sourceLabel } from "./drafts";
 import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 
 // Rows of orders; Sign orders posts the filled rows through onSign(items, draftId), which resolves to the new view or null.
@@ -28,8 +28,7 @@ export default function OrderForm({ busy, onSign, draft }) {
       {draftId && (
         <p className="note small" role="status">
           Draft from dictation · {sourceLabel(draft?.source)}. Check each row, then sign.
-          {draft?.transcript && <> Heard: “{draft.transcript}”</>}
-          {draft?.heard_by && <> Heard by: {sourceLabel(draft.heard_by)}</>}
+          {draft?.transcript && <> {heardLine(draft)}</>}
         </p>
       )}
       <div className="row">

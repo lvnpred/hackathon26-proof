@@ -271,5 +271,28 @@ def test_route_signed_dose_orders_match_without_a_prescription(tmp_path):
     _iyer_home(client, das)
     got = _post(client, das).json()["ask"]["medicines"][-1]
     assert got["match"] == "ok" and len(got["rows"]) == 4
-    assert got["rows"][0]["why"] == "On your signed orders from Dr. A. Rao (synthetic): Metoprolol 25 mg, every 8 h."
-    assert got["why"] == "4 of 4 medicines in the photo are on your signed orders."
+    assert got["rows"][0]["why"] == "Metoprolol 25 mg, every 8 h: given on the ward (signed order)."
+    assert got["why"] == "4 of 4 medicines in the photo are on your prescription or ward orders."
+
+
+def test_a_home_patient_reads_ward_dose_orders_as_ward_orders():
+    doses = dose_rows(DOSE)
+    got = match_medicines(_strips(("Paracetamol", "1 g")), None, doses, ward=True)
+    assert got["rows"][0]["why"] == "Paracetamol 1 g, every 6 h: given on the ward (signed order)."
+    assert "signed orders from" not in got["rows"][0]["why"]
+    miss = match_medicines(_strips(("Cetirizine", "10 mg")), None, doses, ward=True)
+    assert miss["rows"][0]["why"] == "Cetirizine 10 mg is not on your prescription or ward orders. Ask Dr. Rao about it."
+    both = match_medicines(_strips(("Cetirizine", "10 mg")), _rx(), doses, ward=True)
+    assert both["rows"][0]["why"] == "Cetirizine 10 mg is not on your prescription or ward orders. Ask Dr. Rao about it."
+    assert both["why"].startswith("0 of 1 medicines in the photo are on your prescription or ward orders.")
+    differs = match_medicines(_strips(("Paracetamol", "500 mg")), None, doses, ward=True)
+    assert differs["rows"][0]["why"] == "The strip reads Paracetamol 500 mg. The ward order says Paracetamol 1 g: given on the ward (signed order)."
+    # a prescription row still reads as the prescription, and without ward the old wording stands
+    assert match_medicines(_strips(("Paracetamol", "650 mg")), _rx(), doses, ward=True)["rows"][0]["why"].startswith("On your prescription")
+    assert match_medicines(_strips(("Paracetamol", "1 g")), None, doses)["rows"][0]["why"].startswith("On your signed orders from")
+    for text in (got["rows"][0]["why"], miss["rows"][0]["why"], both["why"], differs["rows"][0]["why"]):
+        assert not ADVICE.search(text), text
+
+
+def test_no_medicines_says_signed_medicine_order_not_dose_order():
+    assert "signed medicine order" in NO_MEDICINES and "dose order" not in NO_MEDICINES

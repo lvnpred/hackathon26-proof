@@ -70,3 +70,15 @@ def test_timeline_items_carry_both_texts():
 def test_ward_orders_and_rx_counts_are_singular():
     assert plain(ev("ward.orders_set", by="D", doses=[{}], obs_every_h=4)) == "Ward orders from D: 1 dose, observations every 4 h."
     assert plain(ev("rx.ordered", by="D", rows=[{}], source="demo")) == "Prescription from D: 1 medicine (demo)."
+
+
+def test_patient_timeline_hides_staff_drafts_and_the_duplicate_card_line():
+    draft = ev("order.drafted", by="D", items=[{}])
+    summary = ev("discharge.drafted", by="D")
+    card = ev("discharge.card", by="D")
+    for e in (draft, summary):
+        assert patient_line(e, {}) == "" and "dictated" in plain(e)
+    assert patient_line(card, {}) == plain(card)  # no signed line yet: the card line stays
+    events = [summary, ev("discharge.signed", "s1", 1, by="D"), ev("discharge.card", "c1", 2, by="D")]
+    items = {i["id"]: i["patient"] for i in timeline_items(events)}
+    assert items["e1"] == "" and items["c1"] == "" and items["s1"] == "The doctor signed your discharge."

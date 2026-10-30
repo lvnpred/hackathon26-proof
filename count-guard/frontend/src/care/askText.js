@@ -23,6 +23,10 @@ export const doctorOpenItems = (view) =>
   + (view?.ask?.reviews || []).filter((r) => !r.answer).length
   + (view?.nudges || []).filter((n) => n.to === "doctor").length;
 
+// What the doctor's action area says when nothing is theirs to start but something waits for an answer.
+export const doctorWaiting = (view) =>
+  doctorOpenItems(view) > 0 ? "Waiting for your answer above." : "Nothing to do from this state. The chart below is the record.";
+
 // Who answered, and how: the bot names its source; the doctor says typed or by voice.
 export function answerByLine(answer) {
   if (answer.source === "doctor") return `${answer.by}, ${answer.via === "voice" ? "by voice" : "typed"}`;
@@ -45,7 +49,7 @@ export function questionProblem(text) {
 
 // How an answer was given: "voice" only while the text is exactly what was heard.
 export function answerHow(heardText, currentText, heardBy) {
-  if (heardText && currentText === heardText) return { via: "voice", heard_by: heardBy };
+  if (heardText && (currentText || "").trim() === heardText.trim()) return { via: "voice", heard_by: heardBy };
   return { via: "text", heard_by: "" };
 }
 

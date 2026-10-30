@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
-import { answerHow, doctorOpenItems } from "./askText";
+import { answerHow, doctorOpenItems, doctorWaiting } from "./askText";
 import ActionBar from "./ActionBar";
 import { actionsFor, panelOpen, toggled } from "./actions";
 import Dictate from "./Dictate";
-import { draftChanged, sectionsToSummary, sourceLabel } from "./drafts";
+import { draftChanged, heardLine, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
 import { theatreSteps } from "./theatre";
 import { TrayPreview } from "./VideoCheck";
@@ -122,8 +122,7 @@ function Ward({ view, busy, act, upload, ask, showDischarge }) {
             {summaryDraftId && (
               <p className="note small" role="status">
                 Draft from dictation · {sourceLabel(draft?.source)}. Check the summary, then sign.
-                {draft?.transcript && <> Heard: “{draft.transcript}”</>}
-                {draft?.heard_by && <> Heard by: {sourceLabel(draft.heard_by)}</>}
+                {draft?.transcript && <> {heardLine(draft)}</>}
               </p>
             )}
             <label className="field">
@@ -237,6 +236,5 @@ export default function DoctorActions({ state, view, act, upload, ask, busy }) {
   if (state === "theatre") {
     return <Theatre view={view} busy={busy} act={act} />;
   }
-  if (doctorOpenItems(view) > 0) return null;
-  return <p className="empty small">Nothing to do from this state. The chart below is the record.</p>;
+  return <p className={doctorOpenItems(view) > 0 ? "note" : "empty small"} role="status">{doctorWaiting(view)}</p>;
 }

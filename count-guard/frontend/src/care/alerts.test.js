@@ -67,3 +67,14 @@ test("folded groups follow the order nurse, doctor, patient", () => {
   assert.deepEqual(stripPills(pills, undefined, "nurse").others.map((g) => g.role), ["doctor", "patient"]);
   assert.deepEqual(stripPills(pills, undefined, "patient").others.map((g) => g.role), ["nurse", "doctor"]);
 });
+
+test("stripPills keeps a pill with an unknown role, in a group named by that role", () => {
+  const pills = [pill("e4", "R. Kumar", "Lab", "z", "pharmacist"), pill("e4", "R. Kumar", "Nurse", "y", "nurse"), pill("e4", "R. Kumar", "Lab", "w", "pharmacist")];
+  const out = stripPills(pills, "e4", "nurse");
+  assert.deepEqual(out.mine.map((p) => p.text), ["Nurse → y"]);
+  assert.deepEqual(out.others.map((g) => g.text), ["+2 for pharmacist"]);
+  assert.equal(out.others[0].pills.length, 2);
+  const viewer = stripPills(pills, "e4", "pharmacist");
+  assert.equal(viewer.mine.length, 2);
+  assert.deepEqual(viewer.others.map((g) => g.text), ["+1 for nurse"]);
+});

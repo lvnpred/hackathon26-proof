@@ -222,28 +222,50 @@ def _latest_happening(events: list[dict], you: bool = False) -> str | None:
     return best[1] if best else None
 
 
-def now_next(events: list[dict]) -> dict:
+NEXT_YOU = {
+    "clinic": "The doctor admits you or closes the visit.",
+    "clinic_done": "Your visit is closed. No further steps.",
+    "admitting": "The nurse completes your admission.",
+    "ward": "The doctor sends you to theatre or signs your discharge.",
+    "theatre": "The nurse records the surgery and the count, then returns you to the ward.",
+    "discharging": "The nurse completes your discharge.",
+    "home": "You are home. No further steps.",
+}
+
+
+def _next_step(events: list[dict], state: str, you: bool = False) -> str:
+    """The next step in staff words, or addressed to the patient with `you`."""
     from app.journey.tasks import orders_list  # tasks imports this module
 
-    state = current_state(events)
-    now = _latest_happening(events) or "The patient is in clinic."
-    you_now = _latest_happening(events, you=True) or "You are in clinic."
-    next_ = NEXT[state]
+    next_ = (NEXT_YOU if you else NEXT)[state]
+    own, nurse = ("your", "The nurse") if you else ("the", "Nurse")
     fresh = [o for o in orders_list(events) if not o["acknowledged_by"]]
     if fresh and state in ("ward", "admitting"):
-        ack = f"Nurse acknowledges the new orders from {fresh[-1]['by']}."
-        next_ = ack if state == "ward" else f"{ack[:-1]}, then completes the admission."
+        ack = f"{nurse} acknowledges the new orders from {fresh[-1]['by']}."
+        next_ = ack if state == "ward" else f"{ack[:-1]}, then completes {own} admission."
     if state == "theatre" and surgery_status(events) == "none":
         tray = tray_state(events)
         if tray["planned"] and not tray["latest"]:
-            next_ = "Nurse checks the tray by video, then records the surgery and the count."
+            next_ = f"{nurse} checks the tray by video, then records the surgery and the count."
     if state in PHOTO_STATES:
         waiting = open_for_doctor(events)
         if waiting["reviews"]:
-            next_ = "The doctor reviews the healing photo."
+            next_ = f"The doctor reviews {own} healing photo."
         elif waiting["questions"]:
-            next_ = "The doctor answers the question."
-    return {"now": now, "next": next_, "you_now": you_now}
+            next_ = f"The doctor answers {own} question."
+    return next_
+
+
+def now_next(events: list[dict]) -> dict:
+    state = current_state(events)
+    now = _latest_happening(events) or "The patient is in clinic."
+    you_now = _latest_happening(events, you=True) or "You are in clinic."
+    return {
+        "now": now,
+        "next": _next_step(events, state),
+        "you_now": you_now,
+        "you_next": _next_step(events, state, you=True),
+    }
 
 
 def flow_view(events: list[dict]) -> dict:

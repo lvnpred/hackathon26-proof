@@ -10,8 +10,8 @@ const MIC = (
 );
 
 // One voice-first box: record with the mic, upload audio, or type. A recording is heard first and its text
-// fills the box to check. onHear(file) -> { text, heard_by } | null. onSend({ text, heard }) -> truthy when done.
-export default function Dictate({ label, field = "What was said", verb, busy, maxLength = 2000, onHear, onSend }) {
+// fills the box to check. bare: no card or region of its own (the caller supplies them). onHear(file) -> { text, heard_by } | null. onSend({ text, heard }) -> truthy when done.
+export default function Dictate({ label, field = "What was said", verb, busy, maxLength = 2000, bare = false, onHear, onSend }) {
   const boxId = useId();
   const [recording, setRecording] = useState(false);
   const [text, setText] = useState("");
@@ -78,8 +78,10 @@ export default function Dictate({ label, field = "What was said", verb, busy, ma
     }
   }
 
+  const Wrap = bare ? "div" : "section";
+  const wrapProps = bare ? { className: "stack" } : { className: "card", "aria-label": label };
   return (
-    <section className="card" aria-label={label}>
+    <Wrap {...wrapProps}>
       <p className="label">{label}</p>
       <div className="field">
         <label htmlFor={boxId}>{field}</label>
@@ -98,11 +100,11 @@ export default function Dictate({ label, field = "What was said", verb, busy, ma
       </div>
       {message && <p className="note small" role="status">{message}</p>}
       {heard && heard.text === text && <p className="small muted">Heard by: {sourceLabel(heard.by)}</p>}
-      <label className="dictate-upload">
+      <label className={`dictate-upload${busy || recording ? " disabled" : ""}`}>
         Upload audio
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />
       </label>
       <button type="button" className="primary" disabled={busy || recording || !text.trim()} onClick={send}>{verb}</button>
-    </section>
+    </Wrap>
   );
 }

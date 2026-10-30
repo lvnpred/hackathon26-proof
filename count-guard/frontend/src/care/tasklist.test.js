@@ -93,7 +93,8 @@ test("patientTaskStatus words pass the no-advice scan", () => {
 test("orderStatus says what happens to a clinic order", () => {
   const o = { acknowledged_by: null };
   assert.equal(orderStatus(o, "clinic"), "Starts when the patient is admitted");
-  assert.equal(orderStatus(o, "clinic_done"), "Not started: the visit was closed.");
+  assert.equal(orderStatus(o, "clinic_done"), "Not started: the visit was closed");
+  assert.equal(orderStatus(o, "clinic", true), "Starts when you are admitted");
   assert.equal(orderStatus(o, "ward"), "Waiting for the nurse");
   assert.equal(orderStatus({ acknowledged_by: "Nurse Meena" }, "clinic_done"), "Acknowledged by Nurse Meena");
 });

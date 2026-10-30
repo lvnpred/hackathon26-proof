@@ -12,12 +12,14 @@ const ROLE_ORDER = ["nurse", "doctor", "patient"];
 // On a chart keep that patient's pills; elsewhere each pill leads with the patient's surname.
 // On a chart the banner owns every alert (a pill with nudgeKind), so the strip drops those.
 // The role's own pills come first (mine); the rest fold into one group per other role.
+// A pill with a role we do not know still shows, in a group named by that role.
 export function stripPills(pills, episodeId, role) {
   const arrow = (p) => `${p.who} → ${p.what}`;
   const shown = episodeId
     ? pills.filter((p) => p.episodeId === episodeId && !p.nudgeKind).map((p) => ({ ...p, text: arrow(p) }))
     : pills.map((p) => ({ ...p, text: p.name ? `${surname(p.name)} · ${arrow(p)}` : arrow(p) }));
-  const others = ROLE_ORDER.filter((r) => r !== role)
+  const unknown = [...new Set(shown.map((p) => p.role))].filter((r) => !ROLE_ORDER.includes(r));
+  const others = [...ROLE_ORDER, ...unknown].filter((r) => r !== role)
     .map((r) => ({ role: r, pills: shown.filter((p) => p.role === r) }))
     .filter((g) => g.pills.length)
     .map((g) => ({ ...g, text: `+${g.pills.length} for ${g.role}` }));

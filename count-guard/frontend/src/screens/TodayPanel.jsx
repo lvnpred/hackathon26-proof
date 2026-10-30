@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { parseStrips } from "../journey";
+import Fault from "../care/Fault";
 import { CheckIn, MyCard } from "./PatientCard";
 
 const SLOTS = [
@@ -52,7 +53,7 @@ function Medicines({ schedule }) {
 }
 
 // The patient's Today cards. upload(path, file) resolves to the new view, or null.
-export default function TodayPanel({ view, busy, act, upload }) {
+export default function TodayPanel({ view, busy, act, upload, fault, episodeId }) {
   const [added, setIcs] = useState("");
   const ics = added || view?.ics_url || "";
   const [lines, setLines] = useState("amlodipine 10 mg");
@@ -95,6 +96,7 @@ export default function TodayPanel({ view, busy, act, upload }) {
               </div>
             </div>
           ))}
+          <Fault fault={fault} episodeId={episodeId} only={["/nudges/"]} />
         </section>
       )}
 
@@ -103,6 +105,7 @@ export default function TodayPanel({ view, busy, act, upload }) {
         <Medicines schedule={view?.schedule || []} />
         <button onClick={reminders} disabled={!ready || !view?.rx}>Add reminders to my calendar</button>
         {ics && <a href={ics} download>Download the calendar file</a>}
+        <Fault fault={fault} episodeId={episodeId} only={["/reminders"]} />
       </section>
 
       <section className="card">
@@ -120,6 +123,7 @@ export default function TodayPanel({ view, busy, act, upload }) {
           <input type="file" accept="image/*" capture="environment" onChange={photo} disabled={!ready} />
         </label>
         {photoNote && <p className="note" role="status">{photoNote}</p>}
+        <Fault fault={fault} episodeId={episodeId} only={["/strips"]} />
         {strips.length > 0 && (
           <div className="rows">
             {strips.map((strip, index) => (
@@ -135,8 +139,8 @@ export default function TodayPanel({ view, busy, act, upload }) {
         )}
       </section>
 
-      <MyCard card={view?.card} busy={!ready} act={act} />
-      <CheckIn card={view?.card} busy={!ready} act={act} />
+      <MyCard card={view?.card} busy={!ready} act={act} fault={fault} episodeId={episodeId} />
+      <CheckIn card={view?.card} busy={!ready} act={act} fault={fault} episodeId={episodeId} />
     </>
   );
 }

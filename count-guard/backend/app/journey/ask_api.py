@@ -27,7 +27,8 @@ ANSWERED = "This question is answered already."
 REVIEWED = "This photo is reviewed already."
 PHOTO_REFUSED = "A healing photo is sent once the visit is closed or you are home."
 MEDICINES_REFUSED = "A medicines photo is checked once the visit is closed or you are home."
-NO_MEDICINES = "There is no prescription or signed dose order on your record yet, so the medicines cannot be matched."
+NO_MEDICINES = "There is no prescription or signed medicine order on your record yet, so the medicines cannot be matched."
+WARD_VIEW = ("discharging", "home")  # states in which a dose order is a ward order, not a home one
 MEDICINES_LIVE = True  # D3 second cut: False makes the medicine photo always use the prepared result
 
 
@@ -175,5 +176,6 @@ def ask_medicines(
     ts, by = _at(store, episode_id, at_ms), episode["label"]
     photo = write_photo(settings, store, episode_id, raw, kind, {"purpose": "medicines", "by": by}, ts)
     read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
-    matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses)
+    matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses,
+                             ward=states.current_state(events) in WARD_VIEW)
     return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "by": by})], ts)

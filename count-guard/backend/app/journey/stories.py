@@ -183,10 +183,18 @@ PATIENT_STATE = {"admitting": "You were admitted.", "theatre": "You went to thea
                  "discharging": "You are getting ready to go home.", "home": "You went home."}
 
 
-def patient_line(event: dict, tasks: dict[str, dict]) -> str:
-    """The patient's wording of an event; events without one read as `plain`."""
+STAFF_ONLY = ("order.drafted", "discharge.drafted")
+
+
+def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> str:
+    """The patient's wording of an event; events without one read as `plain`.
+
+    A draft is staff work, and the card line repeats the signed line once the discharge is signed:
+    both read "" and the timeline hides an empty line from the patient."""
     kind = event["event_type"]
     p = event.get("payload") or {}
+    if kind in STAFF_ONLY or (kind == "discharge.card" and signed):
+        return ""
     if kind == "patient.state":
         to, frm = p.get("to"), p.get("from")
         if frm is None:
@@ -218,7 +226,8 @@ def patient_line(event: dict, tasks: dict[str, dict]) -> str:
 
 def timeline_items(events: list[dict]) -> list[dict]:
     tasks = {e["id"]: e.get("payload") or {} for e in events if e["event_type"] == "task.created"}
-    return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks)}
+    signed = any(e["event_type"] == "discharge.signed" for e in events)
+    return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed)}
             for e in events]
 
 

@@ -37,10 +37,11 @@ def _matched(read: str, differs: bool, medicine: str, schedule: str, why: str) -
     }
 
 
-def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = ()) -> dict:
+def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = (), ward: bool = False) -> dict:
     """{"rows", "match", "why"}: one row per strip in read order. A match is key equality, never a substring.
 
-    A prescription row wins over a dose row with the same key.
+    A prescription row wins over a dose row with the same key. With `ward` (the patient is leaving or home),
+    a dose order is named for what it is: a medicine given on the ward, not a home instruction.
     """
     rx = rx or {}
     rows_by_key = {row["key"]: row for row in rx.get("rows") or []}
@@ -52,6 +53,8 @@ def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = ())
         (True, False): f"your prescription from {rx.get('by')}",
     }.get(sources, "your signed orders")
     noun = {(True, True): "your prescription or signed orders", (True, False): "your prescription"}.get(sources, "your signed orders")
+    if ward and sources[1]:
+        where = noun = "your prescription or ward orders"
     out = []
     for strip in strips:
         read = f"{strip['name_as_read']} {strip['strength']}".strip()
@@ -69,10 +72,16 @@ def match_medicines(strips: list[dict], rx: dict | None, doses: list[dict] = ())
         elif key in dose_by_key:
             row = dose_by_key[key]
             differs = bool(strip["strength"] and row["strength"] and _norm(strip["strength"]) != _norm(row["strength"]))
-            why = (
-                f"The strip reads {read}. Your signed orders say {row['medicine']}."
-                if differs else f"On your signed orders from {row['by']}: {row['medicine']}, {row['schedule']}."
-            )
+            if ward:
+                why = (
+                    f"The strip reads {read}. The ward order says {row['medicine']}: given on the ward (signed order)."
+                    if differs else f"{row['medicine']}, {row['schedule']}: given on the ward (signed order)."
+                )
+            else:
+                why = (
+                    f"The strip reads {read}. Your signed orders say {row['medicine']}."
+                    if differs else f"On your signed orders from {row['by']}: {row['medicine']}, {row['schedule']}."
+                )
             out.append(_matched(read, differs, row["medicine"], row["schedule"], why))
         else:
             out.append(

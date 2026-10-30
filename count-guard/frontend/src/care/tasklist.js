@@ -70,10 +70,10 @@ export function orderLines(order, tasks) {
 }
 
 // What happens to an order: its acknowledgement, or what the visit state means for it.
-export function orderStatus(order, state) {
+export function orderStatus(order, state, you = false) {
   if (order.acknowledged_by) return `Acknowledged by ${order.acknowledged_by}`;
-  if (state === "clinic") return "Starts when the patient is admitted";
-  if (state === "clinic_done") return "Not started: the visit was closed.";
+  if (state === "clinic") return you ? "Starts when you are admitted" : "Starts when the patient is admitted";
+  if (state === "clinic_done") return "Not started: the visit was closed";
   return "Waiting for the nurse";
 }
 

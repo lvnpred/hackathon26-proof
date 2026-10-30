@@ -8,7 +8,7 @@ import LoadError from "./LoadError";
 import { NUDGE_SCOPES, STATUS } from "./faults";
 import { queueRows } from "./derive";
 import { StateBadge } from "./Patients";
-import { opensRow } from "./rows";
+import { opensOnKey, opensRow } from "./rows";
 import { STATUS_CHOICES } from "./status";
 
 function QueueRow({ row, ward, open, toggle }) {
@@ -22,14 +22,15 @@ function QueueRow({ row, ward, open, toggle }) {
         className="row-link"
         tabIndex={0}
         onClick={(e) => opensRow(e.target) && navigate(to)}
-        onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && navigate(to)}
+        onKeyDown={(e) => opensOnKey(e) && navigate(to)}
+        aria-label={`Open chart: Bed ${row.bed}, ${row.name}`}
       >
         <td className="num">Bed {row.bed}</td>
         <td className="left">{row.name}</td>
         <td>{row.says}</td>
         <td>{row.waited}</td>
         <td>
-          {DEMO && nudge && <button onClick={toggle}>{open ? "Close" : "Answer"}</button>} <Link to={to}>Open →</Link>
+          {DEMO && nudge && <button onClick={toggle}>{open ? "Close" : "Answer"}</button>} <Link to={to} tabIndex={-1}>Open →</Link>
         </td>
       </tr>
       {open && nudge && (

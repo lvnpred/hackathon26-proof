@@ -1,7 +1,8 @@
 import { useState } from "react";
+import Fault from "../care/Fault";
 
 // The signed discharge card in plain words, plus the "Need help" button.
-export function MyCard({ card, busy, act }) {
+export function MyCard({ card, busy, act, fault, episodeId }) {
   const [says, setSays] = useState("");
   const [sent, setSent] = useState("");
 
@@ -43,11 +44,12 @@ export function MyCard({ card, busy, act }) {
         Need help
       </button>
       {sent && <p className="note" role="status">{sent}</p>}
+      <Fault fault={fault} episodeId={episodeId} only={["/help"]} />
     </section>
   );
 }
 
-export function CheckIn({ card, busy, act }) {
+export function CheckIn({ card, busy, act, fault, episodeId }) {
   const [day, setDay] = useState("1");
   const [feels, setFeels] = useState("");
   const [note, setNote] = useState("");
@@ -105,6 +107,7 @@ export function CheckIn({ card, busy, act }) {
         Send check-in
       </button>
       {saved && <p className="note" role="status">{saved}</p>}
+      <Fault fault={fault} episodeId={episodeId} only={["/checkin"]} />
     </section>
   );
 }

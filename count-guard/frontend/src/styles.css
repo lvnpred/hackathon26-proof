@@ -144,9 +144,10 @@ a { color: var(--sky); font-weight: 600; text-underline-offset: 3px; }
   font-size: 13px;
   line-height: 18px;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 100%;
 }
-.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-muted); }
+.pill::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-muted); }
 .pill.ready { background: var(--leaf-soft); color: var(--leaf); }
 .pill.ready::before { background: var(--leaf); }
 .pill.record { background: var(--record-soft); color: var(--record); }
@@ -236,6 +237,7 @@ button:hover, .button:hover { background: var(--surface-sunk); }
 button.primary, .button.primary { background: var(--action); border-color: var(--action); color: var(--on-action); }
 button.primary:hover, .button.primary:hover { opacity: 0.9; background: var(--action); }
 button.quiet { background: transparent; border-color: transparent; color: var(--sky); text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; align-self: flex-start; }
+button.quiet:disabled { border-color: transparent; }
 button.quiet:hover { background: var(--sky-soft); }
 button.block { width: 100%; }
 button:disabled, button.primary:disabled, .button.primary:disabled,
@@ -253,6 +255,7 @@ button:disabled:hover, button.primary:disabled:hover { background: transparent; 
   color: var(--on-sun);
   box-shadow: 0 0 0 8px var(--sun-soft);
 }
+.mic:disabled, .dictate-mic:disabled { background: var(--surface-sunk); border: 1px solid var(--line); box-shadow: none; }
 .mic:hover { background: var(--sun); opacity: 0.92; }
 .mic span { font-size: 12px; font-weight: 800; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-muted); }

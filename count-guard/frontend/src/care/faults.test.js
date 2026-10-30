@@ -27,3 +27,12 @@ test("a fault with a non-string scope never throws and does not match", () => {
   assert.equal(faultText(makeFault("e4", undefined, "m"), "e4", { only: ["/ask/"] }), "");
   assert.equal(faultText(makeFault("e4", 7, "m"), "e4"), "");
 });
+
+test("a strip photo failure shows in the strips card only", () => {
+  const photo = makeFault("e4", "/strips/photo", "No Meta Model API key.");
+  assert.equal(faultText(photo, "e4", { only: ["/strips"] }), "No Meta Model API key.");
+  assert.equal(faultText(photo, "e4", { only: ["/reminders"] }), "");
+  assert.equal(faultText(photo, "e4", { only: ["/help"] }), "");
+  assert.equal(faultText(photo, "e4", { only: ["/checkin"] }), "");
+  assert.equal(faultText(photo, "e4", { only: ["/nudges/"] }), "");
+});

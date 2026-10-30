@@ -29,7 +29,9 @@ function QuestionItem({ q, role, busy, act, ask }) {
       <p><b>{q.by}</b> asked at {label(q.at_ms)}: {questionText(role, q)}</p>
       {q.answer && <Answered answer={q.answer} text={q.answer.text} />}
       {!q.answer && role === "doctor" && (
-        <Dictate label="Your answer" field="Your answer (check it before sending)" verb="Send answer" maxLength={1000} busy={busy} onHear={hear} onSend={send} />
+        <section aria-label={`Your answer to ${q.by} at ${label(q.at_ms)}`}>
+          <Dictate bare label="Your answer" field="Your answer (check it before sending)" verb="Send answer" maxLength={1000} busy={busy} onHear={hear} onSend={send} />
+        </section>
       )}
     </div>
   );

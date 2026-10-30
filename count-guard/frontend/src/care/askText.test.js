@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ASK_DOCTOR, NOT_FOUND, PHOTO_CLOSED, PHOTO_STATES, answerByLine, botQuestions, doctorQuestions,
-  latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem, doctorOpenItems,
+  ASK_DOCTOR, NOT_FOUND, answerHow, PHOTO_CLOSED, PHOTO_STATES, answerByLine, botQuestions, doctorQuestions,
+  latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem, doctorOpenItems, doctorWaiting,
 } from "./askText.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -117,4 +117,17 @@ test("doctorOpenItems counts what waits on the doctor", () => {
     reviews: [{ answer: null }] }, nudges: [{ to: "doctor" }, { to: "nurse" }] };
   assert.equal(doctorOpenItems(v), 3);
   assert.equal(doctorOpenItems({}), 0);
+});
+
+test("doctorWaiting is a visible line either way and passes the no-advice scan", () => {
+  const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
+  const nudge = { ask: {}, nudges: [{ to: "doctor", kind: "help_requested" }] };
+  assert.equal(doctorWaiting(nudge), "Waiting for your answer above.");
+  assert.match(doctorWaiting({}), /^Nothing to do from this state/);
+  assert.doesNotMatch(doctorWaiting(nudge), ADVICE);
+});
+
+test("answerHow compares trimmed text", () => {
+  assert.deepEqual(answerHow(" the bp is fine \n", "the bp is fine", "Dr. A. Rao (synthetic)"), { via: "voice", heard_by: "Dr. A. Rao (synthetic)" });
+  assert.deepEqual(answerHow("the bp is fine", "the bp is fine today", "x"), { via: "text", heard_by: "" });
 });

@@ -1,9 +1,9 @@
 import { STATE_LABEL } from "./derive";
 
 // The patient's one state, with what is happening now and what comes next.
-// `you` makes NOW address the patient (the patient pages).
+// `you` makes NOW and NEXT address the patient (the patient pages).
 export default function StateHeader({ patient, view, alert, you = false }) {
-  const { now, next, you_now: youNow } = view.now_next || {};
+  const { now, next, you_now: youNow, you_next: youNext } = view.now_next || {};
   return (
     <header className="page-head state-head">
       <p className="label">Bed {patient.bed}</p>
@@ -13,7 +13,7 @@ export default function StateHeader({ patient, view, alert, you = false }) {
         <dt>Now</dt>
         <dd>{alert || (you ? youNow : now) || "Nothing recorded"}</dd>
         <dt>Next</dt>
-        <dd>{next || "Nothing queued"}</dd>
+        <dd>{(you ? youNext || next : next) || "Nothing queued"}</dd>
       </dl>
     </header>
   );

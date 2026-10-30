@@ -41,6 +41,7 @@ export const STEPS = {
     await H.role("Doctor");
     await H.chart(KUMAR);
     await H.click("Use the demo prescription");
+    await H.open("Dictate orders");
     await H.file("Dictate orders", "eval/p2/kumar-orders.wav");
   },
   async "kumar-admit"(H) {
@@ -104,7 +105,9 @@ export const STEPS = {
   async "kumar-discharge"(H) {
     await H.role("Doctor");
     await H.chart(KUMAR);
+    await H.open("Wound photo");
     await H.file("Add reference photo", "eval/p4/wound-day0.png");
+    await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
     await before(H, "kumar-discharge");
     await H.click("Sign discharge");
@@ -149,6 +152,7 @@ export const STEPS = {
     await H.role("Doctor");
     await H.tab("My queue");
     await H.chart(IYER);
+    await H.open("Dictate orders");
     await H.file("Dictate orders", "eval/p2/iyer-saline.wav");
     await H.click("Sign orders");
   },
@@ -177,6 +181,7 @@ export const STEPS = {
   },
   async "iyer-discharge"(H) {
     await H.role("Doctor");
+    await H.open("Dictate discharge");
     await H.fill("Summary", "Recovered on the ward after saline. BP back above the limit.");
     await H.click("Sign discharge");
   },

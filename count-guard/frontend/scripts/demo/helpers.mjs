@@ -38,6 +38,11 @@ export function helpers(page, root) {
     },
     tab: (name) => nav.getByRole("link", { name, exact: true }).click(),
     click: (name, scope) => (scope ? region(scope) : page).getByRole("button", { name, exact: true }).first().click(),
+    // Open an action-bar panel; leaves it open if it already is.
+    async open(name) {
+      const button = page.getByRole("group", { name: "Doctor actions" }).getByRole("button", { name, exact: true });
+      if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
+    },
     clock: (name) => page.getByRole("group", { name: "Demo clock" }).getByRole("button", { name, exact: true }).click(),
     tick: async (...labels) => { for (const l of labels) await page.getByLabel(l, { exact: true }).check(); },
     fill: (label, value, scope) => (scope ? region(scope) : page).getByLabel(label).first().fill(value),

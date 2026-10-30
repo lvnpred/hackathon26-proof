@@ -430,3 +430,5 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .alert-banner { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 2px solid var(--record); border-radius: 12px; background: var(--record-soft); }
 .alert-banner .card { margin: 0; }
 .alert-safety { border-left: 4px solid var(--record); padding-left: 8px; }
+.action-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.action-bar button[aria-expanded="true"] { background: var(--action); border-color: var(--action); color: var(--on-action); }

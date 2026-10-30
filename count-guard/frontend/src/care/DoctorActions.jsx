@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
+import ActionBar from "./ActionBar";
+import { actionsFor, panelOpen, toggled } from "./actions";
 import Dictate from "./Dictate";
 import { draftChanged, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
@@ -27,17 +29,20 @@ function StripCheck({ busy, act }) {
 
 const dictate = (upload, path) => ({ file, text }) => upload(path, file, { text, by: DOCTOR });
 
-function ReferencePhoto({ busy, upload }) {
+function PhotoCard({ title, busy, upload }) {
   async function pick(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (file) await upload("/photos", file, { purpose: "reference", by: DOCTOR });
   }
   return (
-    <label className="field">
-      Add reference photo
-      <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={pick} />
-    </label>
+    <section className="card" aria-label={title}>
+      <p className="label">{title}</p>
+      <label className="field">
+        Add reference photo
+        <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={pick} />
+      </label>
+    </section>
   );
 }
 
@@ -51,7 +56,7 @@ function OrdersDictation({ view, busy, upload, signOrders }) {
   );
 }
 
-function Clinic({ view, busy, act, upload, signOrders }) {
+function Clinic({ view, busy, act, upload, signOrders, open }) {
   const [reason, setReason] = useState("");
   const [reasonDraftId, setReasonDraftId] = useState(null);
   const draft = view.drafts?.order;
@@ -66,9 +71,9 @@ function Clinic({ view, busy, act, upload, signOrders }) {
         <RxImport busy={busy} act={act} />
         <RxTable rx={view.rx} />
       </section>
-      <ReferencePhoto busy={busy} upload={upload} />
+      {open("photo") && <PhotoCard title="Reference photo" busy={busy} upload={upload} />}
+      {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />}
       <StripCheck busy={busy} act={act} />
-      <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />
       <section className="card">
         <p className="label">Visit</p>
         <label className="field">
@@ -84,7 +89,7 @@ function Clinic({ view, busy, act, upload, signOrders }) {
   );
 }
 
-function Ward({ view, busy, act, upload }) {
+function Ward({ view, busy, act, upload, showDischarge }) {
   const [procedure, setProcedure] = useState("");
   const [summary, setSummary] = useState("");
   const [summaryDraftId, setSummaryDraftId] = useState(null);
@@ -105,6 +110,33 @@ function Ward({ view, busy, act, upload }) {
   }
   return (
     <>
+      {showDischarge && (
+        <>
+          <Dictate label="Dictate discharge" busy={busy} onSend={dictate(upload, "/dictate/discharge")} />
+          <section className="card">
+            <p className="label">Discharge</p>
+            {summaryDraftId && (
+              <p className="note small" role="status">
+                Draft from dictation · {sourceLabel(draft?.source)}. Check the summary, then sign.
+                {draft?.transcript && <> Heard: “{draft.transcript}”</>}
+                {draft?.heard_by && <> Heard by: {sourceLabel(draft.heard_by)}</>}
+              </p>
+            )}
+            <label className="field">
+              Summary
+              <textarea rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} />
+            </label>
+            <label className="field">
+              Template
+              <select value={template} onChange={(e) => setTemplate(e.target.value)}>
+                {templates.length === 0 && <option value="hernia-repair">hernia-repair</option>}
+                {templates.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
+              </select>
+            </label>
+            <button type="button" className="primary" disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
+          </section>
+        </>
+      )}
       <section className="card">
         <p className="label">Theatre</p>
         <label className="field">
@@ -116,29 +148,6 @@ function Ward({ view, busy, act, upload }) {
         </label>
         <TrayPreview plan={view.tray_templates?.[procedure]} />
         <button type="button" className="primary" disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
-      </section>
-      <Dictate label="Dictate discharge" busy={busy} onSend={dictate(upload, "/dictate/discharge")} />
-      <section className="card">
-        <p className="label">Discharge</p>
-        {summaryDraftId && (
-          <p className="note small" role="status">
-            Draft from dictation · {sourceLabel(draft?.source)}. Check the summary, then sign.
-            {draft?.transcript && <> Heard: “{draft.transcript}”</>}
-            {draft?.heard_by && <> Heard by: {sourceLabel(draft.heard_by)}</>}
-          </p>
-        )}
-        <label className="field">
-          Summary
-          <textarea rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} />
-        </label>
-        <label className="field">
-          Template
-          <select value={template} onChange={(e) => setTemplate(e.target.value)}>
-            {templates.length === 0 && <option value="hernia-repair">hernia-repair</option>}
-            {templates.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
-          </select>
-        </label>
-        <button type="button" className="primary" disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
       </section>
     </>
   );
@@ -180,9 +189,17 @@ const sign = (act) => (items, draftId) => act("/orders/sign", { items, by: DOCTO
 
 // The doctor's actions for the patient's current state.
 export default function DoctorActions({ state, view, act, upload, busy }) {
+  const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
+  const open = (id) => panelOpen(chosen, id, view);
+  const bar = <ActionBar actions={actionsFor(state)} isOpen={open} onToggle={(id) => setChosen(toggled(chosen, id))} />;
   if (state === "clinic") {
-    return <Clinic view={view} busy={busy} act={act} upload={upload} signOrders={signOrders} />;
+    return (
+      <>
+        {bar}
+        <Clinic view={view} busy={busy} act={act} upload={upload} signOrders={signOrders} open={open} />
+      </>
+    );
   }
   if (state === "admitting") {
     return (
@@ -195,9 +212,10 @@ export default function DoctorActions({ state, view, act, upload, busy }) {
   if (state === "ward") {
     return (
       <>
-        <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />
-        <ReferencePhoto busy={busy} upload={upload} />
-        <Ward view={view} busy={busy} act={act} upload={upload} />
+        {bar}
+        {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} signOrders={signOrders} />}
+        {open("photo") && <PhotoCard title="Wound photo" busy={busy} upload={upload} />}
+        <Ward view={view} busy={busy} act={act} upload={upload} showDischarge={open("discharge")} />
       </>
     );
   }

@@ -79,7 +79,7 @@ On screen: `Clinic visit closed`
 ### Path 2: Mr. Kumar, hernia repair (all three roles)
 
 #### `kumar-orders` · 0:34 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) File eval/p2/kumar-orders.wav into "Dictate orders"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) Button "Dictate orders"; 5) File eval/p2/kumar-orders.wav into "Dictate orders"
 
 On screen: `Draft from dictation · Rules (no model)` · `Heard by: Prepared demo result` · `Paracetamol`
 
@@ -158,7 +158,7 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:36 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Add reference photo" <- eval/p4/wound-day0.png; 4) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 5) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Sign discharge"
 
 On screen: `Reference` · `15 of 15` · `Heard by: Prepared demo result` · `Being discharged`
 
@@ -203,7 +203,7 @@ On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 > Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.
 
 #### `iyer-orders` · 2:20 · doctor · 7 s
-Clicks: 1) Role Doctor; 2) Tab "My queue" (row shows "is below the limit of 90"); 3) Chart S. Iyer; 4) File eval/p2/iyer-saline.wav into "Dictate orders"; 5) Button "Sign orders"
+Clicks: 1) Role Doctor; 2) Tab "My queue" (row shows "is below the limit of 90"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Sign orders"
 
 On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao (synthetic).`
 
@@ -231,7 +231,7 @@ On screen: `logged BP 112/70, HR 84` · the waiting strip no longer shows `→ S
 > Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.
 
 #### `iyer-discharge` · 2:42 · doctor · 3 s
-Clicks: 1) Role Doctor; 2) Field "Summary" <- Recovered on the ward after saline. BP back above the limit.; 3) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Button "Dictate discharge"; 3) Field "Summary" <- Recovered on the ward after saline. BP back above the limit.; 4) Button "Sign discharge"
 
 On screen: `Being discharged`
 

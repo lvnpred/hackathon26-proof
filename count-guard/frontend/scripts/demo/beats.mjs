@@ -75,7 +75,7 @@ export const BEATS = [
   {
     id: "kumar-orders", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao dictates admission orders for Mr. Kumar, and a draft appears with its source named.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'File eval/p2/kumar-orders.wav into "Dictate orders"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'Button "Dictate orders"', 'File eval/p2/kumar-orders.wav into "Dictate orders"'],
     expect: ["Draft from dictation · Rules (no model)", HEARD, "Paracetamol"],
     files: ["kumar-orders.wav"],
     keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by Or type what was said.",
@@ -159,7 +159,7 @@ export const BEATS = [
   {
     id: "kumar-discharge", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Sign discharge"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Sign discharge"'],
     expect: ["Reference", "15 of 15", HEARD, "Being discharged"],
     before: ["15 of 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
@@ -208,7 +208,7 @@ export const BEATS = [
   {
     id: "iyer-orders", path: "iyer", role: "doctor", seconds: 7, film: true,
     say: "Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them.",
-    clicks: ["Role Doctor", 'Tab "My queue" (row shows "is below the limit of 90")', "Chart S. Iyer", 'File eval/p2/iyer-saline.wav into "Dictate orders"', 'Button "Sign orders"'],
+    clicks: ["Role Doctor", 'Tab "My queue" (row shows "is below the limit of 90")', "Chart S. Iyer", 'Button "Dictate orders"', 'File eval/p2/iyer-saline.wav into "Dictate orders"', 'Button "Sign orders"'],
     expect: ["Draft from dictation", "Nurse acknowledges the new orders from Dr. A. Rao (synthetic)."],
     files: ["iyer-saline.wav"],
     keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by Or type what was said.",
@@ -239,7 +239,7 @@ export const BEATS = [
   {
     id: "iyer-discharge", path: "iyer", role: "doctor", seconds: 3, film: true,
     say: "Dr. Rao types a short summary and signs the discharge.",
-    clicks: ["Role Doctor", 'Field "Summary" <- Recovered on the ward after saline. BP back above the limit.', 'Button "Sign discharge"'],
+    clicks: ["Role Doctor", 'Button "Dictate discharge"', 'Field "Summary" <- Recovered on the ward after saline. BP back above the limit.', 'Button "Sign discharge"'],
     expect: ["Being discharged"],
     keyed: "No model call.",
   },

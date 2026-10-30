@@ -427,3 +427,6 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .now-next dt { color: var(--ink-muted); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .now-next dd { margin: 0; }
 .task-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.alert-banner { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 2px solid var(--record); border-radius: 12px; background: var(--record-soft); }
+.alert-banner .card { margin: 0; }
+.alert-safety { border-left: 4px solid var(--record); padding-left: 8px; }

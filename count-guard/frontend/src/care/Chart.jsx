@@ -3,7 +3,9 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getAudit } from "../journey";
 import { AuditTable } from "../screens/Audit";
 import { useCareWard } from "./CareShell";
+import { alertNow } from "./alerts";
 import { label } from "./clock";
+import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
 import { taskDue } from "./derive";
 import { MATCH_LABEL, proofOf, sourceLabel } from "./drafts";
@@ -61,7 +63,9 @@ export default function Chart() {
 
   return (
     <>
-      <StateHeader patient={patient} view={view} />
+      <StateHeader patient={patient} view={view} alert={alertNow(view)} />
+
+      <AlertBanner view={view} role={ward.role} line={line} busy={ward.busy} act={act} />
 
       <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
 
@@ -127,8 +131,6 @@ export default function Chart() {
             lens={lens in LENSES ? lens : "nurse"}
             role={ward.role}
             line={line}
-            busy={ward.busy}
-            act={act}
           />
         )}
       </section>

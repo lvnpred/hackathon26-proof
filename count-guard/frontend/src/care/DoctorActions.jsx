@@ -5,7 +5,6 @@ import Dictate from "./Dictate";
 import { draftChanged, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
 import { surgeryNow } from "./tasklist";
-import { trayFlag } from "./video";
 import { TrayPreview } from "./VideoCheck";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -149,11 +148,9 @@ function Theatre({ view, busy, act }) {
   const [reason, setReason] = useState("");
   const { began, ended } = surgeryNow(view.timeline);
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
-  const flag = trayFlag(view);
   return (
     <section className="card">
       <p className="label">In theatre</p>
-      {flag && <p className="note" role="status"><span className="pill sun">Tray flag</span> {flag}</p>}
       <p className="small">Surgery began: {began || "not yet"}</p>
       <p className="small">Surgery ended: {ended || "not yet"}</p>
       {move && (

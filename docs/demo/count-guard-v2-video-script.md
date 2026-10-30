@@ -212,14 +212,14 @@ On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr.
 #### `iyer-setup` · 2:27 · nurse · 8 s
 Clicks: 1) Role Nurse; 2) Button "Acknowledge"; 3) File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"; 4) Button "Begin"
 
-On screen: `Set-up matches the list` · `began Saline 1 litre over 2 hours, video check of the set-up`
+On screen: `Set-up matches the list` · `Saline 1 litre over 2 hours, video check of the set-up running`
 
 > The nurse acknowledges the orders, films the saline set-up, and the check matches the list before she begins.
 
 #### `iyer-end` · 2:35 · nurse · 2 s
 Clicks: 1) Button "+1 h" twice; 2) Button "End"
 
-On screen: `finished Saline 1 litre over 2 hours, video check of the set-up`
+On screen: `Saline 1 litre over 2 hours, video check of the set-up done`
 
 > The clock moves two hours and the nurse ends the saline task.
 

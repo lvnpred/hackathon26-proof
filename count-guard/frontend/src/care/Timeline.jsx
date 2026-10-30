@@ -1,5 +1,3 @@
-import { Nudge } from "../screens/WardPanel";
-
 // Which timeline types each lens keeps. "everyone" has no entry: the chart shows the audit rows instead.
 export const LENSES = {
   nurse: ["count.", "dose.", "obs.", "handover.", "nudge.", "patient.state", "order.", "task.", "surgery.", "discharge."],
@@ -7,10 +5,9 @@ export const LENSES = {
   patient: ["brownbag.", "reminders.", "checkin.", "help.", "patient.state", "order.signed", "task.done", "surgery.", "discharge."],
 };
 
-// One line per event in time order. An open nudge replaces its own "nudge.raised" line and keeps its actions.
-// readOnly shows an open nudge as a plain line with no actions (My care).
+// One line per event in time order. Open alerts are answered in the chart banner, never here.
 // A line a lens filters out still shows when the nudge is for the current role or is the deep-linked line.
-export default function Timeline({ lines, nudges, replaced, lens, role, line, busy, act, readOnly }) {
+export default function Timeline({ lines, nudges, replaced, lens, role, line }) {
   const open = Object.fromEntries(nudges.map((nudge) => [nudge.id, nudge]));
   const prefixes = LENSES[lens] || [];
   const shown = lines.filter((item) => {
@@ -22,15 +19,7 @@ export default function Timeline({ lines, nudges, replaced, lens, role, line, bu
   return (
     <ol className="timeline" aria-label="Timeline">
       {shown.map((item) => {
-        const nudge = open[item.id];
         const hit = item.id === line ? " line-hit" : "";
-        if (nudge && !readOnly) {
-          return (
-            <li key={item.id} id={item.id} data-line={item.id} className={`tl-nudge${hit}`}>
-              <Nudge nudge={nudge} busy={busy} act={act} />
-            </li>
-          );
-        }
         const struck = replaced.has(item.id);
         return (
           <li key={item.id} id={item.id} data-line={item.id} className={`${struck ? "struck" : ""}${hit}`.trim() || undefined}>

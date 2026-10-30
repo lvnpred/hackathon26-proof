@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Outlet, useNavigate, useOutletContext } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useMatch, useNavigate, useOutletContext } from "react-router-dom";
 import { Banner, Mark } from "../App";
 import { call } from "../journey";
+import { stripPills } from "./alerts";
 import { label, skipTargets } from "./clock";
 import { waitingPills } from "./derive";
 import { findPatient } from "./Patients";
@@ -41,7 +42,8 @@ export function CareHome() {
 
 function Strip({ ward }) {
   const navigate = useNavigate();
-  const pills = waitingPills(ward.patients, ward.nowMs);
+  const chartId = useMatch("/chart/:episodeId")?.params.episodeId;
+  const pills = stripPills(waitingPills(ward.patients, ward.nowMs), chartId);
   if (!pills.length) return null;
   return (
     <ul className="wait-strip" aria-label="Waiting">
@@ -52,7 +54,7 @@ function Strip({ ward }) {
             className={`pill wait ${pill.late ? "sun" : ""}`}
             onClick={() => navigate(`/chart/${pill.episodeId}${pill.lineId ? `?line=${pill.lineId}` : ""}`)}
           >
-            {pill.who} → {pill.what}{pill.waited ? ` · ${pill.waited}` : ""}
+            {pill.text}{pill.waited ? ` · ${pill.waited}` : ""}
           </button>
         </li>
       ))}

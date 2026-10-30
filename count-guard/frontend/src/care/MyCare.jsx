@@ -52,7 +52,7 @@ export default function MyCare() {
       <VideoChecks view={view} />
       <section className="card">
         <p className="label">Timeline</p>
-        <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" readOnly />
+        <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" />
       </section>
     </Fragment>
   );

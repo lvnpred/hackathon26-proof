@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Nudge } from "../screens/WardPanel";
 import Checklist from "./Checklist";
 import ObsForm from "./ObsForm";
 import TaskProof from "./TaskProof";
@@ -88,7 +87,6 @@ function Ward({ view, nowMs, by, busy, act, upload, ask }) {
           {tasks.map((task) => <TaskRow key={task.id} view={view} task={task} due={taskDue(task, nowMs)} by={by} busy={busy} act={act} upload={upload} onProof={setPreset} />)}
         </ul>
       </section>
-      {(view.nudges || []).map((nudge) => <Nudge key={nudge.id} nudge={nudge} busy={busy} act={act} />)}
     </>
   );
 }

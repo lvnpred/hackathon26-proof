@@ -28,6 +28,7 @@ test("waited text and late flag", () => {
   const now = 30 * H + 20 * M;
   assert.equal(queueRows(patients, "nurse", now)[0].waited, "2 h 20 min");
   assert.equal(waitingPills(patients, now)[0].late, true);
+  assert.equal(waitingPills(patients, now)[0].name, "Patient e1");
   assert.equal(queueRows(patients, "nurse", 28 * H + 5 * M)[0].waited, "5 min");
   assert.equal(waitingPills(patients, 28 * H + 5 * M)[0].late, false);
 });

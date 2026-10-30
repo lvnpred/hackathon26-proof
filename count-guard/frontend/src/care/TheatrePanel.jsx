@@ -78,7 +78,6 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced }) {
           <button disabled={!ready || !validBack} onClick={() => close(open.fact_id)}>Correct the count</button>
         )}
       </div>
-      {open && <p className="small">Open: {open.says}</p>}
       <div className="row">
         <button onClick={camera}>Count by camera</button>
         <span className="small muted">Opens the camera count. Its result is filed on this patient.</span>

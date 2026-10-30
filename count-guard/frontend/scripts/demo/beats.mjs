@@ -217,7 +217,7 @@ export const BEATS = [
     id: "iyer-setup", path: "iyer", role: "nurse", seconds: 8, film: true,
     say: "The nurse acknowledges the orders, films the saline set-up, and the check matches the list before she begins.",
     clicks: ["Role Nurse", 'Button "Acknowledge"', 'File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"', 'Button "Begin"'],
-    expect: ["Set-up matches the list", `began ${SALINE}`],
+    expect: ["Set-up matches the list", `${SALINE} running`],
     files: ["saline-setup.mp4"],
     keyed: "SAM 3.1 video call. The label reads SAM 3.1. Switch: SETUP_LIVE.",
   },
@@ -225,7 +225,7 @@ export const BEATS = [
     id: "iyer-end", path: "iyer", role: "nurse", seconds: 2, film: true,
     say: "The clock moves two hours and the nurse ends the saline task.",
     clicks: ['Button "+1 h" twice', 'Button "End"'],
-    expect: [`finished ${SALINE}`],
+    expect: [`${SALINE} done`],
     keyed: "No model call.",
   },
   {

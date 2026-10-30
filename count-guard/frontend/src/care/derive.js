@@ -167,8 +167,10 @@ export function waitingPills(patients, nowMs) {
   const rows = ["nurse", "patient", "doctor"]
     .flatMap((role) => patients.flatMap((patient) => rowsFor(patient, role, nowMs)))
     .filter((r) => !seen.has(r.key) && seen.add(r.key));
+  const names = Object.fromEntries(patients.map((patient) => [patient.id, patient.name]));
   return sorted(rows).map((r) => ({
     key: r.key,
+    name: names[r.episodeId] || "",
     who: r.owner,
     what: r.says,
     waited: r.waited,
@@ -177,4 +179,10 @@ export function waitingPills(patients, nowMs) {
     lineId: r.lineId,
     stage: r.stage,
   }));
+}
+
+// CL-R2: the banner shows the tray flag, except to the nurse while the patient is in theatre
+// (her theatre card shows the tray result once).
+export function showTrayFlag(role, state) {
+  return !(role === "nurse" && state === "theatre");
 }

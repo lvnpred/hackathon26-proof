@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CHECK_LABEL, checkLabel, latestCheck, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
+import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, shownChecks, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const file = (type, mb) => ({ type, size: mb * 1024 * 1024 });
@@ -96,4 +96,17 @@ test("taskVideoLabel is empty without a video", () => {
 test("no UI string reads as advice", () => {
   const all = [...Object.values(CHECK_LABEL.tray), ...Object.values(CHECK_LABEL.setup), videoProblem(file("image/png", 1)), videoProblem(file("video/mp4", 60))];
   for (const s of all) assert.doesNotMatch(s, ADVICE, s);
+});
+
+test("shownChecks hides tray checks from the patient and from the nurse's theatre screen", () => {
+  const checks = [{ id: "a", check: "tray" }, { id: "b", check: "setup" }];
+  assert.deepEqual(shownChecks(checks, {}).map((c) => c.id), ["a", "b"]);
+  assert.deepEqual(shownChecks(checks, { patient: true }).map((c) => c.id), ["b"]);
+  assert.deepEqual(shownChecks(checks, { hideTray: true }).map((c) => c.id), ["b"]);
+});
+test("patientCheckLine", () => {
+  assert.equal(patientCheckLine({ check: "setup", match: "ok" }), "Checked from a video: everything planned was seen.");
+  assert.equal(patientCheckLine({ check: "setup", match: "mismatch" }), "Checked from a video: something planned was not seen; the nurse was told.");
+  assert.equal(patientCheckLine({ check: "setup", match: "ok", media: "photos" }), "Checked from photos: everything planned was seen.");
+  assert.equal(patientCheckLine({ check: "setup", match: null }), "A video was kept; it was not checked.");
 });

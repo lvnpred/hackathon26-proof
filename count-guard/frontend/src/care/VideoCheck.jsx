@@ -3,7 +3,7 @@ import { checkLabel, toUpload, videoProblem } from "./video";
 import { useState } from "react";
 
 // A tray or set-up clip: pick it, and the result shows beside the planned list. A flag never blocks.
-export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false }) {
+export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "" }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
     const files = Array.from(event.target.files || []);
@@ -15,7 +15,7 @@ export default function VideoCheck({ title, kind, check, busy, onFile, hideUploa
   }
   return (
     <section className="card" aria-label={title}>
-      <p className="label">{title}</p>
+      <p className="label">{step && `${step} `}{title}</p>
       {!hideUpload && (
         <label className="field">
           {kind === "tray" ? "Upload tray video or photos" : "Add video or photo check"}

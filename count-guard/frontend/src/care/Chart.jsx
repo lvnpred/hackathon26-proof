@@ -6,6 +6,7 @@ import { useCareWard } from "./CareShell";
 import { alertNow } from "./alerts";
 import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
+import { trayOnNurseCard } from "./derive";
 import { lensFor } from "./lens";
 import OrderTasks from "./OrderTasks";
 import Photos from "./Photos";
@@ -70,7 +71,7 @@ export default function Chart() {
 
       <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} busy={ward.busy} act={act} ask={ask} />
 
-      <VideoChecks view={view} />
+      <VideoChecks view={view} hideTray={trayOnNurseCard(ward.role, view.state)} />
 
       <OrderTasks orders={orders} tasks={tasks} photos={view.photos} nowMs={ward.nowMs} state={view.state} />
 

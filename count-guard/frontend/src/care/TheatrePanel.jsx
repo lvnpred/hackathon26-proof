@@ -5,7 +5,7 @@ import { swabTotal } from "./video";
 const NURSE = "Nurse Asha (synthetic)";
 
 // The Theatre count: pack opened, closing count, a correction, and the door to the camera count.
-export default function TheatrePanel({ episodeId, view, busy, act, replaced }) {
+export default function TheatrePanel({ episodeId, view, busy, act, replaced, step = "" }) {
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
@@ -47,7 +47,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced }) {
 
   return (
     <section className="card">
-      <p className="label">Swab count</p>
+      <p className="label">{step && `${step} `}Swab count</p>
       <div className="row">
         <label className="field" style={{ flex: "1 1 120px" }}>
           Pack opened

@@ -28,9 +28,10 @@ test("bannerAlerts gives the form to the nurse, to the addressee and to the deep
   assert.deepEqual(bannerAlerts(view, "doctor", null).map((x) => x.canAnswer), [false, false]);
   assert.deepEqual(bannerAlerts(view, "doctor", "a").map((x) => x.canAnswer), [true, false]);
 });
-test("showTrayFlag hides the flag from the nurse while the patient is in theatre", () => {
+test("showTrayFlag shows the flag only while in theatre, and not to the nurse (her theatre card shows it)", () => {
   assert.equal(showTrayFlag("nurse", "theatre"), false);
   assert.equal(showTrayFlag("doctor", "theatre"), true);
-  assert.equal(showTrayFlag("nurse", "ward"), true);
-  assert.equal(showTrayFlag("patient", "theatre"), true);
+  assert.equal(showTrayFlag("doctor", "ward"), false);
+  assert.equal(showTrayFlag("nurse", "ward"), false);
+  assert.equal(showTrayFlag("doctor", "home"), false);
 });

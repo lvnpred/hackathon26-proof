@@ -186,8 +186,13 @@ export function waitingPills(patients, nowMs) {
   }));
 }
 
-// CL-R2: the banner shows the tray flag, except to the nurse while the patient is in theatre
-// (her theatre card shows the tray result once).
+// The nurse's theatre screen shows the tray result in her Tray check card, once (CL-R2).
+export function trayOnNurseCard(role, state) {
+  return role === "nurse" && state === "theatre";
+}
+
+// The banner's tray flag shows only while the patient is in theatre (a stale flag on the ward or
+// home chart confuses), and not to the nurse, whose card already shows it (CL-R2, CL-R9).
 export function showTrayFlag(role, state) {
-  return !(role === "nurse" && state === "theatre");
+  return state === "theatre" && !trayOnNurseCard(role, state);
 }

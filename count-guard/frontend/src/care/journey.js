@@ -48,6 +48,13 @@ export function cardActions(state, role, view) {
   return [];
 }
 
+// Where the doctor's primary blocks render. The card holds them only while the doctor owns the step;
+// on the ward they stay reachable below the quiet row when the nurse owns it (a dictated draft is never hidden).
+export function doctorBlocks(state, card) {
+  if (card.mine) return { inside: card.actions, below: [] };
+  return { inside: [], below: state === "ward" ? ["theatre", "discharge"] : [] };
+}
+
 const QUIET = {
   clinic: [["orders", "Dictate orders"], ["photo", "Reference photo"]],
   ward: [["orders", "Dictate orders"], ["photo", "Wound photo"]],

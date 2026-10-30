@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cardActions, foldLines, foldOpensFor, journeySteps, lensLines, nextCard, quietActions } from "./journey.js";
+import { cardActions, doctorBlocks, foldLines, foldOpensFor, journeySteps, lensLines, nextCard, quietActions } from "./journey.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const S = (steps) => steps.map((s) => s.status);
@@ -68,4 +68,12 @@ test("lensLines filters by lens, keeps a nudge for the role", () => {
 });
 test("new copy has no advice words", () => {
   for (const s of ["Next · for you", "Next · for the nurse", "Waiting for the doctor.", "Visit closed", "Show full history (5)"]) assert.doesNotMatch(s, ADVICE);
+});
+
+test("doctorBlocks keeps the ward actions reachable when the nurse owns the step", () => {
+  const mine = { mine: true, actions: ["theatre", "discharge"] };
+  const theirs = { mine: false, actions: [] };
+  assert.deepEqual(doctorBlocks("ward", mine), { inside: ["theatre", "discharge"], below: [] });
+  assert.deepEqual(doctorBlocks("ward", theirs), { inside: [], below: ["theatre", "discharge"] });
+  assert.deepEqual(doctorBlocks("clinic", theirs), { inside: [], below: [] });
 });

@@ -4,7 +4,7 @@ import { RxImport, RxTable } from "../screens/ClinicPanel";
 import { answerHow, doctorOpenItems, doctorWaiting } from "./askText";
 import ActionBar from "./ActionBar";
 import { panelOpen, toggled } from "./actions";
-import { quietActions } from "./journey";
+import { doctorBlocks, quietActions } from "./journey";
 import NextCard from "./NextCard";
 import Dictate from "./Dictate";
 import { draftChanged, heardLine, sectionsToSummary, sourceLabel } from "./drafts";
@@ -225,12 +225,14 @@ export default function DoctorActions({ state, card, view, act, upload, ask, bus
     theatre: <SendToTheatre key="theatre" view={view} busy={busy} act={act} />,
     discharge: <Discharge key="discharge" view={view} busy={busy} act={act} upload={upload} ask={ask} open={open("discharge")} onToggle={() => toggle("discharge")} />,
   };
+  const { inside, below } = doctorBlocks(state, card);
   return (
     <>
-      <NextCard card={card}>{card.actions.map((key) => primary[key])}</NextCard>
+      <NextCard card={card}>{inside.map((key) => primary[key])}</NextCard>
       <ActionBar actions={quietActions(state, "doctor")} isOpen={open} onToggle={toggle} />
       {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
+      {below.map((key) => primary[key])}
       {state === "clinic" && <Clinic view={view} busy={busy} act={act} />}
       {state === "theatre" && <Theatre view={view} busy={busy} act={act} />}
       {!["clinic", "admitting", "ward", "theatre"].includes(state) && (

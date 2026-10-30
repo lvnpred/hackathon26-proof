@@ -417,7 +417,7 @@ a.list-row:hover { background: var(--surface-sunk); }
 button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun-text); }
 .timeline { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .timeline li { padding: 6px 8px; border-radius: 8px; }
-.timeline li.line-hit { background: var(--sun-soft); outline: 2px solid var(--sun); }
+.timeline li.line-hit, .alert-banner .line-hit { background: var(--sun-soft); outline: 2px solid var(--sun); }
 @media (max-width: 800px) {
   .stage-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Evidence } from "./Evidence.jsx";
 import { seenCell } from "./evidence.js";
 
-// A tray or set-up clip: pick it, and the result shows beside the planned list. A flag never blocks.
+const DROP_LABEL = { tray: "Upload tray video or photos", swabs: "Upload a clip or photos of the returned swabs" };
+
+// A tray, set-up or swab clip: pick it, and the result shows beside the planned list. A flag never blocks.
 export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "", episodeId, version = 0 }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
@@ -19,8 +21,8 @@ export default function VideoCheck({ title, kind, check, busy, onFile, hideUploa
     <section className="card" aria-label={title}>
       <p className="label">{step && `${step} `}{title}</p>
       {!hideUpload && (
-        <label className={kind === "tray" ? "field drop-zone" : "field"}>
-          {kind === "tray" ? "Upload tray video or photos" : "Add video or photo check"}
+        <label className={kind === "setup" ? "field" : "field drop-zone"}>
+          {DROP_LABEL[kind] || "Add video or photo check"}
           <input type="file" accept="video/*,image/*" multiple disabled={busy} onChange={pick} />
         </label>
       )}

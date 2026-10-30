@@ -23,7 +23,7 @@ export default function VideoChecks({ view, hideTray = false, patient = false })
             <p className="small">{patientCheckLine(c)}</p>
           ) : (
             <p className="small">
-              {c.check === "tray" ? "Tray check" : `Set-up check · ${titleOf(c.task_id)}`}
+              {c.check === "tray" ? "Tray check" : c.check === "swabs" ? "Swab camera count" : `Set-up check · ${titleOf(c.task_id)}`}
               {c.by ? ` · ${c.by}` : ""}{c.at_ms !== undefined ? ` · ${label(c.at_ms)}` : ""}{" "}
               <span className={`pill ${c.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(c)}</span>{" "}
               <span className="muted">({sourceLabel(c.source)})</span>

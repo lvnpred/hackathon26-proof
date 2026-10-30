@@ -96,6 +96,9 @@ def task_list(events: list[dict]) -> list[dict]:
                         "match": e["payload"].get("match"),
                         "why": e["payload"].get("why", ""),
                         "source": e["payload"].get("source", ""),
+                        "evidence_id": e["payload"].get("evidence_id"),
+                        "read": e["payload"].get("read"),
+                        "saved": e["payload"].get("saved"),
                     }
                     for e in done
                 ],
@@ -240,10 +243,20 @@ def _proof_match(store, episode_id: str, task: dict, task_id: str, proof_id: str
     if not checks:
         return {"match": "none", "why": NOT_CHECKED, "source": "none"}
     found = checks[-1]
+    kept = {"evidence_id": found["evidence_id"]} if found.get("evidence_id") else {}
     if task["kind"] == "obs" and values and "values_read" in found:
         again = proof.check_monitor(found["values_read"], values)
-        return {"match": again["match"], "why": again["why"], "source": found.get("source", "none")}
-    return {"match": found["match"], "why": found.get("why", ""), "source": found.get("source", "none")}
+        return {"match": again["match"], "why": again["why"], "source": found.get("source", "none"),
+                **kept, **_correction(found["values_read"], values)}
+    return {"match": found["match"], "why": found.get("why", ""), "source": found.get("source", "none"), **kept}
+
+
+def _correction(read: dict, values: dict) -> dict:
+    """`read` and `saved` (the same keys) when the nurse saved a value other than the one the monitor photo gave (R17)."""
+    keys = [k for k in OBS_FIELDS if k in read and k in values]
+    if all(read[k] == values[k] for k in keys):
+        return {}
+    return {"read": {k: read[k] for k in keys}, "saved": {k: values[k] for k in keys}}
 
 
 def complete_task(
@@ -273,6 +286,7 @@ def complete_task(
     done = {"task_id": task_id, "by": by, "via": via, "note": note, "transcript": transcript, "heard_by": heard_by, "calls": calls or []}
     if proof_id:
         done.update(proof_id=proof_id, **_proof_match(store, episode_id, payload, task_id, proof_id, values))
+    evidence = {"evidence_id": done["evidence_id"]} if "evidence_id" in done else {}
     if values:
         done["values"] = values
     store.append(episode_id, "task.done", done, ts_ms=ts)
@@ -281,5 +295,5 @@ def complete_task(
         fact = {"key": key_of(name), "name": name, "amount": payload["amount"], "by": by, "source": "task"}
         store.append(episode_id, "dose.given", fact, ts_ms=ts)
     elif payload["kind"] == "obs":
-        store.append(episode_id, "obs.recorded", {**values, "by": by}, ts_ms=ts)
+        store.append(episode_id, "obs.recorded", {**values, "by": by, **evidence, **({"source": done["source"]} if evidence else {})}, ts_ms=ts)
     return ts

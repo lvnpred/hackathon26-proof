@@ -21,7 +21,7 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
   }
   if (step.key === "count") {
     return nurse
-      ? <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} replaced={replaced} onNote={onNote} />
+      ? <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} onNote={onNote} />
       : <p className="small muted">The theatre nurse records the swab count.</p>;
   }
   const began = step.key === "began";

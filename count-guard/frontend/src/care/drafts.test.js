@@ -165,6 +165,8 @@ test("lastDoneLine names time, who and how, with the photo match", () => {
   assert.equal(line.text, "Last done 10:36 by Nurse Meena, by voice");
   assert.equal(line.match, MATCH_LABEL.ok);
   assert.equal(lastDoneLine({ done: [] }, []), null);
+  assert.equal(line.evidenceId, null);
+  assert.equal(lastDoneLine({ done: [{ at_ms: 0, by: "n", via: "tap", evidence_id: "e".repeat(32) }] }, []).evidenceId, "e".repeat(32));
 });
 test("rowSession pins the row's task and keeps obs values only", () => {
   const obs = { id: "o", kind: "obs" };

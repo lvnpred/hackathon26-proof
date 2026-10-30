@@ -15,6 +15,7 @@ from app.journey.ai_api import ai_router, evidence_router
 from app.journey.api import demo_router, router as journey_router
 from app.journey.flow_api import flow_router
 from app.journey.ask_api import ask_router
+from app.journey.count_api import count_router
 from app.journey.staff_api import staff_router
 from app.journey.media_api import media_router, models_router
 from app.journey.video_api import video_router
@@ -51,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(morning_extra_router)
     app.include_router(site_router)
     app.include_router(journey_router)
+    app.include_router(count_router)
     app.include_router(demo_router)
     app.include_router(flow_router)
     app.include_router(media_router)

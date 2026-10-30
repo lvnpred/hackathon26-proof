@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { EvidenceThumb } from "./Evidence.jsx";
 import ObsForm from "./ObsForm";
+import { prefillObs } from "./capture";
 import { doneBody, MATCH_LABEL, newestPhoto, sourceLabel } from "./drafts";
 import { obsValues } from "./tasklist";
 
@@ -12,6 +13,7 @@ const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(
 export default function TaskProof({ view, task, session, by, busy, act, upload, onClear }) {
   const [form, setForm] = useState(() => strings(session.proposal.values));
   const [photo, setPhoto] = useState(null);
+  const [filled, setFilled] = useState(0); // bumps when a photo fills the form, so ObsForm shows it
   const [error, setError] = useState("");
 
   async function addPhoto(event) {
@@ -20,7 +22,13 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
     if (!file) return;
     const stated = task.kind === "obs" ? obsValues(form).values || {} : {};
     const next = await upload("/photos", file, { purpose: "proof", task_id: task.id, by, sbp: stated.sbp, dbp: stated.dbp, hr: stated.hr });
-    if (next) setPhoto(newestPhoto(next, task.id));
+    if (!next) return;
+    const added = newestPhoto(next, task.id);
+    setPhoto(added);
+    if (task.kind === "obs") {
+      setForm((current) => prefillObs(added?.check?.regions || [], current));
+      setFilled(filled + 1);
+    }
   }
 
   async function confirm() {
@@ -44,7 +52,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
           {session.heardBy && session.via === "voice" && <span className="muted"> · Heard by: {sourceLabel(session.heardBy)}</span>}
         </p>
       )}
-      {task.kind === "obs" && <ObsForm key={task.id} busy={busy} initial={form} onChange={setForm} />}
+      {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}
       <label className="field">
         Add photo
         <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={addPhoto} />

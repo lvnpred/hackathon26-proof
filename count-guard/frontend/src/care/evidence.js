@@ -1,5 +1,8 @@
 import { hhmm } from "./clock.js";
+import { correctionLine } from "./capture.js";
 import { displayName } from "./names.js";
+
+export { correctionLine };
 
 // Pure helpers for the evidence viewer. The "Why" text is built from numbers here, never from model text.
 export const MODEL_NAME = { voice: "Muse Voice", spark: "Muse Spark 1.3", sam: "SAM 3.1", "spark-open": "Muse Spark Open" };

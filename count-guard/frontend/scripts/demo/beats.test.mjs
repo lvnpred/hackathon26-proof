@@ -82,5 +82,6 @@ test("expected strings follow the accepted rulings", () => {
   const NEXT_ADMIT = "Acknowledge the new orders from Dr. A. Rao, then complete the admission.";
   // kumar-review: the "Heard by" line goes once the answer is sent, so it is checked before and not in expect.
   // kumar-admission: the NEXT card sentence goes once the orders are acknowledged.
-  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-admission" && s === NEXT_ADMIT), `${b.id} ${s}`);
+  // kumar-count: the swab viewer goes once the count is corrected, because the count step folds.
+  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-admission" && s === NEXT_ADMIT) || (b.id === "kumar-count" && s === "Saw 14 of 15 gauze swabs."), `${b.id} ${s}`);
 });

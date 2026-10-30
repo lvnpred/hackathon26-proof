@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { call } from "../journey";
-import { boxLabel, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, itemName, nudgeLabels, regionLabel, seenCell, startImage } from "./evidence.js";
+import { boxLabel, boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, evidenceView, itemName, nudgeLabels, regionLabel, seenCell, startImage } from "./evidence.js";
 
 const cache = new Map();
 
@@ -191,6 +191,7 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
         return (
           <p className="small muted" key={c.event_id}>
             <Link to={`/chart/${episodeId}?line=${c.event_id}`}>{line}</Link>
+            {correctionLine(c.read, c.saved, c.by) && <><br />{correctionLine(c.read, c.saved, c.by)}</>}
           </p>
         );
       })}

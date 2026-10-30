@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { cameraPrefill, closingBody, correctionLine } from "./capture";
 import { displayName } from "./names";
 import { packLine, swabFigures } from "./theatre";
-import { swabTotal } from "./video";
+import VideoCheck from "./VideoCheck";
+import { latestCheck, swabTotal } from "./video";
 
 const NURSE = "Nurse Asha (synthetic)";
 
-// The Theatre count: pack opened, closing count, a correction, and the door to the camera count.
-export default function TheatrePanel({ episodeId, view, busy, act, replaced, onNote }) {
-  const navigate = useNavigate();
+// The Theatre count: pack opened, the camera count, closing count and a correction.
+export default function TheatrePanel({ episodeId, view, busy, act, upload, replaced, onNote }) {
   const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
   const [detail, setDetail] = useState("");
@@ -19,7 +19,8 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
   const corrected = open && replaced?.has(open.fact_id);
   const ready = view && !busy && by.trim();
   const opened = Number(quantity);
-  const back = Number(returned);
+  const shown = cameraPrefill(view?.count, returned); // the camera count until the nurse types her own
+  const back = Number(shown);
 
   async function post(body) {
     onNote("");
@@ -27,7 +28,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
   }
 
   async function close(supersedesId) {
-    const body = { step: "closing", returned: back, detail: detail.trim() };
+    const body = closingBody(view.count, back, detail.trim());
     if (supersedesId) body.supersedes_id = supersedesId;
     if (await post(body)) {
       setReturned("");
@@ -36,18 +37,13 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
     }
   }
 
-  function camera() {
-    try {
-      sessionStorage.setItem("cg-chart-episode", episodeId);
-    } catch {
-      // the camera screen then files to its default patient
-    }
-    navigate("/count");
-  }
-
-  const validBack = returned !== "" && Number.isInteger(back) && back >= 0;
+  const validBack = shown !== "" && Number.isInteger(back) && back >= 0;
   const figures = swabFigures(view.count);
   const packed = view.count?.opened != null;
+  const correction = correctionLine(view.count?.read, view.count?.saved, view.count?.closed_by);
+  const opened_ms = view.count?.opened_at_ms;
+  const swabCheck = latestCheck(view, "swabs");
+  const thisStay = swabCheck && (opened_ms == null || swabCheck.at_ms >= opened_ms) ? swabCheck : null;
   const askPack = !packed || changing;
 
   return (
@@ -57,6 +53,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
           <p key={key}><span className="swab-number">{figures[key]}</span><span className="small muted">{name}</span></p>
         ))}
       </div>
+      {correction && <p className="small">{correction}</p>}
       {packed && <p className="small">{packLine(view.count)} {!changing && <button type="button" className="quiet" onClick={() => setChanging(true)}>change</button>}</p>}
       {askPack && (
         <div className="row">
@@ -78,10 +75,11 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
           </button>
         </div>
       )}
+      {view.count?.camera && <p className="small">Camera count: {view.count.camera.count}</p>}
       <div className="row">
         <label className="field" style={{ flex: "1 1 120px" }}>
           Closing count (returned)
-          <input inputMode="numeric" value={returned} onChange={(event) => setReturned(event.target.value)} />
+          <input inputMode="numeric" value={shown} onChange={(event) => setReturned(event.target.value)} />
         </label>
         <label className="field" style={{ flex: "2 1 220px" }}>
           Detail
@@ -92,10 +90,17 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
           <button disabled={!ready || !validBack} onClick={() => close(open.fact_id)}>Correct the count</button>
         )}
       </div>
-      <div className="row">
-        <button onClick={camera}>Count by camera</button>
-        <span className="small muted">Opens the camera count. Its result is filed on this patient.</span>
-      </div>
+      {packed && (
+        <VideoCheck
+          title="Swab camera count"
+          kind="swabs"
+          episodeId={episodeId}
+          version={view.timeline?.length}
+          check={thisStay}
+          busy={busy}
+          onFile={(file) => upload("/video", file, { check: "swabs", by })}
+        />
+      )}
     </div>
   );
 }

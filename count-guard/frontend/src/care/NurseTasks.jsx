@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Dictate from "./Dictate";
 import ObsForm from "./ObsForm";
+import { EvidenceThumb } from "./Evidence.jsx";
 import TaskProof from "./TaskProof";
 import VideoCheck from "./VideoCheck";
 import { answerHow } from "./askText";
@@ -38,6 +39,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           {last.match && <> · <span className={`pill ${last.flagged ? "sun" : "info"}`}>{last.match}</span></>}
         </p>
       )}
+      {last?.evidenceId && <EvidenceThumb episodeId={view.episode?.id} evidenceId={last.evidenceId} version={view.timeline?.length} />}
       {micOpen && live && (
         <Dictate
           bare
@@ -61,6 +63,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
         />
       )}
+      {live && task.kind === "obs" && <button type="button" className="quiet" disabled={busy} onClick={() => onProof(task)}>Read from monitor photo</button>}
       {live && task.kind === "obs" && <ObsForm busy={busy} due={due} label={mark.label} primary={mark.primary} onSave={(values) => done({ values })} />}
       {live && task.kind !== "obs" && task.mode === "start_end" && (
         task.status === "running"

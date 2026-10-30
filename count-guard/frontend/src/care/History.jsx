@@ -32,7 +32,7 @@ export default function History({ view, role, line, rows, rowsError, replaced })
           rowsError ? <p className="error" role="alert">Could not load the audit lines: {rowsError}</p>
           : rows.length ? <AuditTable rows={rows} /> : <p className="empty small">Nothing recorded for this patient yet.</p>
         ) : (
-          <Timeline lines={lines} nudges={view.nudges} replaced={replaced} lens={shownLens} role={role} line={line} />
+          <Timeline episodeId={view.episode?.id} lines={lines} nudges={view.nudges} replaced={replaced} lens={shownLens} role={role} line={line} />
         )}
         <button type="button" className="quiet" onClick={() => setOpen(!open)}>
           {open ? "Show less" : `Show full history (${kept.length})`}

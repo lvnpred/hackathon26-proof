@@ -39,7 +39,8 @@ def get_evidence(episode_id: str, evidence_id: str, request: Request) -> dict:
         **body,
         "images": [{**i, "url": f"/journey/episodes/{episode_id}/photos/{i['photo_id']}"} for i in body["images"]],
         "cited_by": [
-            {"event_id": e["id"], "type": e["event_type"], "when": e["ts_ms"], "by": e["payload"].get("by")}
+            {"event_id": e["id"], "type": e["event_type"], "when": e["ts_ms"], "by": e["payload"].get("by"),
+             **{k: e["payload"][k] for k in ("read", "saved") if e["payload"].get(k)}}
             for e in holders
         ],
     }

@@ -104,6 +104,14 @@ test("shownChecks hides tray checks from the patient and from the nurse's theatr
   assert.deepEqual(shownChecks(checks, { patient: true }).map((c) => c.id), ["b"]);
   assert.deepEqual(shownChecks(checks, { hideTray: true }).map((c) => c.id), ["b"]);
 });
+test("shownChecks keeps swab checks off the patient page and the nurse's theatre screen", () => {
+  const checks = [{ id: "a", check: "swabs" }, { id: "b", check: "setup" }];
+  assert.deepEqual(shownChecks(checks, {}).map((c) => c.id), ["a", "b"]);
+  assert.deepEqual(shownChecks(checks, { patient: true }).map((c) => c.id), ["b"]);
+  assert.deepEqual(shownChecks(checks, { hideTray: true }).map((c) => c.id), ["b"]);
+  assert.equal(checkLabel({ check: "swabs", match: "ok" }), "Swab count matches the pack");
+  assert.equal(checkLabel({ check: "swabs", match: "none" }), "Clip kept, not counted");
+});
 test("patientCheckLine", () => {
   assert.equal(patientCheckLine({ check: "setup", match: "ok" }), "Checked from a video: everything planned was seen.");
   assert.equal(patientCheckLine({ check: "setup", match: "mismatch" }), "Checked from a video: something planned was not seen; the nurse was told.");

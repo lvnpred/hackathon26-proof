@@ -20,9 +20,11 @@ video_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 
 SETUP_LIVE = True  # D3 cut switch: False makes the set-up check use the prepared result only
 TRAY_LIVE = True  # the same cut switch for the tray check
+SWABS_LIVE = True  # and for the swab camera count
 MAX_VIDEO_BYTES = 50 * 1024 * 1024
 VIDEO_TYPES = {"video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm"}
-NAMES_TASK = "A set-up check names its task; a tray check names none."
+NAMES_TASK = "A set-up check names its task; a tray or swab check names none."
+PACK_FIRST = "Record the pack opened first."
 NOT_THEATRE = "The tray is checked in theatre, after the tray plan is confirmed."
 ONE_OR_PHOTOS = "Send one video or 1 to 6 photos."
 MAX_PHOTOS = 6
@@ -54,6 +56,14 @@ def _tray_refusal(events: list[dict]) -> str | None:
     if not any(e["event_type"] == "tray.planned" for e in events[last_move:]):
         return NOT_THEATRE
     return BEGUN if states.surgery_status(events) != "none" else None
+
+
+def _swabs_refusal(events: list[dict]) -> tuple[int | None, str]:
+    """(opened, refusal) for a swab camera count: the pack opened in this theatre stay, else why not."""
+    if states.current_state(events) != "theatre":
+        return None, PACK_FIRST
+    opened = states.stay_latest(events, "count.pack_opened")
+    return (opened["payload"]["quantity"], "") if opened else (None, PACK_FIRST)
 
 
 def _setup_refusal(events: list[dict], task_id: str) -> tuple[str | None, int, str]:
@@ -145,7 +155,7 @@ def add_video(
     request: Request,
     file: UploadFile | None = File(None),
     files: list[UploadFile] | None = File(None),
-    check: Literal["tray", "setup"] = Form(...),
+    check: Literal["tray", "setup", "swabs"] = Form(...),
     by: str = Form(..., min_length=1, max_length=80),
     at_ms: int | None = Form(None, ge=0),
     task_id: str | None = Form(None, min_length=1, max_length=64),
@@ -166,6 +176,11 @@ def add_video(
             raise HTTPException(status_code=status, detail=detail)
         rows, live_ok = expected_for_setup(key), SETUP_LIVE
         extra, planned = {"setup": key, "task_id": task_id}, None
+    elif check == "swabs":
+        opened, refusal = _swabs_refusal(events)
+        if refusal:
+            raise HTTPException(status_code=409, detail=refusal)
+        rows, live_ok, extra, planned = [{"concept": "gauze swab", "names": ["Swab"], "planned": opened}], SWABS_LIVE, {}, None
     else:
         refusal = _tray_refusal(events)
         if refusal:
@@ -203,6 +218,10 @@ def add_video(
         "by": by,
         **({"evidence_id": saved} if saved else {}),
     }
-    store.append(episode_id, "tray.checked" if check == "tray" else "setup.checked", payload, ts_ms=ts)
+    if check == "swabs":
+        seen = result["rows"][0]["seen"]
+        payload = {**payload, "count": seen, "opened": opened}
+    kind = {"tray": "tray.checked", "setup": "setup.checked", "swabs": "swabs.counted"}[check]
+    store.append(episode_id, kind, payload, ts_ms=ts)
     raise_nudges(store, episode_id, ts)
     return view(request, episode_id)

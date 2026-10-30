@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw
 
 HERE = Path(__file__).parent
 PREPARED = HERE.parent.parent / "backend" / "app" / "journey" / "prepared"
-STEMS = ("tray-hernia", "tray-hernia-full", "saline-setup")
+STEMS = ("tray-hernia", "tray-hernia-full", "saline-setup", "swabs-closing")
 SECONDS, FPS, SIZE = 6, 2, (640, 360)
 
 

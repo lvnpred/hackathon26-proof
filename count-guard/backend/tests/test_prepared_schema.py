@@ -28,7 +28,7 @@ def test_every_fixture_uses_known_keys_and_counts_match_frames():
 
 
 def test_the_three_clip_fixtures_are_handmade_with_frames_and_stills():
-    for stem in ("tray-hernia", "tray-hernia-full", "saline-setup"):
+    for stem in ("tray-hernia", "tray-hernia-full", "saline-setup", "swabs-closing"):
         data = json.loads((PREPARED_DIR / f"{stem}.json").read_text())
         assert data["handmade"] is True and len(data["frames"]) == 12
         assert [f["t"] for f in data["frames"]] == [n / 2 for n in range(12)]

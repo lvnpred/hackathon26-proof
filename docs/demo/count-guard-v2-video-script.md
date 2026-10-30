@@ -16,7 +16,7 @@ Decision for the owner: film offline or keyed (see Owner handover). The script b
 
 ## Before filming
 
-1. Run `make demo-check` once, or run the three generators (`eval/p2/make_media.py`, `eval/p3/make_clips.py`, `eval/p4/make_photos.py`). They write the files named in this script: `kumar-orders.wav`, `kumar-paracetamol.wav`, `kumar-discharge.wav`, `rao-answer.wav`, `iyer-bp.wav`, `iyer-saline.wav`, `strip-paracetamol.png`, `tray-hernia.mp4`, `saline-setup.mp4`, `wound-day0.png`, `wound-day3.png`, `meds-iyer.png`.
+1. Run `make demo-check` once, or run the three generators (`eval/p2/make_media.py`, `eval/p3/make_clips.py`, `eval/p4/make_photos.py`). They write the files named in this script: `kumar-orders.wav`, `kumar-paracetamol.wav`, `kumar-discharge.wav`, `rao-answer.wav`, `iyer-bp.wav`, `iyer-saline.wav`, `strip-paracetamol.png`, `tray-hernia.mp4`, `saline-setup.mp4`, `swabs-closing.mp4`, `wound-day0.png`, `wound-day3.png`, `meds-iyer.png`.
 2. Stop the keyed server on port 8100 first (or pass other `CG_API_PORT` and `CG_WEB_PORT` values). Delete the data folder before each take. Start a clean offline server: `rm -rf /tmp/cg-film && make dev MODEL_API_KEY= COUNT_GUARD_DATA=/tmp/cg-film`.
 3. Open a new private window. The ward state lives in session storage.
 4. Use a 1200-wide window. The patient beats can be filmed in a phone-sized window.
@@ -130,11 +130,11 @@ On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `
 > Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon.
 
 #### `kumar-count` · 1:09 · nurse · 9 s
-Clicks: 1) Button "Surgery began"; 2) Button "Record pack opened" (prefilled 15); 3) Field "Closing count (returned)" <- 14; 4) Button "Record closing count"; 5) Field "Closing count (returned)" <- 15; 6) Button "Correct the count"
+Clicks: 1) Button "Surgery began"; 2) Button "Record pack opened" (prefilled 15); 3) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 4) Button "Record closing count" (prefilled 14 by the camera); 5) Field "Closing count (returned)" <- 15; 6) Button "Correct the count"
 
 On screen: `Closing count: 14 of 15 back, 1 unaccounted.` · `Correction recorded.`
 
-> Surgery begins, the pack opens at 15 swabs, and a count of 14 is flagged until it is corrected to 15.
+> Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the count is corrected to 15 when one is found.
 
 #### `kumar-back` · 1:18 · nurse · 4 s
 Clicks: 1) Button "Surgery ended"; 2) Button "Back to ward"
@@ -273,6 +273,7 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 | `das-ask` | 1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
+| `kumar-count` | SAM 3.1 video call for the swab camera count. The label reads SAM 3.1. Switch: SWABS_LIVE. |
 | `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch. |
 | `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-review` | 1 Voice call (hear). Heard by reads Muse Voice. No switch. |
@@ -291,21 +292,23 @@ Cost and order:
 
 ## Owner handover
 
-### The three cut switches
+### The cut switches
 
 | Switch | File | `False` does |
 |---|---|---|
 | `TRAY_LIVE` | `count-guard/backend/app/journey/video_api.py:22` | Tray check always uses the prepared result. |
+| `SWABS_LIVE` | `count-guard/backend/app/journey/video_api.py:23` | Swab camera count always uses the prepared result. |
 | `SETUP_LIVE` | `count-guard/backend/app/journey/video_api.py:21` | Set-up check always uses the prepared result. |
 | `MEDICINES_LIVE` | `count-guard/backend/app/journey/ask_api.py:30` | Medicine photo always uses the prepared result. |
 
-All three are `True` in the code. With no key they have no effect, because the run is offline. Edit the line and save: uvicorn reloads on save, so no restart is needed.
+All four are `True` in the code. With no key they have no effect, because the run is offline. Edit the line and save: uvicorn reloads on save, so no restart is needed.
 
 ### Clip and photo names
 
 The prepared results key on the file name stem. Keep these names when you replace a drawn stand-in with real footage:
 
 - `tray-hernia.mp4`: film the tray with one needle holder held back, then film it complete. Film on a desktop, not a phone.
+- `swabs-closing.mp4`: film the returned swabs laid out, 14 of them. Film on a desktop, not a phone.
 - `saline-setup.mp4`: film the saline set-up showing bag, line, cannula and label. Film on a desktop, not a phone.
 - Photos are accepted wherever a video check is offered.
 - Offline, a check with several photos follows the first file. Upload the intended one first.

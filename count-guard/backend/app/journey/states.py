@@ -309,17 +309,34 @@ def next_role(events: list[dict], state: str) -> str | None:
     return role
 
 
-def theatre_count(events: list[dict]) -> dict:
-    """This theatre stay's swab count: the latest pack opened and the closing that still stands."""
+def stay_events(events: list[dict]) -> list[dict]:
+    """The visible events since the patient last changed state: this stay."""
     last = _last_state_event(events)
-    stay = visible_events(events[events.index(last) + 1 :] if last else events)
+    return visible_events(events[events.index(last) + 1 :] if last else events)
+
+
+def stay_latest(events: list[dict], kind: str) -> dict | None:
+    return _latest(stay_events(events), kind)
+
+
+def theatre_count(events: list[dict]) -> dict:
+    """This theatre stay's swab count: the latest pack opened, the closing that still stands and the camera count."""
+    stay = stay_events(events)
     opened, closing = _latest(stay, "count.pack_opened"), _latest(stay, "count.closing")
+    camera = _latest(stay, "swabs.counted")
+    newer = camera is not None and camera["payload"].get("count") is not None and (
+        closing is None or stay.index(camera) > stay.index(closing))
     return {
         "opened": opened["payload"]["quantity"] if opened else None,
         "opened_by": opened["payload"].get("by") if opened else None,
         "opened_at_ms": opened["ts_ms"] if opened else None,
         "returned": closing["payload"]["returned"] if closing else None,
         "missing": closing["payload"]["unaccounted"] if closing else None,
+        "read": closing["payload"].get("read") if closing else None,
+        "saved": closing["payload"].get("saved") if closing else None,
+        "closed_by": closing["payload"].get("by") if closing else None,
+        "camera": {"count": camera["payload"]["count"], "evidence_id": camera["payload"].get("evidence_id"),
+                   "at_ms": camera["ts_ms"]} if newer else None,
     }
 
 

@@ -115,6 +115,7 @@ export function lastDoneLine(task, photos) {
     text: `Last done ${hhmm(d.at_ms)} by ${displayName(d.by)}, ${how}`,
     match: d.match ? MATCH_LABEL[d.match] || MATCH_LABEL.none : null,
     flagged: proof.flagged,
+    evidenceId: d.evidence_id || null,
   };
 }
 

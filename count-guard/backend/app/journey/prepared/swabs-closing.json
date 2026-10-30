@@ -1,0 +1,1937 @@
+{
+  "detections": {
+    "gauze swab": {
+      "count": 14,
+      "at_s": 1.0
+    }
+  },
+  "frames": [
+    {
+      "t": 0.0,
+      "index": 0,
+      "objects": []
+    },
+    {
+      "t": 0.5,
+      "index": 1,
+      "objects": []
+    },
+    {
+      "t": 1.0,
+      "index": 2,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 1.5,
+      "index": 3,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 2.0,
+      "index": 4,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 2.5,
+      "index": 5,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 3.0,
+      "index": 6,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 3.5,
+      "index": 7,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 4.0,
+      "index": 8,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 4.5,
+      "index": 9,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 5.0,
+      "index": 10,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 5.5,
+      "index": 11,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    }
+  ],
+  "stills": [
+    {
+      "t": null,
+      "index": 0,
+      "objects": [
+        {
+          "id": "1",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "5",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "6",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "7",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "8",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "gauze swab",
+          "bbox": [
+            0.5625,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "10",
+          "label": "gauze swab",
+          "bbox": [
+            0.6719,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "11",
+          "label": "gauze swab",
+          "bbox": [
+            0.7812,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "12",
+          "label": "gauze swab",
+          "bbox": [
+            0.8906,
+            0.2111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "13",
+          "label": "gauze swab",
+          "bbox": [
+            0.3438,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "14",
+          "label": "gauze swab",
+          "bbox": [
+            0.4531,
+            0.3111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    }
+  ],
+  "handmade": true
+}

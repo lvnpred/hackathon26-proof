@@ -134,10 +134,10 @@ def _frames(episode_id: str, ids: list[str]) -> list[dict]:
 
 
 def checks_view(events: list[dict]) -> list[dict]:
-    """Every tray and set-up check, oldest first, with its kept frames."""
+    """Every tray, set-up and swab camera check, oldest first, with its kept frames."""
     out = []
     for e in events:
-        if e["event_type"] not in ("tray.checked", "setup.checked"):
+        if e["event_type"] not in ("tray.checked", "setup.checked", "swabs.counted"):
             continue
         p = e["payload"]
         out.append(

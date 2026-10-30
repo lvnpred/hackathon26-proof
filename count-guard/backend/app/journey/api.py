@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import base64
-from typing import Literal
 
 import httpx
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.adapters.spark import SparkAdapter
 from app.config import BANNER
@@ -119,26 +118,6 @@ class CheckinIn(At):
     feels: str = Field(min_length=1, max_length=80)
     signs: list[str] = Field(default_factory=list, max_length=10)
     note: str = Field(default="", max_length=300)
-
-
-class CountIn(At):
-    step: Literal["opened", "closing"]
-    quantity: int | None = Field(default=None, ge=1, le=200)  # required when step is "opened"
-    returned: int | None = Field(default=None, ge=0, le=200)  # required when step is "closing"
-    detail: str = Field(default="", max_length=200)
-    by: str = Field(min_length=1, max_length=80)
-    supersedes_id: str | None = None
-
-    @model_validator(mode="after")
-    def _step_fields(self):
-        if self.step == "opened":
-            if self.quantity is None:
-                raise ValueError("quantity is required when the pack is opened")
-            if self.supersedes_id:
-                raise ValueError("an opened pack cannot replace a line")
-        elif self.returned is None:
-            raise ValueError("returned is required for the closing count")
-        return self
 
 
 def _store(request: Request):
@@ -416,32 +395,6 @@ def need_help(episode_id: str, body: HelpIn, request: Request) -> dict:
 def check_in(episode_id: str, body: CheckinIn, request: Request) -> dict:
     payload = {**body.model_dump(exclude={"at_ms"}), "by": "patient"}
     return _act(request, episode_id, "checkin.recorded", payload, body.at_ms)
-
-
-@router.post("/count")
-def count(episode_id: str, body: CountIn, request: Request) -> dict:
-    """The theatre nurse's swab count at the demo time. A corrected closing replaces the one it names."""
-    _require(request, episode_id)
-    store = _store(request)
-    if body.supersedes_id:
-        old = store.get_event(body.supersedes_id)
-        if old is None or old["episode_id"] != episode_id or old["event_type"] != "count.closing":
-            raise HTTPException(status_code=404, detail="Closing count not found")
-    if body.step == "opened":
-        payload = {"item_type": "swab", "quantity": body.quantity, "source": "typed", "by": body.by}
-        return _act(request, episode_id, "count.pack_opened", payload, body.at_ms, body.supersedes_id)
-    opened = _latest(store.events(episode_id), "count.pack_opened")
-    if opened is None:
-        raise HTTPException(status_code=409, detail="Record the pack opened first.")
-    start = opened["payload"]["quantity"]
-    payload = {
-        "opened": start,
-        "returned": body.returned,
-        "unaccounted": start - body.returned,
-        "detail": body.detail,
-        "by": body.by,
-    }
-    return _act(request, episode_id, "count.closing", payload, body.at_ms, body.supersedes_id)
 
 
 @router.get("/audit")

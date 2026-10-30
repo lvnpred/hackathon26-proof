@@ -138,6 +138,10 @@ def plain(event: dict) -> str:
         return f"Medicines photo: {p.get('why')}"
     if kind == "tray.checked":
         return f"Tray check by {'photos' if p.get('media') == 'photos' else 'video'}: {p.get('why')}"
+    if kind == "swabs.counted":
+        if p.get("count") is None:
+            return f"Swab camera count: {p.get('why')}"
+        return f"Swab camera count: {p['count']} seen, {p['opened']} opened."
     if kind == "setup.checked":
         return f"Set-up check by {'photos' if p.get('media') == 'photos' else 'video'}: {p.get('why')}"
     if kind == "question.asked":
@@ -231,7 +235,8 @@ def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> s
 def timeline_items(events: list[dict]) -> list[dict]:
     tasks = {e["id"]: e.get("payload") or {} for e in events if e["event_type"] == "task.created"}
     signed = any(e["event_type"] == "discharge.signed" for e in events)
-    return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed)}
+    return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed),
+             "evidence_id": (e.get("payload") or {}).get("evidence_id"), "calls": (e.get("payload") or {}).get("calls") or []}
             for e in events]
 
 

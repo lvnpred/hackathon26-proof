@@ -48,3 +48,10 @@ test("the dock folds to one line at phone width and the clock keeps its disabled
   assert.match(css, /\.demo-dock \{[^}]*background/);
   assert.doesNotMatch(css, /\.demo-toggle/);
 });
+
+test("the research notice sits outside the folded dock body", () => {
+  const jsx = fs.readFileSync(new URL("./DemoDock.jsx", import.meta.url), "utf8");
+  const body = jsx.match(/<div className="dock-body">([\s\S]*?)\n      <\/div>/)[1];
+  assert.doesNotMatch(body, /<Banner/);
+  assert.match(jsx, /<Banner \/>/);
+});

@@ -53,6 +53,7 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 @media (max-width: 640px) {
   .demo-dock { padding: 0 16px; }
   .dock-summary { display: inline-flex; align-items: center; }
+  .demo-dock > .note { flex: 1 1 100%; padding-bottom: 8px; }
   .demo-dock:not(.open) .dock-body { display: none; }
   .demo-dock.open .dock-body { padding-bottom: 8px; }
 }

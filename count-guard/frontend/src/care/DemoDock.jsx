@@ -50,8 +50,8 @@ export default function DemoDock({ ward, showClock, pick }) {
           </div>
         )}
         <span>{modelsText(live)}</span>
-        <Banner />
       </div>
+      <Banner />
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { alertsLabel, dockSummary, modelsText } from "./dock.js";
+import { alertCount, alertsLabel, dockSummary, modelsText } from "./dock.js";
 import { M } from "./clock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -19,4 +19,11 @@ test("modelsText and alertsLabel", () => {
 
 test("dock copy has no advice words", () => {
   for (const s of [dockSummary("patient", 0), modelsText(false), alertsLabel(2)]) assert.doesNotMatch(s, ADVICE);
+});
+
+test("alertCount sums own and grouped pills, and is 0 for the patient", () => {
+  const pills = { mine: [{}, {}], others: [{ pills: [{}] }, { pills: [{}, {}] }] };
+  assert.equal(alertCount(pills, "nurse"), 5);
+  assert.equal(alertCount(pills, "patient"), 0);
+  assert.equal(alertCount({ mine: [], others: [] }, "doctor"), 0);
 });

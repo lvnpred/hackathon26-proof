@@ -13,3 +13,7 @@ export function modelsText(live) {
 }
 
 export const alertsLabel = (n) => (n === 0 ? "" : n === 1 ? "1 alert" : `${n} alerts`);
+
+// Open alerts the bar counts: the role's own pills plus every grouped pill. The patient has none.
+export const alertCount = ({ mine, others }, role) =>
+  role === "patient" ? 0 : mine.length + others.reduce((n, g) => n + g.pills.length, 0);

@@ -79,7 +79,8 @@ test("expected strings follow the accepted rulings", () => {
   assert.ok(by["iyer-setup"].expect.includes(`${title} running`));
   assert.ok(by["iyer-end"].expect.includes(`finished ${title} at`));
   assert.ok(by["kumar-count"].before.includes("Closing count: 14 of 15 back, 1 unaccounted."));
+  const NEXT_ADMIT = "Nurse acknowledges the new orders from Dr. A. Rao, then completes the admission.";
   // kumar-review: the "Heard by" line goes once the answer is sent, so it is checked before and not in expect.
   // kumar-admission: the NEXT card sentence goes once the orders are acknowledged.
-  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || ["kumar-review", "kumar-admission"].includes(b.id), `${b.id} ${s}`);
+  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-admission" && s === NEXT_ADMIT), `${b.id} ${s}`);
 });

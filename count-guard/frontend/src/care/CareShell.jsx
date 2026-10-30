@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from "react-router-dom";
 import { Mark } from "../App";
 import { stripPills } from "./alerts";
-import { alertsLabel } from "./dock";
+import { alertCount, alertsLabel } from "./dock";
 import DemoDock from "./DemoDock";
 import { waitingPills } from "./derive";
 import { chipClass } from "./status";
@@ -87,7 +87,8 @@ export default function CareShell({ ward, children }) {
   const chartId = useMatch("/chart/:episodeId")?.params.episodeId;
   const [alertsOpen, setAlertsOpen] = useState(false);
   const { mine, others } = stripPills(waitingPills(ward.patients, ward.nowMs), chartId, ward.role);
-  const alerts = ward.role === "patient" ? 0 : mine.length + others.reduce((n, g) => n + g.pills.length, 0);
+  const alerts = alertCount({ mine, others }, ward.role);
+  useEffect(() => { if (alerts === 0) setAlertsOpen(false); }, [alerts]);
 
   // A fault belongs to the screen it happened on.
   useEffect(() => { clearFault(); }, [pathname, ward.role, ward.patientBed]);

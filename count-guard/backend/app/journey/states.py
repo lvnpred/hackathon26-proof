@@ -78,6 +78,11 @@ def current_state(events: list[dict]) -> str:
     return last["payload"]["to"] if last else "clinic"
 
 
+def journey_path(events: list[dict]) -> list[str]:
+    """Every state the patient has been in, in order, starting at clinic."""
+    return ["clinic"] + [e["payload"]["to"] for e in events if e["event_type"] == "patient.state"]
+
+
 def count_open(events: list[dict]) -> bool:
     """True when the latest closing count that still stands has swabs unaccounted for.
 
@@ -256,6 +261,49 @@ def _next_step(events: list[dict], state: str, you: bool = False) -> str:
     return next_
 
 
+NEXT_ROLE = {
+    "clinic": "doctor",
+    "clinic_done": None,
+    "admitting": "nurse",
+    "ward": "doctor",
+    "theatre": "nurse",
+    "discharging": "nurse",
+    "home": None,
+}
+
+
+def next_role(events: list[dict], state: str) -> str | None:
+    """Who owns the next step. Same branches, same order as `_next_step`, so the two cannot drift."""
+    from app.journey.tasks import orders_list  # tasks imports this module
+
+    role = NEXT_ROLE[state]
+    if state in ("ward", "admitting") and any(not o["acknowledged_by"] for o in orders_list(events)):
+        role = "nurse"
+    if state == "theatre" and surgery_status(events) == "none":
+        tray = tray_state(events)
+        if tray["planned"] and not tray["latest"]:
+            role = "nurse"
+    if state in PHOTO_STATES:
+        waiting = open_for_doctor(events)
+        if waiting["reviews"] or waiting["questions"]:
+            role = "doctor"
+    return role
+
+
+def theatre_count(events: list[dict]) -> dict:
+    """This theatre stay's swab count: the latest pack opened and the closing that still stands."""
+    last = _last_state_event(events)
+    stay = visible_events(events[events.index(last) + 1 :] if last else events)
+    opened, closing = _latest(stay, "count.pack_opened"), _latest(stay, "count.closing")
+    return {
+        "opened": opened["payload"]["quantity"] if opened else None,
+        "opened_by": opened["payload"].get("by") if opened else None,
+        "opened_at_ms": opened["ts_ms"] if opened else None,
+        "returned": closing["payload"]["returned"] if closing else None,
+        "missing": closing["payload"]["unaccounted"] if closing else None,
+    }
+
+
 def now_next(events: list[dict]) -> dict:
     state = current_state(events)
     now = _latest_happening(events) or "The patient is in clinic."
@@ -263,6 +311,7 @@ def now_next(events: list[dict]) -> dict:
     return {
         "now": now,
         "next": _next_step(events, state),
+        "next_role": next_role(events, state),
         "you_now": you_now,
         "you_next": _next_step(events, state, you=True),
     }
@@ -280,6 +329,8 @@ def flow_view(events: list[dict]) -> dict:
         "order_list": orders_list(events),
         "tasks": task_list(events),
         "state": current_state(events),
+        "visited": journey_path(events),
+        "count": theatre_count(events),
         "now_next": now_next(events),
         "allowed": allowed_moves(events),
         "procedure": {"key": procedure, "title": PROCEDURES[procedure]} if procedure else None,

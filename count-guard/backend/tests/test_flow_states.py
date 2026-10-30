@@ -332,3 +332,55 @@ def test_patient_next_speaks_to_the_patient(tmp_path):
     assert not any(ADVICE.search(text) for text in NEXT_YOU.values())
     for text in NEXT_YOU.values():
         assert "the patient" not in text.lower()
+
+
+def test_visited_keeps_theatre_after_return(tmp_path):
+    client, eid = _new(tmp_path)
+    assert _view(client, eid)["visited"] == ["clinic"]
+    _to_theatre(client, eid)
+    _surgery(client, eid, "began")
+    _surgery(client, eid, "ended")
+    assert _move(client, eid, "ward", checklist={}).status_code == 200
+    assert _view(client, eid)["visited"] == ["clinic", "admitting", "ward", "theatre", "ward"]
+
+
+def test_next_role_follows_the_next_sentence(tmp_path):
+    client, eid = _new(tmp_path)
+    assert _view(client, eid)["now_next"]["next_role"] == "doctor"
+    _move(client, eid, "admitting", reason="Hernia repair")
+    assert _view(client, eid)["now_next"]["next_role"] == "nurse"
+    _move(client, eid, "ward", checklist=ADMIT_CHECKS)
+    assert _view(client, eid)["now_next"]["next_role"] == "doctor"
+    das = client.post("/morning/episodes", json={"label": "Synthetic demo, A. Das"}).json()["id"]
+    _move(client, das, "clinic_done")
+    assert _view(client, das)["now_next"]["next_role"] is None
+
+
+def test_next_role_is_doctor_for_an_open_photo(tmp_path):
+    from tests.test_p4_ask import PNG, _home, _patients, _photo
+
+    client = _client(tmp_path)
+    kumar = _patients(client)["9"]
+    _home(client, kumar)
+    assert _view(client, kumar)["now_next"]["next_role"] is None
+    assert _photo(client, kumar, content=PNG).status_code == 200
+    assert _view(client, kumar)["now_next"]["next_role"] == "doctor"
+
+
+def test_count_is_per_theatre_stay(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    base, by = f"/journey/episodes/{eid}", {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    empty = {"opened": None, "opened_by": None, "opened_at_ms": None, "returned": None, "missing": None}
+    assert _view(client, eid)["count"] == empty
+    client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
+    closing = client.post(f"{base}/count", json={"step": "closing", "returned": 19, **by}).json()
+    count = _view(client, eid)["count"]
+    assert (count["opened"], count["returned"], count["missing"], count["opened_by"]) == (20, 19, 1, "Nurse Asha (synthetic)")
+    fix_id = [t for t in closing["timeline"] if t["type"] == "count.closing"][-1]["id"]
+    client.post(f"{base}/count", json={"step": "closing", "returned": 20, "supersedes_id": fix_id, **by})
+    assert _view(client, eid)["count"]["missing"] == 0
+    _surgery(client, eid, "began")
+    _surgery(client, eid, "ended")
+    _move(client, eid, "ward", checklist={})
+    assert _view(client, eid)["count"]["opened"] is None

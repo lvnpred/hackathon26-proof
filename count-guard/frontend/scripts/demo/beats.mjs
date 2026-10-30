@@ -38,6 +38,13 @@ export const BEATS = [
     keyed: "No model call. The dock reads models: live, not offline, when a key is set.",
   },
   {
+    id: "ai", path: "intro", role: "none", seconds: 20, film: true,
+    say: "The AI at work page lists the four Muse models on this ward; a sample tray photo shows SAM 3.1 boxes, the counts and a plain explanation.",
+    clicks: ['Link "AI at work" in the demo dock', 'Button "Try sample" in "SAM 3.1"'],
+    expect: ["AI at work", "Muse Voice", "Muse Spark 1.3", "SAM 3.1", "Muse Spark Open", "Saw 2 of 3 needle holders.", "2 (missing)"],
+    keyed: "Try sample makes live calls with a key: SAM 3.1 runs one image call per tray concept (7). The chip reads live in place of Sample or prepared.",
+  },
+  {
     id: "das-rx", path: "das", role: "doctor", seconds: 5, film: true,
     say: "Dr. Rao opens Mr. Das, an outpatient, and loads the prescription for his clinic visit.",
     clicks: ["Chart A. Das", 'Button "Use the demo prescription"'],

@@ -15,6 +15,10 @@ export const STEPS = {
     await H.page.goto(URL, { waitUntil: "domcontentloaded" });
     await H.role("Doctor");
   },
+  async ai(H) {
+    await H.dockLink("AI at work");
+    await H.click("Try sample", "SAM 3.1");
+  },
   async "das-rx"(H) {
     await H.chart("A. Das");
     await H.click("Use the demo prescription");

@@ -2,15 +2,15 @@
 
 ## Summary
 
-The film is three paths in 3:00. Offline is the safe default and `make demo-check` runs it end to end. Keyed is optional and spends credits.
+The film is three paths and an opening in 3:20. Offline is the safe default and `make demo-check` runs it end to end. Keyed is optional and spends credits.
 
 - Path 1, Das: an outpatient. Prescription, strip check, closed visit, and a patient question answered from the record.
 - Path 2, Kumar: hernia repair. Dictated orders, admission, theatre, tray check, swab count, paracetamol by voice, discharge, healing photo, doctor answer.
 - Path 3, Iyer: low blood pressure. Voice reading flagged, saline orders, set-up video check, a typed reading back above the limit with the flag answered, discharge, medicine photo.
 
-Totals: doctor 58 s, nurse 58 s, patient 58 s, intro and close 6 s, film 3:00.
+Totals: doctor 58 s, nurse 58 s, patient 58 s, intro, AI at work and close 26 s, film 3:20.
 
-How to check it: run `make demo-check` from `count-guard/`. It makes the media, runs the unit tests, starts its own servers on ports 8200 and 5273 with no model key, walks all 31 beats in a headless browser, and saves one screenshot per beat in `count-guard/demo-shots/`. It takes about 25 seconds (measured: 23 s, twice). The machine needs: Playwright's cached Chromium or `CG_CHROME` pointing at a Chrome, macOS `say`, `ffmpeg`, and Pillow in `.venv`.
+How to check it: run `make demo-check` from `count-guard/`. It makes the media, runs the unit tests, starts its own servers on ports 8200 and 5273 with no model key, walks all 32 beats in a headless browser, and saves one screenshot per beat in `count-guard/demo-shots/`. It takes about 25 seconds (measured: 23 s, twice). The machine needs: Playwright's cached Chromium or `CG_CHROME` pointing at a Chrome, macOS `say`, `ffmpeg`, and Pillow in `.venv`.
 
 Decision for the owner: film offline or keyed (see Owner handover). The script below is the offline one. Section "Keyed variant" lists what changes.
 
@@ -38,37 +38,44 @@ On screen: `Synthetic data · models: offline (prepared)` · `Research demo. Not
 > Count Guard is a research demo on a synthetic ward, running with no live model.
 
 
+#### `ai` · 0:03 · none · 20 s
+Clicks: 1) Link "AI at work" in the demo dock; 2) Button "Try sample" in "SAM 3.1"
+
+On screen: `AI at work` · `Muse Voice` · `Muse Spark 1.3` · `SAM 3.1` · `Muse Spark Open` · `Saw 2 of 3 needle holders.` · `2 (missing)`
+
+> The AI at work page lists the four Muse models on this ward; a sample tray photo shows SAM 3.1 boxes, the counts and a plain explanation.
+
 ### Path 1: Mr. Das, outpatient (patient and doctor)
 
-#### `das-rx` · 0:03 · doctor · 5 s
+#### `das-rx` · 0:23 · doctor · 5 s
 Clicks: 1) Chart A. Das; 2) Button "Use the demo prescription"
 
 On screen: `In clinic` · `Amlodipine`
 
 > Dr. Rao opens Mr. Das, an outpatient, and loads the prescription for his clinic visit.
 
-#### `das-strip` · 0:08 · doctor · 5 s
+#### `das-strip` · 0:28 · doctor · 5 s
 Clicks: 1) Field "One strip per line: name then strength" <- Amlodipine 10 mg; 2) Button "Check these strips"
 
 On screen: `The prescription says Amlodipine 5 mg`
 
 > A pharmacy strip is checked against the prescription, and the mismatch is named.
 
-#### `das-close` · 0:13 · doctor · 3 s
+#### `das-close` · 0:33 · doctor · 3 s
 Clicks: 1) Button "Close visit"
 
 On screen: `Clinic visit closed` · `The visit is closed. No further steps.`
 
 > Dr. Rao closes the visit, and the record says nothing more is due.
 
-#### `das-ask` · 0:16 · patient · 12 s
+#### `das-ask` · 0:36 · patient · 12 s
 Clicks: 1) Role Patient; 2) Pick A. Das; 3) Tab Ask; 4) Textarea in "Ask your record" <- When do I take amlodipine?; 5) Button "Ask the record"
 
 On screen: `Here is what your record says.` · `Amlodipine` · `Rules (no model)`
 
 > Mr. Das asks his own record about his tablet, and the answer comes from the record, with its source named.
 
-#### `das-mycare` · 0:28 · patient · 6 s
+#### `das-mycare` · 0:48 · patient · 6 s
 Clicks: 1) Tab "My care"
 
 On screen: `Clinic visit closed`
@@ -78,35 +85,35 @@ On screen: `Clinic visit closed`
 
 ### Path 2: Mr. Kumar, hernia repair (all three roles)
 
-#### `kumar-orders` · 0:34 · doctor · 8 s
+#### `kumar-orders` · 0:54 · doctor · 8 s
 Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) Button "Dictate orders"; 5) File eval/p2/kumar-orders.wav into "Dictate orders"; 6) Button "Draft orders"
 
 On screen: `Draft from dictation · Rules (no model)` · `Heard by: Prepared demo result` · `Paracetamol`
 
 > Dr. Rao dictates admission orders for Mr. Kumar, and a draft appears with its source named.
 
-#### `kumar-admit` · 0:42 · doctor · 4 s
+#### `kumar-admit` · 1:02 · doctor · 4 s
 Clicks: 1) Button "Sign orders"; 2) Button "Admit"
 
 On screen: `Being admitted` · `Nurse acknowledges the new orders from Dr. A. Rao, then completes the admission.`
 
 > Dr. Rao signs the orders and admits him; the screen says which nurse step comes next.
 
-#### `kumar-admission` · 0:46 · nurse · 6 s
+#### `kumar-admission` · 1:06 · nurse · 6 s
 Clicks: 1) Role Nurse; 2) Tab "My queue"; 3) Chart R. Kumar; 4) Tick "Wristband on", "Allergies checked", "Baseline observations taken", "Consent on file"; 5) Button "Complete admission"; 6) Button "Acknowledge"
 
 On screen: `On the ward` · `acknowledged the orders at`
 
 > Nurse Meena sees the new orders in her queue, ticks the admission checks and acknowledges the orders.
 
-#### `kumar-theatre` · 0:52 · doctor · 6 s
+#### `kumar-theatre` · 1:12 · doctor · 6 s
 Clicks: 1) Role Doctor; 2) Select "Procedure" <- hernia-repair; 3) Button "Send to theatre"
 
 On screen: `Swabs: 15` · `In theatre` · `Dr. A. Rao: In theatre with R. Kumar, free about`
 
 > Dr. Rao picks the hernia repair and sends him to theatre; the doctor's status follows.
 
-#### `kumar-chip` · 0:58 · patient · 5 s
+#### `kumar-chip` · 1:18 · patient · 5 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Today
 
 On screen: `In theatre with R. Kumar`
@@ -122,70 +129,70 @@ On screen: `In theatre with R. Kumar, expected free soon`
 
 Filming note: `kumar-free-soon` is not in the film. The check moves the clock on one hour here and reads the chip. In the filmed take the +1 h move is skipped (or done off camera and not shown), and `kumar-tray` follows `kumar-chip` directly, so its first two clicks (Role Nurse, Chart R. Kumar) are on camera.
 
-#### `kumar-tray` · 1:03 · nurse · 6 s
+#### `kumar-tray` · 1:23 · nurse · 6 s
 Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "Tray check"
 
 On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `needle holder` · `2 (missing)` · `Saw 2 of 3 needle holders.` · `Prepared demo result`
 
 > Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon.
 
-#### `kumar-count` · 1:09 · nurse · 9 s
+#### `kumar-count` · 1:29 · nurse · 9 s
 Clicks: 1) Button "Surgery began"; 2) Button "Record pack opened" (prefilled 15); 3) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 4) Button "Record closing count" (prefilled 14 by the camera); 5) Field "Closing count (returned)" <- 15; 6) Button "Correct the count"
 
 On screen: `Closing count: 14 of 15 back, 1 unaccounted.` · `Correction recorded.`
 
 > Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the count is corrected to 15 when one is found.
 
-#### `kumar-back` · 1:18 · nurse · 4 s
+#### `kumar-back` · 1:38 · nurse · 4 s
 Clicks: 1) Button "Surgery ended"; 2) Button "Back to ward"
 
 On screen: `On the ward` · `Dr. A. Rao: Available`
 
 > Surgery ends and he returns to the ward; Dr. Rao shows as available again.
 
-#### `kumar-paracetamol` · 1:22 · nurse · 7 s
+#### `kumar-paracetamol` · 1:42 · nurse · 7 s
 Clicks: 1) Button "Say it: Paracetamol…" on the Paracetamol row; 2) File eval/p2/kumar-paracetamol.wav into that row; 3) Button "Use this"; 4) File eval/p2/strip-paracetamol.png into "Confirm task"; 5) Button "Confirm"
 
 On screen: `Paracetamol 1 g given to bed 4.` · `Heard by: Prepared demo result` · `Photo matches the task` · `by voice`
 
 > Nurse Meena records the paracetamol round by voice, adds the strip photo, and confirms.
 
-#### `kumar-mycare` · 1:29 · patient · 7 s
+#### `kumar-mycare` · 1:49 · patient · 7 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab "My care"
 
 On screen: `, by voice` · `Photo matches the task`
 
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
-#### `kumar-discharge` · 1:36 · doctor · 8 s
+#### `kumar-discharge` · 1:56 · doctor · 8 s
 Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Sign discharge"
 
 On screen: `Reference` · `15 of 15` · `Heard by: Prepared demo result` · `Being discharged`
 
 > Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.
 
-#### `kumar-home` · 1:44 · nurse · 3 s
+#### `kumar-home` · 2:04 · nurse · 3 s
 Clicks: 1) Role Nurse; 2) tick "Discharge card given", "Medicines handed over", "Reminders set"; 3) Button "Complete discharge"
 
 On screen: `Home`
 
 > The nurse completes the discharge checks and he goes home.
 
-#### `kumar-ask` · 1:47 · patient · 12 s
+#### `kumar-ask` · 2:07 · patient · 12 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Day 3; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
 
 On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.`
 
 > At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says who is waiting.
 
-#### `kumar-review` · 1:59 · doctor · 9 s
+#### `kumar-review` · 2:19 · doctor · 9 s
 Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
 
 On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send to R. Kumar) · `by voice · Prepared demo result` · `No visit needed`
 
 > Dr. Rao opens the healing photo beside the reference photo and answers by voice.
 
-#### `kumar-answers` · 2:08 · patient · 6 s
+#### `kumar-answers` · 2:28 · patient · 6 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask
 
 On screen: `The wound looks as expected for day 3.` · `No visit needed`
@@ -195,56 +202,56 @@ On screen: `The wound looks as expected for day 3.` · `No visit needed`
 
 ### Path 3: Ms. Iyer, low blood pressure and saline (all three roles)
 
-#### `iyer-bp` · 2:14 · nurse · 6 s
+#### `iyer-bp` · 2:34 · nurse · 6 s
 Clicks: 1) Role Nurse; 2) Chart S. Iyer; 3) Button "Say it: BP and pulse…" on the BP and pulse row; 4) File eval/p2/iyer-bp.wav into that row; 5) Button "Use this"; 6) Button "Confirm"
 
 On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 
 > Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.
 
-#### `iyer-orders` · 2:20 · doctor · 7 s
+#### `iyer-orders` · 2:40 · doctor · 7 s
 Clicks: 1) Role Doctor; 2) Tab "My patients" (row reads "Observation past its limit"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Draft orders"; 7) Button "Sign orders"
 
 On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao.`
 
 > Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them.
 
-#### `iyer-setup` · 2:27 · nurse · 8 s
+#### `iyer-setup` · 2:47 · nurse · 8 s
 Clicks: 1) Role Nurse; 2) Button "Acknowledge"; 3) File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"; 4) Button "Begin"
 
 On screen: `Set-up matches the list` · `Saline 1 litre over 2 hours, video check of the set-up running`
 
 > The nurse acknowledges the orders, films the saline set-up, and the check matches the list before she begins.
 
-#### `iyer-end` · 2:35 · nurse · 2 s
+#### `iyer-end` · 2:55 · nurse · 2 s
 Clicks: 1) Button "+1 h" twice; 2) Button "End"
 
 On screen: `finished Saline 1 litre over 2 hours, video check of the set-up at`
 
 > The clock moves two hours and the nurse ends the saline task.
 
-#### `iyer-recheck` · 2:37 · nurse · 5 s
+#### `iyer-recheck` · 2:57 · nurse · 5 s
 Clicks: 1) Role Nurse; 2) Button "Say it: BP and pulse every 1 h"; 3) Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.; 4) Button "Use this"; 5) Button "Confirm"; 6) Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside; 7) Button "Answer" in that flag
 
 On screen: `logged BP 112/70, HR 84` · the waiting strip no longer shows `→ Systolic BP 82 is below the limit of 90`
 
 > Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.
 
-#### `iyer-discharge` · 2:42 · doctor · 3 s
+#### `iyer-discharge` · 3:02 · doctor · 3 s
 Clicks: 1) Role Doctor; 2) Button "Dictate discharge"; 3) Field "Summary" <- Recovered on the ward after saline. BP back above the limit.; 4) Button "Sign discharge"
 
 On screen: `Being discharged`
 
 > Dr. Rao types a short summary and signs the discharge.
 
-#### `iyer-home` · 2:45 · nurse · 2 s
+#### `iyer-home` · 3:05 · nurse · 2 s
 Clicks: 1) Role Nurse; 2) tick "Discharge card given", "Medicines handed over", "Reminders set"; 3) Button "Complete discharge"
 
 On screen: `Home`
 
 > The discharge checks are ticked and she goes home.
 
-#### `iyer-meds` · 2:47 · patient · 10 s
+#### `iyer-meds` · 3:07 · patient · 10 s
 Clicks: 1) Role Patient; 2) Pick S. Iyer; 3) Tab Ask; 4) File input in "Medicines photo" <- eval/p4/meds-iyer.png
 
 On screen: `Ibuprofen` · `Pantoprazole 40 mg:` · `Ibuprofen 400 mg · not prescribed`
@@ -254,7 +261,7 @@ On screen: `Ibuprofen` · `Pantoprazole 40 mg:` · `Ibuprofen 400 mg · not pres
 
 ### Close
 
-#### `close` · 2:57 · none · 3 s
+#### `close` · 3:17 · none · 3 s
 Clicks: 1) Role Doctor; 2) Tab "My patients"
 
 On screen: `Dr. A. Rao: Available`
@@ -270,6 +277,7 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 | Beat | Model calls and label change |
 |---|---|
 | `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The dock reads models: live, not offline, when a key is set. |
+| `ai` | Try sample makes live calls with a key: SAM 3.1 runs one image call per tray concept (7). The chip reads live in place of Sample or prepared. |
 | `das-ask` | No model call: a medicine question is answered by quoting the prescription row. The label reads Rules (no model) with or without a key. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |

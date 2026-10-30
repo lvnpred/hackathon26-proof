@@ -36,6 +36,7 @@ export function helpers(page, root) {
       await page.getByLabel("Patient", { exact: true }).selectOption(value);
       await page.locator("h1", { hasText: prefix }).waitFor();
     },
+    dockLink: (name) => page.getByRole("region", { name: "Demo" }).getByRole("link", { name, exact: true }).click(),
     tab: (name) => nav.getByRole("link", { name, exact: true }).click(),
     click: (name, scope) => (scope ? region(scope) : page).getByRole("button", { name, exact: true }).first().click(),
     // Open a quiet-row or card panel; leaves it open if it already is.

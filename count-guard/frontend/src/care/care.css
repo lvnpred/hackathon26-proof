@@ -74,7 +74,7 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .journey li.current { background: var(--sun-soft); border: 1px solid var(--sun); }
 .journey li.later, .journey li.skipped { color: var(--ink-muted); }
 .journey li.skipped { text-decoration: line-through; }
-.next-card { display: grid; gap: 8px; margin: 12px 0; }
+.next-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 12px 0; }
 .next-text { margin: 0; font-size: 1.25rem; font-weight: 700; }
 .quiet-row { margin: 4px 0 12px; }
 @media (max-width: 640px) {
@@ -89,8 +89,8 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .order-fold summary { cursor: pointer; font-weight: 600; }
 
 /* Theatre checklist and swab count */
-.checklist { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
-.checklist .step { display: grid; gap: 6px; }
+.checklist { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.checklist .step { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .checklist .step-line { margin: 0; }
 .checklist .step.current, .checklist .step.open { padding: 10px; border: 1px solid var(--sun); border-radius: 10px; background: var(--sun-soft); }
 .checklist .step .card { margin: 0; }
@@ -126,7 +126,7 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .answered-fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600 }
 
 /* Evidence viewer (Task 6) */
-.evidence { margin: 8px 0; display: grid; gap: 6px; }
+.evidence { margin: 8px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .ev-stage { position: relative; max-width: 640px }
 .ev-stage img { width: 100%; display: block }
 .ev-stage canvas { position: absolute; inset: 0; width: 100%; height: 100% }

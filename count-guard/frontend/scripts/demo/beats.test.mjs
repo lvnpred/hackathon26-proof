@@ -5,27 +5,28 @@ import { ADVICE, BEATS, GENERATOR, MEDIA, ROLES, filmSeconds, missingMedia, role
 test("ids are unique and every beat has a known role and path", () => {
   const ids = BEATS.map((b) => b.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(BEATS.length, 31);
+  assert.equal(BEATS.length, 32);
   for (const b of BEATS) {
     assert.ok([...ROLES, "none"].includes(b.role), b.id);
     assert.ok(["intro", "das", "kumar", "iyer", "close"].includes(b.path), b.id);
   }
 });
 
-test("paths run das, then kumar, then iyer (intro first, close last)", () => {
+test("paths run intro twice, then das, kumar, iyer, and close last", () => {
   const order = BEATS.map((b) => b.path);
-  assert.equal(order[0], "intro");
+  assert.deepEqual(order.slice(0, 2), ["intro", "intro"]);
   assert.equal(order.at(-1), "close");
-  const middle = order.slice(1, -1);
+  const middle = order.slice(2, -1);
   const rank = { das: 0, kumar: 1, iyer: 2 };
   assert.ok(middle.every((p) => p in rank));
   assert.deepEqual(middle.map((p) => rank[p]), [...middle.map((p) => rank[p])].sort());
 });
 
-test("each role is filmed 54 to 62 s and the film is at most 180 s", () => {
+test("each role is filmed 54 to 62 s, the opening and close take 26 s and the film is at most 200 s", () => {
   const sums = roleSeconds(BEATS);
   for (const r of ROLES) assert.ok(sums[r] >= 54 && sums[r] <= 62, `${r} ${sums[r]}`);
-  assert.ok(filmSeconds(BEATS) <= 180, String(filmSeconds(BEATS)));
+  assert.equal(sums.none, 26);
+  assert.ok(filmSeconds(BEATS) <= 200, String(filmSeconds(BEATS)));
 });
 
 test("roleSeconds counts filmed beats only", () => {
@@ -74,6 +75,8 @@ test("expected strings follow the accepted rulings", () => {
   const by = Object.fromEntries(BEATS.map((b) => [b.id, b]));
   assert.ok(by["kumar-orders"].expect.includes("Draft from dictation · Rules (no model)"));
   assert.ok(by["kumar-orders"].expect.includes("Heard by: Prepared demo result"));
+  assert.equal(BEATS[1].id, "ai");
+  assert.ok(by.ai.expect.includes("Saw 2 of 3 needle holders."));
   assert.ok(by["iyer-meds"].expect.includes("Pantoprazole 40 mg:"));
   const title = "Saline 1 litre over 2 hours, video check of the set-up";
   assert.ok(by["iyer-setup"].expect.includes(`${title} running`));

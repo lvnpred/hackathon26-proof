@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import re
 import subprocess
 import tempfile
@@ -21,6 +22,7 @@ from app.media_pipeline import to_sam_clip
 from app.spend import clip_seconds
 
 PREPARED_DIR = Path(__file__).parent / "prepared"
+log = logging.getLogger(__name__)
 _NAME = re.compile(r"^([a-z0-9-]{1,60})\.[a-z0-9]{1,5}$")
 NO_KEY = "No model key, so recordings are not transcribed here. Type what was said in the box."
 NO_SPEECH = "Nothing was heard in the recording. Type what was said in the box."
@@ -63,6 +65,13 @@ def to_wav(raw: bytes, content_type: str) -> bytes:
     return done.stdout
 
 
+def _reason(exc: Exception, key: str) -> str:
+    """Why a call failed, with the response body when there is one. The key never appears."""
+    body = exc.response.text if isinstance(exc, httpx.HTTPStatusError) else ""
+    text = f"{type(exc).__name__}: {exc} {body}"
+    return (text.replace(key, "[redacted]") if key else text)[:400]
+
+
 def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str) -> dict:
     if settings.voice_configured:
         try:
@@ -72,6 +81,7 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
                 path.write_bytes(wav)
                 turns = VoiceAdapter(settings).transcribe(path, 0, "audio/wav")
         except (httpx.HTTPError, subprocess.SubprocessError, OSError, ValueError) as exc:
+            log.warning("Voice transcription failed: %s", _reason(exc, settings.meta_api_key))
             found = prepared(filename)
             if found and found.get("transcript"):
                 return {"text": found["transcript"], "source": FALLBACK}

@@ -1,6 +1,6 @@
 import { label } from "./clock.js";
 import { waitedText } from "./derive.js";
-import { shortName } from "./names.js";
+import { displayName, shortName } from "./names.js";
 import { sourceLabel } from "./drafts.js";
 
 // Same copy as the server's not-found answer.
@@ -26,16 +26,24 @@ export const doctorOpenItems = (view) =>
   + (view?.ask?.reviews || []).filter((r) => !r.answer).length
   + (view?.nudges || []).filter((n) => n.to === "doctor").length;
 
-// The doctor's inbox: questions to the doctor and reviews. The doctor sees all; others see answered items.
+// The doctor's inbox: questions to the doctor and reviews, open and answered, for every role (R23).
 // Open items first, then answered, each oldest first (R22).
-export function inboxItems(view, role, nowMs) {
+export function inboxItems(view, _role, nowMs) {
   const make = (kind) => (item) => ({ kind, id: item.id, atMs: item.at_ms, open: !item.answer, waited: item.answer ? "" : waitedText(nowMs - item.at_ms) });
   const all = [
     ...((view?.ask?.questions) || []).filter((q) => q.to === "doctor").map(make("question")),
     ...((view?.ask?.reviews) || []).map(make("review")),
-  ].filter((i) => role === "doctor" || !i.open);
+  ];
   const byTime = (a, b) => a.atMs - b.atMs;
   return [...all.filter((i) => i.open).sort(byTime), ...all.filter((i) => !i.open).sort(byTime)];
+}
+
+export const inboxGroups = (items) => ({ open: items.filter((i) => i.open), answered: items.filter((i) => !i.open) });
+
+export function checkinLine(c) {
+  const seen = c.seen || [];
+  const signs = (c.signs || []).join(", ") || "no listed signs";
+  return `Day ${c.day} check-in: ${c.feels}; ${signs} \u00b7 ${seen.length ? `Seen by ${displayName(seen[0].by)}` : "not seen yet"}`;
 }
 
 export function inboxHeader(name, items) {

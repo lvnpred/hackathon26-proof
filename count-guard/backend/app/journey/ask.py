@@ -28,7 +28,7 @@ def _answer(p: dict, ts_ms: int) -> dict:
 
 
 def ask_view(events: list[dict]) -> dict:
-    """Questions and reviews, oldest first, each with its first answer. Medicine photos too."""
+    """Questions and reviews, oldest first, each with its first answer. Medicine photos and check-ins too."""
     answers, decisions = {}, {}
     for e in events:
         p = e["payload"]
@@ -36,7 +36,13 @@ def ask_view(events: list[dict]) -> dict:
             answers.setdefault(p["question_id"], e)
         elif e["event_type"] == "review.answered":
             decisions.setdefault(p["review_id"], e)
-    questions, reviews, medicines = [], [], []
+    seen: dict[str, list[dict]] = {}
+    for e in events:
+        if e["event_type"] == "checkin.seen":
+            by_list = seen.setdefault(e["payload"]["checkin_id"], [])
+            if all(row["by"] != e["payload"]["by"] for row in by_list):
+                by_list.append({"by": e["payload"]["by"], "at_ms": e["ts_ms"]})
+    questions, reviews, medicines, checkins = [], [], [], []
     for e in events:
         p = e["payload"]
         if e["event_type"] == "question.asked":
@@ -71,7 +77,14 @@ def ask_view(events: list[dict]) -> dict:
                     "rows": p["rows"], "match": p["match"], "why": p["why"], "source": p["source"], "at_ms": e["ts_ms"],
                 }
             )
-    return {"questions": questions, "reviews": reviews, "medicines": medicines}
+        elif e["event_type"] == "checkin.recorded":
+            checkins.append(
+                {
+                    "id": e["id"], "at_ms": e["ts_ms"], "day": p["day"], "feels": p["feels"],
+                    "signs": p.get("signs") or [], "note": p.get("note", ""), "seen": seen.get(e["id"], []),
+                }
+            )
+    return {"questions": questions, "reviews": reviews, "medicines": medicines, "checkins": checkins}
 
 
 def open_for_doctor(events: list[dict]) -> dict:

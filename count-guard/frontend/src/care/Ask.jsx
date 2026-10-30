@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import { findPatient } from "./Patients";
 import StateHeader from "./StateHeader";
 import { BotCard, DoctorCard, MedicinesCard, ReviewCard } from "./AskCards";
+import Thread from "./Thread.jsx";
+import { markOpened } from "./thread.js";
 
 // All drafts live here, so keying this component by patient resets every one of them (P4-R7).
 function AskBody({ ward, patient }) {
@@ -16,14 +18,18 @@ function AskBody({ ward, patient }) {
     fault: ward.fault,
     episodeId: patient.id,
   };
+  // Opening Ask marks every answer so far as read (R21).
+  useEffect(() => { markOpened(patient.id, ward.nowMs); }, [patient.id]);
+  const askDoctor = (text) => setToDoctor({ id: `${Date.now()}`, text });
   return (
     <>
       <PageLead kicker={patient.name} title="Ask" body="Ask your record, ask the doctor, or send a photo. Answers come from your record or from Dr. Rao." />
       <StateHeader patient={patient} view={patient.view} you />
-      <BotCard {...props} onAskDoctor={(text) => setToDoctor({ id: `${Date.now()}`, text })} />
+      <BotCard {...props} />
       <DoctorCard {...props} fill={toDoctor} />
       <ReviewCard {...props} />
       <MedicinesCard {...props} />
+      <Thread view={patient.view} nowMs={ward.nowMs} onAskDoctor={askDoctor} />
     </>
   );
 }

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   ASK_DOCTOR, NOT_FOUND, answerHow, PHOTO_CLOSED, PHOTO_STATES, answerByLine, botQuestions, doctorQuestions,
   latestMedicines, latestReview, medicineLine, photoAskOpen, questionProblem, doctorOpenItems,
-  inboxItems, inboxHeader, photoDay, sendVerb,
+  inboxItems, inboxGroups, checkinLine, inboxHeader, photoDay, sendVerb,
 } from "./askText.js";
 import { H, M } from "./clock.js";
 
@@ -124,10 +124,14 @@ test("doctorOpenItems counts what waits on the doctor", () => {
 const v = { ask: {
   questions: [{ id: "q2", to: "doctor", at_ms: 20 * M, answer: null }, { id: "q1", to: "doctor", at_ms: 10 * M, answer: null }, { id: "b", to: "bot", at_ms: 0, answer: null }, { id: "q0", to: "doctor", at_ms: 0, answer: { text: "ok" } }],
   reviews: [{ id: "r1", at_ms: 15 * M, answer: null }] } };
-test("inboxItems: open oldest first, then answered; others see answered only", () => {
+test("inboxItems: open oldest first, then answered; every role sees both", () => {
   assert.deepEqual(inboxItems(v, "doctor", 30 * M).map((i) => i.id), ["q1", "r1", "q2", "q0"]);
   assert.equal(inboxItems(v, "doctor", 30 * M)[0].waited, "20 min");
-  assert.deepEqual(inboxItems(v, "nurse", 30 * M).map((i) => i.id), ["q0"]);
+  assert.deepEqual(inboxItems(v, "nurse", 30 * M).map((i) => i.id), ["q1", "r1", "q2", "q0"]);
+  assert.deepEqual(inboxGroups(inboxItems(v, "doctor", 30 * M)).answered.map((i) => i.id), ["q0"]);
+  assert.deepEqual(inboxGroups(inboxItems(v, "doctor", 30 * M)).open.map((i) => i.id), ["q1", "r1", "q2"]);
+  assert.equal(checkinLine({ day: 3, feels: "Better", signs: [], seen: [] }), "Day 3 check-in: Better; no listed signs \u00b7 not seen yet");
+  assert.equal(checkinLine({ day: 4, feels: "Same", signs: ["Redness", "Fever"], seen: [{ by: "Nurse Meena (synthetic)" }] }), "Day 4 check-in: Same; Redness, Fever \u00b7 Seen by Nurse Meena");
   assert.deepEqual(inboxItems({}, "doctor", 0), []);
 });
 test("header, verb and photo day", () => {

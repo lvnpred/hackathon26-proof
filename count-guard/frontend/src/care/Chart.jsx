@@ -12,7 +12,10 @@ import OrderTasks from "./OrderTasks";
 import Photos from "./Photos";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
+import { unseenCheckins } from "./thread.js";
 import VideoChecks from "./VideoChecks";
+
+const WARD_NURSE = "Nurse Meena (synthetic)"; // the ward nurse, as in NurseActions.jsx
 
 export default function Chart() {
   const { episodeId } = useParams();
@@ -34,6 +37,18 @@ export default function Chart() {
       .catch((exc) => { if (live) setRowsError(exc.message); });
     return () => { live = false; };
   }, [episodeId, Boolean(patient), stamp]);
+
+  // The ward nurse opening a chart has seen its check-ins: one Seen per check-in, one after the other (R22).
+  const checkinCount = view?.ask?.checkins?.length;
+  useEffect(() => {
+    if (ward.role !== "nurse" || !view) return;
+    const ids = unseenCheckins(view, WARD_NURSE);
+    (async () => {
+      for (const id of ids) {
+        if (!(await ward.markSeen(episodeId, id, WARD_NURSE))) break;
+      }
+    })();
+  }, [episodeId, checkinCount, ward.role]);
 
   // A missing id leaves the chart at the top.
   useEffect(() => {

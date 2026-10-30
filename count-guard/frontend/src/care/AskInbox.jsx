@@ -4,7 +4,7 @@ import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import { INBOX_SCOPES } from "./faults";
-import { answerHow, answerSourceLine, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
+import { answerHow, answerSourceLine, checkinLine, inboxGroups, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
 
 // The three fixed review decisions, as the server names them.
 const DECISIONS = [["no_visit", "No visit needed"], ["come_in", "Come in to the clinic"], ["call", "The doctor will call you"]];
@@ -80,21 +80,31 @@ function ReviewCard({ r, item, role, busy, act, reference }) {
   );
 }
 
-// The doctor's inbox: one card per question or healing photo, open first and oldest first. Only the doctor can answer.
+// The conversation with the patient: open cards first, then answered ones and check-ins in a fold. Only the doctor can answer.
 export default function AskInbox({ view, role, name, nowMs, busy, act, ask, fault, episodeId }) {
   const items = inboxItems(view, role, nowMs);
-  if (!items.length) return null;
+  const checkins = view.ask?.checkins || [];
+  if (!items.length && !checkins.length) return null;
   const questions = new Map((view.ask?.questions || []).map((q) => [q.id, q]));
   const reviews = new Map((view.ask?.reviews || []).map((r) => [r.id, r]));
   const references = (view.photos || []).filter((p) => p.purpose === "reference");
   const reference = references[references.length - 1];
+  const { open, answered } = inboxGroups(items);
+  const card = (item) => (item.kind === "question"
+    ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} busy={busy} act={act} ask={ask} />
+    : <ReviewCard key={item.id} r={reviews.get(item.id)} item={item} role={role} busy={busy} act={act} reference={reference} />);
   return (
     <section aria-label="Ask inbox">
       <p className="label">{inboxHeader(name, items)}</p>
       <Fault fault={fault} episodeId={episodeId} only={INBOX_SCOPES} />
-      {items.map((item) => item.kind === "question"
-        ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} busy={busy} act={act} ask={ask} />
-        : <ReviewCard key={item.id} r={reviews.get(item.id)} item={item} role={role} busy={busy} act={act} reference={reference} />)}
+      {open.map(card)}
+      {(answered.length > 0 || checkins.length > 0) && (
+        <details className="answered-fold" key={open.length ? "some" : "none"} open={open.length === 0}>
+          <summary>Answered ({answered.length})</summary>
+          {answered.map(card)}
+          {checkins.map((c) => <p className="small" key={c.id} data-line={c.id}>{checkinLine(c)}</p>)}
+        </details>
+      )}
     </section>
   );
 }

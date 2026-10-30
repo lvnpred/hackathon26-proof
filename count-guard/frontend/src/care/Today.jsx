@@ -5,6 +5,7 @@ import { findPatient } from "./Patients";
 import { answerByLine, doctorQuestions } from "./askText";
 import { greeting, nextWords, todayFolds, whereWords } from "./today.js";
 import { displayName } from "./names";
+import { checkinStatusLine, readOpened, unreadLine } from "./thread.js";
 import { CheckIn, MyCard, NeedHelp } from "../screens/PatientCard";
 import { Medicines, Nudges, Reminders, Strips } from "../screens/TodayPanel";
 
@@ -44,6 +45,9 @@ function TodayBody({ ward, patient }) {
     fault: ward.fault,
     episodeId: patient.id,
   };
+  const unread = unreadLine(view, readOpened(patient.id));
+  // The check-in form unmounts on save, so its own confirmation goes with it; this line comes from the record (PF-2).
+  const sent = checkinStatusLine(view, ward.nowMs);
   const upload = (path, file) => ward.upload(patient.id, path, file);
   const folds = {
     card: <MyCard card={view.card} />,
@@ -66,6 +70,8 @@ function TodayBody({ ward, patient }) {
         <p className="next-text">{whereWords(view.state, ward.nowMs)}</p>
         <p>{displayName(view.now_next?.you_now)}</p>
         <p className="small">{nextWords(view)}</p>
+        {unread && <p className="note">{unread}</p>}
+        {sent && <p className="note" role="status">{sent}</p>}
       </section>
       <Nudges {...common} />
       {home ? (

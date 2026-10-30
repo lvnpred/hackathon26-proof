@@ -55,3 +55,9 @@ test("the research notice sits outside the folded dock body", () => {
   assert.doesNotMatch(body, /<Banner/);
   assert.match(jsx, /<Banner \/>/);
 });
+
+test("care.css styles the patient thread rows and the unread dot", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.thread-row/);
+  assert.match(css, /\.dot \{/);
+});

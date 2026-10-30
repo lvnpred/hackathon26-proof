@@ -161,6 +161,17 @@ export function useWard() {
   const send = (id, path, file, fields) => uploadJourney(id, path, file, { ...fields, at_ms: nowMs });
   const upload = (id, path, file, fields, scope = path) => run(id, () => send(id, path, file, fields), scope);
 
+  // A nurse's Seen is bookkeeping, not an action: it swaps the view and leaves the clock and busy flag alone.
+  // A failure is dropped; the chart tries again the next time it opens.
+  async function markSeen(id, checkinId, by) {
+    try {
+      swap(id, await postJourney(id, `/checkins/${checkinId}/seen`, { by, at_ms: nowMs }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // Like upload, but returns the JSON without swapping the view (a proposal is not a record).
   async function ask(id, path, file, fields, scope = path) {
     setFault(null);
@@ -213,5 +224,5 @@ export function useWard() {
 
   const find = (id) => patients.find((p) => p.id === id);
 
-  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, fault, loadError, clearFault, act, upload, ask, jump, reset, find };
+  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, fault, loadError, clearFault, act, upload, markSeen, ask, jump, reset, find };
 }

@@ -49,6 +49,10 @@ class DecisionIn(At):
     by: str = Field(min_length=1, max_length=80)
 
 
+class SeenCheckinIn(At):
+    by: str = Field(min_length=1, max_length=80)
+
+
 def _write(request: Request, episode_id: str, rows: list[tuple[str, dict]], ts: int) -> dict:
     store = _store(request)
     for kind, payload in rows:
@@ -179,3 +183,12 @@ def ask_medicines(
     matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses,
                              ward=states.current_state(events) in WARD_VIEW)
     return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "by": by})], ts)
+
+
+@ask_router.post("/checkins/{checkin_id}/seen")
+def checkin_seen(episode_id: str, checkin_id: str, body: SeenCheckinIn, request: Request) -> dict:
+    """A nurse saw a check-in. Once per nurse: a second call writes nothing."""
+    _, events = _find(request, episode_id, "checkin.recorded", checkin_id, "Check-in not found")
+    if any(e["event_type"] == "checkin.seen" and e["payload"]["checkin_id"] == checkin_id and e["payload"]["by"] == body.by for e in events):
+        return view(request, episode_id)
+    return _write(request, episode_id, [("checkin.seen", {"checkin_id": checkin_id, "by": body.by})], _at(_store(request), episode_id, body.at_ms))

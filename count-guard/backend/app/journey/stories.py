@@ -112,6 +112,8 @@ def plain(event: dict) -> str:
     if kind == "checkin.recorded":
         signs = ", ".join(p.get("signs") or []) or "no listed signs"
         return f"Day {p.get('day')} check-in: {p.get('feels')}; {signs}."
+    if kind == "checkin.seen":
+        return f"{p['by']} saw a check-in."
     if kind == "patient.state":
         said = f" Reason: {p.get('reason')}" if p.get("reason") else ""
         if p.get("from") is None:
@@ -206,6 +208,8 @@ def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> s
     elif kind == "nudge.raised":
         # A note for staff has no patient wording; the timeline hides an empty line from the patient.
         return f"A note for you: {p.get('says')}" if p.get("to") == "patient" else ""
+    elif kind == "checkin.seen":
+        return f"{short_name(p['by'])} saw your check-in."
     elif kind == "surgery.began":
         return "Your operation began."
     elif kind == "surgery.ended":

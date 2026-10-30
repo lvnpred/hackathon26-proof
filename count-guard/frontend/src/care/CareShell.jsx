@@ -7,6 +7,8 @@ import DemoDock from "./DemoDock";
 import { waitingPills } from "./derive";
 import { chipClass } from "./status";
 import "./care.css";
+import { readOpened, unreadCount } from "./thread.js";
+import { findPatient } from "./Patients";
 import { useWard } from "./ward";
 
 const STAFF_TABS = {
@@ -87,6 +89,8 @@ export default function CareShell({ ward, children }) {
   const chartId = useMatch("/chart/:episodeId")?.params.episodeId;
   const [alertsOpen, setAlertsOpen] = useState(false);
   const { mine, others } = stripPills(waitingPills(ward.patients, ward.nowMs), chartId, ward.role);
+  const me = ward.role === "patient" ? findPatient(ward.patients, ward.patientBed) : null;
+  const unread = me ? unreadCount(me.view, readOpened(me.id)) : 0;
   const alerts = alertCount({ mine, others }, ward.role);
   useEffect(() => { if (alerts === 0) setAlertsOpen(false); }, [alerts]);
 
@@ -111,7 +115,9 @@ export default function CareShell({ ward, children }) {
           </span>
         </Link>
         <nav className="nav" aria-label="Main">
-          {tabs.map(([to, name]) => <NavLink key={to} to={to}>{name}</NavLink>)}
+          {tabs.map(([to, name]) => (
+            <NavLink key={to} to={to}>{name}{to === "/ask" && unread > 0 && <span className="dot" aria-hidden="true" />}</NavLink>
+          ))}
         </nav>
         {alerts > 0 && (
           <button type="button" className="pill wait" aria-expanded={alertsOpen} onClick={() => setAlertsOpen((v) => !v)}>

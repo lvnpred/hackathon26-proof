@@ -167,3 +167,57 @@ def test_medicines_photo_saves_a_sidecar_and_ask_view_carries_the_regions(tmp_pa
     assert [r["row"] for r in read["regions"]] == [0, 1, 2, 3] and len(read["rows"]) == 4
     got = client.get(f"/journey/episodes/{kumar}/evidence/{read['evidence_id']}").json()
     assert got["kind"] == "medicines" and got["images"][0]["photo_id"] == read["photo"]["id"] and len(got["regions"]) == 4
+
+
+def _spark_down(monkeypatch):
+    def boom(self, url):
+        raise httpx.ConnectError("down")
+
+    monkeypatch.setattr(SparkAdapter, "read_monitor", boom)
+    monkeypatch.setattr(SparkAdapter, "read_strips", boom)
+
+
+def test_spark_fallback_uses_the_fixture_regions_whole(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: _recs((0.1,)))
+    _spark_down(monkeypatch)
+    out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "monitor-88-54.png", "image/png")
+    assert [(r["label"], r["value"]) for r in out["regions"]] == [("SBP", "88"), ("DBP", "54"), ("HR", "112")]
+    assert out["regions"][0]["bbox"][0] == 0.4688 and out["handmade"] is True
+    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "sam-3.1"), ("spark", live.FALLBACK)]
+
+
+def test_spark_fallback_without_fixture_regions_pairs_live_boxes(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: _recs((0.1, 0.4, 0.7)))
+    monkeypatch.setattr(live, "prepared", lambda name: {"text": MONITOR, "handmade": True})
+    _spark_down(monkeypatch)
+    out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "x.png", "image/png")
+    assert [(r["bbox"][1], r["value"]) for r in out["regions"]] == [(0.1, "118"), (0.4, "76"), (0.7, "80")]
+    assert out["handmade"] is False
+    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "sam-3.1"), ("spark", live.FALLBACK)]
+
+
+def test_spark_fallback_keeps_fixture_regions_when_sam_also_failed(tmp_path, monkeypatch):
+    def boom(*a, **k):
+        raise httpx.ConnectError("no")
+
+    monkeypatch.setattr(SamAdapter, "segment_images", boom)
+    _spark_down(monkeypatch)
+    out = live.read_photo(_keyed(tmp_path), "strip", b"x", "meds-kumar.png", "image/png")
+    assert len(out["regions"]) == 4 and all(r["bbox"] for r in out["regions"]) and out["handmade"] is True
+    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "failed"), ("spark", live.FALLBACK)]
+
+
+def test_garbage_monitor_text_gives_no_regions(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
+    monkeypatch.setattr(SparkAdapter, "read_monitor", lambda self, url: "not json")
+    assert live.read_photo(_keyed(tmp_path), "monitor", b"x", "a.png", "image/png")["regions"] == []
+
+
+def test_stale_strip_row_does_not_crash_the_proof_check(tmp_path, monkeypatch):
+    from app.journey import media_api
+
+    read = {"text": "", "source": "prepared", "calls": [], "raw": None, "handmade": True,
+            "regions": [{"bbox": [0, 0, 1, 1], "label": "x", "value": "x", "row": 3}]}
+    monkeypatch.setattr(live, "read_photo", lambda *a, **k: read)
+    out = media_api._check_photo(_no_key(tmp_path), "e", "p", {"kind": "dose", "title": "Paracetamol"}, b"x", "a.png", "image/png", {})
+    assert out["regions"][0]["match"] is None

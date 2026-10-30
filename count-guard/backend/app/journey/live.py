@@ -175,7 +175,8 @@ def _values(reader: str, text: str | None) -> list[dict]:
     if not text:
         return []
     if reader == "monitor":
-        return monitor_values(parse_monitor_text(text))
+        read = parse_monitor_text(text)
+        return monitor_values(read) if read else []
     return strip_values(strips_from(text))
 
 
@@ -204,14 +205,18 @@ def read_photo(
         except (httpx.HTTPError, RuntimeError, ValueError):
             ms = _since(start)
             if found and found.get("text"):
-                text, source, handmade = found["text"], FALLBACK, bool(found.get("handmade"))
+                text, source = found["text"], FALLBACK
+                # As for video (_stored_or): the fixture's regions stand whole, with its own handmade flag (T4-1).
+                stored = found.get("regions")
+                regions = stored or pair_regions(boxes, _values(reader, text))
+                handmade = bool(found.get("handmade")) if stored else False
             else:
-                text, source, handmade = None, "failed", False
+                text, source, regions, handmade = None, "failed", pair_regions(boxes, []), False
             spark_call = call_of("spark", settings, source, ms)
         else:
             source, handmade = "muse-spark-1.3", False
             spark_call = call_of("spark", settings, source, _since(start))
-        regions = pair_regions(boxes, _values(reader, text))
+            regions = pair_regions(boxes, _values(reader, text))
         return _photo(text, source, regions, [sam_call, spark_call], {"sam": parsed, "spark": text}, handmade)
     if found and found.get("text"):
         values = _values(reader, found["text"])

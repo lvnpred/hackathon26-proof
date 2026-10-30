@@ -172,7 +172,7 @@ def _check_photo(settings, episode_id: str, photo_id: str, task: dict, raw: byte
         strips = strips_from(read["text"] or "")
         wanted = key_of(task.get("name") or task["title"])
         regions = [
-            {**r, "match": None if r["row"] is None else "ok" if key_of(strips[r["row"]]["name_as_read"]) == wanted else "mismatch"}
+            {**r, "match": None if r["row"] is None or r["row"] >= len(strips) else "ok" if key_of(strips[r["row"]]["name_as_read"]) == wanted else "mismatch"}
             for r in read["regions"]
         ]
         return {**proof.check_strip(strips, task), "source": read["source"], "calls": read["calls"],

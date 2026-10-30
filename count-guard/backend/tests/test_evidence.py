@@ -101,6 +101,7 @@ def test_save_caps_raw_and_load_refuses_a_bad_id(tmp_path):
     small = {"kind": "tray", "raw": {"spark": "ok"}}
     big_id, small_id = evidence.save(settings, eid, big), evidence.save(settings, eid, small)
     assert evidence.EVIDENCE_ID.fullmatch(big_id) and big_id != small_id
+    assert not evidence.EVIDENCE_ID.fullmatch(big_id + "\n")
     assert evidence.load(settings, eid, big_id)["raw"] == {"note": "Raw output over 200 KB; not kept."}
     assert evidence.load(settings, eid, small_id)["raw"] == {"spark": "ok"}
     assert evidence.load(settings, eid, small_id)["id"] == small_id

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { call, getJourney, postJourney, uploadJourney } from "../journey";
 import { afterRun } from "./clock";
 import { CLOCK, STATUS, makeFault } from "./faults";
+import { displayName, displayView } from "./names";
 import { statusBody, statusQuery } from "./status";
 
 const ROSTER = "cg-ward-roster";
@@ -35,6 +36,9 @@ function savedRoster() {
     return null;
   }
 }
+
+// What the screen shows: names and every view string lose " (synthetic)". The record on the server keeps it.
+const shown = (p) => ({ ...p, name: displayName(p.name), view: displayView(p.view) });
 
 async function withViews(roster) {
   const views = await Promise.all(roster.patients.map((p) => getJourney(p.id)));
@@ -86,7 +90,7 @@ export function useWard() {
   useEffect(() => {
     loadWard()
       .then((ward) => {
-        setPatients(ward.patients);
+        setPatients(ward.patients.map(shown));
         setNowMs(ward.nowMs);
         setBoard(ward.board);
       })
@@ -132,7 +136,7 @@ export function useWard() {
   }
 
   function swap(id, view) {
-    setPatients((list) => list.map((p) => (p.id === id ? { ...p, view } : p)));
+    setPatients((list) => list.map((p) => (p.id === id ? shown({ ...p, view }) : p)));
   }
 
   async function run(id, send, scope) {
@@ -185,7 +189,7 @@ export function useWard() {
         if (res.status === "fulfilled") views.set(patients[i].id, res.value);
         else failed.push(`${patients[i].name}: ${res.reason?.message || "failed"}`);
       });
-      setPatients((list) => list.map((p) => (views.has(p.id) ? { ...p, view: views.get(p.id) } : p)));
+      setPatients((list) => list.map((p) => (views.has(p.id) ? shown({ ...p, view: views.get(p.id) }) : p)));
       if (failed.length) setFault(makeFault(null, CLOCK, `The time moved, but ${failed.join("; ")}`));
     } finally {
       setBusy(false);
@@ -197,7 +201,7 @@ export function useWard() {
     setBusy(true);
     try {
       const ward = await seed();
-      setPatients(ward.patients);
+      setPatients(ward.patients.map(shown));
       setNowMs(ward.nowMs);
       setBoard(ward.board);
     } catch (exc) {

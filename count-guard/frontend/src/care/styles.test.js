@@ -41,3 +41,10 @@ test("care.css styles the journey bar, the next card and the quiet row", () => {
   assert.match(css, /\.next-text \{[^}]*font-size/);
   assert.match(css, /\.quiet-row/);
 });
+
+test("the dock folds to one line at phone width and the clock keeps its disabled style", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.demo-dock:not\(\.open\) \.dock-body \{[^}]*display:\s*none/);
+  assert.match(css, /\.demo-dock \{[^}]*background/);
+  assert.doesNotMatch(css, /\.demo-toggle/);
+});

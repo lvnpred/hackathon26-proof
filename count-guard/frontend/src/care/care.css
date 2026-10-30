@@ -38,17 +38,23 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .alert-safety { border-left: 4px solid var(--record); padding-left: 8px; }
 .action-bar { display: flex; flex-wrap: wrap; gap: 8px; }
 .action-bar button[aria-expanded="true"]:not(:disabled) { background: var(--action); border-color: var(--action); color: var(--on-action); }
-.header-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: nowrap; }
-.picker-slot { width: 240px; display: flex; justify-content: flex-end; }
-.picker-slot select { max-width: 100%; }
-.demo-toggle { display: none; }
-.fold-wrap { display: contents; }
+.demo-dock { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 24px; background: var(--ink); color: var(--surface); font-size: 14px; }
+.dock-summary { display: none; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--surface); font: inherit; font-weight: 700; cursor: pointer; }
+.dock-body { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.demo-dock .role-switch { background: transparent; border: 1px solid var(--surface); }
+.demo-dock .role-switch button { color: var(--surface); }
+.demo-dock .role-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: none; }
+.demo-dock .clock-bar { padding: 0; background: transparent; border: 0; }
+.demo-dock .clock-bar button, .demo-dock select { border: 1px solid var(--surface); background: transparent; color: var(--surface); }
+.demo-dock .clock-bar button:disabled { border-color: var(--ink-muted); color: var(--ink-muted); }
+.demo-dock select { min-height: 44px; max-width: 100%; border-radius: 10px; }
+.demo-dock .note { background: transparent; border: 0; padding: 0; color: var(--surface); }
+.app-bar .nav { margin-left: auto; }
 @media (max-width: 640px) {
-  .header-controls { flex-wrap: wrap; }
-  .picker-slot { width: auto; }
-  .demo-toggle { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--line-control); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
-  .demo-toggle[aria-expanded="true"] { background: var(--sun-soft); color: var(--sun-text); border-color: var(--sun); }
-  .app:not(.demo-open) .demo-fold { display: none; }
+  .demo-dock { padding: 0 16px; }
+  .dock-summary { display: inline-flex; align-items: center; }
+  .demo-dock:not(.open) .dock-body { display: none; }
+  .demo-dock.open .dock-body { padding-bottom: 8px; }
 }
 
 /* Dictate: one box that takes a mic, an audio file or typing */

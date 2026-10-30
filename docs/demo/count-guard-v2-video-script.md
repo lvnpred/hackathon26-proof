@@ -22,7 +22,7 @@ Decision for the owner: film offline or keyed (see Owner handover). The script b
 4. Use a 1200-wide window. The patient beats can be filmed in a phone-sized window.
 5. Do not press Reset in the first second.
 6. The intro beat names port 5273, which is the check's own port. Use your own port when filming.
-7. Confirm the header reads `Models: offline (prepared results)` before the first take. If it reads Models: live, stop and restart with the key empty.
+7. Confirm the dock reads `Synthetic data · models: offline (prepared)` before the first take. If it reads Models: live, stop and restart with the key empty.
 
 ## Offline script
 
@@ -33,7 +33,7 @@ Each beat shows its id, start time, role and length. Clicks are numbered. "On sc
 #### `intro` · 0:00 · none · 3 s
 Clicks: 1) Open http://127.0.0.1:5273/; 2) Role Doctor
 
-On screen: `Models: offline (prepared results)` · `Research demo. Not for clinical use.`
+On screen: `Synthetic data · models: offline (prepared)` · `Research demo. Not for clinical use.`
 
 > Count Guard is a research demo on a synthetic ward, running with no live model.
 
@@ -88,14 +88,14 @@ On screen: `Draft from dictation · Rules (no model)` · `Heard by: Prepared dem
 #### `kumar-admit` · 0:42 · doctor · 4 s
 Clicks: 1) Button "Sign orders"; 2) Button "Admit"
 
-On screen: `Being admitted` · `Nurse acknowledges the new orders from Dr. A. Rao (synthetic), then completes the admission.`
+On screen: `Being admitted` · `Nurse acknowledges the new orders from Dr. A. Rao, then completes the admission.`
 
 > Dr. Rao signs the orders and admits him; the screen says which nurse step comes next.
 
 #### `kumar-admission` · 0:46 · nurse · 6 s
 Clicks: 1) Role Nurse; 2) Tab "My queue"; 3) Chart R. Kumar; 4) Tick "Wristband on", "Allergies checked", "Baseline observations taken", "Consent on file"; 5) Button "Complete admission"; 6) Button "Acknowledge"
 
-On screen: `New orders from Dr. A. Rao` · `On the ward` · `acknowledged the orders at`
+On screen: `On the ward` · `acknowledged the orders at`
 
 > Nurse Meena sees the new orders in her queue, ticks the admission checks and acknowledges the orders.
 
@@ -205,7 +205,7 @@ On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 #### `iyer-orders` · 2:20 · doctor · 7 s
 Clicks: 1) Role Doctor; 2) Tab "My patients" (row reads "Observation past its limit"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Draft orders"; 7) Button "Sign orders"
 
-On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao (synthetic).`
+On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao.`
 
 > Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them.
 
@@ -269,7 +269,7 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 
 | Beat | Model calls and label change |
 |---|---|
-| `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The header reads Models: live, not offline, when a key is set. |
+| `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The dock reads models: live, not offline, when a key is set. |
 | `das-ask` | 1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |

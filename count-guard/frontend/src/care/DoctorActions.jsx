@@ -6,7 +6,7 @@ import { actionsFor, panelOpen, toggled } from "./actions";
 import Dictate from "./Dictate";
 import { draftChanged, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
-import { surgeryNow } from "./tasklist";
+import { theatreSteps } from "./theatre";
 import { TrayPreview } from "./VideoCheck";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -155,13 +155,24 @@ function Ward({ view, busy, act, upload, showDischarge }) {
 
 function Theatre({ view, busy, act }) {
   const [reason, setReason] = useState("");
-  const { began, ended } = surgeryNow(view.timeline);
+  const steps = theatreSteps(view);
+  const [, began, , ended] = steps;
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
   return (
-    <section className="card">
+    <section className="card" aria-label="Theatre steps">
       <p className="label">In theatre</p>
-      <p className="small">Surgery began: {began || "not yet"}</p>
-      <p className="small">Surgery ended: {ended || "not yet"}</p>
+      <p className="small muted">The theatre nurse records the tray check and the swab count from the Nurse view. You can record when surgery began and ended.</p>
+      <ol className="theatre-steps">
+        {steps.map((step, i) => (
+          <li key={step.title}>
+            <b>Step {i + 1} of 4 · {step.title}:</b> <span className={step.done ? "" : "muted"}>{step.says}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="row">
+        <button type="button" disabled={busy || began.done} onClick={() => act("/surgery", { step: "began", by: DOCTOR })}>Surgery began</button>
+        <button type="button" disabled={busy || !began.done || ended.done} onClick={() => act("/surgery", { step: "ended", by: DOCTOR })}>Surgery ended</button>
+      </div>
       {move && (
         <>
           <label className="field">
@@ -174,7 +185,7 @@ function Theatre({ view, busy, act }) {
           <button
             type="button"
             className="primary"
-            disabled={busy || !ended || !reason.trim()}
+            disabled={busy || !ended.done || !reason.trim()}
             onClick={() => act("/state", { to: "ward", by: DOCTOR, reason: reason.trim(), checklist: {} })}
           >
             Back to ward

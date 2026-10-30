@@ -440,3 +440,4 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
   .header-controls { flex-wrap: wrap; }
   .picker-slot { width: auto; }
 }
+.theatre-steps { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 6px; }

@@ -20,7 +20,7 @@ export default function MyCare() {
   return (
     <Fragment key={patient.id}>
       <PageLead kicker={patient.name} title="My care" body="Where you are and what has been recorded. You can read it here." />
-      <StateHeader patient={patient} view={view} />
+      <StateHeader patient={patient} view={view} you />
       <section className="card">
         <p className="label">Orders and tasks</p>
         {(view.order_list || []).length === 0 && <p className="empty small">No orders yet.</p>}

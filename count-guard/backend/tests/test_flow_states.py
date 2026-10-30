@@ -147,7 +147,8 @@ def test_no_advice_words_in_now_next(tmp_path):
     seen.append(_move(client, eid, "discharging").json())
     seen.append(_move(client, eid, "home", checklist=DISCHARGE_CHECKS).json())
     for view in seen:
-        assert not ADVICE.search(view["now_next"]["now"] + " " + view["now_next"]["next"])
+        n = view["now_next"]
+        assert not ADVICE.search(" ".join((n["now"], n["you_now"], n["next"])))
     assert len(seen) == 5
 
 
@@ -259,3 +260,61 @@ def test_state_line_with_no_earlier_state_reads_as_an_admission(tmp_path):
     text = plain(event)
     assert "admitted the patient to the ward" in text
     assert "None" not in text
+
+
+def test_patient_now_speaks_to_you_for_each_kind_of_event(tmp_path):
+    from app.journey.stories import clock
+
+    client, eid = _new(tmp_path)
+    assert _view(client, eid)["now_next"]["you_now"] == "You are in clinic."
+    _to_ward(client, eid)
+    assert _view(client, eid)["now_next"]["you_now"].startswith("Dr. A. Rao moved you to the ward at ")
+    items = [{"kind": "check", "text": "Check wound dressing", "mode": "tick", "proof": "none", "every_h": None}]
+    view = client.post(
+        f"/journey/episodes/{eid}/orders/sign", json={"items": items, "by": "Dr. A. Rao (synthetic)", "at_ms": 600_000}
+    ).json()
+    assert view["now_next"]["you_now"] == f"Dr. A. Rao signed new orders for you at {clock(600_000)}."
+    order = view["order_list"][0]
+    view = client.post(
+        f"/journey/episodes/{eid}/orders/{order['id']}/ack", json={"by": "Nurse Meena (synthetic)", "at_ms": 900_000}
+    ).json()
+    assert view["now_next"]["you_now"] == f"Nurse Meena acknowledged your orders at {clock(900_000)}."
+    assert view["now_next"]["now"] != view["now_next"]["you_now"]
+    task = view["tasks"][0]
+    view = client.post(
+        f"/journey/episodes/{eid}/tasks/{task['id']}/done",
+        json={"by": "Nurse Meena (synthetic)", "via": "tap", "at_ms": 1_200_000},
+    ).json()
+    assert view["now_next"]["you_now"] == f"Nurse Meena finished Check wound dressing at {clock(1_200_000)}."
+    asked = client.post(f"/journey/episodes/{eid}/ask/doctor", json={"text": "Is this normal?", "at_ms": 1_500_000}).json()
+    assert asked["now_next"]["you_now"] == f"You sent a question to the doctor at {clock(1_500_000)}."
+
+
+def test_patient_now_names_the_nurse_who_gave_a_dose(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_ward(client, eid)
+    dose = {"kind": "dose", "text": "Paracetamol 1 g every 6 h", "name": "Paracetamol", "amount": "1 g", "every_h": 6}
+    signed = client.post(
+        f"/journey/episodes/{eid}/orders/sign", json={"items": [dose], "by": "Dr. A. Rao (synthetic)", "at_ms": 0}
+    ).json()
+    view = client.post(
+        f"/journey/episodes/{eid}/orders/{signed['order_list'][0]['id']}/ack", json={"by": "Nurse Meena (synthetic)", "at_ms": 0}
+    ).json()
+    view = client.post(
+        f"/journey/episodes/{eid}/tasks/{view['tasks'][0]['id']}/done",
+        json={"by": "Nurse Meena (synthetic)", "via": "tap", "at_ms": 60_000},
+    ).json()
+    assert view["now_next"]["you_now"].startswith("Nurse Meena gave Paracetamol 1 g at ")
+    assert view["now_next"]["now"].startswith("Nurse Meena (synthetic) finished ")
+    assert not ADVICE.search(view["now_next"]["you_now"])
+
+
+def test_seed_admission_reads_as_admitted_the_day_before_to_you(tmp_path):
+    from app.journey.states import _latest_happening
+
+    event = {
+        "id": "x", "event_type": "patient.state", "ts_ms": 0, "supersedes_id": None,
+        "payload": {"from": None, "to": "ward", "by": "Dr. A. Rao (synthetic)", "reason": "Admitted the day before (seed)"},
+    }
+    assert _latest_happening([event], you=True) == "You were admitted to the ward the day before."
+    assert _latest_happening([event]) == "Dr. A. Rao (synthetic) admitted the patient to the ward the day before."

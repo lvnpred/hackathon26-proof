@@ -162,34 +162,58 @@ def allowed_moves(events: list[dict]) -> list[dict]:
     return out
 
 
-def _latest_happening(events: list[dict]) -> str | None:
-    """The most recent of: order signed, order acknowledged, task began or done, state move."""
+YOU_DID = {
+    "admitting": "admitted you",
+    "clinic_done": "closed your visit",
+    "ward": "moved you to the ward",
+    "theatre": "sent you to theatre",
+    "discharging": "signed your discharge",
+    "home": "completed your discharge",
+}
+
+
+def _latest_happening(events: list[dict], you: bool = False) -> str | None:
+    """The most recent of: order signed, order acknowledged, task began or done, state move.
+
+    With `you`, the line is addressed to the patient, with short names and the dose that was given."""
     rows = visible_events(events)
-    titles = {e["id"]: e["payload"]["title"] for e in rows if e["event_type"] == "task.created"}
+    made = {e["id"]: e["payload"] for e in rows if e["event_type"] == "task.created"}
     best = None
     for index, e in enumerate(rows):
-        p, kind = e["payload"], e["event_type"]
+        p, kind, at = e["payload"], e["event_type"], clock(e["ts_ms"])
+        who = short_name(p.get("by")) if you else p.get("by")
         if kind == "patient.state":
-            if p.get("from") is None:
-                text, rank = f"{p['by']} admitted the patient to the ward the day before.", -1  # any real event at the same time wins
+            if p.get("from") is None:  # any real event at the same time wins
+                text = "You were admitted to the ward the day before." if you else f"{p['by']} admitted the patient to the ward the day before."
+                rank = -1
             else:
-                text, rank = f"{p['by']} {DID[p['to']]} at {clock(e['ts_ms'])}.", 0
+                text = f"{who} {YOU_DID[p['to']]} at {at}." if you else f"{p['by']} {DID[p['to']]} at {at}."
+                rank = 0
         elif kind == "order.signed":
-            text, rank = f"{p['by']} signed new orders at {clock(e['ts_ms'])}.", 0
+            text, rank = (f"{who} signed new orders for you at {at}." if you else f"{who} signed new orders at {at}."), 0
         elif kind == "order.acknowledged":
-            text, rank = f"{p['by']} acknowledged the orders at {clock(e['ts_ms'])}.", 0
+            text, rank = (f"{who} acknowledged your orders at {at}." if you else f"{who} acknowledged the orders at {at}."), 0
         elif kind in ("task.began", "task.done"):
-            verb = "began" if kind == "task.began" else "finished"
-            title = titles.get(p["task_id"], "a task")
-            text, rank = f"{p['by']} {verb} {title} at {clock(e['ts_ms'])}.", 0
+            task = made.get(p["task_id"], {})
+            title = task.get("title", "a task")
+            if you and kind == "task.done" and task.get("kind") == "dose":
+                given = " ".join(part for part in (task.get("name") or title, task.get("amount")) if part)
+                text = f"{who} gave {given} at {at}."
+            else:
+                verb = "began" if kind == "task.began" else "finished"
+                text = f"{who} {verb} {title} at {at}."
+            rank = 0
         elif kind == "question.asked" and p["to"] == "doctor":
-            text, rank = f"{short_name(p['by'])} sent a question to the doctor at {clock(e['ts_ms'])}.", 0
+            text = f"You sent a question to the doctor at {at}." if you else f"{short_name(p['by'])} sent a question to the doctor at {at}."
+            rank = 0
         elif kind == "question.answered" and p.get("source") == "doctor":
-            text, rank = f"{p['by']} answered the question at {clock(e['ts_ms'])}.", 0
+            text, rank = (f"{who} answered your question at {at}." if you else f"{who} answered the question at {at}."), 0
         elif kind == "review.requested":
-            text, rank = f"{short_name(p['by'])} sent a healing photo at {clock(e['ts_ms'])}.", 0
+            text = f"You sent a healing photo at {at}." if you else f"{short_name(p['by'])} sent a healing photo at {at}."
+            rank = 0
         elif kind == "review.answered":
-            text, rank = f"{p['by']} reviewed the healing photo at {clock(e['ts_ms'])}: {p['label']}.", 0
+            text = f"{who} reviewed {'your' if you else 'the'} healing photo at {at}: {p['label']}."
+            rank = 0
         else:
             continue
         key = (e["ts_ms"], rank, index)
@@ -203,6 +227,7 @@ def now_next(events: list[dict]) -> dict:
 
     state = current_state(events)
     now = _latest_happening(events) or "The patient is in clinic."
+    you_now = _latest_happening(events, you=True) or "You are in clinic."
     next_ = NEXT[state]
     fresh = [o for o in orders_list(events) if not o["acknowledged_by"]]
     if fresh and state in ("ward", "admitting"):
@@ -218,7 +243,7 @@ def now_next(events: list[dict]) -> dict:
             next_ = "The doctor reviews the healing photo."
         elif waiting["questions"]:
             next_ = "The doctor answers the question."
-    return {"now": now, "next": next_}
+    return {"now": now, "next": next_, "you_now": you_now}
 
 
 def flow_view(events: list[dict]) -> dict:

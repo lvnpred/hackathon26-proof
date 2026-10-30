@@ -19,7 +19,7 @@ function AskBody({ ward, patient }) {
   return (
     <>
       <PageLead kicker={patient.name} title="Ask" body="Ask your record, ask the doctor, or send a photo. Answers come from your record or from Dr. Rao." />
-      <StateHeader patient={patient} view={patient.view} />
+      <StateHeader patient={patient} view={patient.view} you />
       <BotCard {...props} onAskDoctor={(text) => setToDoctor({ id: `${Date.now()}`, text })} />
       <DoctorCard {...props} fill={toDoctor} />
       <ReviewCard {...props} />

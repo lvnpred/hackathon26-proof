@@ -212,6 +212,7 @@ def test_healing_review_no_visit_needed(tmp_path):
     assert [p["purpose"] for p in view["photos"]] == ["healing"]
     assert view["now_next"]["next"] == "The doctor reviews the healing photo."
     assert view["now_next"]["now"] == "R. Kumar sent a healing photo at Day 0 09:00."
+    assert view["now_next"]["you_now"] == "You sent a healing photo at Day 0 09:00."
     decided = client.post(
         _url(kumar, f"reviews/{review['id']}/answer"), json={"decision": "no_visit", "by": DOC, "at_ms": 9000}
     ).json()
@@ -220,6 +221,8 @@ def test_healing_review_no_visit_needed(tmp_path):
     assert decided["now_next"]["now"].startswith(f"{DOC} reviewed the healing photo at ")
     assert decided["now_next"]["now"].endswith(": No visit needed.")
     assert decided["now_next"]["next"] != "The doctor reviews the healing photo."
+    assert decided["now_next"]["you_now"].startswith("Dr. A. Rao reviewed your healing photo at ")
+    assert decided["now_next"]["you_now"].endswith(": No visit needed.")
     lines = record_lines(_events(client, kumar))
     assert any(l["kind"] == "review" and l["text"].startswith(f"{DOC} reviewed your healing photo at ") and l["text"].endswith(": No visit needed.") for l in lines)
     count = len(_events(client, kumar))

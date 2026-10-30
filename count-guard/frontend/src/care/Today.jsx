@@ -13,7 +13,7 @@ export default function Today() {
   return (
     <Fragment key={patient.id}>
       <PageLead kicker={patient.name} title="Today" body="What to do now, your medicines and your check-ins." />
-      <StateHeader patient={patient} view={patient.view} />
+      <StateHeader patient={patient} view={patient.view} you />
       {patient.view.state === "home" ? (
         <>
           <TodayPanel

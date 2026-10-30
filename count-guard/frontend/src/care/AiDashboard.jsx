@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageLead } from "../App";
 import { call } from "../journey";
-import { PIPELINES, callsText, latencyText, modeLabel, recentText } from "./ai.js";
+import { BAD_ANSWER, EMPTY_MODELS, PIPELINES, callsText, isSummary, isTry, latencyText, modeLabel, recentText } from "./ai.js";
+import { displayName } from "./names.js";
 import { useCareWard } from "./CareShell";
 import { Evidence, EvidenceThumb } from "./Evidence.jsx";
 
@@ -15,9 +16,9 @@ function ModelCard({ model, busy, text, onTry }) {
       <h3>{model.name}</h3>
       <p className="small">{model.role}</p>
       <p className="row"><span className="pill">{modeLabel(model.mode)}</span> <span className="small">{callsText(model.calls)} · {latencyText(model.median_ms)}</span></p>
-      {last && <p className="small">{last.text}</p>}
-      {last?.evidence_id && <EvidenceThumb episodeId={last.episode_id} evidenceId={last.evidence_id} />}
-      {text && <p className="small">{text}</p>}
+      {last && <p className="small">{displayName(last.text)}</p>}
+      {last?.evidence_id && <EvidenceThumb episodeId={last.episode_id} evidenceId={last.evidence_id} model={model.key} />}
+      {text && <p className="small"><span className="pill">{modeLabel(text.mode)}</span> {text.text}</p>}
       <button type="button" disabled={busy} onClick={onTry}>Try sample</button>
     </section>
   );
@@ -29,7 +30,7 @@ function RecentRow({ row, open, toggle }) {
   return (
     <li>
       <button type="button" className="linklike" aria-expanded={open} onClick={toggle}>{text}</button>
-      {open && <Evidence episodeId={row.episode_id} evidenceId={row.evidence_id} linkLines />}
+      {open && <Evidence episodeId={row.episode_id} evidenceId={row.evidence_id} linkLines model={row.model} />}
     </li>
   );
 }
@@ -46,7 +47,9 @@ export default function AiDashboard() {
   const [open, setOpen] = useState({});
   const load = useCallback(() => {
     if (!ids) return Promise.resolve();
-    return call(`/journey/ai/summary?ids=${ids}`).then(setData).catch((e) => setError(faultOf(e)));
+    return call(`/journey/ai/summary?ids=${ids}`)
+      .then((out) => { if (!isSummary(out)) throw new Error(BAD_ANSWER); setData(out); })
+      .catch((e) => setError(faultOf(e)));
   }, [ids]);
   useEffect(() => { load(); }, [load]);
   const tryIt = async (key) => {
@@ -54,8 +57,9 @@ export default function AiDashboard() {
     setError(null);
     try {
       const out = await call(`/journey/ai/try/${key}`, { method: "POST" });
+      if (!isTry(out)) throw new Error(BAD_ANSWER);
       if (out.evidence) setSample({ key, evidence: out.evidence });
-      else setTexts((t) => ({ ...t, [key]: out.text }));
+      else setTexts((t) => ({ ...t, [key]: { text: out.text, mode: out.mode } }));
       await load();
     } catch (e) {
       setError(faultOf(e));
@@ -63,24 +67,23 @@ export default function AiDashboard() {
       setBusy(false);
     }
   };
-  const key = (row) => `${row.event_id}/${row.model}`;
   return (
     <>
       <PageLead kicker="Demo" title="AI at work" body="Which Muse models run this ward, and what they just did." />
-      {data && <p className="small"><span className="pill">{data.live ? "Live ●" : "Prepared ○"}</span></p>}
+      {data && <p className="small ai-live" aria-label="Models">{data.live ? "Live ●" : "Prepared ○"}</p>}
       <ol className="pipelines small" aria-label="Pipelines">
         {PIPELINES.map((steps) => <li key={steps[0]}>{steps.join(" → ")}</li>)}
       </ol>
       {error && <p className="error small" role="alert">{error}</p>}
       <div className="model-cards">
-        {(data?.models || []).map((m) => <ModelCard key={m.key} model={m} busy={busy} text={texts[m.key]} onTry={() => tryIt(m.key)} />)}
+        {(data?.models || EMPTY_MODELS).map((m) => <ModelCard key={m.key} model={m} busy={busy} text={texts[m.key]} onTry={() => tryIt(m.key)} />)}
       </div>
-      {sample && <Evidence sample={sample.evidence} check={{ rows: sample.evidence.rows }} />}
+      {sample && <Evidence sample={sample.evidence} check={{ rows: sample.evidence.rows }} model={sample.key} />}
       <section aria-label="Recent AI events">
         <h3>Recent AI events</h3>
         {data && data.recent.length === 0 && <p className="empty small">No model results yet. Run a flow and they appear here.</p>}
         <ul className="recent-ai">
-          {(data?.recent || []).map((r) => <RecentRow key={key(r)} row={r} open={Boolean(open[key(r)])} toggle={() => setOpen((o) => ({ ...o, [key(r)]: !o[key(r)] }))} />)}
+          {(data?.recent || []).map((r, i) => <RecentRow key={i} row={r} open={Boolean(open[i])} toggle={() => setOpen((o) => ({ ...o, [i]: !o[i] }))} />)}
         </ul>
       </section>
     </>

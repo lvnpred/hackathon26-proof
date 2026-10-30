@@ -24,9 +24,10 @@ export function modeWord(source, handmade) {
   return FAILED.includes(source) ? "failed" : "";
 }
 
-export function chipText(calls, handmade) {
+// `model` names the card the chip sits under (T7-1); without it the chip names SAM, else the first call.
+export function chipText(calls, handmade, model) {
   const list = calls || [];
-  const c = list.find((x) => x.model === "sam") || list[0];
+  const c = (model && list.find((x) => x.model === model)) || list.find((x) => x.model === "sam") || list[0];
   return c ? `${MODEL_NAME[c.model]} · ${modeWord(c.source, handmade)}` : "";
 }
 

@@ -151,3 +151,4 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .pipelines { margin: 8px 0; padding-left: 20px; }
 .recent-ai { list-style: none; padding: 0; display: grid; gap: 8px; }
 .recent-ai button.linklike { min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+.ai-live { text-align: right; margin: 0 }

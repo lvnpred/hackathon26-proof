@@ -38,7 +38,9 @@ function draw(canvas, img, boxes, regions, labels) {
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  ctx.font = "12px sans-serif";
+  const scale = Math.min(1, w / 640);
+  const FONT = Math.max(10, Math.round(12 * scale));
+  ctx.font = `${FONT}px sans-serif`;
   const items = [
     ...boxes.map((o) => ({ bbox: o.bbox, colour: o.kept ? colourFor(o.label) : EDGE, dashed: !o.kept, text: boxLabel(o) })),
     ...(regions || []).filter((r) => r.bbox).map((r) => ({ bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r) })),
@@ -55,8 +57,10 @@ function draw(canvas, img, boxes, regions, labels) {
     ctx.strokeRect(x * w, y * h, bw * w, bh * h);
   }
   if (!labels) return;
-  const PH = 16;
-  const pills = nudgeLabels(items.map((it) => ({ x: Math.min(it.bbox[0] * w, w - 20), y: Math.max(it.bbox[1] * h - PH - 2, 0), w: ctx.measureText(it.text).width + 8, h: PH })));
+  const PH = FONT + 4;
+  const placed = nudgeLabels(items.map((it) => ({ x: Math.min(it.bbox[0] * w, w - 20), y: Math.max(it.bbox[1] * h - PH - 2, 0), w: ctx.measureText(it.text).width + 8, h: PH })));
+  // Keep every pill inside the canvas on the right and at the bottom (T7-2).
+  const pills = placed.map((p) => ({ ...p, x: Math.max(0, Math.min(p.x, w - p.w)), y: Math.max(0, Math.min(p.y, h - p.h)) }));
   ctx.setLineDash([]);
   items.forEach((it, i) => {
     const p = pills[i];
@@ -126,7 +130,7 @@ function CountTable({ rows }) {
 
 // The inline viewer (R32): boxes on the frame, a scrubber, counts, a plain explanation and the raw output.
 // linkLines false is the patient lens: no event codes, no raw output, no links to the staff chart.
-export function Evidence({ episodeId, evidenceId, check, sample, linkLines = true, version = 0 }) {
+export function Evidence({ episodeId, evidenceId, check, sample, linkLines = true, version = 0, model }) {
   const fetched = useEvidence(episodeId, evidenceId, Boolean(sample), version);
   const data = sample || fetched.data;
   const [picked, setPicked] = useState(null);
@@ -151,7 +155,7 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
   const keptTimes = view.images.map((i) => i.t ?? i.index);
   return (
     <section className="evidence" aria-label="Evidence">
-      <p className="label">{view.title}{view.chip && ` · ${view.chip}`}</p>
+      <p className="label">{view.title}{(model ? chipText(data.calls, data.handmade, model) : view.chip) && ` · ${model ? chipText(data.calls, data.handmade, model) : view.chip}`}</p>
       {image && <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} />}
       {view.images.length > 1 && (
         <div className="row">
@@ -195,19 +199,19 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
 }
 
 // A 48 px preview with the kept boxes; a click opens the full viewer below it.
-export function EvidenceThumb({ episodeId, evidenceId, check, linkLines = true, version = 0, fallback = null }) {
+export function EvidenceThumb({ episodeId, evidenceId, check, linkLines = true, version = 0, fallback = null, model }) {
   const { data } = useEvidence(episodeId, evidenceId, false, version);
   const [open, setOpen] = useState(false);
   if (!data) return fallback;
   const image = (data.images || [])[0];
-  const chip = chipText(data.calls, data.handmade);
+  const chip = chipText(data.calls, data.handmade, model);
   return (
     <div>
       <button type="button" className="ev-thumb" title={chip} aria-expanded={open} aria-label={`Evidence ${chip}`.trim()} onClick={() => setOpen(!open)}>
         {image && <Stage className="ev-thumb-stage" image={image} boxes={boxesAt(data.frames, image.t ?? image.index, false)} regions={null} labels={false} />}
       </button>
       <span className="small muted">{chip}</span>
-      {open && <Evidence episodeId={episodeId} evidenceId={evidenceId} check={check} linkLines={linkLines} version={version} />}
+      {open && <Evidence episodeId={episodeId} evidenceId={evidenceId} check={check} linkLines={linkLines} version={version} model={model} />}
     </div>
   );
 }

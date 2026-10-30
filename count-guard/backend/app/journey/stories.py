@@ -78,6 +78,10 @@ STATE_WORDS = {
 }
 
 
+def count_of(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
 def plain(event: dict) -> str:
     kind = event["event_type"]
     p = event.get("payload") or {}
@@ -88,7 +92,9 @@ def plain(event: dict) -> str:
     if kind == "dose.given":
         return f"{p.get('by')} logged {p.get('name')} {p.get('amount') or ''}.".replace(" .", ".")
     if kind == "obs.recorded":
-        return f"{p.get('by')} logged BP {p.get('sbp')}/{p.get('dbp')}, HR {p.get('hr')}, SpO2 {p.get('spo2')}, T {p.get('temp')}."
+        bp = f"BP {p.get('sbp')}/{p.get('dbp')}" if p.get("sbp") is not None and p.get("dbp") is not None else None
+        parts = [bp] + [f"{label} {p.get(key)}" for label, key in (("HR", "hr"), ("SpO2", "spo2"), ("T", "temp")) if p.get(key) is not None]
+        return f"{p.get('by')} logged {', '.join(x for x in parts if x)}."
     if kind == "nudge.raised":
         return f"Nudge to {p.get('to')}: {p.get('says')}"
     if kind == "nudge.seen":
@@ -112,9 +118,9 @@ def plain(event: dict) -> str:
             return f"{p.get('by')} admitted the patient to {STATE_WORDS.get(p.get('to'), p.get('to'))}.{said}"
         return f"{p.get('by')} moved the patient from {STATE_WORDS.get(p.get('from'), p.get('from'))} to {STATE_WORDS.get(p.get('to'), p.get('to'))}.{said}"
     if kind == "order.signed":
-        return f"{p.get('by')} signed {len(p.get('items') or [])} orders."
+        return f"{p.get('by')} signed {count_of(len(p.get('items') or []), 'order')}."
     if kind == "order.drafted":
-        return f"{p.get('by')} dictated {len(p.get('items') or [])} orders (draft, not signed)."
+        return f"{p.get('by')} dictated {count_of(len(p.get('items') or []), 'order')} (draft, not signed)."
     if kind == "discharge.drafted":
         return f"{p.get('by')} dictated a discharge summary (draft, not signed)."
     if kind == "tray.planned":
@@ -170,6 +176,46 @@ def plain(event: dict) -> str:
     if kind in ("surgery.began", "surgery.ended"):
         return f"{p.get('by')} recorded that surgery {kind.split('.')[1]}."
     return explain_event(event)
+
+
+PATIENT_STATE = {"admitting": "You were admitted.", "theatre": "You went to theatre.", "clinic_done": "Your clinic visit was closed.",
+                 "discharging": "Your discharge was signed.", "home": "You went home."}
+
+
+def patient_line(event: dict, tasks: dict[str, dict]) -> str:
+    """The patient's wording of an event; events without one read as `plain`."""
+    kind = event["event_type"]
+    p = event.get("payload") or {}
+    if kind == "patient.state":
+        to, frm = p.get("to"), p.get("from")
+        if frm is None:
+            return PATIENT_STATE["admitting"]
+        if to == "ward" and frm in ("admitting", "theatre"):
+            return "You are on the ward." if frm == "admitting" else "You are back on the ward."
+        if to in PATIENT_STATE:
+            return PATIENT_STATE[to]
+    elif kind == "surgery.began":
+        return "Your operation began."
+    elif kind == "surgery.ended":
+        return "Your operation finished."
+    elif kind == "discharge.signed":
+        return "The doctor signed your discharge."
+    elif kind == "order.signed":
+        return f"The doctor signed {count_of(len(p.get('items') or []), 'order')}."
+    elif kind == "task.done" and p.get("task_id") in tasks:
+        task, who = tasks[p["task_id"]], short_name(p.get("by"))
+        if task.get("kind") == "dose":
+            return f"{who} gave {(task.get('name') or task.get('title') or '').lower()}."
+        if task.get("kind") == "obs":
+            return f"{who} checked your observations."
+        return f"{who} finished: {task.get('title')}."
+    return plain(event)
+
+
+def timeline_items(events: list[dict]) -> list[dict]:
+    tasks = {e["id"]: e.get("payload") or {} for e in events if e["event_type"] == "task.created"}
+    return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks)}
+            for e in events]
 
 
 def build_stories(events: list[dict]) -> list[dict]:

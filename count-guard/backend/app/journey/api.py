@@ -19,7 +19,7 @@ from app.journey.rx import document_for, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
 from app.journey.seed import card_payload, seed_ward
 from app.journey.states import flow_view
-from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, clock, plain
+from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, clock, timeline_items
 from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
 from app.morning.druglog import parse_drug_phrase
@@ -196,10 +196,7 @@ def view(request: Request, episode_id: str) -> dict:
         "nudges": [
             {**e["payload"], "id": e["id"], "when": clock(e["ts_ms"])} for e in rules.open_nudges(events)
         ],
-        "timeline": [
-            {"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e)}
-            for e in events
-        ],
+        "timeline": timeline_items(events),
         "templates": {key: value["title"] for key, value in CARE_TEMPLATES.items()},
         **flow_view(events),
         # Present once reminders were added, so a reload keeps the download link without a second post.

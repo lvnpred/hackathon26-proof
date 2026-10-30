@@ -34,7 +34,7 @@ export default function Timeline({ lines, nudges, replaced, lens, role, line, bu
         const struck = replaced.has(item.id);
         return (
           <li key={item.id} id={item.id} data-line={item.id} className={`${struck ? "struck" : ""}${hit}`.trim() || undefined}>
-            <span className="tag">{item.when}</span> <span>{item.plain}</span>
+            <span className="tag">{item.when}</span> <span>{lens === "patient" ? item.patient || item.plain : item.plain}</span>
             {struck && <> <span className="tag">corrected</span></>}
           </li>
         );

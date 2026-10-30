@@ -81,7 +81,7 @@ def photos_view(events: list[dict]) -> list[dict]:
                 "by": p["by"],
                 "at_ms": e["ts_ms"],
                 "url": f"/journey/episodes/{e['episode_id']}/photos/{e['id']}",
-                "check": {k: found[k] for k in ("read", "match", "why", "source")} if found else None,
+                "check": {k: found[k] for k in ("read", "match", "why", "source", "evidence_id", "regions") if k in found} if found else None,
             }
         )
     return out

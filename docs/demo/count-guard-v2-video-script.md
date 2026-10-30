@@ -273,14 +273,14 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 | `das-ask` | 1 Spark text call. The label reads Muse Spark in place of Rules (no model), and the answer is prose. No switch. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
-| `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch. |
+| `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch. |
 | `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
 | `kumar-review` | 1 Voice call (hear). Heard by reads Muse Voice. No switch. |
 | `iyer-bp` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. No switch. |
 | `iyer-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by typing in the box. |
 | `iyer-recheck` | 1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch. |
 | `iyer-setup` | SAM 3.1 video call. The label reads SAM 3.1. Switch: SETUP_LIVE. |
-| `iyer-meds` | 1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE. |
+| `iyer-meds` | 1 SAM 3.1 image call (strip regions) and 1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE. |
 
 Cost and order:
 

@@ -1,3 +1,50 @@
 {
-  "text": "{\"strips\": [{\"name\": \"Pantoprazole\", \"strength\": \"40 mg\"}, {\"name\": \"Atorvastatin\", \"strength\": \"10 mg\"}, {\"name\": \"Paracetamol\", \"strength\": \"500 mg\"}, {\"name\": \"Ibuprofen\", \"strength\": \"400 mg\"}]}"
+  "text": "{\"strips\": [{\"name\": \"Pantoprazole\", \"strength\": \"40 mg\"}, {\"name\": \"Atorvastatin\", \"strength\": \"10 mg\"}, {\"name\": \"Paracetamol\", \"strength\": \"500 mg\"}, {\"name\": \"Ibuprofen\", \"strength\": \"400 mg\"}]}",
+  "regions": [
+    {
+      "bbox": [
+        0.0556,
+        0.0469,
+        0.8889,
+        0.2031
+      ],
+      "label": "Pantoprazole 40 mg",
+      "value": "Pantoprazole 40 mg",
+      "row": 0
+    },
+    {
+      "bbox": [
+        0.0556,
+        0.2812,
+        0.8889,
+        0.2031
+      ],
+      "label": "Atorvastatin 10 mg",
+      "value": "Atorvastatin 10 mg",
+      "row": 1
+    },
+    {
+      "bbox": [
+        0.0556,
+        0.5156,
+        0.8889,
+        0.2031
+      ],
+      "label": "Paracetamol 500 mg",
+      "value": "Paracetamol 500 mg",
+      "row": 2
+    },
+    {
+      "bbox": [
+        0.0556,
+        0.75,
+        0.8889,
+        0.2031
+      ],
+      "label": "Ibuprofen 400 mg",
+      "value": "Ibuprofen 400 mg",
+      "row": 3
+    }
+  ],
+  "handmade": true
 }

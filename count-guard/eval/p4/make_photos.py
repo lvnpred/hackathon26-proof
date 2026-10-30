@@ -1,6 +1,7 @@
 """Stand-in photos for the P4 demo, until the owner photographs real strips (P2-R2). Needs Pillow.
 
-Run: .venv/bin/python eval/p4/make_photos.py
+Run: .venv/bin/python eval/p4/make_photos.py [--write-fixtures]
+`--write-fixtures` adds the handmade `regions` (one box per card) to meds-kumar.json and meds-iyer.json.
 Writes meds-kumar.png, meds-iyer.png (one drawn strip per prepared row) wound-day3.png and wound-day0.png (the reference photo taken after theatre).
 The output (*.png) is git-ignored. The medicine file names match backend/app/journey/prepared/*.json.
 """
@@ -8,6 +9,7 @@ The output (*.png) is git-ignored. The medicine file names match backend/app/jou
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -58,7 +60,29 @@ def wound_photo_day0(out: Path) -> None:
     img.save(out)
 
 
+def write_fixtures() -> None:
+    """One region per card: (40, top, 680, top + 130) on a (720, 40 + 150 n) photo, labelled from the text strips."""
+    for name in ("meds-kumar", "meds-iyer"):
+        path = PREPARED / f"{name}.json"
+        data = json.loads(path.read_text())
+        strips = json.loads(data["text"])["strips"]
+        width, height = 720, 40 + 150 * len(strips)
+        data["regions"] = [
+            {
+                "bbox": [round(40 / width, 4), round((30 + 150 * n) / height, 4), round(640 / width, 4), round(130 / height, 4)],
+                "label": f"{s['name']} {s['strength']}".strip(), "value": f"{s['name']} {s['strength']}".strip(), "row": n,
+            }
+            for n, s in enumerate(strips)
+        ]
+        data["handmade"] = True
+        path.write_text(json.dumps(data, indent=2) + "\n")
+        print(path)
+
+
 def main() -> None:
+    if "--write-fixtures" in sys.argv[1:]:
+        write_fixtures()
+        return
     for name in ("meds-kumar", "meds-iyer"):
         text = json.loads((PREPARED / f"{name}.json").read_text())["text"]
         medicines_photo(json.loads(text)["strips"], HERE / f"{name}.png")

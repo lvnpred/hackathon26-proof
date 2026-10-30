@@ -1,6 +1,7 @@
 """Generate the P2 demo audio and photos. Needs macOS `say`, ffmpeg and Pillow.
 
-Run: .venv/bin/python eval/p2/make_media.py
+Run: .venv/bin/python eval/p2/make_media.py [--write-fixtures]
+`--write-fixtures` adds the handmade `regions` (boxes from this drawing) to monitor-88-54.json and strip-paracetamol.json.
 The output (*.wav, *.png) is git-ignored. The file names match backend/app/journey/prepared/*.json.
 """
 
@@ -8,6 +9,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -57,7 +59,41 @@ def monitor_photo(out: Path) -> None:
     img.save(out)
 
 
+MONITOR_SIZE = (640, 400)
+MONITOR_ROWS = ((70, "SBP", "88"), (160, "DBP", "54"), (250, "HR", "112"))
+STRIP_SIZE = (640, 400)
+STRIP_CARD = (60, 90, 580, 310)
+
+
+def norm(box: tuple, size: tuple) -> list[float]:
+    """Pixel (x0, y0, x1, y1) to normalised [x, y, w, h], 4 places."""
+    (x0, y0, x1, y1), (w, h) = box, size
+    return [round(x0 / w, 4), round(y0 / h, 4), round((x1 - x0) / w, 4), round((y1 - y0) / h, 4)]
+
+
+def _set_regions(stem: str, regions: list[dict]) -> None:
+    path = PREPARED / f"{stem}.json"
+    data = json.loads(path.read_text())
+    data["regions"], data["handmade"] = regions, True
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    print(path)
+
+
+def write_fixtures() -> None:
+    """The boxes of the value texts monitor_photo draws, and of the strip card strip_photo draws."""
+    d = ImageDraw.Draw(Image.new("RGB", MONITOR_SIZE))
+    rows = [
+        {"bbox": norm(d.textbbox((300, y), value, font=_font(84)), MONITOR_SIZE), "label": label, "value": value, "row": n}
+        for n, (y, label, value) in enumerate(MONITOR_ROWS)
+    ]
+    _set_regions("monitor-88-54", rows)
+    _set_regions("strip-paracetamol", [{"bbox": norm(STRIP_CARD, STRIP_SIZE), "label": "Paracetamol 500 mg", "value": "Paracetamol 500 mg", "row": 0}])
+
+
 def main() -> None:
+    if "--write-fixtures" in sys.argv[1:]:
+        write_fixtures()
+        return
     for path in sorted(PREPARED.glob("*.json")):
         data = json.loads(path.read_text())
         if "transcript" in data:

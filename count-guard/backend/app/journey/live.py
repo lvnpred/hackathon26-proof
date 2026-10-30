@@ -18,6 +18,8 @@ from app.adapters.spark import SparkAdapter
 from app.adapters.voice import VoiceAdapter
 from app.adapters.sam import SamAdapter
 from app.config import Settings
+from app.journey.proof import parse_monitor_text
+from app.journey.regions import READER_CONCEPTS, monitor_values, pair_regions, strip_values, strips_from
 from app.journey.video import frames_from, summarize
 from app.media_pipeline import to_sam_clip
 from app.spend import clip_seconds
@@ -151,6 +153,36 @@ def spark_text(settings: Settings, prompt: str) -> str | None:
         return None
 
 
+def _boxes(settings: Settings, reader: str, data_url: str) -> tuple[list[dict], list[dict], dict]:
+    """SAM's boxes for a photo: (boxes, parsed records, the sam call). A SAM error gives no boxes and a failed call."""
+    start = time.monotonic()
+    try:
+        records = SamAdapter(settings).segment_images([data_url], READER_CONCEPTS[reader])
+    except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
+        return [], [], call_of("sam", settings, "failed", _since(start))
+    call = call_of("sam", settings, "sam-3.1", _since(start))
+    parsed = [{k: v for k, v in r.items() if k != "mask_token"} for r in records]
+    boxes = [
+        {"bbox": [round(v, 4) for v in r["bbox"]], "score": r.get("score")}
+        for r in records
+        if r.get("frame_index", 0) == 0 and (r.get("score") is None or r["score"] >= settings.low_confidence)
+    ]
+    return boxes, parsed, call
+
+
+def _values(reader: str, text: str | None) -> list[dict]:
+    """What Spark read, in reading order; none when it read nothing."""
+    if not text:
+        return []
+    if reader == "monitor":
+        return monitor_values(parse_monitor_text(text))
+    return strip_values(strips_from(text))
+
+
+def _photo(text, source, regions, calls, raw, handmade) -> dict:
+    return {"text": text, "source": source, "regions": regions, "calls": calls, "raw": raw, "handmade": handmade}
+
+
 def read_photo(
     settings: Settings,
     reader: Literal["strip", "monitor"],
@@ -159,24 +191,36 @@ def read_photo(
     content_type: str,
     live_ok: bool = True,
 ) -> dict:
+    """A photo read is two calls: SAM boxes each region, Spark reads the values, `pair_regions` joins them (D1(b))."""
+    found = prepared(filename)
     if settings.spark_configured and live_ok:
         kind = content_type if (content_type or "").startswith("image/") else "image/jpeg"
         data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
+        boxes, parsed, sam_call = _boxes(settings, reader, data_url)
         adapter = SparkAdapter(settings)
         start = time.monotonic()
         try:
             text = adapter.read_strips(data_url) if reader == "strip" else adapter.read_monitor(data_url)
         except (httpx.HTTPError, RuntimeError, ValueError):
             ms = _since(start)
-            found = prepared(filename)
             if found and found.get("text"):
-                return {"text": found["text"], "source": FALLBACK, "calls": _calls("spark", settings, FALLBACK, ms)}
-            return {"text": None, "source": "failed", "calls": _calls("spark", settings, "failed", ms)}
-        return {"text": text, "source": "muse-spark-1.3", "calls": _calls("spark", settings, "muse-spark-1.3", _since(start))}
-    found = prepared(filename)
+                text, source, handmade = found["text"], FALLBACK, bool(found.get("handmade"))
+            else:
+                text, source, handmade = None, "failed", False
+            spark_call = call_of("spark", settings, source, ms)
+        else:
+            source, handmade = "muse-spark-1.3", False
+            spark_call = call_of("spark", settings, source, _since(start))
+        regions = pair_regions(boxes, _values(reader, text))
+        return _photo(text, source, regions, [sam_call, spark_call], {"sam": parsed, "spark": text}, handmade)
     if found and found.get("text"):
-        return {"text": found["text"], "source": "prepared", "calls": _calls("spark", settings, "prepared", _prepared_ms(found))}
-    return {"text": None, "source": "none", "calls": []}
+        values = _values(reader, found["text"])
+        stored = found.get("regions")
+        calls = ([call_of("sam", settings, "prepared", _prepared_ms(found))] if stored else []) + [
+            call_of("spark", settings, "prepared", _prepared_ms(found))]
+        return _photo(found["text"], "prepared", stored or pair_regions([], values), calls,
+                      found.get("raw"), bool(found.get("handmade")))
+    return _photo(None, "none", [], [], None, False)
 
 
 def _stored(found: dict | None, key: str) -> dict:

@@ -15,7 +15,7 @@ NOT_FOUND = "Evidence not found"
 def get_evidence(episode_id: str, evidence_id: str, request: Request) -> dict:
     """The sidecar of one check, if an event of this episode cites it."""
     _require(request, episode_id)
-    if not evidence.EVIDENCE_ID.match(evidence_id):
+    if not evidence.EVIDENCE_ID.fullmatch(evidence_id):
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     holders = evidence.held_by(_store(request).events(episode_id), evidence_id)
     body = evidence.load(request.app.state.settings, episode_id, evidence_id) if holders else None

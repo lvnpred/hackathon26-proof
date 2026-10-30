@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.config import Settings
 
-EVIDENCE_ID = re.compile(r"^[0-9a-f]{32}$")
+EVIDENCE_ID = re.compile(r"[0-9a-f]{32}")
 MAX_RAW_CHARS = 200_000
 RAW_CAPPED = {"note": "Raw output over 200 KB; not kept."}
 
@@ -32,7 +32,7 @@ def save(settings: Settings, episode_id: str, body: dict) -> str:
 
 def load(settings: Settings, episode_id: str, evidence_id: str) -> dict | None:
     """The sidecar, or None when the id is malformed or the file is missing."""
-    if not EVIDENCE_ID.match(evidence_id):
+    if not EVIDENCE_ID.fullmatch(evidence_id):
         return None
     path = _path(settings, episode_id, evidence_id)
     return json.loads(path.read_text()) if path.is_file() else None

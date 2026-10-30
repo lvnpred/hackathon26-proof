@@ -9,9 +9,10 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.journey import dictation, live, proof, spoken, states, tasks
+from app.journey import dictation, evidence, live, proof, spoken, states, tasks
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, view
-from app.morning.strips import parse_strip_text
+from app.journey.regions import strips_from
+from app.journey.rx import key_of
 
 media_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 models_router = APIRouter(prefix="/journey")
@@ -152,25 +153,36 @@ def dictate_task(
     return {**meta, "candidates": candidates, "values": result["values"]}
 
 
-def strips_from(text: str) -> list[dict]:
-    """Grounded strips from a reader's text. A reply that does not parse gives no strips."""
-    try:
-        return parse_strip_text(text)
-    except (ValueError, KeyError, TypeError, AttributeError):
-        return []
+def keep_photo_evidence(settings, episode_id: str, kind: str, photo_id: str, read: dict, regions: list[dict]) -> dict:
+    """Save a photo read's regions, calls and raw output as a sidecar. {} when nothing was found (no regions)."""
+    if not regions:
+        return {}
+    saved = evidence.save(settings, episode_id, {
+        "kind": kind, "media": "photos", "images": [{"photo_id": photo_id, "t": None, "index": 0}],
+        "frames": None, "regions": regions, "expected": None, "min_score": settings.low_confidence, "fps": None,
+        "calls": read["calls"], "raw": read["raw"], "handmade": read["handmade"],
+    })
+    return {"evidence_id": saved, "regions": regions}
 
 
-def _check_photo(settings, task: dict, raw: bytes, name: str, kind: str, stated: dict) -> dict:
+def _check_photo(settings, episode_id: str, photo_id: str, task: dict, raw: bytes, name: str, kind: str, stated: dict) -> dict:
     """The proof check for one photo. A reader that gave nothing, or a reply that does not parse, is `none`."""
     if task["kind"] == "dose":
         read = live.read_photo(settings, "strip", raw, name, kind)
         strips = strips_from(read["text"] or "")
-        return {**proof.check_strip(strips, task), "source": read["source"], "calls": read["calls"]}
+        wanted = key_of(task.get("name") or task["title"])
+        regions = [
+            {**r, "match": None if r["row"] is None else "ok" if key_of(strips[r["row"]]["name_as_read"]) == wanted else "mismatch"}
+            for r in read["regions"]
+        ]
+        return {**proof.check_strip(strips, task), "source": read["source"], "calls": read["calls"],
+                **keep_photo_evidence(settings, episode_id, "strip", photo_id, read, regions)}
     if task["kind"] == "obs":
         read = live.read_photo(settings, "monitor", raw, name, kind)
         values_read = proof.parse_monitor_text(read["text"] or "")
         # values_read is kept so that Confirm can compare the photo with the values the nurse confirms.
-        return {**proof.check_monitor(values_read, stated), "source": read["source"], "values_read": values_read, "calls": read["calls"]}
+        return {**proof.check_monitor(values_read, stated), "source": read["source"], "values_read": values_read, "calls": read["calls"],
+                **keep_photo_evidence(settings, episode_id, "monitor", photo_id, read, read["regions"])}
     return {"read": "", "match": "none", "why": proof.NO_READING, "source": "none", "calls": []}
 
 
@@ -229,7 +241,7 @@ def add_photo(
     photo = write_photo(settings, store, episode_id, raw, kind, added, ts)
     if task is not None:
         stated = {k: v for k, v in (("sbp", sbp), ("dbp", dbp), ("hr", hr)) if v is not None}
-        checked = _check_photo(settings, task, raw, file.filename or "", kind, stated)
+        checked = _check_photo(settings, episode_id, photo["id"], task, raw, file.filename or "", kind, stated)
         store.append(episode_id, "proof.checked", {"photo_id": photo["id"], "task_id": task_id, **checked}, ts_ms=ts)
     return view(request, episode_id)
 

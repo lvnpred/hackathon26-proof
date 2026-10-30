@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.adapters.sam import SamAdapter
 from app.adapters import spark as spark_mod
 from app.adapters.voice import VoiceAdapter
 from app.journey import dictation, live, proof, spoken
@@ -23,7 +24,7 @@ WEBP = b"RIFF\x00\x00\x00\x00WEBPfake"
 
 def bare(result: dict) -> dict:
     """A model result without its `calls` list (covered in test_ai_calls.py)."""
-    return {k: v for k, v in result.items() if k != "calls"}
+    return {k: v for k, v in result.items() if k not in ("calls", "regions", "raw", "handmade")}
 
 
 @pytest.fixture(autouse=True)
@@ -135,6 +136,7 @@ def test_failed_transcribe_falls_back_to_prepared(tmp_path, monkeypatch):
 
 
 def test_failed_read_photo_falls_back_to_prepared(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
     def boom(self, url):
         raise httpx.ConnectError("down")
 

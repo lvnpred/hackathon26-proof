@@ -68,7 +68,7 @@ def test_evidence_get_404s(tmp_path, fake_frames):
     other = client.post("/morning/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
     assert client.get(f"/journey/episodes/{eid}/evidence/{good}").status_code == 200
     for path in (f"{eid}/evidence/..%2Fx", f"{eid}/evidence/{'0' * 32}", f"{other}/evidence/{good}",
-                 f"{eid}/evidence/{good.upper()}", f"{eid}/evidence/{good[:31]}", f"{eid}/evidence/{good}0"):
+                 f"{eid}/evidence/{good.upper()}", f"{eid}/evidence/{good[:31]}", f"{eid}/evidence/{good}0", f"{eid}/evidence/{good}%0A"):
         assert client.get(f"/journey/episodes/{path}").status_code == 404, path
 
 
@@ -100,7 +100,7 @@ def test_save_caps_raw_and_load_refuses_a_bad_id(tmp_path):
     big = {"kind": "tray", "raw": {"spark": "x" * 200_001}}
     small = {"kind": "tray", "raw": {"spark": "ok"}}
     big_id, small_id = evidence.save(settings, eid, big), evidence.save(settings, eid, small)
-    assert evidence.EVIDENCE_ID.match(big_id) and big_id != small_id
+    assert evidence.EVIDENCE_ID.fullmatch(big_id) and big_id != small_id
     assert evidence.load(settings, eid, big_id)["raw"] == {"note": "Raw output over 200 KB; not kept."}
     assert evidence.load(settings, eid, small_id)["raw"] == {"spark": "ok"}
     assert evidence.load(settings, eid, small_id)["id"] == small_id

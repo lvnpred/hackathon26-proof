@@ -15,7 +15,7 @@ from app.journey import states
 from app.journey.api import At, _at, _require, _store, raise_nudges, view
 from app.journey import live
 from app.journey.ask import DECISIONS, PHOTO_STATES
-from app.journey.media_api import _heard, _structure, read_upload_photo, strips_from, write_photo
+from app.journey.media_api import _heard, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
 from app.journey.medicines import dose_rows, match_medicines, record_holds
 from app.journey.tasks import orders_list
 from app.journey.record import BOT, answer_from_reply, bot_prompt, record_lines, rules_answer
@@ -183,7 +183,8 @@ def ask_medicines(
     read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
     matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses,
                              ward=states.current_state(events) in WARD_VIEW)
-    return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "calls": read["calls"], "by": by})], ts)
+    kept = keep_photo_evidence(settings, episode_id, "medicines", photo["id"], read, read["regions"])
+    return _write(request, episode_id, [("medicines.read", {"photo_id": photo["id"], **matched, "source": read["source"], "calls": read["calls"], **kept, "by": by})], ts)
 
 
 @ask_router.post("/checkins/{checkin_id}/seen")

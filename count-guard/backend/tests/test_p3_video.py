@@ -19,7 +19,7 @@ ADVICE = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|conside
 
 def bare(result: dict) -> dict:
     """A model result without its `calls` (test_ai_calls.py) and its evidence (test_evidence.py)."""
-    return {k: v for k, v in result.items() if k not in ("calls", "frames", "raw", "handmade")}
+    return {k: v for k, v in result.items() if k not in ("calls", "frames", "raw", "handmade", "regions")}
 
 
 @pytest.fixture(autouse=True)

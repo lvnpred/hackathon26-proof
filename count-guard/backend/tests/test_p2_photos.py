@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.adapters.sam import SamAdapter
 from app.adapters.spark import SparkAdapter
 from app.journey import proof
 from app.journey.stories import plain
@@ -154,6 +155,7 @@ def test_photo_on_running_task_keeps_it_running(tmp_path):
 
 
 def test_live_reader_faked(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
     client = TestClient(create_app(_keyed(tmp_path)))
     eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     task = _ward(client, eid, [DOSE])[0]

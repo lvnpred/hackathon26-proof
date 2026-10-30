@@ -7,6 +7,7 @@ import re
 import httpx
 import pytest
 
+from app.adapters.sam import SamAdapter
 from app.adapters import spark as spark_mod
 from app.adapters.spark import MONITOR_PROMPT, STRIP_PROMPT
 from app.adapters.voice import VoiceAdapter
@@ -21,7 +22,7 @@ ORDERS_TEXT = (
 
 def bare(result: dict) -> dict:
     """A model result without its `calls` list (covered in test_ai_calls.py)."""
-    return {k: v for k, v in result.items() if k != "calls"}
+    return {k: v for k, v in result.items() if k not in ("calls", "regions", "raw", "handmade")}
 
 
 @pytest.fixture(autouse=True)
@@ -111,6 +112,7 @@ def test_read_photo_prepared_and_unknown(tmp_path):
 
 
 def test_read_photo_key_uses_faked_spark(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_monitor", lambda self, url: "seen:" + url[:15])
     out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "m.png", "image/png")
     assert bare(out) == {"text": "seen:data:image/png;", "source": "muse-spark-1.3"}

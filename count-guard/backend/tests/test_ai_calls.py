@@ -32,9 +32,9 @@ def test_nothing_read_is_no_call(tmp_path):
     assert live.read_photo(_no_key(tmp_path), "strip", b"x", "unknown.png", "image/png")["calls"] == []
 
 
-def test_prepared_photo_read_is_one_spark_call(tmp_path):
+def test_prepared_photo_read_is_a_sam_and_a_spark_call(tmp_path):
     calls = live.read_photo(_no_key(tmp_path), "monitor", b"x", "monitor-88-54.png", "image/png")["calls"]
-    assert [(c["model"], c["source"]) for c in calls] == [("spark", "prepared")]
+    assert [(c["model"], c["source"]) for c in calls] == [("sam", "prepared"), ("spark", "prepared")]
 
 
 def test_mode_of():
@@ -148,16 +148,16 @@ def test_tray_and_setup_checks_record_the_sam_call(tmp_path):
     assert _pairs(_checked(client, eid, "setup.checked")["calls"]) == [("sam", "prepared")]
 
 
-def test_proof_check_records_the_spark_call(tmp_path):
+def test_proof_check_records_the_sam_and_spark_calls(tmp_path):
     from tests.test_p2_photos import _photo, _ward as _ward_tasks
 
     client, eid = _new(tmp_path)
     task = _ward_tasks(client, eid, [DOSE])[0]
     assert _photo(client, eid, task_id=task["id"]).status_code == 200
-    assert _pairs(_last(client, eid, "proof.checked")["payload"]["calls"]) == [("spark", "prepared")]
+    assert _pairs(_last(client, eid, "proof.checked")["payload"]["calls"]) == [("sam", "prepared"), ("spark", "prepared")]
 
 
-def test_medicines_photo_records_the_spark_call(tmp_path):
+def test_medicines_photo_records_the_sam_and_spark_calls(tmp_path):
     from tests.test_care_demo import _client
     from tests.test_p4_ask import _home, _patients
     from tests.test_p4_medicines import _post
@@ -166,7 +166,7 @@ def test_medicines_photo_records_the_spark_call(tmp_path):
     kumar = _patients(client)["4"]
     _home(client, kumar)
     assert _post(client, kumar).status_code == 200
-    assert _pairs(_last(client, kumar, "medicines.read")["payload"]["calls"]) == [("spark", "prepared")]
+    assert _pairs(_last(client, kumar, "medicines.read")["payload"]["calls"]) == [("sam", "prepared"), ("spark", "prepared")]
 
 
 def test_doctor_answer_by_voice_records_one_untimed_voice_call(tmp_path):

@@ -8,6 +8,7 @@ import re
 import httpx
 import pytest
 
+from app.adapters.sam import SamAdapter
 from app.adapters import spark as spark_mod
 from app.journey import ask_api, proof
 from app.journey.ask_api import NO_MEDICINES
@@ -139,6 +140,7 @@ def test_route_refusals(tmp_path):
 
 
 def test_live_read_and_cut_switch(tmp_path, monkeypatch):
+    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
     keyed = _keyed_client(tmp_path)
     kumar2 = _patients(keyed)["4"]
     _home(keyed, kumar2)

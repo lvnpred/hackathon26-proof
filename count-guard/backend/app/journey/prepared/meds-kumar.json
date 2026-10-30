@@ -1,3 +1,50 @@
 {
-  "text": "{\"strips\": [{\"name\": \"Metoprolol\", \"strength\": \"25 mg\"}, {\"name\": \"Amlodipine\", \"strength\": \"5 mg\"}, {\"name\": \"Pantoprazole\", \"strength\": \"40 mg\"}, {\"name\": \"Cetirizine\", \"strength\": \"10 mg\"}]}"
+  "text": "{\"strips\": [{\"name\": \"Metoprolol\", \"strength\": \"25 mg\"}, {\"name\": \"Amlodipine\", \"strength\": \"5 mg\"}, {\"name\": \"Pantoprazole\", \"strength\": \"40 mg\"}, {\"name\": \"Cetirizine\", \"strength\": \"10 mg\"}]}",
+  "regions": [
+    {
+      "bbox": [
+        0.0556,
+        0.0469,
+        0.8889,
+        0.2031
+      ],
+      "label": "Metoprolol 25 mg",
+      "value": "Metoprolol 25 mg",
+      "row": 0
+    },
+    {
+      "bbox": [
+        0.0556,
+        0.2812,
+        0.8889,
+        0.2031
+      ],
+      "label": "Amlodipine 5 mg",
+      "value": "Amlodipine 5 mg",
+      "row": 1
+    },
+    {
+      "bbox": [
+        0.0556,
+        0.5156,
+        0.8889,
+        0.2031
+      ],
+      "label": "Pantoprazole 40 mg",
+      "value": "Pantoprazole 40 mg",
+      "row": 2
+    },
+    {
+      "bbox": [
+        0.0556,
+        0.75,
+        0.8889,
+        0.2031
+      ],
+      "label": "Cetirizine 10 mg",
+      "value": "Cetirizine 10 mg",
+      "row": 3
+    }
+  ],
+  "handmade": true
 }

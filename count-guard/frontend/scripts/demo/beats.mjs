@@ -147,7 +147,7 @@ export const BEATS = [
     expect: ["Paracetamol 1 g given to bed 4.", HEARD, "Photo matches the task", "by voice"],
     before: ["Paracetamol 1 g given to bed 4.", HEARD],
     files: ["kumar-paracetamol.wav", "strip-paracetamol.png"],
-    keyed: "1 Voice call and 1 Spark text call, plus 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch.",
+    keyed: "1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch.",
   },
   {
     id: "kumar-mycare", path: "kumar", role: "patient", seconds: 7, film: true,
@@ -256,7 +256,7 @@ export const BEATS = [
     clicks: ["Role Patient", "Pick S. Iyer", "Tab Ask", 'File input in "Medicines photo" <- eval/p4/meds-iyer.png'],
     expect: ["Ibuprofen", "Pantoprazole 40 mg:"],
     files: ["meds-iyer.png"],
-    keyed: "1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE.",
+    keyed: "1 SAM 3.1 image call (strip regions) and 1 Spark vision call. The label reads Muse Spark. Switch: MEDICINES_LIVE.",
   },
   {
     id: "close", path: "close", role: "none", seconds: 3, film: true,

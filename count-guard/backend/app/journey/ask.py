@@ -75,6 +75,7 @@ def ask_view(events: list[dict]) -> dict:
                     "id": e["id"],
                     "photo": {"id": p["photo_id"], "url": f"/journey/episodes/{e['episode_id']}/photos/{p['photo_id']}"},
                     "rows": p["rows"], "match": p["match"], "why": p["why"], "source": p["source"], "at_ms": e["ts_ms"],
+                    "regions": p.get("regions") or [], "evidence_id": p.get("evidence_id"),
                 }
             )
         elif e["event_type"] == "checkin.recorded":

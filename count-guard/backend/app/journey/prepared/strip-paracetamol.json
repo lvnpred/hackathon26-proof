@@ -1,3 +1,17 @@
 {
-  "text": "{\"strips\": [{\"name\": \"Paracetamol\", \"strength\": \"500 mg\"}]}"
+  "text": "{\"strips\": [{\"name\": \"Paracetamol\", \"strength\": \"500 mg\"}]}",
+  "regions": [
+    {
+      "bbox": [
+        0.0938,
+        0.225,
+        0.8125,
+        0.55
+      ],
+      "label": "Paracetamol 500 mg",
+      "value": "Paracetamol 500 mg",
+      "row": 0
+    }
+  ],
+  "handmade": true
 }

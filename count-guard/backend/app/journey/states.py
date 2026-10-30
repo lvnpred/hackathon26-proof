@@ -237,27 +237,46 @@ NEXT_YOU = {
     "home": "You are home. No further steps.",
 }
 
+# The same steps addressed to the person who owns them (the "Next · for you" card).
+NEXT_MINE = {
+    "clinic": "Admit the patient or close the visit.",
+    "clinic_done": NEXT["clinic_done"],
+    "admitting": "Complete the admission.",
+    "ward": "Send the patient to theatre or sign the discharge.",
+    "theatre": "Record the surgery and the count, then return the patient to the ward.",
+    "discharging": "Complete the discharge.",
+    "home": NEXT["home"],
+}
 
-def _next_step(events: list[dict], state: str, you: bool = False) -> str:
-    """The next step in staff words, or addressed to the patient with `you`."""
+
+def _next_step(events: list[dict], state: str, you: bool = False, mine: bool = False) -> str:
+    """The next step in staff words; `you` addresses the patient, `mine` the step's owner."""
     from app.journey.tasks import orders_list  # tasks imports this module
 
-    next_ = (NEXT_YOU if you else NEXT)[state]
-    own, nurse = ("your", "The nurse") if you else ("the", "Nurse")
+    next_ = (NEXT_YOU if you else NEXT_MINE if mine else NEXT)[state]
+    own = "your" if you else "the"
+
+    def say(subject: str, verb: str, rest: str) -> str:
+        """`Nurse acknowledges the ...`, or for the owner `Acknowledge the ...`."""
+        return f"{verb.capitalize()} {rest}" if mine else f"{subject} {verb}s {rest}"
+
+    nurse = "The nurse" if you else "Nurse"
     fresh = [o for o in orders_list(events) if not o["acknowledged_by"]]
     if fresh and state in ("ward", "admitting"):
-        ack = f"{nurse} acknowledges the new orders from {fresh[-1]['by']}."
-        next_ = ack if state == "ward" else f"{ack[:-1]}, then completes {own} admission."
+        ack = say(nurse, "acknowledge", f"the new orders from {fresh[-1]['by']}.")
+        then = f"complete {own} admission" if mine else f"completes {own} admission"
+        next_ = ack if state == "ward" else f"{ack[:-1]}, then {then}."
     if state == "theatre" and surgery_status(events) == "none":
         tray = tray_state(events)
         if tray["planned"] and not tray["latest"]:
-            next_ = f"{nurse} checks the tray by video, then records the surgery and the count."
+            then = "record" if mine else "records"
+            next_ = f"{say(nurse, 'check', 'the tray by video')}, then {then} the surgery and the count."
     if state in PHOTO_STATES:
         waiting = open_for_doctor(events)
         if waiting["reviews"]:
-            next_ = f"The doctor reviews {own} healing photo."
+            next_ = say("The doctor", "review", f"{own} healing photo.")
         elif waiting["questions"]:
-            next_ = f"The doctor answers {own} question."
+            next_ = say("The doctor", "answer", f"{own} question.")
     return next_
 
 
@@ -311,6 +330,7 @@ def now_next(events: list[dict]) -> dict:
     return {
         "now": now,
         "next": _next_step(events, state),
+        "next_mine": _next_step(events, state, mine=True),
         "next_role": next_role(events, state),
         "you_now": you_now,
         "you_next": _next_step(events, state, you=True),

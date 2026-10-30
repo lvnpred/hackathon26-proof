@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DoctorChip, useCareWard } from "./CareShell";
 import { findPatient } from "./Patients";
@@ -26,10 +26,15 @@ function Answered({ view }) {
 
 export default function Today() {
   const ward = useCareWard();
-  const [checkingIn, setCheckingIn] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const patient = findPatient(ward.patients, ward.patientBed);
   if (!patient) return <p className="empty">{ward.loadError || "Loading your day…"}</p>;
+  // Keyed by patient so the check-in and help panels start closed after a patient switch.
+  return <TodayBody key={patient.id} ward={ward} patient={patient} />;
+}
+
+function TodayBody({ ward, patient }) {
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const { view } = patient;
   const home = view.state === "home";
   const common = {
@@ -52,7 +57,7 @@ export default function Today() {
     ask: <Answered view={view} />,
   };
   return (
-    <Fragment key={patient.id}>
+    <>
       <div className="row between greeting-row">
         <h1>{greeting(patient.name)}</h1>
         <DoctorChip status={ward.doctorStatus} />
@@ -66,7 +71,7 @@ export default function Today() {
       {home ? (
         <>
           {checkingIn ? (
-            <CheckIn card={view.card} {...common} />
+            <CheckIn card={view.card} {...common} onDone={() => setCheckingIn(false)} />
           ) : (
             <button className="primary" onClick={() => setCheckingIn(true)}>Open check-in</button>
           )}
@@ -89,6 +94,6 @@ export default function Today() {
       ) : (
         <p className="empty small">Check-ins and Need help open once you are home.</p>
       )}
-    </Fragment>
+    </>
   );
 }

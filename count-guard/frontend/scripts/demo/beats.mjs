@@ -92,7 +92,7 @@ export const BEATS = [
     say: "Nurse Meena sees the new orders in her queue, ticks the admission checks and acknowledges the orders.",
     clicks: ["Role Nurse", 'Tab "My queue"', "Chart R. Kumar", 'Tick "Wristband on", "Allergies checked", "Baseline observations taken", "Consent on file"', 'Button "Complete admission"', 'Button "Acknowledge"'],
     expect: ["On the ward", "acknowledged the orders at"],
-    before: ["Nurse acknowledges the new orders from Dr. A. Rao, then completes the admission."],
+    before: ["Acknowledge the new orders from Dr. A. Rao, then complete the admission."],
     keyed: "No model call.",
   },
   {

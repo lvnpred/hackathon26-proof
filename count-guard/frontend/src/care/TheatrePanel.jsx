@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { displayName } from "./names";
 import { packLine, swabFigures } from "./theatre";
 import { swabTotal } from "./video";
 
@@ -11,7 +12,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
   const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
   const [detail, setDetail] = useState("");
-  const [by, setBy] = useState(NURSE);
+  const by = NURSE; // shown as plain text; the tagged value goes to the server
   const [changing, setChanging] = useState(false);
 
   const open = (view?.nudges || []).find((nudge) => nudge.kind === "count_open");
@@ -63,10 +64,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, replaced, onN
             Pack opened
             <input inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
           </label>
-          <label className="field" style={{ flex: "1 1 160px" }}>
-            By
-            <input value={by} onChange={(event) => setBy(event.target.value)} />
-          </label>
+          <p className="small muted" style={{ flex: "1 1 160px" }}>By {displayName(by)}</p>
           <button
             disabled={!ready || !Number.isInteger(opened) || opened < 1}
             onClick={async () => {

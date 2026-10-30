@@ -37,7 +37,7 @@ export function patientGroups(patients, nowMs) {
     const longest = rows.reduce((a, b) => (b.waitedMs > a.waitedMs ? b : a));
     waiting.push({ ...out, reason: reasonText(rows), waited: longest.waited, waitedMs: longest.waitedMs });
   }
-  waiting.sort((a, b) => b.waitedMs - a.waitedMs);
+  waiting.sort((a, b) => (b.waitedMs ?? -1) - (a.waitedMs ?? -1));
   quiet.sort((a, b) => String(a.bed).localeCompare(String(b.bed), undefined, { numeric: true }));
   return { waiting: waiting.map(({ waitedMs, ...row }) => row), quiet };
 }

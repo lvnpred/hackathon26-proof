@@ -59,7 +59,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
         />
       )}
-      {live && task.kind === "obs" && <ObsForm busy={busy} due={due} label={mark.label} onSave={(values) => done({ values })} />}
+      {live && task.kind === "obs" && <ObsForm busy={busy} due={due} label={mark.label} primary={mark.primary} onSave={(values) => done({ values })} />}
       {live && task.kind !== "obs" && task.mode === "start_end" && (
         task.status === "running"
           ? <button type="button" className="primary" disabled={busy} onClick={() => done()}>End</button>

@@ -77,3 +77,17 @@ test("doctorBlocks keeps the ward actions reachable when the nurse owns the step
   assert.deepEqual(doctorBlocks("ward", theirs), { inside: [], below: ["theatre", "discharge"] });
   assert.deepEqual(doctorBlocks("clinic", theirs), { inside: [], below: [] });
 });
+
+test("the owner reads the second-person sentence, others the staff one", () => {
+  const v = view("ward", "doctor");
+  v.now_next.next_mine = "Send the patient to theatre or sign the discharge.";
+  assert.equal(nextCard(v, "doctor").text, "Send the patient to theatre or sign the discharge.");
+  assert.equal(nextCard(v, "nurse").text, "X.");
+  assert.equal(nextCard(v, "patient", { you: true }).text, "YX.");
+});
+test("the current step skips a detail that repeats its label", () => {
+  const home = journeySteps("home", ["clinic", "home"]).find((s) => s.status === "current");
+  assert.equal(home.label, "Home");
+  assert.equal(home.detail, "");
+  assert.equal(journeySteps("ward", ["ward"]).find((s) => s.status === "current").detail, "On the ward");
+});

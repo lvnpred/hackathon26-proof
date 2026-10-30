@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { nextForOthers, patientGroups, reasonText, statusWord } from "./patientGroups.js";
+import fs from "node:fs";
 import { H, M } from "./clock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -38,4 +39,19 @@ test("statusWord", () => {
 
 test("M5 copy has no advice words", () => {
   for (const s of ["Waiting on you · 1", "Nothing for you now · 2", "Who is waiting on you first.", "Nurse obs due 10:00"]) assert.doesNotMatch(s, ADVICE);
+});
+
+test("an untimed waiting row has an empty waited text and sorts after timed rows", () => {
+  const clinic = P("e1", "1", "clinic");
+  const kumar = P("e4", "4", "home", { ask: { questions: [{ id: "q", to: "doctor", at_ms: 0, answer: null }] } });
+  const g = patientGroups([clinic, kumar], 30 * M);
+  assert.deepEqual(g.waiting.map((r) => [r.bed, r.waited]), [["4", "30 min"], ["1", ""]]);
+  assert.ok(g.waiting.every((r) => !("waitedMs" in r)));
+  const same = patientGroups([kumar, clinic], 30 * M).waiting.map((r) => r.bed);
+  assert.deepEqual(same, ["4", "1"]);
+});
+
+test("the waited pill renders only when there is a waited text", () => {
+  const src = fs.readFileSync(new URL("./MyPatients.jsx", import.meta.url), "utf8");
+  assert.match(src, /row\.waited && <span className="pill sun">/);
 });

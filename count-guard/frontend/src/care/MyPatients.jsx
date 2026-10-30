@@ -19,7 +19,7 @@ function PatientList({ rows, kind }) {
             <span>{row.name}</span>
             {kind === "waiting" && <span>{row.reason}</span>}
             <span className="pill info state-badge">{row.state}</span>
-            {kind === "waiting" ? <span className="pill sun">{row.waited}</span> : <span className="muted">{row.next}</span>}
+            {kind !== "waiting" ? <span className="muted">{row.next}</span> : row.waited && <span className="pill sun">{row.waited}</span>}
           </Link>
         </li>
       ))}

@@ -27,3 +27,11 @@ test("alertCount sums own and grouped pills, and is 0 for the patient", () => {
   assert.equal(alertCount(pills, "patient"), 0);
   assert.equal(alertCount({ mine: [], others: [] }, "doctor"), 0);
 });
+
+test("the patient's product bar shows no doctor chip (the greeting row keeps it)", async () => {
+  const fs = await import("node:fs");
+  const shell = fs.readFileSync(new URL("./CareShell.jsx", import.meta.url), "utf8");
+  assert.match(shell, /ward\.role !== "patient" && <DoctorChip/);
+  const today = fs.readFileSync(new URL("./Today.jsx", import.meta.url), "utf8");
+  assert.match(today, /<DoctorChip/);
+});

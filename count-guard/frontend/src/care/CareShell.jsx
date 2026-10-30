@@ -118,7 +118,7 @@ export default function CareShell({ ward, children }) {
             {alertsLabel(alerts)}
           </button>
         )}
-        <DoctorChip status={ward.doctorStatus} />
+        {ward.role !== "patient" && <DoctorChip status={ward.doctorStatus} />}
       </header>
       {alerts > 0 && alertsOpen && <Strip mine={mine} others={others} />}
       <main className="page">

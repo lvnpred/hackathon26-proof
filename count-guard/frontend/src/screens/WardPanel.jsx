@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { num } from "../journey";
 import { nudgeLabel } from "../care/askText";
+import { displayName } from "../care/names";
 import NurseHandover from "./NurseHandover";
 
 const NURSE = "Nurse Meena (synthetic)";
@@ -14,7 +15,7 @@ const OBS = [
 
 export function Nudge({ nudge, busy, act }) {
   const [note, setNote] = useState("");
-  const [by, setBy] = useState(NURSE);
+  const by = NURSE; // shown as plain text; the tagged value goes to the server
   return (
     <div className="card sunk">
       <div className="row between">
@@ -27,14 +28,11 @@ export function Nudge({ nudge, busy, act }) {
           What you did or saw
           <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Called the patient back" />
         </label>
-        <label className="field" style={{ flex: "1 1 160px" }}>
-          By
-          <input value={by} onChange={(event) => setBy(event.target.value)} />
-        </label>
+        <p className="small muted" style={{ flex: "1 1 160px" }}>By {displayName(by)}</p>
         <button
           className="primary"
-          disabled={busy || !by.trim()}
-          onClick={() => act(`/nudges/${nudge.id}/seen`, { by: by.trim(), note: note.trim() })}
+          disabled={busy}
+          onClick={() => act(`/nudges/${nudge.id}/seen`, { by, note: note.trim() })}
         >
           Answer
         </button>

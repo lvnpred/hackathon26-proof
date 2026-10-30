@@ -181,7 +181,7 @@ On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.`
 #### `kumar-review` · 1:59 · doctor · 9 s
 Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
 
-On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send answer) · `by voice · Prepared demo result` · `No visit needed`
+On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send to R. Kumar) · `by voice · Prepared demo result` · `No visit needed`
 
 > Dr. Rao opens the healing photo beside the reference photo and answers by voice.
 

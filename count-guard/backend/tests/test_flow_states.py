@@ -148,7 +148,7 @@ def test_no_advice_words_in_now_next(tmp_path):
     seen.append(_move(client, eid, "home", checklist=DISCHARGE_CHECKS).json())
     for view in seen:
         n = view["now_next"]
-        assert not ADVICE.search(" ".join((n["now"], n["you_now"], n["next"], n["you_next"])))
+        assert not ADVICE.search(" ".join((n["now"], n["you_now"], n["next"], n["you_next"], n["next_mine"])))
     assert len(seen) == 5
 
 
@@ -384,3 +384,16 @@ def test_count_is_per_theatre_stay(tmp_path):
     _surgery(client, eid, "ended")
     _move(client, eid, "ward", checklist={})
     assert _view(client, eid)["count"]["opened"] is None
+
+
+def test_next_mine_speaks_to_the_owner(tmp_path):
+    from app.journey.states import NEXT, NEXT_MINE
+
+    client, eid = _new(tmp_path)
+    nn = _view(client, eid)["now_next"]
+    assert nn["next"] == "Doctor admits the patient or closes the visit."
+    assert nn["next_mine"] == "Admit the patient or close the visit."
+    assert NEXT_MINE.keys() == NEXT.keys()
+    for text in NEXT_MINE.values():
+        assert not ADVICE.search(text)
+        assert not text.startswith(("Doctor ", "Nurse ", "The doctor", "The nurse"))

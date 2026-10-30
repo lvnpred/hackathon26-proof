@@ -22,7 +22,9 @@ export function journeySteps(state, visited = []) {
   return JOURNEY.map((step, i) => {
     const seen = step.states.some((s) => visited.includes(s));
     if (i === at) {
-      return { key: step.key, label: state === "clinic_done" ? "Visit closed" : step.label, status: "current", detail: STATE_LABEL[state] };
+      const label = state === "clinic_done" ? "Visit closed" : step.label;
+      const detail = STATE_LABEL[state];
+      return { key: step.key, label, status: "current", detail: detail === label ? "" : detail };
     }
     let status;
     if (i < at) status = step.key === "theatre" && !visited.includes("theatre") ? "skipped" : "done";
@@ -72,7 +74,7 @@ export function nextCard(view, role, { you = false } = {}) {
     owner,
     mine,
     eyebrow: mine ? "Next · for you" : owner ? `Next · for the ${owner}` : "Next",
-    text: (you ? nn.you_next || nn.next : nn.next) || "Nothing queued",
+    text: (you ? nn.you_next || nn.next : mine ? nn.next_mine || nn.next : nn.next) || "Nothing queued",
     waiting: !owner || mine ? "" : `Waiting for the ${owner}.`,
     last: `Last: ${(you ? nn.you_now : nn.now) || "Nothing recorded"}`,
     actions: mine && !you ? cardActions(view.state, role, view) : [],

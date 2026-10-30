@@ -30,3 +30,12 @@ test("folds: an empty My medicines never comes first, and the answered count sho
 test("M6 copy has no advice words", () => {
   for (const s of ["Open check-in", "Feeling worse?", "Need help now", "You are getting ready to go home", "Ask a question →"]) assert.doesNotMatch(s, ADVICE);
 });
+
+test("Today keeps its panel state per patient and closes check-in after a save", async () => {
+  const fs = await import("node:fs");
+  const today = fs.readFileSync(new URL("./Today.jsx", import.meta.url), "utf8");
+  assert.match(today, /<TodayBody key=\{patient\.id\}/);
+  assert.match(today, /onDone=\{\(\) => setCheckingIn\(false\)\}/);
+  const card = fs.readFileSync(new URL("../screens/PatientCard.jsx", import.meta.url), "utf8");
+  assert.match(card, /onDone\?\.\(\)/);
+});

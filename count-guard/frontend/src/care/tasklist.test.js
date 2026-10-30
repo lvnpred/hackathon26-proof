@@ -136,3 +136,13 @@ test("orderFoldTitle", () => {
 test("M2 copy has no advice words", () => {
   for (const s of ["Given early", "Save readings", "due now", "paused while in theatre", "Due now", "Later today", "Signed orders"]) assert.doesNotMatch(s, ADVICE);
 });
+
+test("an observation row stays primary even when its time is not yet due", async () => {
+  const { rowMark } = await import("./tasklist.js");
+  assert.equal(rowMark({ kind: "obs" }, "later").primary, true);
+  const fs = await import("node:fs");
+  const tasks = fs.readFileSync(new URL("./NurseTasks.jsx", import.meta.url), "utf8");
+  const form = fs.readFileSync(new URL("./ObsForm.jsx", import.meta.url), "utf8");
+  assert.match(tasks, /<ObsForm[^>]*primary=\{mark\.primary\}/);
+  assert.match(form, /isPrimary \? "primary"/);
+});

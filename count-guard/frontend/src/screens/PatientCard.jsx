@@ -49,7 +49,7 @@ export function NeedHelp({ busy, act, fault, episodeId }) {
   );
 }
 
-export function CheckIn({ card, busy, act, fault, episodeId }) {
+export function CheckIn({ card, busy, act, fault, episodeId, onDone }) {
   const [day, setDay] = useState("1");
   const [feels, setFeels] = useState("");
   const [note, setNote] = useState("");
@@ -67,6 +67,7 @@ export function CheckIn({ card, busy, act, fault, episodeId }) {
       setFeels("");
       setNote("");
       setSigns([]);
+      onDone?.();
     }
   }
 

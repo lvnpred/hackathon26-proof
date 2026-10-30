@@ -73,6 +73,17 @@ def test_closing_by_camera_unchanged_has_no_correction(tmp_path):
     assert p["via"] == "camera" and "read" not in p and "saved" not in p
 
 
+def test_closing_cites_an_unreadable_camera_count_without_read_or_saved(tmp_path, monkeypatch):
+    from app.journey import count_api
+
+    client, eid = _new(tmp_path)
+    ev = _counted(client, eid)["evidence_id"]
+    monkeypatch.setattr(count_api, "_camera_count", lambda events, evidence_id: {"payload": {"count": None, "evidence_id": evidence_id}})
+    assert _closing(client, eid, returned=15, evidence_id=ev).status_code == 200
+    p = [e for e in _events(client, eid) if e["event_type"] == "count.closing"][-1]["payload"]
+    assert p["via"] == "camera" and p["evidence_id"] == ev and "read" not in p and "saved" not in p
+
+
 def test_typed_closing_has_no_evidence(tmp_path):
     client, eid = _new(tmp_path)
     _to_theatre(client, eid)

@@ -74,6 +74,7 @@ def count(episode_id: str, body: CountIn, request: Request) -> dict:
     }
     if camera:
         payload.update(via="camera", evidence_id=evidence_id)
-        if camera["payload"]["count"] != body.returned:
-            payload.update(read={"returned": camera["payload"]["count"]}, saved={"returned": body.returned})
+        read = camera["payload"].get("count")
+        if read is not None and read != body.returned:
+            payload.update(read={"returned": read}, saved={"returned": body.returned})
     return _act(request, episode_id, "count.closing", payload, body.at_ms, body.supersedes_id)

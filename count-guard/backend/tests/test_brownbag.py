@@ -148,5 +148,8 @@ def test_brownbag_copy_has_no_advice():
     texts = [s["answer"] for s in said] + [line["text"] for s in said for line in s["sources"]]
     plan = day_plan(RX, _read())
     texts += [i["text"] for slot in plan["slots"].values() for i in slot] + [i["text"] for i in plan["as_needed"]]
+    written = day_plan({**RX, "rows": [{**RX["rows"][0], "dose": "1 tab thrice", "duration": "5 days"}]}, None)
+    texts += [i["text"] for i in written["as_written"]] + [i["text"] for i in plan["as_written"]]
+    assert written["as_written"]
     for text in texts:
         assert not ADVICE.search(text), text

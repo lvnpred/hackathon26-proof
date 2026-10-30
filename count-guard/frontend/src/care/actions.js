@@ -1,11 +1,4 @@
-// Which action buttons the doctor's bar offers, and which panels are open.
-export const ACTIONS = {
-  clinic: [["orders", "Dictate orders"], ["photo", "Reference photo"]],
-  ward: [["orders", "Dictate orders"], ["photo", "Wound photo"], ["discharge", "Dictate discharge"]],
-};
-
-export const actionsFor = (state) => ACTIONS[state] || [];
-
+// Which doctor panels are open.
 export function toggled(set, id) {
   const next = new Set(set);
   if (!next.delete(id)) next.add(id);

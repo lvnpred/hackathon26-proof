@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { actionsFor, panelOpen, toggled } from "./actions.js";
-
-test("actionsFor", () => {
-  assert.deepEqual(actionsFor("clinic").map(([, l]) => l), ["Dictate orders", "Reference photo"]);
-  assert.deepEqual(actionsFor("ward").map(([, l]) => l), ["Dictate orders", "Wound photo", "Dictate discharge"]);
-  assert.deepEqual(actionsFor("theatre"), []);
-  assert.deepEqual(actionsFor("admitting"), []);
-});
+import { panelOpen, toggled } from "./actions.js";
 
 test("panels stay closed until chosen; a draft opens its panel", () => {
   const none = new Set();

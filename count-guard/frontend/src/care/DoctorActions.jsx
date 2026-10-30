@@ -3,7 +3,8 @@ import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
 import { answerHow, doctorOpenItems, doctorWaiting } from "./askText";
 import ActionBar from "./ActionBar";
-import { actionsFor, panelOpen, toggled } from "./actions";
+import { panelOpen, toggled } from "./actions";
+import { quietActions } from "./journey";
 import Dictate from "./Dictate";
 import { draftChanged, heardLine, sectionsToSummary, sourceLabel } from "./drafts";
 import OrderForm from "./OrderForm";
@@ -206,7 +207,7 @@ export default function DoctorActions({ state, view, act, upload, ask, busy }) {
   const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
-  const bar = <ActionBar actions={actionsFor(state)} isOpen={open} onToggle={(id) => setChosen((current) => toggled(current, id))} />;
+  const bar = <ActionBar actions={[...quietActions(state, "doctor"), ...(state === "ward" ? [["discharge", "Dictate discharge"]] : [])]} isOpen={open} onToggle={(id) => setChosen((current) => toggled(current, id))} />;
   if (state === "clinic") {
     return (
       <>

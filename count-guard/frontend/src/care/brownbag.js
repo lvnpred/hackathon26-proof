@@ -34,5 +34,11 @@ export const askAboutText = (read) => `About ${read} from my medicines photo: it
 
 export const markLine = ({ mark, by }) => (mark === "noted" ? `Noted by ${displayName(by)}` : `Discuss with patient · ${displayName(by)}`);
 
+// The patient's own wording of the doctor's mark on one medicine of the photo (spec 2.6 step 4).
+export function patientMarkLine({ mark, by }, row) {
+  const name = row?.read || "one of your medicines";
+  return mark === "noted" ? `${displayName(by)} has noted ${name}` : `${displayName(by)} will talk to you about ${name}`;
+}
+
 // The region of a read row, for the crop: the first region that points at row `index`.
 export const regionOfRow = (regions, index) => (regions || []).find((r) => r.row === index && r.bbox) || null;

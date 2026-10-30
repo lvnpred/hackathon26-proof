@@ -95,3 +95,21 @@ test("controls follow the backend rules, not the list order", () => {
   const over = { ...began, timeline: [...began.timeline, line("surgery.ended", "Day 0 10:00")] };
   assert.equal(canRecord(over, "ended"), false);
 });
+
+test("a corrected camera count stays on the folded count line", () => {
+  const view = {
+    tray: { planned: [{}], latest: { check: "tray", match: "ok" } },
+    count: { missing: 0, read: { returned: 14 }, saved: { returned: 15 }, closed_by: "Nurse Asha (synthetic)" },
+    timeline: [IN_THEATRE, line("surgery.began", "Day 0 09:20"), line("count.pack_opened", "Day 0 09:22", "Opened 15 swab."), line("count.closing", "Day 0 09:25", "Closing count: opened 15, back 15, unaccounted 0.")],
+  };
+  const count = theatreSteps(view)[2];
+  assert.equal(count.correction, "Read 14, saved 15 by Nurse Asha");
+  assert.doesNotMatch(count.correction, ADVICE);
+  assert.equal(theatreSteps({ ...view, count: { missing: 0 } })[2].correction, "");
+  assert.equal(theatreSteps({ ...view, timeline: [IN_THEATRE] })[2].correction, "");
+});
+
+test("the folded count line renders the correction", async () => {
+  const fs = await import("node:fs");
+  assert.match(fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8"), /step\.says, step\.correction/);
+});

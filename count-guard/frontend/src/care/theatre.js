@@ -1,3 +1,4 @@
+import { correctionLine } from "./capture.js";
 import { hhmm } from "./clock.js";
 import { displayName } from "./names.js";
 import { checkLabel } from "./video.js";
@@ -27,6 +28,8 @@ export function theatreSteps(view) {
       done: Boolean(closing),
       says: closing ? closing.plain : opened ? "Pack opened; closing count not recorded yet" : "Not started",
       at: clock(closing),
+      // "Read 14, saved 15 by Nurse Asha": stays on the folded line so the corrected camera count is still visible.
+      correction: closing ? correctionLine(view.count?.read, view.count?.saved, view.count?.closed_by) : "",
       open: (view.count?.missing ?? 0) > 0,
     },
     { key: "ended", title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${ended.when}` : "Not yet", at: clock(ended), open: false },

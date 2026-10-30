@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { askAboutText, cropStyle, markLine, regionOfRow, stripLabel, stripMatch, stripTone } from "./brownbag.js";
+import fs from "node:fs";
+import { askAboutText, cropStyle, markLine, patientMarkLine, regionOfRow, stripLabel, stripMatch, stripTone } from "./brownbag.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const rows = [
@@ -31,4 +32,16 @@ test("regionOfRow finds the box of a read row", () => {
 test("brown-bag copy has no advice words", () => {
   for (const s of [askAboutText("Cetirizine 10 mg"), "Not on your prescription: Cetirizine 10 mg", "Morning", "Afternoon", "Night", "As needed", "As written", "Noted", "Discuss with patient", "Medicines from home", markLine({ mark: "discuss", by: "Dr. A. Rao (synthetic)" }), markLine({ mark: "noted", by: "Dr. A. Rao (synthetic)" })]) assert.doesNotMatch(s, ADVICE);
   assert.equal(markLine({ mark: "noted", by: "Dr. A. Rao (synthetic)" }), "Noted by Dr. A. Rao");
+});
+
+test("the patient reads the doctor's mark in plain words, with no advice words", () => {
+  const row = { read: "Cetirizine 10 mg" };
+  const by = "Dr. A. Rao (synthetic)";
+  assert.equal(patientMarkLine({ mark: "discuss", by }, row), "Dr. A. Rao will talk to you about Cetirizine 10 mg");
+  assert.equal(patientMarkLine({ mark: "noted", by }, row), "Dr. A. Rao has noted Cetirizine 10 mg");
+  assert.equal(patientMarkLine({ mark: "discuss", by }, undefined), "Dr. A. Rao will talk to you about one of your medicines");
+  for (const s of [patientMarkLine({ mark: "discuss", by }, row), patientMarkLine({ mark: "noted", by }, row), patientMarkLine({ mark: "discuss", by }, null), "As written"]) assert.doesNotMatch(s, ADVICE);
+  const thread = fs.readFileSync(new URL("./Thread.jsx", import.meta.url), "utf8");
+  assert.match(thread, /patientMarkLine\(mark, raw\.rows\[mark\.row\]\)/);
+  assert.doesNotMatch(thread, /markLine\(mark\)/);
 });

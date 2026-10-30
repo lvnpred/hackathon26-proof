@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageLead } from "../App";
 import { call } from "../journey";
-import { BAD_ANSWER, EMPTY_MODELS, PIPELINES, callsText, isSummary, isTry, latencyText, modeLabel, recentText } from "./ai.js";
+import { BAD_ANSWER, EMPTY_MODELS, PIPELINES, STAFF_ONLY, canSeeAi, cardLine, isSummary, isTry, modeLabel, modelsPill, recentText } from "./ai.js";
 import { displayName } from "./names.js";
 import { useCareWard } from "./CareShell";
 import { Evidence, EvidenceThumb } from "./Evidence.jsx";
@@ -15,7 +15,7 @@ function ModelCard({ model, busy, text, onTry }) {
     <section className="card model-card" aria-label={model.name}>
       <h3>{model.name}</h3>
       <p className="small">{model.role}</p>
-      <p className="row"><span className="pill">{modeLabel(model.mode)}</span> <span className="small">{callsText(model.calls)} · {latencyText(model.median_ms)}</span></p>
+      <p className="row"><span className="pill">{modeLabel(model.mode)}</span> <span className="small">{cardLine(model)}</span></p>
       {last && <p className="small">{displayName(last.text)}</p>}
       {last?.evidence_id && <EvidenceThumb episodeId={last.episode_id} evidenceId={last.evidence_id} model={model.key} />}
       {text && <p className="small"><span className="pill">{modeLabel(text.mode)}</span> {text.text}</p>}
@@ -38,6 +38,7 @@ function RecentRow({ row, open, toggle }) {
 // The showcase page: which Muse models run this ward, what they did, and a sample run of each.
 export default function AiDashboard() {
   const ward = useCareWard();
+  const staff = canSeeAi(ward.role);
   const ids = ward.patients.map((p) => p.id).join(",");
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -46,11 +47,11 @@ export default function AiDashboard() {
   const [texts, setTexts] = useState({});
   const [open, setOpen] = useState({});
   const load = useCallback(() => {
-    if (!ids) return Promise.resolve();
+    if (!staff || !ids) return Promise.resolve();
     return call(`/journey/ai/summary?ids=${ids}`)
       .then((out) => { if (!isSummary(out)) throw new Error(BAD_ANSWER); setData(out); })
       .catch((e) => setError(faultOf(e)));
-  }, [ids]);
+  }, [staff, ids]);
   useEffect(() => { load(); }, [load]);
   const tryIt = async (key) => {
     setBusy(true);
@@ -67,12 +68,16 @@ export default function AiDashboard() {
       setBusy(false);
     }
   };
+  if (!staff) return <PageLead kicker="Demo" title="AI at work" body={STAFF_ONLY} />;
   return (
     <>
-      <PageLead kicker="Demo" title="AI at work" body="Which Muse models run this ward, and what they just did." />
-      {data && <p className="small ai-live" aria-label="Models">{data.live ? "Live ●" : "Prepared ○"}</p>}
+      <PageLead kicker="Demo" title="AI at work" body={<>Which Muse models run this ward, and what they just did. {data && <span className="pill" aria-label="Models">{modelsPill(data.live)}</span>}</>} />
       <ol className="pipelines small" aria-label="Pipelines">
-        {PIPELINES.map((steps) => <li key={steps[0]}>{steps.join(" → ")}</li>)}
+        {PIPELINES.map((steps) => (
+          <li key={steps[0]}>
+            {steps.map((step, i) => <span key={step}>{i > 0 && <span className="step-arrow" aria-hidden="true">→</span>}<span className="step-chip">{step}</span></span>)}
+          </li>
+        ))}
       </ol>
       {error && <p className="error small" role="alert">{error}</p>}
       <div className="model-cards">

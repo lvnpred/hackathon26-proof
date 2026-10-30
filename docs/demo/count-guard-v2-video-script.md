@@ -139,7 +139,7 @@ On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `
 #### `kumar-count` · 1:29 · nurse · 9 s
 Clicks: 1) Button "Surgery began"; 2) Button "Record pack opened" (prefilled 15); 3) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 4) Button "Record closing count" (prefilled 14 by the camera); 5) Field "Closing count (returned)" <- 15; 6) Button "Correct the count"
 
-On screen: `Closing count: 14 of 15 back, 1 unaccounted.` · `Correction recorded.`
+On screen: `Closing count: 14 of 15 back, 1 unaccounted.` · `Correction recorded.` · `Read 14, saved 15 by Nurse Asha`
 
 > Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the count is corrected to 15 when one is found.
 

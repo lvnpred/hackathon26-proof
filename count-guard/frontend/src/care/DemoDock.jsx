@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Banner } from "../App";
 import { call } from "../journey";
 import { label, skipTargets } from "./clock";
+import { canSeeAi } from "./ai.js";
 import { ROLE_NAME, dockSummary, modelsText } from "./dock";
 import Fault from "./Fault";
 import { CLOCK } from "./faults";
@@ -49,7 +50,7 @@ export default function DemoDock({ ward, showClock, pick }) {
             <Fault fault={ward.fault} episodeId={null} only={[CLOCK]} />
           </div>
         )}
-        <Link to="/ai">AI at work</Link>
+        {canSeeAi(ward.role) && <Link to="/ai">AI at work</Link>}
         <span>{modelsText(live)}</span>
       </div>
       <Banner />

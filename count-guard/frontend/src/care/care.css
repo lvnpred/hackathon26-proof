@@ -148,14 +148,20 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .model-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px }
 .model-card { min-width: 0; display: grid; gap: 6px; align-content: start; }
 .model-card h3 { margin: 0; }
-.pipelines { margin: 8px 0; padding-left: 20px; }
+.pipelines { margin: 8px 0; padding: 0; list-style: none; display: grid; gap: 6px }
+.pipelines li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0 }
+.pipelines li > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0 }
+.step-chip { padding: 2px 8px; border: 1px solid var(--line-control); border-radius: 999px; background: var(--surface-sunk); overflow-wrap: anywhere }
+.step-arrow { color: var(--ink-muted) }
 .recent-ai { list-style: none; padding: 0; display: grid; gap: 8px; }
 .recent-ai button.linklike { min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
-.ai-live { text-align: right; margin: 0 }
 .plan-grid { display: grid; gap: 8px }
 .plan-row { border-top: 1px solid var(--line); padding-top: 6px }
 .plan-list { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px }
 .plan-item, .from-home-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0 }
 .crop { flex: none; width: 48px; height: 48px; border-radius: 6px; border: 1px solid var(--line-control); background-repeat: no-repeat; background-color: var(--surface-sunk) }
-.dot { flex: none; width: 12px; height: 12px; border-radius: 50% }
-.dot.green { background: #2e7d32 } .dot.amber { background: #b26a00 } .dot.red { background: #c62828 } .dot.grey { background: #757575 }
+.tone-dot { flex: none; width: 12px; height: 12px; border-radius: 50% }
+.tone-dot.green { background: #2e7d32 } .tone-dot.amber { background: #b26a00 } .tone-dot.red { background: #c62828 } .tone-dot.grey { background: #757575 }
+.ev-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 }
+.ev-legend span { display: inline-flex; align-items: center; gap: 4px }
+.ev-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px }

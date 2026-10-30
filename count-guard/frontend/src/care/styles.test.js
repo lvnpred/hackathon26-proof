@@ -74,3 +74,14 @@ test("the next card, the evidence viewer and the theatre checklist cannot grow w
     assert.match(css.match(rule)[0], /grid-template-columns:\s*minmax\(0, 1fr\)/);
   }
 });
+
+test("the brown-bag tone dots never share the Ask unread dot class, which stays 8 px", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\n\.dot \{[^}]*width:\s*8px[^}]*height:\s*8px/);
+  assert.equal((css.match(/\n\.dot[ .{]/g) || []).length, 1);
+  assert.match(css, /\.tone-dot \{[^}]*12px/);
+  assert.match(css, /\.tone-dot\.green/);
+  const jsx = fs.readFileSync(new URL("./MedicinesFromHome.jsx", import.meta.url), "utf8");
+  assert.match(jsx, /tone-dot \$\{stripTone/);
+  assert.doesNotMatch(jsx, /className=\{`dot /);
+});

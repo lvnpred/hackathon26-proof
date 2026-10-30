@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { call } from "../journey";
-import { TONE_COLOUR, stripLabel, stripMatch, stripTone } from "./brownbag.js";
-import { boxLabel, boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, evidenceView, itemName, nudgeLabels, regionLabel, seenCell, startImage } from "./evidence.js";
+import { stripLabel } from "./brownbag.js";
+import { boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, drawItems, evidenceView, hasIgnored, ignoredFrameNames, isDense, itemName, labelKind, legendItems, nudgeLabels, regionLabel, seenCell, shortConcepts, startImage } from "./evidence.js";
 
 const cache = new Map();
 
@@ -24,30 +24,25 @@ export function useEvidence(episodeId, evidenceId, skip = false, version = 0) {
   return { data, error: state.key === key && !data ? state.error : null };
 }
 
-const EDGE = "#888";
-
 // Draw boxes (normalised [x, y, w, h]) over the image's displayed size. Kept: solid colour. Ignored: dashed grey.
-// A white outer stroke keeps a box visible on any picture; each label sits on a filled pill, nudged clear of the last.
-function draw(canvas, img, boxes, regions, labels, rows) {
-  if (!canvas || !img) return;
+// A white outer stroke keeps a box visible on any picture. Labels sit on a filled pill, nudged clear of the last.
+// A dense frame (FW-1) gives most boxes a small id tag in the corner instead, so the picture stays readable.
+// Returns whether the frame was dense.
+function draw(canvas, img, boxes, regions, labels, rows, showAll, short) {
+  if (!canvas || !img) return false;
   const w = img.clientWidth;
   const h = img.clientHeight;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
   const ctx = canvas.getContext?.("2d");
-  if (!ctx) return;
+  if (!ctx) return false;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   const scale = Math.min(1, w / 640);
   const FONT = Math.max(10, Math.round(12 * scale));
   ctx.font = `${FONT}px sans-serif`;
-  const items = [
-    ...boxes.map((o) => ({ bbox: o.bbox, colour: o.kept ? colourFor(o.label) : EDGE, dashed: !o.kept, text: boxLabel(o) })),
-    ...(regions || []).filter((r) => r.bbox).map((r) => (rows
-      ? { bbox: r.bbox, colour: TONE_COLOUR[stripTone(stripMatch(rows[r.row]))], dashed: false, text: stripLabel(r, rows) }
-      : { bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r) })),
-  ];
+  const items = drawItems(boxes, regions, rows);
   for (const it of items) {
     const [x, y, bw, bh] = it.bbox;
     ctx.setLineDash([]);
@@ -59,27 +54,43 @@ function draw(canvas, img, boxes, regions, labels, rows) {
     ctx.setLineDash(it.dashed ? [4, 3] : []);
     ctx.strokeRect(x * w, y * h, bw * w, bh * h);
   }
-  if (!labels) return;
+  const dense = isDense(items.filter((it) => it.box).map((it) => ({ pill: ctx.measureText(it.text).width + 8, box: it.bbox[2] * w })));
+  if (!labels) return dense;
+  const kinds = items.map((it) => (it.box ? labelKind(it.box, { dense, showAll, short }) : "full"));
   const PH = FONT + 4;
-  const placed = nudgeLabels(items.map((it) => ({ x: Math.min(it.bbox[0] * w, w - 20), y: Math.max(it.bbox[1] * h - PH - 2, 0), w: ctx.measureText(it.text).width + 8, h: PH })));
+  const full = items.filter((_, i) => kinds[i] === "full");
+  const placed = nudgeLabels(full.map((it) => ({ x: Math.min(it.bbox[0] * w, w - 20), y: Math.max(it.bbox[1] * h - PH - 2, 0), w: ctx.measureText(it.text).width + 8, h: PH })));
   // Keep every pill inside the canvas on the right and at the bottom (T7-2).
   const pills = placed.map((p) => ({ ...p, x: Math.max(0, Math.min(p.x, w - p.w)), y: Math.max(0, Math.min(p.y, h - p.h)) }));
   ctx.setLineDash([]);
+  ctx.textBaseline = "middle";
+  let n = 0;
   items.forEach((it, i) => {
-    const p = pills[i];
+    if (kinds[i] === "tag") {
+      const text = String(it.box.id);
+      const tw = ctx.measureText(text).width + 6;
+      const th = FONT + 2;
+      ctx.fillStyle = it.colour;
+      ctx.fillRect(it.bbox[0] * w, it.bbox[1] * h, tw, th);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(text, it.bbox[0] * w + 3, it.bbox[1] * h + th / 2 + 0.5);
+      return;
+    }
+    const p = pills[n];
+    n += 1;
     ctx.fillStyle = it.colour;
     ctx.fillRect(p.x, p.y, p.w, p.h);
     ctx.fillStyle = "#fff";
-    ctx.textBaseline = "middle";
     ctx.fillText(it.text, p.x + 4, p.y + PH / 2 + 0.5);
   });
+  return dense;
 }
 
-function Stage({ image, boxes, regions, labels = true, rows, ...rest }) {
+function Stage({ image, boxes, regions, labels = true, rows, showAll = false, short, onDense, ...rest }) {
   const img = useRef(null);
   const canvas = useRef(null);
   const paint = useRef(null);
-  paint.current = () => draw(canvas.current, img.current, boxes, regions, labels, rows);
+  paint.current = () => onDense?.(draw(canvas.current, img.current, boxes, regions, labels, rows, showAll, short));
   useEffect(() => {
     const again = () => paint.current();
     window.addEventListener("resize", again);
@@ -138,6 +149,8 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
   const data = sample || fetched.data;
   const [picked, setPicked] = useState(null);
   const [ignored, setIgnored] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [dense, setDense] = useState(false);
   const view = evidenceView(data, check);
   if (view.fallback) {
     return (
@@ -155,11 +168,20 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
   const image = view.images[shown] || view.images[0];
   const frames = data.frames;
   const boxes = image ? boxesAt(frames, image.t ?? image.index, ignored) : [];
+  const short = shortConcepts(view.rows);
+  const withIgnored = hasIgnored(frames);
+  const ignoredNames = ignoredFrameNames(frames, view.images);
   const keptTimes = view.images.map((i) => i.t ?? i.index);
   return (
     <section className="evidence" aria-label="Evidence">
       <p className="label">{view.title}{(model ? chipText(data.calls, data.handmade, model) : view.chip) && ` · ${model ? chipText(data.calls, data.handmade, model) : view.chip}`}</p>
-      {image && <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} rows={rows} />}
+      {image && <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} rows={rows} showAll={showAll} short={short} onDense={setDense} />}
+      {dense && (
+        <p className="small ev-legend" aria-label="Colour legend">
+          {legendItems(boxes).map((l) => <span key={l.label}><i className="ev-swatch" style={{ background: l.colour }} aria-hidden="true" />{l.label}</span>)}
+        </p>
+      )}
+      {dense && <label className="small"><input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show all labels</label>}
       {view.images.length > 1 && (
         <div className="row">
           {view.images.map((im, i) => {
@@ -172,9 +194,14 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
           })}
         </div>
       )}
-      {frames && <label className="small"><input type="checkbox" checked={ignored} onChange={(e) => setIgnored(e.target.checked)} /> Show ignored</label>}
+      {withIgnored && (
+        <>
+          <label className="small"><input type="checkbox" checked={ignored} onChange={(e) => setIgnored(e.target.checked)} /> Show ignored</label>
+          {ignoredNames.length > 0 && <p className="small muted">Ignored detections appear in {ignoredNames.length === 1 ? "frame" : "frames"} {ignoredNames.join(", ")}.</p>}
+        </>
+      )}
       {!view.regions && <CountTable rows={view.rows} />}
-      {frames && (
+      {frames && frames.length > 1 && (
         <div className="ev-sparks">
           {view.rows.map((row) => {
             const series = countSeries(frames, row.concept);

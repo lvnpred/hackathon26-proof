@@ -1,5 +1,5 @@
 import { ASK_DOCTOR, NOT_FOUND, answerByLine, medicineLine } from "./askText.js";
-import { markLine } from "./brownbag.js";
+import { patientMarkLine } from "./brownbag.js";
 import { Evidence } from "./Evidence.jsx";
 import { sourceLabel } from "./drafts";
 import { threadItems, threadStatus } from "./thread.js";
@@ -43,7 +43,7 @@ function Answer({ item, onAskDoctor, episodeId, version }) {
         </ul>
         <p className="small">{raw.why} <span className="muted">({sourceLabel(raw.source)})</span></p>
         {raw.evidence_id && <Evidence episodeId={episodeId} evidenceId={raw.evidence_id} linkLines={false} version={version} rows={raw.rows} />}
-        {(raw.marks || []).map((mark) => <p className="small" key={mark.row}><span className="pill info">{markLine(mark)}</span> {raw.rows[mark.row]?.read}</p>)}
+        {(raw.marks || []).map((mark) => <p className="small" key={mark.row}><span className="pill info">{patientMarkLine(mark, raw.rows[mark.row])}</span></p>)}
       </>
     );
   }

@@ -7,9 +7,17 @@ export const PIPELINES = [
   ["Video", "SAM per-frame tracking", "Count", "Mismatch flag"],
 ];
 
-export const callsText = (n) => (n === 0 ? "No calls yet" : n === 1 ? "1 call" : `${n} calls`);
+export const callsText = (n) => (n === 0 ? "No calls yet in this run" : n === 1 ? "1 call" : `${n} calls`);
 
-export const latencyText = (ms) => (ms === null || ms === undefined ? "No timing yet" : `${(ms / 1000).toFixed(1)} s median`);
+export const latencyText = (ms) => (ms === null || ms === undefined ? "Prepared · timing shown when live" : `${(ms / 1000).toFixed(1)} s median`);
+
+// The calls and timing line of one card; with no calls there is no timing to talk about.
+export const cardLine = (model) => (model.calls === 0 ? callsText(0) : `${callsText(model.calls)} · ${latencyText(model.median_ms)}`);
+
+export const modelsPill = (live) => (live ? "Models: live" : "Models: prepared (no key)");
+
+export const STAFF_ONLY = "AI at work is a staff view. Switch to Doctor or Nurse.";
+export const canSeeAi = (role) => role !== "patient";
 
 export const modeLabel = (mode) => ({ live: "Live", prepared: "Prepared", failed: "Failed" })[mode] || mode;
 

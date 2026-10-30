@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cameraPrefill, closingBody, correctionLine } from "./capture";
+import { cameraPrefill, closingBody } from "./capture";
 import { displayName } from "./names";
 import { packLine, swabFigures } from "./theatre";
 import VideoCheck from "./VideoCheck";
@@ -40,7 +40,6 @@ export default function TheatrePanel({ episodeId, view, busy, act, upload, repla
   const validBack = shown !== "" && Number.isInteger(back) && back >= 0;
   const figures = swabFigures(view.count);
   const packed = view.count?.opened != null;
-  const correction = correctionLine(view.count?.read, view.count?.saved, view.count?.closed_by);
   const opened_ms = view.count?.opened_at_ms;
   const swabCheck = latestCheck(view, "swabs");
   const thisStay = swabCheck && (opened_ms == null || swabCheck.at_ms >= opened_ms) ? swabCheck : null;
@@ -53,7 +52,6 @@ export default function TheatrePanel({ episodeId, view, busy, act, upload, repla
           <p key={key}><span className="swab-number">{figures[key]}</span><span className="small muted">{name}</span></p>
         ))}
       </div>
-      {correction && <p className="small">{correction}</p>}
       {packed && <p className="small">{packLine(view.count)} {!changing && <button type="button" className="quiet" onClick={() => setChanging(true)}>change</button>}</p>}
       {askPack && (
         <div className="row">

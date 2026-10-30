@@ -8,7 +8,7 @@ function Row({ photo, row, index, regions, rows, marks, doctor, busy, onMark }) 
   const region = regionOfRow(regions, index);
   return (
     <li className="from-home-row">
-      <span className={`dot ${stripTone(stripMatch(row))}`} aria-hidden="true" />
+      <span className={`tone-dot ${stripTone(stripMatch(row))}`} aria-hidden="true" />
       {region && <span className="crop" style={cropStyle(region.bbox, photo.url)} aria-hidden="true" />}
       <span className="small">
         <b>{stripLabel(region || { row: index }, rows)}</b><br />

@@ -1,6 +1,7 @@
 import { hhmm } from "./clock.js";
 import { correctionLine } from "./capture.js";
 import { displayName } from "./names.js";
+import { TONE_COLOUR, stripLabel, stripMatch, stripTone } from "./brownbag.js";
 
 export { correctionLine };
 
@@ -28,10 +29,13 @@ export function modeWord(source, handmade) {
 }
 
 // `model` names the card the chip sits under (T7-1); without it the chip names SAM, else the first call.
-export function chipText(calls, handmade, model) {
+// `paired` (a photo read with regions) names both models when no card is asked for: SAM boxes, Spark reads.
+export function chipText(calls, handmade, model, paired = false) {
   const list = calls || [];
   const c = (model && list.find((x) => x.model === model)) || list.find((x) => x.model === "sam") || list[0];
-  return c ? `${MODEL_NAME[c.model]} · ${modeWord(c.source, handmade)}` : "";
+  if (!c) return "";
+  const both = paired && !model && c.model === "sam" && list.some((x) => x.model === "spark");
+  return `${both ? "SAM 3.1 + Spark 1.3" : MODEL_NAME[c.model]} · ${modeWord(c.source, handmade)}`;
 }
 
 const sameFrame = (f, at) => (f.t === null || f.t === undefined ? f.index === at : f.t === at);
@@ -62,7 +66,7 @@ const known = (v) => v !== null && v !== undefined;
 
 export function explain(rows, frames, minScore, media) {
   const objects = objectsOf(frames);
-  const ignored = objects.filter((o) => !o.kept).length;
+  const ignored = new Set(objects.filter((o) => !o.kept).map((o) => `${o.label}\u0000${o.id}`)).size;
   const seenAny = objects.some((o) => o.kept) || (rows || []).some((r) => known(r.seen) && r.seen > 0);
   const out = [];
   if (!seenAny) {
@@ -107,7 +111,7 @@ export function explainRegions(regions) {
 
 export function capturedLine(cited) {
   const when = typeof cited.when === "number" ? hhmm(cited.when) : String(cited.when || "").slice(-5);
-  return `Captured to record: ${cited.type} · ${when} · ${displayName(cited.by)}`;
+  return `Captured to record: ${[cited.type, when, cited.by ? displayName(cited.by) : ""].filter(Boolean).join(" · ")}`;
 }
 
 const TITLE = { tray: "Tray check", setup: "Set-up check", swabs: "Swab camera count", monitor: "Monitor photo", strip: "Strip photo", medicines: "Medicines photo" };
@@ -123,7 +127,7 @@ export function evidenceView(sidecar, check) {
   return {
     fallback: false,
     title: TITLE[sidecar.kind] || "Check",
-    chip: chipText(sidecar.calls, sidecar.handmade),
+    chip: chipText(sidecar.calls, sidecar.handmade, undefined, Boolean(sidecar.regions)),
     images: sidecar.images || [],
     rows,
     regions: sidecar.regions || null,
@@ -166,4 +170,43 @@ export function nudgeLabels(rects) {
     placed.push({ ...r, y });
   }
   return placed;
+}
+
+const EDGE = "#888";
+
+// Everything the stage draws, as plain items: kept boxes solid in the concept colour, ignored ones dashed grey,
+// and photo regions in the strip tone (with `rows`) or grey.
+export function drawItems(boxes, regions, rows) {
+  return [
+    ...(boxes || []).map((o) => ({ bbox: o.bbox, colour: o.kept ? colourFor(o.label) : EDGE, dashed: !o.kept, ignored: !o.kept, box: o, text: boxLabel(o) })),
+    ...(regions || []).filter((r) => r.bbox).map((r) => (rows
+      ? { bbox: r.bbox, colour: TONE_COLOUR[stripTone(stripMatch(rows[r.row]))], dashed: false, text: stripLabel(r, rows) }
+      : { bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r) })),
+  ];
+}
+
+// Dense frame (Ruling FW-1): more than 8 boxes, or any full pill wider than 1.5x its box. Each entry is {pill, box} in px.
+export const isDense = (sizes) => sizes.length > 8 || sizes.some((s) => s.pill > 1.5 * s.box);
+
+// "full" is the concept id score pill, "tag" the small id inside the box corner. Only dense frames use tags, and only
+// for kept boxes of a concept that is not short; short rows and ignored boxes keep the full pill.
+export function labelKind(o, { dense, showAll, short }) {
+  if (!dense || showAll || !o.kept || short.has(o.label)) return "full";
+  return "tag";
+}
+
+export const shortConcepts = (rows) => new Set((rows || []).filter((r) => known(r.seen) && r.seen < r.planned).map((r) => r.concept));
+
+export function legendItems(boxes) {
+  const labels = [...new Set((boxes || []).filter((o) => o.kept).map((o) => o.label))].sort();
+  return labels.map((label) => ({ label, colour: colourFor(label) }));
+}
+
+export const hasIgnored = (frames) => objectsOf(frames).some((o) => !o.kept);
+
+// The scrubber names (as the frame buttons show them) of the images whose frame holds an ignored box.
+export function ignoredFrameNames(frames, images) {
+  return (images || [])
+    .filter((im) => (boxesAt(frames, im.t ?? im.index, true)).some((o) => !o.kept))
+    .map((im) => im.t ?? im.index + 1);
 }

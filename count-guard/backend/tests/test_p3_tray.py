@@ -160,7 +160,7 @@ def test_frames_fail_check_still_written(tmp_path, monkeypatch):
     stored = next(e for e in _events(client, eid) if e["event_type"] == "tray.checked")["payload"]
     assert stored["frame_ids"] == [] and stored["why"].endswith(video.NO_FRAMES)
     assert stored["match"] == "mismatch"
-    assert [p.name for p in (tmp_path / "journey_media" / eid).iterdir()] == []
+    assert [p.name for p in (tmp_path / "journey_media" / eid).iterdir() if not p.name.endswith(".evidence.json")] == []
 
 
 def test_live_tray_faked(tmp_path, monkeypatch):
@@ -168,7 +168,7 @@ def test_live_tray_faked(tmp_path, monkeypatch):
 
     def fake(self, path, concepts):
         seen["concepts"] = list(concepts)
-        return [{"frame_index": 0, "object_id": 1, "label": "needle holder", "score": 0.9}]
+        return [{"frame_index": 0, "object_id": 1, "label": "needle holder", "bbox": [0.1, 0.1, 0.1, 0.1], "score": 0.9}]
 
     monkeypatch.setattr(SamAdapter, "segment_video", fake)
     monkeypatch.setattr(live, "clip_seconds", lambda p: 6)

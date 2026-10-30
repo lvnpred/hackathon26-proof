@@ -120,7 +120,7 @@ def test_setup_refusals(tmp_path):
 
 def test_setup_mismatch_never_blocks(tmp_path, monkeypatch):
     def fake(self, path, concepts):
-        return [{"frame_index": 0, "object_id": i, "label": c, "score": 0.9}
+        return [{"frame_index": 0, "object_id": i, "label": c, "bbox": [0.1, 0.1, 0.1, 0.1], "score": 0.9}
                 for i, c in enumerate(concepts) if c != "iv cannula"]
 
     monkeypatch.setattr(SamAdapter, "segment_video", fake)

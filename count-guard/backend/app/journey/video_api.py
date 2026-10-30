@@ -8,7 +8,7 @@ from typing import Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from app.journey import live, states, tasks
+from app.journey import evidence, live, states, tasks
 from app.journey.live import segment_clip, segment_photos
 from app.journey.api import _at, _require, _store, raise_nudges, view
 from app.journey.media_api import PHOTO_TYPES, read_upload_photo, write_photo
@@ -120,6 +120,25 @@ def _read_photos(request: Request, episode_id: str, photos: list[tuple[bytes, st
     return found, compare(rows, found["detections"], found["source"], "photos")
 
 
+def _keep_evidence(settings, episode_id: str, check: str, media: str, found: dict, result: dict, frame_ids: list[str]) -> str | None:
+    """Save the boxes behind this check as a sidecar and return its id; None when no boxes exist (R10)."""
+    if found["frames"] is None:
+        return None
+    times = [None] * len(frame_ids) if media == "photos" else frame_times(result["rows"])
+    return evidence.save(settings, episode_id, {
+        "kind": check,
+        "media": media,
+        "images": [{"photo_id": pid, "t": t, "index": n} for n, (pid, t) in enumerate(zip(frame_ids, times))],
+        "frames": found["frames"],
+        "expected": [{"concept": r["concept"], "planned": r["planned"]} for r in result["rows"]],
+        "min_score": settings.low_confidence,
+        "fps": None if media == "photos" else settings.sam_fps,
+        "calls": found["calls"],
+        "raw": found["raw"],
+        "handmade": found["handmade"],
+    })
+
+
 @video_router.post("/video")
 def add_video(
     episode_id: str,
@@ -170,6 +189,7 @@ def add_video(
             store.append(episode_id, "photo.added", {**frame, "path": str(p.relative_to(settings.data_dir))}, ts_ms=ts)["id"]
             for p in kept
         ]
+    saved = _keep_evidence(settings, episode_id, check, media, found, result, frame_ids)
     payload = {
         **extra,
         "media": media,
@@ -181,6 +201,7 @@ def add_video(
         "clip": filename.lower() if live.safe_stem(filename) else "",
         "frame_ids": frame_ids,
         "by": by,
+        **({"evidence_id": saved} if saved else {}),
     }
     store.append(episode_id, "tray.checked" if check == "tray" else "setup.checked", payload, ts_ms=ts)
     raise_nudges(store, episode_id, ts)

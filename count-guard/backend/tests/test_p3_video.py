@@ -18,8 +18,8 @@ ADVICE = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|conside
 
 
 def bare(result: dict) -> dict:
-    """A model result without its `calls` list (covered in test_ai_calls.py)."""
-    return {k: v for k, v in result.items() if k != "calls"}
+    """A model result without its `calls` (test_ai_calls.py) and its evidence (test_evidence.py)."""
+    return {k: v for k, v in result.items() if k not in ("calls", "frames", "raw", "handmade")}
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +50,7 @@ def _keyed(tmp_path):
 
 
 def _rec(frame, oid, label="needle holder", score=0.9):
-    return {"frame_index": frame, "object_id": oid, "label": label, "score": score}
+    return {"frame_index": frame, "object_id": oid, "label": label, "bbox": [0.1, 0.2, 0.3, 0.4], "score": score}
 
 
 def test_expected_for_tray_groups_by_concept():

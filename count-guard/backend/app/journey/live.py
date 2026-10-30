@@ -18,7 +18,7 @@ from app.adapters.spark import SparkAdapter
 from app.adapters.voice import VoiceAdapter
 from app.adapters.sam import SamAdapter
 from app.config import Settings
-from app.journey.video import summarize
+from app.journey.video import frames_from, summarize
 from app.media_pipeline import to_sam_clip
 from app.spend import clip_seconds
 
@@ -179,17 +179,33 @@ def read_photo(
     return {"text": None, "source": "none", "calls": []}
 
 
-def _stored_or(settings: Settings, stored: dict | None, failed: str, ms: int | None) -> dict:
+def _stored(found: dict | None, key: str) -> dict:
+    """The fixture's frames (`key` is frames or stills) and raw output, else None (R10)."""
+    found = found or {}
+    return {"frames": found.get(key), "raw": found.get("raw"), "handmade": bool(found.get("handmade"))}
+
+
+def _live_evidence(records: list[dict], fps: int, settings: Settings, photos: bool) -> dict:
+    """The boxes of a live SAM answer, and its parsed records without the mask tokens (R12)."""
+    frames = frames_from(records, fps, settings.low_confidence, photos=photos)
+    parsed = [{k: v for k, v in r.items() if k != "mask_token"} for r in records]
+    return {"frames": frames, "raw": {"sam": parsed}, "handmade": False}
+
+
+def _stored_or(settings: Settings, found: dict | None, failed: str, ms: int | None, key: str) -> dict:
     """A live call did not work: the prepared detections under the fallback label, else `failed`."""
+    stored = found.get("detections") if found else None
     source = FALLBACK if stored else failed
-    return {"detections": stored or None, "source": source, "calls": _calls("sam", settings, source, ms)}
+    return {"detections": stored or None, "source": source, "calls": _calls("sam", settings, source, ms),
+            **(_stored(found, key) if stored else _stored(None, key))}
 
 
-def _prepared_or_none(settings: Settings, found: dict | None) -> dict:
+def _prepared_or_none(settings: Settings, found: dict | None, key: str) -> dict:
     stored = found.get("detections") if found else None
     if stored:
-        return {"detections": stored, "source": "prepared", "calls": _calls("sam", settings, "prepared", _prepared_ms(found))}
-    return {"detections": None, "source": "none", "calls": []}
+        return {"detections": stored, "source": "prepared", "calls": _calls("sam", settings, "prepared", _prepared_ms(found)),
+                **_stored(found, key)}
+    return {"detections": None, "source": "none", "calls": [], **_stored(None, key)}
 
 
 def segment_clip(
@@ -197,12 +213,12 @@ def segment_clip(
 ) -> dict:
     """Detections by concept for one clip: live SAM 3.1 with a key (and live_ok), else the prepared result."""
     found = prepared(filename)
-    stored = found.get("detections") if found else None
     if settings.sam_configured and live_ok:
         try:
             seconds = clip_seconds(clip)
         except (SystemExit, OSError, ValueError):  # no ffprobe, ffprobe fails or prints N/A
-            return {"detections": None, "source": "unreadable", "calls": _calls("sam", settings, "unreadable", None)}
+            return {"detections": None, "source": "unreadable", "calls": _calls("sam", settings, "unreadable", None),
+                    **_stored(None, "frames")}
         if seconds > MAX_LIVE_SECONDS:
             raise NotHeard(400, LONG_CLIP)
         start = time.monotonic()
@@ -214,10 +230,11 @@ def segment_clip(
                 records = SamAdapter(settings).segment_video(out, concepts)
             ms = _since(start)
             detections = summarize(records, settings.sam_fps, settings.low_confidence, concepts)
+            evidence = _live_evidence(records, settings.sam_fps, settings, photos=False)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            return _stored_or(settings, stored, "failed", _since(start))
-        return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms)}
-    return _prepared_or_none(settings, found)
+            return _stored_or(settings, found, "failed", _since(start), "frames")
+        return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms), **evidence}
+    return _prepared_or_none(settings, found, "frames")
 
 
 _IMAGE_TYPES = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
@@ -228,7 +245,6 @@ def segment_photos(
 ) -> dict:
     """Detections by concept for 1-6 photos: per concept the most seen in any one photo (as for frames)."""
     found = prepared(filename)
-    stored = found.get("detections") if found else None
     if settings.sam_configured and live_ok:
         start = time.monotonic()
         try:
@@ -240,9 +256,10 @@ def segment_photos(
             records = SamAdapter(settings).segment_images(urls, concepts)
             ms = _since(start)
             detections = summarize(records, 1, settings.low_confidence, concepts)
+            evidence = _live_evidence(records, 1, settings, photos=True)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            return _stored_or(settings, stored, "failed", _since(start))
+            return _stored_or(settings, found, "failed", _since(start), "stills")
         for cell in detections.values():
             cell["at_s"] = None  # a photo has no time
-        return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms)}
-    return _prepared_or_none(settings, found)
+        return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms), **evidence}
+    return _prepared_or_none(settings, found, "stills")

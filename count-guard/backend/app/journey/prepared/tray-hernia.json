@@ -28,5 +28,2235 @@
       "count": 4,
       "at_s": 3.5
     }
-  }
+  },
+  "frames": [
+    {
+      "t": 0.0,
+      "index": 0,
+      "objects": []
+    },
+    {
+      "t": 0.5,
+      "index": 1,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 1.0,
+      "index": 2,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 1.5,
+      "index": 3,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 2.0,
+      "index": 4,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "needle holder",
+          "bbox": [
+            0.5625,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.32,
+          "kept": false
+        }
+      ]
+    },
+    {
+      "t": 2.5,
+      "index": 5,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "9",
+          "label": "needle holder",
+          "bbox": [
+            0.5625,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.32,
+          "kept": false
+        }
+      ]
+    },
+    {
+      "t": 3.0,
+      "index": 6,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 3.5,
+      "index": 7,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "towel clip",
+          "bbox": [
+            0.3438,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "towel clip",
+          "bbox": [
+            0.4531,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "towel clip",
+          "bbox": [
+            0.5625,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "towel clip",
+          "bbox": [
+            0.6719,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 4.0,
+      "index": 8,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "towel clip",
+          "bbox": [
+            0.3438,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "towel clip",
+          "bbox": [
+            0.4531,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "towel clip",
+          "bbox": [
+            0.5625,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "towel clip",
+          "bbox": [
+            0.6719,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 4.5,
+      "index": 9,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "towel clip",
+          "bbox": [
+            0.3438,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "towel clip",
+          "bbox": [
+            0.4531,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "towel clip",
+          "bbox": [
+            0.5625,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "towel clip",
+          "bbox": [
+            0.6719,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 5.0,
+      "index": 10,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "towel clip",
+          "bbox": [
+            0.3438,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "towel clip",
+          "bbox": [
+            0.4531,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "towel clip",
+          "bbox": [
+            0.5625,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "towel clip",
+          "bbox": [
+            0.6719,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 5.5,
+      "index": 11,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "towel clip",
+          "bbox": [
+            0.3438,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "towel clip",
+          "bbox": [
+            0.4531,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "towel clip",
+          "bbox": [
+            0.5625,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "towel clip",
+          "bbox": [
+            0.6719,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    }
+  ],
+  "stills": [
+    {
+      "t": null,
+      "index": 0,
+      "objects": [
+        {
+          "id": "1",
+          "label": "scalpel handle",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scalpel handle",
+          "bbox": [
+            0.4531,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "artery forceps",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "artery forceps",
+          "bbox": [
+            0.4531,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "needle holder",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "needle holder",
+          "bbox": [
+            0.4531,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "scissors",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "scissors",
+          "bbox": [
+            0.4531,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "scissors",
+          "bbox": [
+            0.5625,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "surgical forceps",
+          "bbox": [
+            0.3438,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "surgical forceps",
+          "bbox": [
+            0.4531,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "surgical forceps",
+          "bbox": [
+            0.5625,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "surgical forceps",
+          "bbox": [
+            0.6719,
+            0.5778,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "retractor",
+          "bbox": [
+            0.3438,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "retractor",
+          "bbox": [
+            0.4531,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "retractor",
+          "bbox": [
+            0.5625,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "retractor",
+          "bbox": [
+            0.6719,
+            0.6944,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "towel clip",
+          "bbox": [
+            0.3438,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "2",
+          "label": "towel clip",
+          "bbox": [
+            0.4531,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "3",
+          "label": "towel clip",
+          "bbox": [
+            0.5625,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "4",
+          "label": "towel clip",
+          "bbox": [
+            0.6719,
+            0.8111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    }
+  ],
+  "handmade": true
 }

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from app.journey.procedures import SETUP_TEMPLATES
 
 NOT_CHECKED = "The clip was not checked: no model key and no prepared result for this clip."
@@ -56,6 +58,39 @@ def summarize(records: list[dict], fps: int, min_score: float, concepts: list[st
         first = min(f for f, ids in per_frame.items() if len(ids) == best)
         out[concept] = {"count": best, "at_s": round(first / fps, 3)}
     return out
+
+
+def _best_frames(records: list[dict], fps: int, min_score: float) -> set[int]:
+    """The frame `summarize` reports for each concept that was seen."""
+    labels = list(dict.fromkeys(r["label"] for r in records))
+    seen = summarize(records, fps, min_score, labels)
+    return {round(cell["at_s"] * fps) for cell in seen.values() if cell["at_s"] is not None}
+
+
+def frames_from(records: list[dict], fps: int, min_score: float, cap: int = 120, photos: bool = False) -> list[dict]:
+    """The boxes of every frame, for the evidence viewer. Over `cap`, every n-th frame plus each concept's best."""
+    records = [r for r in records if r.get("label") is not None]
+    by_index: dict[int, list[dict]] = {}
+    for r in records:
+        score = r.get("score")
+        by_index.setdefault(int(r["frame_index"]), []).append({
+            "id": r["object_id"], "label": r["label"], "bbox": [round(v, 4) for v in r["bbox"]],
+            "score": score, "kept": score is None or score >= min_score})
+    indexes = sorted(by_index)
+    if len(indexes) > cap:
+        best = _best_frames(records, fps, min_score)
+        step = math.ceil(len(indexes) / cap)
+        chosen = {i for n, i in enumerate(indexes) if n % step == 0}
+        indexes = sorted(chosen | best)
+        while len(indexes) > cap:  # drop the latest frame that is not a best frame
+            indexes.remove(max(i for i in indexes if i not in best))
+    return [{"t": None if photos else round(i / fps, 3), "index": i, "objects": by_index[i]} for i in indexes]
+
+
+def records_of(frames: list[dict]) -> list[dict]:
+    """The inverse of `frames_from`: one record per object."""
+    return [{"frame_index": f["index"], "object_id": o["id"], "label": o["label"], "bbox": o["bbox"], "score": o["score"]}
+            for f in frames for o in f["objects"]]
 
 
 def _said(text: str, media: str) -> str:
@@ -116,6 +151,7 @@ def checks_view(events: list[dict]) -> list[dict]:
                 **{k: p[k] for k in ("rows", "missing", "match", "why", "source")},
                 "unchecked": p.get("unchecked", []),
                 "frames": _frames(e["episode_id"], p["frame_ids"]),
+                "evidence_id": p.get("evidence_id"),
             }
         )
     return out

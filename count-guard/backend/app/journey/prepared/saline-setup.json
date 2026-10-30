@@ -16,5 +16,591 @@
       "count": 1,
       "at_s": 2.0
     }
-  }
+  },
+  "frames": [
+    {
+      "t": 0.0,
+      "index": 0,
+      "objects": []
+    },
+    {
+      "t": 0.5,
+      "index": 1,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 1.0,
+      "index": 2,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 1.5,
+      "index": 3,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 2.0,
+      "index": 4,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 2.5,
+      "index": 5,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 3.0,
+      "index": 6,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 3.5,
+      "index": 7,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 4.0,
+      "index": 8,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 4.5,
+      "index": 9,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 5.0,
+      "index": 10,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    },
+    {
+      "t": 5.5,
+      "index": 11,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    }
+  ],
+  "stills": [
+    {
+      "t": null,
+      "index": 0,
+      "objects": [
+        {
+          "id": "1",
+          "label": "saline bag",
+          "bbox": [
+            0.3438,
+            0.1111,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv tubing",
+          "bbox": [
+            0.3438,
+            0.2278,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "iv cannula",
+          "bbox": [
+            0.3438,
+            0.3444,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        },
+        {
+          "id": "1",
+          "label": "label",
+          "bbox": [
+            0.3438,
+            0.4611,
+            0.0875,
+            0.0833
+          ],
+          "score": 0.9,
+          "kept": true
+        }
+      ]
+    }
+  ],
+  "handmade": true
 }

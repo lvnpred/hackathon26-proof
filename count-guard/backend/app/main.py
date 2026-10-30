@@ -11,6 +11,7 @@ from app.api.routes import router
 from app.api.ws import router as ws_router
 from app.config import BANNER, Settings, get_settings
 from app.engine import Engine
+from app.journey.ai_api import evidence_router
 from app.journey.api import demo_router, router as journey_router
 from app.journey.flow_api import flow_router
 from app.journey.ask_api import ask_router
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ask_router)
     app.include_router(staff_router)
     app.include_router(video_router)
+    app.include_router(evidence_router)
     app.include_router(models_router)
     return app
 

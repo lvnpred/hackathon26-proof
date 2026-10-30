@@ -112,15 +112,19 @@ export default function CareShell({ ward, children }) {
             <span className="brand-sub">Ward care. Records only, no medical advice.</span>
           </span>
         </Link>
-        {ward.role === "patient" && ward.patients.length > 0 && (
-          <select aria-label="Patient" value={findPatient(ward.patients, ward.patientBed).bed} onChange={(e) => ward.setPatientBed(e.target.value)}>
-            {ward.patients.map((p) => <option key={p.id} value={p.bed}>{p.name}</option>)}
-          </select>
-        )}
-        <div className="role-switch" role="group" aria-label="Role">
-          {ROLES.map(([id, name]) => (
-            <button key={id} type="button" aria-pressed={ward.role === id} onClick={() => pick(id)}>{name}</button>
-          ))}
+        <div className="header-controls">
+          <div className="picker-slot">
+            {ward.role === "patient" && ward.patients.length > 0 && (
+              <select aria-label="Patient" value={findPatient(ward.patients, ward.patientBed).bed} onChange={(e) => ward.setPatientBed(e.target.value)}>
+                {ward.patients.map((p) => <option key={p.id} value={p.bed}>{p.name}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="role-switch" role="group" aria-label="Role">
+            {ROLES.map(([id, name]) => (
+              <button key={id} type="button" aria-pressed={ward.role === id} onClick={() => pick(id)}>{name}</button>
+            ))}
+          </div>
         </div>
       </header>
       <div className="nav-bar">

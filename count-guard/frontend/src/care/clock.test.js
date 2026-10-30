@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { H, M, label, skipTargets, hhmm } from "./clock.js";
+import { H, M, STEP_MS, afterAction, afterRun, label, skipTargets, hhmm } from "./clock.js";
 
 test("label matches the backend clock", () => {
   assert.equal(label(0), "Day 0 09:00");
@@ -38,3 +38,15 @@ test("Next due leaves out closed tasks and patients whose stay has ended", () =>
 });
 
 test("hhmm", () => assert.equal(hhmm(H + 5 * M), "10:05"));
+
+test("each recorded action moves the clock 2 minutes", () => {
+  assert.equal(STEP_MS, 2 * M);
+  assert.equal(afterAction(0), 2 * M);
+  assert.equal(label(afterAction(afterAction(0))), "Day 0 09:04");
+});
+
+test("afterRun steps only after a successful record", () => {
+  assert.equal(afterRun(5 * M, { state: "x" }), 7 * M); // act or upload succeeded
+  assert.equal(afterRun(5 * M, null), 5 * M); // failure (run returns null)
+  assert.equal(afterRun(5 * M, undefined), 5 * M);
+});

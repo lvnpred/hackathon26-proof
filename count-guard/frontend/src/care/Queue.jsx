@@ -15,7 +15,7 @@ function QueueRow({ row, ward, open, toggle }) {
     <>
       <tr>
         <td className="num">Bed {row.bed}</td>
-        <td>{row.name}</td>
+        <td className="left">{row.name}</td>
         <td>{row.says}</td>
         <td>{row.waited}</td>
         <td>
@@ -56,7 +56,7 @@ export default function Queue() {
             <thead>
               <tr>
                 <th>Bed</th>
-                <th>Patient</th>
+                <th className="left">Patient</th>
                 <th>What</th>
                 <th>Waited</th>
                 <th />

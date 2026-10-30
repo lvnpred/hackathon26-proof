@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { call, getJourney, postJourney, uploadJourney } from "../journey";
+import { afterRun } from "./clock";
 import { statusBody, statusQuery } from "./status";
 
 const ROSTER = "cg-ward-roster";
@@ -136,6 +137,11 @@ export function useWard() {
     try {
       const next = await send();
       swap(id, next);
+      setNowMs((ms) => {
+        const stepped = afterRun(ms, next);
+        write(NOW, String(stepped));
+        return stepped;
+      });
       return next;
     } catch (exc) {
       setError(exc.message);

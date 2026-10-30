@@ -18,6 +18,14 @@ export function label(ms) {
 // "HH:MM" of a demo time.
 export const hhmm = (ms) => label(ms).slice(-5);
 
+// Each recorded action takes 2 demo minutes.
+export const STEP_MS = 2 * M;
+export const afterAction = (nowMs) => nowMs + STEP_MS;
+
+// The clock steps only after a SUCCESSFUL act or upload (run returns the new view, or null on failure).
+// An ask (a proposal) and a clock jump never come through here.
+export const afterRun = (nowMs, result) => (result ? afterAction(nowMs) : nowMs);
+
 const STAY_OVER = ["discharging", "home", "clinic_done"];
 
 // Skip-ahead buttons. "Next due" is the earliest open task still in the future.

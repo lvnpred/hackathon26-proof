@@ -188,7 +188,8 @@ def test_ask_view_medicines_oldest_first():
 
 def test_medicine_strings_have_no_advice(tmp_path):
     out = match_medicines(_strips(*[(s["name"], s["strength"]) for s in KUMAR_STRIPS], ("Amlodipine", "10 mg")), _rx())
-    strings = [out["why"], NO_HOME, NO_MEDICINES, record_holds([]), record_holds(DOSE)] + [r["why"] for r in out["rows"]]
+    strings = [out["why"], NO_HOME, NO_MEDICINES, record_holds([]), record_holds(DOSE)]
+    strings.append(record_holds([{"by": "D", "items": []}])) + [r["why"] for r in out["rows"]]
     strings += [r["schedule"] for r in out["rows"] if r["schedule"]]
     doses = dose_rows(DOSE)
     out = match_medicines(_strips(("Paracetamol", "1 g"), ("Paracetamol", "500 mg"), ("Cetirizine", "10 mg")), None, doses)
@@ -238,15 +239,15 @@ def test_not_matched_names_where_it_looked():
     assert both["why"] == "0 of 1 medicines in the photo are on your prescription or signed orders. Flagged: Cetirizine 10 mg."
 
 
-def test_record_holds_lists_name_and_amount_never_free_text():
-    items = [{"kind": "dose", "name": "Paracetamol", "amount": "1 g", "text": "Paracetamol 1 g, patient asks for more"},
-             {"kind": "dose", "name": "Ondansetron", "amount": "", "text": "secret free text"}]
+def test_record_holds_uses_fixed_sentences_never_free_text():
+    items = [{"kind": "obs", "name": "", "text": "secret free text", "every_h": 1}]
     got = record_holds([{"by": "D", "items": items}])
-    assert got == "Your record holds signed orders for: Paracetamol 1 g; Ondansetron."
+    assert got == "Your record holds signed orders, but none is a medicine."
+    assert "obs" not in got and "secret" not in got
     assert record_holds([]) == "Your record holds no orders yet."
 
 
-def test_409_lists_signed_non_dose_orders_without_their_free_text(tmp_path):
+def test_409_says_signed_orders_hold_no_medicine(tmp_path):
     client = _client(tmp_path)
     das = _patients(client)["9"]
     item = {"kind": "procedure", "name": "Wound dressing", "text": "Wound dressing, call family first"}
@@ -254,7 +255,8 @@ def test_409_lists_signed_non_dose_orders_without_their_free_text(tmp_path):
     assert _move(client, das, "clinic_done").status_code == 200
     refused = _post(client, das)
     assert refused.status_code == 409
-    assert refused.json()["detail"] == f"{NO_MEDICINES} Your record holds signed orders for: Wound dressing."
+    assert refused.json()["detail"] == f"{NO_MEDICINES} Your record holds signed orders, but none is a medicine."
+    assert "Wound" not in refused.json()["detail"] and "obs" not in refused.json()["detail"]
 
 
 def test_route_signed_dose_orders_match_without_a_prescription(tmp_path):

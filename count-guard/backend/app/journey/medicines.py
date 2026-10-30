@@ -24,9 +24,10 @@ def dose_rows(orders: list[dict]) -> list[dict]:
 
 
 def record_holds(orders: list[dict]) -> str:
-    """What the record holds, by item name and amount only, never an order's free text."""
-    names = [f"{i.get('name') or ''} {i.get('amount') or ''}".strip() or i.get("kind", "order") for o in orders for i in o["items"]]
-    return f"Your record holds signed orders for: {'; '.join(names)}." if names else "Your record holds no orders yet."
+    """What the record holds, in fixed sentences. An order's free text is never repeated."""
+    if not orders:
+        return "Your record holds no orders yet."
+    return "Your record holds signed orders, but none is a medicine."
 
 
 def _matched(read: str, differs: bool, medicine: str, schedule: str, why: str) -> dict:

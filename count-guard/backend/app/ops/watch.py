@@ -44,8 +44,9 @@ def orders_unacknowledged(events: list[dict], at_ms: int, opened: set[str]) -> l
 def task_unassigned(events: list[dict], at_ms: int, opened: set[str]) -> list[WorkItem]:
     given = assignees(events)
     by_order: dict[str, list[str]] = {}
+    finished = {t["id"] for t in tasks.task_list(events) if t["status"] in ("done", "closed")}
     for created in _of(visible_events(events), "task.created"):
-        if created["id"] not in given:
+        if created["id"] not in given and created["id"] not in finished:
             by_order.setdefault(created["payload"]["order_id"], []).append(created["id"])
     signed = {o["id"]: o for o in tasks.orders_list(events)}
     out = []
@@ -120,8 +121,13 @@ def move_ready(events: list[dict], at_ms: int, opened: set[str]) -> list[WorkIte
     move = _move_to_ward(events)
     if not move:
         return []
+    stay = states.stay_events(events)
+    pack, closing = states.stay_latest(events, "count.pack_opened"), states.stay_latest(events, "count.closing")
+    if pack and (closing is None or stay.index(closing) < stay.index(pack)):
+        return []  # a count was started and never closed: never nudge leaving theatre
     last = _latest(visible_events(events), "patient.state")
-    reason = "Surgery has ended and the count is closed; the patient can go back to the ward."
+    reason = ("Surgery has ended and the count is closed; the patient can go back to the ward." if closing
+              else "Surgery has ended; no swab count was started.")
     return [_item("propose_move", "move_ready", reason, (last["id"],), move["role"], f"ward:{last['id']}")]
 
 

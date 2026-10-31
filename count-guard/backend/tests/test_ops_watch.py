@@ -192,3 +192,26 @@ def test_stale_codes():
     assert not ADVICE.search(got[0][2]) and not SNAKE.search(got[0][2])
     done = _ev("work.dropped", {"work_id": "w2", "by": "x", "reason": "r", "code": "rejected"}, "z", 50)
     assert watch.stale(base + [move, mprop, reopened, done]) == []
+
+
+def test_move_ready_never_with_a_started_count_unclosed():
+    started = _theatre() + [_ev("count.pack_opened", {"quantity": 10}, "k1", 13)]
+    assert watch.watch(started, 500) == []
+    got = watch.watch(_theatre(), 500)  # no pack at all
+    assert _kinds(got) == ["propose_move"]
+    assert got[0].reason == "Surgery has ended; no swab count was started."
+    assert not ADVICE.search(got[0].reason)
+    closed = watch.watch(_theatre(0), 500)
+    assert "the count is closed" in closed[0].reason
+
+
+def test_tasks_skip_done_and_closed():
+    one_off = _ev("task.created", {"order_id": "o1", "title": "Dose", "kind": "dose", "mode": "tap",
+                                   "proof": "none", "every_h": 0, "due_ms": 1000}, "t1", 110)
+    done = _ev("task.done", {"task_id": "t1", "by": "N", "via": "tap", "note": ""}, "d1", 200)
+    assert _kinds(watch.watch([one_off], 500)) == ["assign_task"]
+    assert watch.watch([one_off, done], 500) == []
+    recurring_done = [_task("t2"), _ev("task.done", {"task_id": "t2", "by": "N", "via": "tap", "note": ""}, "d2", 200)]
+    assert _kinds(watch.watch(recurring_done, 500)) == ["assign_task"]  # every_h task is open again
+    home = [_task("t3"), _state("home", "s9", 300, "discharging")]
+    assert watch.watch(home, 500) == []

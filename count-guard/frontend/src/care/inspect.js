@@ -41,11 +41,13 @@ export const stepFrame = (i, delta, n) => Math.max(0, Math.min(n - 1, i + delta)
 
 // A patient never resolves a staff-only moment, whatever the URL says.
 export function resolveMoment(moments, id, lens) {
-  const found = (moments || []).find((m) => m.id === id || m.photo_id === id || m.evidence_id === id
-    || (m.written || []).some((w) => w.event_id === id));
-  if (!found) return null;
-  if (lens === "patient" && found.patient_finding == null) return null;
-  return found;
+  const seen = (m) => lens !== "patient" || m.patient_finding != null;
+  const list = moments || [];
+  // An exact id wins; a photo, evidence or follow-up event id falls back to the first moment this lens may see.
+  return list.find((m) => m.id === id && seen(m))
+    || (list.some((m) => m.id === id) ? null : list.find((m) => seen(m)
+      && (m.photo_id === id || m.evidence_id === id || (m.written || []).some((w) => w.event_id === id))))
+    || null;
 }
 
 // The form field each photo value filled (R13 of the spec). Keys are the monitor labels.

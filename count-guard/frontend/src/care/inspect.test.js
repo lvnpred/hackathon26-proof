@@ -47,6 +47,12 @@ test("a patient lens never resolves a staff-only moment", () => {
   assert.equal(resolveMoment(undefined, "a", "staff"), null);
 });
 
+test("an exact moment id wins over a staff-only moment that lists it as a follow-up", () => {
+  const moments = [{ id: "v", patient_finding: null, written: [{ event_id: "s" }] }, { id: "s", patient_finding: "x" }];
+  assert.equal(resolveMoment(moments, "s", "patient").id, "s");
+  assert.equal(resolveMoment(moments, "s", "staff").id, "s");
+});
+
 test("Inspector renders inside .app without a portal or dialog role", () => {
   const s = src("./Inspector.jsx");
   assert.match(s, /aria-label="Inspector"/);

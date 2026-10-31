@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { alertCount, alertsLabel, modelsText } from "./dock.js";
+import { alertCount, alertsLabel, modelsText, pausedText } from "./dock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 
@@ -46,8 +46,8 @@ test("the AI switch is staff only and posts the signed-in person, from one share
   assert.match(dock, /ops\.paused != null/);
   const header = read("./ProductHeader.jsx");
   assert.match(header, /staff && ops\.paused != null/);
-  assert.match(header, /AI admin: \{ops\.paused \? "paused" : "on"\}/);
-  assert.match(header, /ops\.paused \? "Resume" : "Pause"/);
+  assert.match(header, /aiChip\(ops\.paused\)/);
+  assert.match(header, /pauseLabel\(ops\.paused\)/);
   const { canSeeAi } = await import("./ai.js");
   assert.equal(canSeeAi("patient"), false);
 });
@@ -70,9 +70,12 @@ test("the safety strip is first in the shell, in the product and not in the dock
 test("the paused banner names who paused and when, for staff only", async () => {
   const fs = await import("node:fs");
   const header = fs.readFileSync(new URL("./ProductHeader.jsx", import.meta.url), "utf8");
-  assert.match(header, /AI admin is paused for Ward 4\. Paused by \$\{by \|\| "a person"\}\$\{at\}\. New orders and tasks wait for a person\./);
   assert.match(header, /className="paused-banner" role="status"/);
-  assert.match(header, /whenText\(atMs, nowMs\)/);
+  assert.match(header, /whenText\(ops\.atMs, nowMs\)/);
+  assert.equal(pausedText("Dr. A. Rao", "09:14"), "AI admin is paused for Ward 4. Paused by Dr. A. Rao at 09:14. New orders and tasks wait for a person.");
+  assert.equal(pausedText("Nurse Meena", ""), "AI admin is paused for Ward 4. Paused by Nurse Meena. New orders and tasks wait for a person.");
+  assert.equal(pausedText(null, "09:14"), "AI admin is paused for Ward 4. Paused by a person at 09:14. New orders and tasks wait for a person.");
+  assert.match(fs.readFileSync(new URL("./useOpsPaused.js", import.meta.url), "utf8"), /atMs: o\.at_ms/);
   const shell = fs.readFileSync(new URL("./CareShell.jsx", import.meta.url), "utf8");
   assert.match(shell, /ward\.role !== "patient" && <PausedBanner/);
 });

@@ -155,13 +155,13 @@ def test_ops_view_no_snake_case():
 def test_pause_resume_is_durable(tmp_path):
     path = tmp_path / "m.db"
     store = MorningStore(path)
-    assert site.paused(store) == (False, None)
+    assert site.paused(store) == (False, None, None)
     site.set_paused(store, True, "Demo dock (Doctor)", 0)
     again = MorningStore(path)
-    assert site.paused(again) == (True, "Demo dock (Doctor)")
+    assert site.paused(again) == (True, "Demo dock (Doctor)", 0)
     assert site.site_episode(store) == site.site_episode(again)
     site.set_paused(again, False, "Owner", 5)
-    assert site.paused(again) == (False, "Owner")
+    assert site.paused(again) == (False, "Owner", 5)
 
 
 def test_board_events(tmp_path):

@@ -71,8 +71,8 @@ def reject(episode_id: str, work_id: str, body: RejectIn, request: Request) -> d
 
 
 def _state(store) -> dict:
-    paused, by = site.paused(store)
-    return {"paused": paused, "by": by}
+    paused, by, at_ms = site.paused(store)
+    return {"paused": paused, "by": by, "at_ms": at_ms}
 
 
 @ops_site_router.get("")

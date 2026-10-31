@@ -13,7 +13,7 @@ export function useOpsPaused(role, nowMs) {
   useEffect(() => {
     if (!staff) return;
     call("/journey/ops")
-      .then((o) => setState({ paused: Boolean(o.paused), by: o.by ?? null, atMs: null }))
+      .then((o) => setState({ paused: Boolean(o.paused), by: o.by ?? null, atMs: o.at_ms ?? null }))
       .catch(() => setState({ paused: null, by: null, atMs: null }));
   }, [staff]);
   const toggle = () => {
@@ -21,7 +21,7 @@ export function useOpsPaused(role, nowMs) {
     setBusy(true);
     setError("");
     return call(`/journey/ops/${verb}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by: SIGNED_IN[role].name, at_ms: nowMs }) })
-      .then((o) => setState({ paused: Boolean(o.paused), by: o.by ?? null, atMs: nowMs }))
+      .then((o) => setState({ paused: Boolean(o.paused), by: o.by ?? null, atMs: o.at_ms ?? nowMs }))
       .catch(() => setError(`Could not ${verb} the AI.`))
       .finally(() => setBusy(false));
   };

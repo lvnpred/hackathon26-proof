@@ -197,10 +197,11 @@ def test_ops_boundary_validation(tmp_path):
 
 def test_pause_resume_routes(tmp_path):
     client = _ops_client(tmp_path)
-    assert client.get("/journey/ops").json() == {"paused": False, "by": None}
-    assert client.post("/journey/ops/pause", json={"by": "Charge nurse"}).json() == {"paused": True, "by": "Charge nurse"}
-    assert client.get("/journey/ops").json()["paused"] is True
-    assert client.post("/journey/ops/resume", json={"by": "Charge nurse"}).json()["paused"] is False
+    assert client.get("/journey/ops").json() == {"paused": False, "by": None, "at_ms": None}
+    assert client.post("/journey/ops/pause", json={"by": "Charge nurse", "at_ms": 4000}).json() == {"paused": True, "by": "Charge nurse", "at_ms": 4000}
+    assert client.get("/journey/ops").json() == {"paused": True, "by": "Charge nurse", "at_ms": 4000}
+    resumed = client.post("/journey/ops/resume", json={"by": "Owner", "at_ms": 9000}).json()
+    assert resumed == {"paused": False, "by": "Owner", "at_ms": 9000}
     assert client.post("/journey/ops/pause", json={"by": "AI x"}).status_code == 422
     assert client.get("/journey/ops").json()["paused"] is False
 

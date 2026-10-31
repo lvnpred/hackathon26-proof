@@ -30,15 +30,15 @@ def _site_events(store) -> list[dict]:
     return visible_events(store.events(episode)) if episode else []
 
 
-def paused(store) -> tuple[bool, str | None]:
-    """(is the agent paused, who last switched it). Never paused until someone pauses it."""
+def paused(store) -> tuple[bool, str | None, int | None]:
+    """(is the agent paused, who last switched it, when). Never paused until someone pauses it."""
     last = None
     for event in _site_events(store):
         if event["event_type"] in ("ops.paused", "ops.resumed"):
             last = event
     if last is None:
-        return False, None
-    return last["event_type"] == "ops.paused", last["payload"].get("by")
+        return False, None, None
+    return last["event_type"] == "ops.paused", last["payload"].get("by"), last["ts_ms"]
 
 
 def set_paused(store, paused: bool, by: str, at_ms: int) -> None:

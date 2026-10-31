@@ -1,20 +1,15 @@
 import { Link, NavLink } from "react-router-dom";
 import { Mark } from "../App";
-import { alertsLabel } from "./dock";
+import { aiChip, alertsLabel, pauseLabel, pausedText } from "./dock";
 import { SIGNED_IN, initials } from "./people";
 import { whenText } from "./when";
-
-export function pausedText(by, atMs, nowMs) {
-  const at = atMs == null ? "" : ` at ${whenText(atMs, nowMs)}`;
-  return `AI admin is paused for Ward 4. Paused by ${by || "a person"}${at}. New orders and tasks wait for a person.`;
-}
 
 // Ward-wide, staff only. The Resume button is the same switch as the header's.
 export function PausedBanner({ ops, nowMs }) {
   if (!ops.paused) return null;
   return (
     <div className="paused-banner" role="status">
-      <span>{pausedText(ops.by, ops.atMs, nowMs)}</span>
+      <span>{pausedText(ops.by, ops.atMs == null ? "" : whenText(ops.atMs, nowMs))}</span>
       <button type="button" disabled={ops.busy} onClick={ops.toggle}>Resume</button>
     </div>
   );
@@ -46,8 +41,8 @@ export default function ProductHeader({ role, tabs, unread, alerts, alertsOpen, 
       {staff && chip}
       {staff && ops.paused != null && (
         <span className="ai-admin">
-          <span>AI admin: {ops.paused ? "paused" : "on"}</span>
-          <button type="button" disabled={ops.busy} onClick={ops.toggle}>{ops.paused ? "Resume" : "Pause"}</button>
+          <span>{aiChip(ops.paused)}</span>
+          <button type="button" disabled={ops.busy} onClick={ops.toggle}>{pauseLabel(ops.paused)}</button>
           {ops.error && <span className="error small" role="alert">{ops.error}</span>}
         </span>
       )}

@@ -136,10 +136,10 @@ test("strip count ignores undone rows", () => {
 
 test("dock chip, pause label, routed line, constants", () => {
   assert.equal(aiChip(null), "");
-  assert.equal(aiChip(false), "AI: running");
-  assert.equal(aiChip(true), "AI: paused");
-  assert.equal(pauseLabel(false), "Pause AI");
-  assert.equal(pauseLabel(true), "Resume AI");
+  assert.equal(aiChip(false), "AI admin: on");
+  assert.equal(aiChip(true), "AI admin: paused");
+  assert.equal(pauseLabel(false), "Pause");
+  assert.equal(pauseLabel(true), "Resume");
   assert.equal(routedLine({ ops }, "q1"), "Your question went to Dr. A. Rao");
   assert.equal(routedLine({ ops }, "zz"), "");
   assert.equal(routedLine({}, "q1"), "");

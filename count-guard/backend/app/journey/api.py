@@ -21,6 +21,7 @@ from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, clock
 from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
 from app.morning.druglog import parse_drug_phrase
+from app.ops import run as ops_run
 
 router = APIRouter(prefix="/journey/episodes/{episode_id}")
 demo_router = APIRouter(prefix="/journey/demo")
@@ -144,6 +145,14 @@ def raise_nudges(store, episode_id: str, at_ms: int) -> list[dict]:
     return written
 
 
+def settle(request: Request, episode_id: str, ts: int) -> None:
+    """After every write: raise nudges, then let the ops agent act, inside the same request (R5)."""
+    store = _store(request)
+    raise_nudges(store, episode_id, ts)
+    ops_run.run(store, episode_id, ts, settings=request.app.state.settings,
+                write=getattr(request.app.state, "ops_write", None))
+
+
 def _latest(events: list[dict], kind: str) -> dict | None:
     rows = [event for event in visible_events(events) if event["event_type"] == kind]
     return rows[-1] if rows else None
@@ -192,7 +201,7 @@ def _act(
     store = _store(request)
     ts = _at(store, episode_id, at_ms)
     store.append(episode_id, kind, payload, ts_ms=ts, supersedes_id=supersedes_id)
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)
 
 
@@ -243,7 +252,7 @@ def scan_strips(episode_id: str, body: StripsIn, request: Request) -> dict:
     for offset, strip in enumerate(body.strips):
         found = {**read_strip(strip.name, strip.strength), "by": "patient", "source": "typed"}
         store.append(episode_id, "brownbag.med_found", found, ts_ms=ts + offset)
-    raise_nudges(store, episode_id, ts + len(body.strips))
+    settle(request, episode_id, ts + len(body.strips))
     return view(request, episode_id)
 
 
@@ -299,7 +308,7 @@ def tick(episode_id: str, body: At, request: Request) -> dict:
     """Check overdue doses and observations at a clock time. The ward screen calls this."""
     _require(request, episode_id)
     store = _store(request)
-    raise_nudges(store, episode_id, _at(store, episode_id, body.at_ms))
+    settle(request, episode_id, _at(store, episode_id, body.at_ms))
     return view(request, episode_id)
 
 

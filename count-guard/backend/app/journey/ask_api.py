@@ -12,7 +12,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import Field
 
 from app.journey import states
-from app.journey.api import At, _at, _require, _store, raise_nudges, view
+from app.journey.api import At, _at, _require, _store, settle, view
 from app.journey import live
 from app.journey.ask import DECISIONS, PHOTO_STATES
 from app.journey.media_api import _heard, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
@@ -64,7 +64,7 @@ def _write(request: Request, episode_id: str, rows: list[tuple[str, dict]], ts: 
     store = _store(request)
     for kind, payload in rows:
         store.append(episode_id, kind, payload, ts_ms=ts)
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)
 
 
@@ -93,7 +93,7 @@ def ask_bot(episode_id: str, body: QuestionIn, request: Request) -> dict:
         "found": result["found"], "source": source, "by": BOT, "calls": calls,
     }
     store.append(episode_id, "question.answered", answer, ts_ms=ts)
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)
 
 

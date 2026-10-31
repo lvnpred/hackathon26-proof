@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field, field_validator, model_validator
 
 from app.journey import live, states, tasks
-from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, raise_nudges, view
+from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, settle, view
 from app.journey.dictation import draft_refusal
 from app.journey.doctor_status import theatre_payload
 from app.journey.procedures import tray_plan
@@ -54,7 +54,7 @@ def move(episode_id: str, body: StateIn, request: Request) -> dict:
         store.append(episode_id, "tray.planned", {**plan, "by": body.by}, ts_ms=ts)
         status = theatre_payload(body.by, _require(request, episode_id)["label"], ts, plan["expected_minutes"])
         store.append(episode_id, "doctor.status", {**status, "by": body.by}, ts_ms=ts)
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)
 
 
@@ -136,7 +136,7 @@ def _write(request: Request, episode_id: str, at_ms: int | None, action) -> dict
         ts = action(store, _at(store, episode_id, at_ms))
     except tasks.TaskError as exc:
         raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)
 
 
@@ -193,5 +193,5 @@ def sign_discharge(episode_id: str, body: DischargeIn, request: Request) -> dict
     # Every refusal is above. check_move needs the signed event, so a refusal here would be a bug (P2-R6).
     move = states.move_payload(store.events(episode_id), "discharging", {"by": body.by})
     store.append(episode_id, "patient.state", move, ts_ms=ts)
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)

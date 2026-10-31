@@ -10,7 +10,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app.journey import dictation, evidence, live, proof, spoken, states, tasks
-from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, raise_nudges, view
+from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, settle, view
 from app.journey.regions import strips_from
 from app.journey.rx import key_of
 
@@ -289,5 +289,5 @@ def strips_photo(
         if offset == 0:
             row["calls"] = read["calls"]  # one row carries the calls, so the summary counts each call once (R12)
         store.append(episode_id, "brownbag.med_found", row, ts_ms=ts + 1 + offset)
-    raise_nudges(store, episode_id, ts + 1 + len(strips))
+    settle(request, episode_id, ts + 1 + len(strips))
     return view(request, episode_id)

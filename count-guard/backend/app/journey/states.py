@@ -351,6 +351,28 @@ def theatre_count(events: list[dict]) -> dict:
     }
 
 
+def closing_payload(events: list[dict], returned: int, by: str, *, evidence_id: str | None = None, detail: str = "",
+                    camera: dict | None = None) -> dict:
+    """The `count.closing` payload the human save and the AI filing both write.
+
+    With an `evidence_id` that names this stay's camera count it adds via/evidence_id, and read/saved when the
+    saved figure differs from the camera's. A caller that already holds the camera event may pass it as `camera`.
+    Raises ValueError when no pack was opened."""
+    opened = _latest(visible_events(events), "count.pack_opened")
+    if opened is None:
+        raise ValueError("Record the pack opened first.")
+    start = opened["payload"]["quantity"]
+    payload = {"opened": start, "returned": returned, "unaccounted": start - returned, "detail": detail, "by": by}
+    camera = camera or next((e for e in reversed(stay_events(events)) if e["event_type"] == "swabs.counted"
+                             and evidence_id and e["payload"].get("evidence_id") == evidence_id), None)
+    if camera:
+        payload.update(via="camera", evidence_id=evidence_id)
+        read = camera["payload"].get("count")
+        if read is not None and read != returned:
+            payload.update(read={"returned": read}, saved={"returned": returned})
+    return payload
+
+
 def now_next(events: list[dict]) -> dict:
     state = current_state(events)
     now = _latest_happening(events) or "The patient is in clinic."

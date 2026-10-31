@@ -80,7 +80,7 @@ def _patient(events: list[dict]) -> str:
     return short_name(asked["payload"].get("by")) if asked else "the patient"
 
 
-def _ack_order(item, events, board, at_ms):
+def _ack_order(item, events, board, at_ms, patient=""):
     order = next((o for o in tasks.orders_list(events) if o["id"] == item.inputs[0]), None)
     if order is None or order["acknowledged_by"]:
         return None
@@ -88,7 +88,7 @@ def _ack_order(item, events, board, at_ms):
                   TEMPLATES["ack_order"].format(doctor=short_name(order["by"])))
 
 
-def _assign_task(item, events, board, at_ms):
+def _assign_task(item, events, board, at_ms, patient=""):
     given = assignees(events)
     live = {t["id"] for t in tasks.task_list(events) if t["status"] in _OPEN}
     ids = [i for i in item.inputs if i in live and i not in given]
@@ -101,7 +101,7 @@ def _assign_task(item, events, board, at_ms):
     return Action("assign_task", {"pairs": [[t, n] for t, n in picks.items()]}, summary)
 
 
-def _nudge(item, events, board, at_ms):
+def _nudge(item, events, board, at_ms, patient=""):
     nudge = _find(events, item.inputs[0], "nudge.raised")
     if nudge is None:
         return None
@@ -114,7 +114,7 @@ def _nudge(item, events, board, at_ms):
                   TEMPLATES["nudge_obs_overdue"].format(nurse=short_name(nurse), says=says))
 
 
-def _route(item, events, board, at_ms):
+def _route(item, events, board, at_ms, patient=""):
     question_id = item.inputs[0]
     if _find(events, question_id, "question.asked") is None or _answered(events, question_id) \
             or question_id in routes(events):
@@ -124,7 +124,7 @@ def _route(item, events, board, at_ms):
                   TEMPLATES["route_question"].format(doctor=short_name(doctor)))
 
 
-def _file_read(item, events, board, at_ms):
+def _file_read(item, events, board, at_ms, patient=""):
     read = next((e for e in watch.monitor_reads(events) if e["id"] == item.inputs[0]), None)
     if read is not None:
         p = read["payload"]
@@ -139,7 +139,7 @@ def _file_read(item, events, board, at_ms):
     closing = states.stay_latest(events, "count.closing")
     pack = states.stay_latest(events, "count.pack_opened")
     p = camera["payload"]
-    if (pack is None or camera is not states.stay_latest(events, "swabs.counted")
+    if (pack is None or camera["id"] != (states.stay_latest(events, "swabs.counted") or {}).get("id")
             or (closing and stay.index(closing) > stay.index(camera))
             or p.get("count") is None or not p.get("evidence_id")):
         return None
@@ -150,7 +150,7 @@ def _file_read(item, events, board, at_ms):
                   TEMPLATES["file_swabs"].format(n=p["count"], opened=opened))
 
 
-def _draft_answer(item, events, board, at_ms):
+def _draft_answer(item, events, board, at_ms, patient=""):
     question = _find(events, item.inputs[0], "question.asked")
     rows = cited_card(events)
     card_signs = (_latest(events, "discharge.card") or {"payload": {}})["payload"].get("warning_signs")
@@ -164,10 +164,10 @@ def _draft_answer(item, events, board, at_ms):
                   draft=draft, cited=tuple(rows))
 
 
-def _propose_move(item, events, board, at_ms):
+def _propose_move(item, events, board, at_ms, patient=""):
     if not watch.move_ready(events, at_ms, set()):
         return None
-    sentence = TEMPLATES["propose_move"].format(patient=_patient(events))
+    sentence = TEMPLATES["propose_move"].format(patient=patient or _patient(events))
     return Action("propose_move", {"to": "ward"}, sentence, sentence=sentence)
 
 
@@ -178,6 +178,9 @@ _PLANNERS = {
 }
 
 
-def plan(item: WorkItem, events: list[dict], *, board=(), at_ms: int = 0, settings=None, write=None) -> Action | None:
-    """The action for a work item, or None when the work is no longer needed. `settings` and `write` are for the reword."""
-    return _PLANNERS[item.kind](item, events, board, at_ms)
+def plan(item: WorkItem, events: list[dict], *, board=(), at_ms: int = 0, settings=None, write=None,
+         patient: str = "") -> Action | None:
+    """The action for a work item, or None when the work is no longer needed.
+
+    `settings` and `write` are for the reword. `patient` is the episode's short name for the move sentence."""
+    return _PLANNERS[item.kind](item, events, board, at_ms, patient)

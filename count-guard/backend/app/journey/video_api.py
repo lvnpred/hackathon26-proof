@@ -10,7 +10,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from app.journey import evidence, live, states, tasks
 from app.journey.live import segment_clip, segment_photos
-from app.journey.api import _at, _require, _store, raise_nudges, view
+from app.journey.api import _at, _require, _store, settle, view
 from app.journey.media_api import PHOTO_TYPES, read_upload_photo, write_photo
 from app.journey.procedures import setup_for
 from app.journey.video import NO_FRAMES, compare, expected_for_setup, expected_for_tray, frame_times, unchecked_for_tray
@@ -223,5 +223,5 @@ def add_video(
         payload = {**payload, "count": seen, "opened": opened}
     kind = {"tray": "tray.checked", "setup": "setup.checked", "swabs": "swabs.counted"}[check]
     store.append(episode_id, kind, payload, ts_ms=ts)
-    raise_nudges(store, episode_id, ts)
+    settle(request, episode_id, ts)
     return view(request, episode_id)

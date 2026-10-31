@@ -121,6 +121,18 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} moved the patient from {STATE_WORDS.get(p.get('from'), p.get('from'))} to {STATE_WORDS.get(p.get('to'), p.get('to'))}.{said}"
     if kind == "order.signed":
         return f"{p.get('by')} signed {count_of(len(p.get('items') or []), 'order')}."
+    if kind == "work.done":
+        return f"{p.get('by')}: {p.get('summary')}."
+    if kind == "work.proposed":
+        return f"AI proposal for the {p.get('owner_role')}: {p.get('sentence')}."
+    if kind == "work.dropped":
+        return f"AI item closed: {p.get('reason')}"
+    if kind == "work.undone":
+        return f"{p.get('by')} undid an AI action."
+    if kind == "task.assigned":
+        return f"{p.get('by')} assigned a task to {p.get('to')}."
+    if kind == "question.routed":
+        return f"{p.get('by')} sent the question to {p.get('to')}."
     if kind == "order.drafted":
         return f"{p.get('by')} dictated {count_of(len(p.get('items') or []), 'order')} (draft, not signed)."
     if kind == "discharge.drafted":
@@ -192,6 +204,7 @@ PATIENT_STATE = {"admitting": "You were admitted.", "theatre": "You went to thea
 
 
 STAFF_ONLY = ("order.drafted", "discharge.drafted")
+HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted")  # bookkeeping; the visible record is work.done and the rest
 
 
 def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> str:
@@ -201,8 +214,10 @@ def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> s
     both read "" and the timeline hides an empty line from the patient."""
     kind = event["event_type"]
     p = event.get("payload") or {}
-    if kind in STAFF_ONLY or (kind == "discharge.card" and signed):
+    if kind in STAFF_ONLY or kind.startswith("work.") or kind == "task.assigned" or (kind == "discharge.card" and signed):
         return ""
+    if kind == "question.routed":
+        return f"Your question went to {short_name(p.get('to'))}."
     if kind == "patient.state":
         to, frm = p.get("to"), p.get("from")
         if frm is None:
@@ -242,7 +257,7 @@ def timeline_items(events: list[dict]) -> list[dict]:
     signed = any(e["event_type"] == "discharge.signed" for e in events)
     return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed),
              "evidence_id": (e.get("payload") or {}).get("evidence_id"), "calls": (e.get("payload") or {}).get("calls") or []}
-            for e in events]
+            for e in events if e["event_type"] not in HIDDEN_FROM_TIMELINE]
 
 
 def build_stories(events: list[dict]) -> list[dict]:

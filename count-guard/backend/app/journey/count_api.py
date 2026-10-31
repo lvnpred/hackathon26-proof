@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field, model_validator
 
 from app.journey import states
-from app.journey.api import At, _act, _latest, _require, _store
+from app.journey.api import At, _act, _require, _store
 
 count_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 NOT_THIS_STAY = "That camera count is not from this patient's theatre stay."
@@ -60,21 +60,10 @@ def count(episode_id: str, body: CountIn, request: Request) -> dict:
     events = store.events(episode_id)
     # A correction keeps the camera count its closing came from, so the record shows what was read and what was saved.
     evidence_id = body.evidence_id or (old["payload"].get("evidence_id") if old else None)
-    camera = _camera_count(events, evidence_id) if evidence_id else None
-    opened = _latest(events, "count.pack_opened")
-    if opened is None:
-        raise HTTPException(status_code=409, detail="Record the pack opened first.")
-    start = opened["payload"]["quantity"]
-    payload = {
-        "opened": start,
-        "returned": body.returned,
-        "unaccounted": start - body.returned,
-        "detail": body.detail,
-        "by": body.by,
-    }
-    if camera:
-        payload.update(via="camera", evidence_id=evidence_id)
-        read = camera["payload"].get("count")
-        if read is not None and read != body.returned:
-            payload.update(read={"returned": read}, saved={"returned": body.returned})
+    camera = _camera_count(events, evidence_id) if evidence_id else None  # a 422 when not from this stay
+    try:
+        payload = states.closing_payload(events, body.returned, body.by, evidence_id=evidence_id, detail=body.detail,
+                                         camera=camera)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _act(request, episode_id, "count.closing", payload, body.at_ms, body.supersedes_id)

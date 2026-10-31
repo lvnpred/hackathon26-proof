@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { call } from "../journey";
 import { stripLabel } from "./brownbag.js";
-import { boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, drawItems, evidenceView, hasIgnored, ignoredFrameNames, isDense, itemName, labelKind, legendItems, nudgeLabels, regionLabel, seenCell, shortConcepts, startImage } from "./evidence.js";
+import { boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, evidenceView, ignoredFrameNames, itemName, regionLabel, sawCount, sawRows, seenCell, startImage } from "./evidence.js";
+import { EvidenceExpand } from "./EvidenceExpand.jsx";
+import { Stage } from "./EvidenceStage.jsx";
 
 const cache = new Map();
 
@@ -22,87 +24,6 @@ export function useEvidence(episodeId, evidenceId, skip = false, version = 0) {
   if (skip) return { data: null, error: null };
   const data = cache.get(key)?.data || (state.key === key ? state.data : null);
   return { data, error: state.key === key && !data ? state.error : null };
-}
-
-// Draw boxes (normalised [x, y, w, h]) over the image's displayed size. Kept: solid colour. Ignored: dashed grey.
-// A white outer stroke keeps a box visible on any picture. Labels sit on a filled pill, nudged clear of the last.
-// A dense frame (FW-1) gives most boxes a small id tag in the corner instead, so the picture stays readable.
-// Returns whether the frame was dense.
-function draw(canvas, img, boxes, regions, labels, rows, showAll, short) {
-  if (!canvas || !img) return false;
-  const w = img.clientWidth;
-  const h = img.clientHeight;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  const ctx = canvas.getContext?.("2d");
-  if (!ctx) return false;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  const scale = Math.min(1, w / 640);
-  const FONT = Math.max(10, Math.round(12 * scale));
-  ctx.font = `${FONT}px sans-serif`;
-  const items = drawItems(boxes, regions, rows);
-  for (const it of items) {
-    const [x, y, bw, bh] = it.bbox;
-    ctx.setLineDash([]);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(x * w, y * h, bw * w, bh * h);
-    ctx.strokeStyle = it.colour;
-    ctx.lineWidth = 2;
-    ctx.setLineDash(it.dashed ? [4, 3] : []);
-    ctx.strokeRect(x * w, y * h, bw * w, bh * h);
-  }
-  const dense = isDense(items.filter((it) => it.box).map((it) => ({ pill: ctx.measureText(it.text).width + 8, box: it.bbox[2] * w })));
-  if (!labels) return dense;
-  const kinds = items.map((it) => (it.box ? labelKind(it.box, { dense, showAll, short }) : "full"));
-  const PH = FONT + 4;
-  const full = items.filter((_, i) => kinds[i] === "full");
-  const placed = nudgeLabels(full.map((it) => ({ x: Math.min(it.bbox[0] * w, w - 20), y: Math.max(it.bbox[1] * h - PH - 2, 0), w: ctx.measureText(it.text).width + 8, h: PH })));
-  // Keep every pill inside the canvas on the right and at the bottom (T7-2).
-  const pills = placed.map((p) => ({ ...p, x: Math.max(0, Math.min(p.x, w - p.w)), y: Math.max(0, Math.min(p.y, h - p.h)) }));
-  ctx.setLineDash([]);
-  ctx.textBaseline = "middle";
-  let n = 0;
-  items.forEach((it, i) => {
-    if (kinds[i] === "tag") {
-      const text = String(it.box.id);
-      const tw = ctx.measureText(text).width + 6;
-      const th = FONT + 2;
-      ctx.fillStyle = it.colour;
-      ctx.fillRect(it.bbox[0] * w, it.bbox[1] * h, tw, th);
-      ctx.fillStyle = "#fff";
-      ctx.fillText(text, it.bbox[0] * w + 3, it.bbox[1] * h + th / 2 + 0.5);
-      return;
-    }
-    const p = pills[n];
-    n += 1;
-    ctx.fillStyle = it.colour;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = "#fff";
-    ctx.fillText(it.text, p.x + 4, p.y + PH / 2 + 0.5);
-  });
-  return dense;
-}
-
-function Stage({ image, boxes, regions, labels = true, rows, showAll = false, short, onDense, ...rest }) {
-  const img = useRef(null);
-  const canvas = useRef(null);
-  const paint = useRef(null);
-  paint.current = () => onDense?.(draw(canvas.current, img.current, boxes, regions, labels, rows, showAll, short));
-  useEffect(() => {
-    const again = () => paint.current();
-    window.addEventListener("resize", again);
-    return () => window.removeEventListener("resize", again);
-  }, []);
-  useEffect(() => paint.current());
-  return (
-    <div {...rest}>
-      <img ref={img} src={image?.url} alt="Evidence frame" onLoad={() => paint.current()} />
-      <canvas ref={canvas} aria-hidden="true" />
-    </div>
-  );
 }
 
 function Sparkline({ series, kept, planned, concept }) {
@@ -142,15 +63,16 @@ function CountTable({ rows }) {
   );
 }
 
-// The inline viewer (R32): boxes on the frame, a scrubber, counts, a plain explanation and the raw output.
-// linkLines false is the patient lens: no event codes, no raw output, no links to the staff chart.
+// The inline viewer (R32): the picture with small id tags, "What the AI saw" beside it (tap an item to light up
+// its boxes), a scrubber, a plain explanation and the raw output. Expand opens the full-screen view with readable
+// labels and every box listed. linkLines false is the patient lens: no event codes, no raw output, no chart links.
 export function Evidence({ episodeId, evidenceId, check, sample, linkLines = true, version = 0, model, rows }) {
   const fetched = useEvidence(episodeId, evidenceId, Boolean(sample), version);
   const data = sample || fetched.data;
   const [picked, setPicked] = useState(null);
-  const [ignored, setIgnored] = useState(false);
-  const [showAll, setShowAll] = useState(false);
-  const [dense, setDense] = useState(false);
+  const [focus, setFocus] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const closeExpanded = useCallback(() => setExpanded(false), []);
   const view = evidenceView(data, check);
   if (view.fallback) {
     return (
@@ -167,21 +89,43 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
   const shown = picked ?? startImage(view.images, view.rows);
   const image = view.images[shown] || view.images[0];
   const frames = data.frames;
-  const boxes = image ? boxesAt(frames, image.t ?? image.index, ignored) : [];
-  const short = shortConcepts(view.rows);
-  const withIgnored = hasIgnored(frames);
+  const boxes = image ? boxesAt(frames, image.t ?? image.index, false) : [];
+  const saw = view.regions ? [] : sawRows(view.rows);
+  const regionLines = view.regions && view.regions.map((r) => (rows ? stripLabel(r, rows) : regionLabel(r)));
   const ignoredNames = ignoredFrameNames(frames, view.images);
   const keptTimes = view.images.map((i) => i.t ?? i.index);
+  const chip = model ? chipText(data.calls, data.handmade, model) : view.chip;
   return (
     <section className="evidence" aria-label="Evidence">
-      <p className="label">{view.title}{(model ? chipText(data.calls, data.handmade, model) : view.chip) && ` · ${model ? chipText(data.calls, data.handmade, model) : view.chip}`}</p>
-      {image && <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} rows={rows} showAll={showAll} short={short} onDense={setDense} />}
-      {dense && (
-        <p className="small ev-legend" aria-label="Colour legend">
-          {legendItems(boxes).map((l) => <span key={l.label}><i className="ev-swatch" style={{ background: l.colour }} aria-hidden="true" />{l.label}</span>)}
-        </p>
-      )}
-      {dense && <label className="small"><input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show all labels</label>}
+      <p className="label">{view.title}{chip && ` · ${chip}`}</p>
+      <div className="ev-main">
+        {image && (
+          <button type="button" className="ev-open" aria-label="Expand picture" onClick={() => setExpanded(true)}>
+            <Stage className="ev-stage" image={image} boxes={boxes} regions={view.regions} rows={rows} focus={focus} />
+          </button>
+        )}
+        <div className="ev-saw" aria-label="What the AI saw">
+          <p className="label">What the AI saw</p>
+          {saw.length > 0 && (
+            <ul>
+              {saw.map((r) => (
+                <li key={r.concept}>
+                  <button type="button" className="ev-saw-row" aria-pressed={focus?.concept === r.concept} onClick={() => setFocus(focus?.concept === r.concept ? null : { concept: r.concept })}>
+                    <i className="ev-swatch" style={{ background: r.colour }} aria-hidden="true" />
+                    <span>{r.name}</span>
+                    <span className="muted">{sawCount(r)}</span>
+                    {r.missing > 0 && <strong className="ev-missing">{r.missing} missing</strong>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {regionLines && <ul className="small">{regionLines.map((line, i) => <li key={i}>{line}</li>)}</ul>}
+          <p className="small">Why: {view.sentences.join(" ")}</p>
+          {ignoredNames.length > 0 && <p className="small muted">The AI ignored {ignoredNames.length === 1 ? "a box in frame" : "boxes in frames"} {ignoredNames.join(", ")}. Expand to see {ignoredNames.length === 1 ? "it" : "them"}.</p>}
+          {image && <button type="button" className="ev-expand" onClick={() => setExpanded(true)}>⤢ Expand</button>}
+        </div>
+      </div>
       {view.images.length > 1 && (
         <div className="row">
           {view.images.map((im, i) => {
@@ -194,13 +138,6 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
           })}
         </div>
       )}
-      {withIgnored && (
-        <>
-          <label className="small"><input type="checkbox" checked={ignored} onChange={(e) => setIgnored(e.target.checked)} /> Show ignored</label>
-          {ignoredNames.length > 0 && <p className="small muted">Ignored detections appear in {ignoredNames.length === 1 ? "frame" : "frames"} {ignoredNames.join(", ")}.</p>}
-        </>
-      )}
-      {!view.regions && <CountTable rows={view.rows} />}
       {frames && frames.length > 1 && (
         <div className="ev-sparks">
           {view.rows.map((row) => {
@@ -211,10 +148,6 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
           })}
         </div>
       )}
-      {view.regions && (
-        <ul className="small">{view.regions.map((r, i) => <li key={i}>{rows ? stripLabel(r, rows) : regionLabel(r)}</li>)}</ul>
-      )}
-      <p className="small">Why: {view.sentences.join(" ")}</p>
       {linkLines && <details><summary>Raw output</summary><pre>{JSON.stringify(view.raw, null, 2)}</pre></details>}
       {linkLines && view.cited.map((c) => {
         const line = capturedLine(c);
@@ -225,6 +158,9 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
           </p>
         );
       })}
+      {expanded && (
+        <EvidenceExpand title={view.title} images={view.images} start={shown} frames={frames} regions={view.regions} countRows={view.rows} rxRows={rows} regionLines={regionLines} onClose={closeExpanded} />
+      )}
     </section>
   );
 }

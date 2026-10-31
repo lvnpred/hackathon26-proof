@@ -142,6 +142,34 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .ev-sparks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px }
 .ev-sparks p { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 }
 @media (max-width: 640px) { .ev-sparks { grid-template-columns: minmax(0, 1fr) } }
+/* Picture beside "What the AI saw"; Expand opens the full-screen view */
+.ev-main { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; align-items: start }
+.ev-open { padding: 0; border: 0; background: none; cursor: zoom-in; display: block; width: 100%; min-width: 0 }
+.ev-saw { display: grid; gap: 6px; align-content: start; min-width: 0 }
+.ev-saw ul, .ev-panel ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px }
+.ev-saw p { margin: 0 }
+.ev-saw-row { width: 100%; min-height: 44px; display: flex; justify-content: flex-start; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 8px; border: 1px solid var(--line-control); border-radius: 8px; background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer }
+.ev-saw-row[aria-pressed="true"] { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action) }
+.ev-saw-row > span:first-of-type { flex: 1 1 8em; min-width: 0 }
+.ev-missing { color: #c62828 }
+.ev-expand { justify-self: start; min-height: 44px }
+.ev-modal { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; padding: 16px }
+.ev-modal-body { width: min(1200px, 100%); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 8px; margin: 0 }
+.ev-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px }
+.ev-modal-head p { margin: 0 }
+.ev-modal-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start }
+.ev-stage-big { max-width: none }
+.ev-step { align-items: center; gap: 8px; margin-top: 6px }
+.ev-panel { display: grid; gap: 12px; align-content: start; min-width: 0 }
+.ev-panel section { display: grid; gap: 4px }
+.ev-boxes { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) }
+.ev-boxes button { width: 100%; min-height: 36px; border: 1px solid var(--line-control); border-radius: 6px; background: var(--surface); color: inherit; font: inherit; cursor: pointer }
+.ev-boxes button[aria-pressed="true"] { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action) }
+@media (max-width: 640px) {
+  .ev-main, .ev-modal-grid { grid-template-columns: minmax(0, 1fr) }
+  .ev-modal { padding: 0; place-items: stretch }
+  .ev-modal-body { height: 100vh; max-height: 100vh; border-radius: 0; align-content: start }
+}
 
 /* AI at work */
 .demo-dock .dock-body a { color: var(--surface); text-decoration: underline; min-height: 44px; display: inline-flex; align-items: center; }
@@ -162,6 +190,4 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .crop { flex: none; width: 48px; height: 48px; border-radius: 6px; border: 1px solid var(--line-control); background-repeat: no-repeat; background-color: var(--surface-sunk) }
 .tone-dot { flex: none; width: 12px; height: 12px; border-radius: 50% }
 .tone-dot.green { background: #2e7d32 } .tone-dot.amber { background: #b26a00 } .tone-dot.red { background: #c62828 } .tone-dot.grey { background: #757575 }
-.ev-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 }
-.ev-legend span { display: inline-flex; align-items: center; gap: 4px }
 .ev-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px }

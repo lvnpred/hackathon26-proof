@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  PALETTE, boxLabel, drawItems, hasIgnored, ignoredFrameNames, isDense, labelKind, legendItems, shortConcepts, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
+  PALETTE, boxLabel, drawItems, hasIgnored, ignoredFrameNames, isDense, isFocus, labelKind, sawCount, sawRows, boxGroups, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
   regionLabel, seenCell, startImage, itemName, nudgeLabels,
 } from "./evidence.js";
 
@@ -154,33 +154,44 @@ test("drawItems: regions follow the strip tone, or grey with their label", () =>
   assert.equal(drawItems([], regions, [{ read: "Cetirizine 10 mg", prescribed: false }])[0].colour, "#c62828");
 });
 
-test("isDense: more than 8 boxes, or a full pill wider than 1.5x its box", () => {
+test("isDense: any full pill wider than 1.5x its box, however many boxes", () => {
   const ok = { pill: 100, box: 80 };
-  assert.equal(isDense(Array(8).fill(ok)), false);
-  assert.equal(isDense(Array(9).fill(ok)), true);
-  assert.equal(isDense([{ pill: 120, box: 80 }]), false);
+  assert.equal(isDense(Array(14).fill(ok)), false);
   assert.equal(isDense([{ pill: 100, box: 80 }, { pill: 121, box: 80 }]), true);
   assert.equal(isDense([]), false);
 });
 
-test("labelKind: full pills for short rows and ignored boxes in dense mode, else a small id tag", () => {
-  const short = new Set(["towel clip"]);
-  assert.equal(labelKind(ob("1", "scissors"), { dense: false, showAll: false, short }), "full");
-  assert.equal(labelKind(ob("1", "scissors"), { dense: true, showAll: false, short }), "tag");
-  assert.equal(labelKind(ob("2", "towel clip"), { dense: true, showAll: false, short }), "full");
-  assert.equal(labelKind(ob("3", "scissors", false), { dense: true, showAll: false, short }), "full");
-  assert.equal(labelKind(ob("1", "scissors"), { dense: true, showAll: true, short }), "full");
+test("labelKind: the inline picture always uses tags; the expanded view uses pills unless crowded", () => {
+  assert.equal(labelKind(ob("1", "scissors"), { expanded: false, dense: false, focus: null }), "tag");
+  assert.equal(labelKind(ob("1", "scissors"), { expanded: true, dense: false, focus: null }), "full");
+  assert.equal(labelKind(ob("1", "scissors"), { expanded: true, dense: true, focus: null }), "tag");
+  assert.equal(labelKind(ob("3", "scissors", false), { expanded: true, dense: true, focus: null }), "full");
+  assert.equal(labelKind(ob("1", "scissors"), { expanded: true, dense: true, focus: { concept: "scissors", id: "1" } }), "full");
+  assert.equal(labelKind(ob("2", "scissors"), { expanded: true, dense: true, focus: { concept: "scissors", id: "1" } }), "tag");
+  assert.equal(labelKind(ob("1", "scissors"), { expanded: true, dense: true, focus: { concept: "scissors" } }), "tag");
 });
 
-test("shortConcepts lists the rows that saw fewer than planned", () => {
-  const set = shortConcepts([{ concept: "a", planned: 2, seen: 1 }, { concept: "b", planned: 1, seen: 1 }, { concept: "c", planned: 1, seen: null }]);
-  assert.deepEqual([...set], ["a"]);
-  assert.deepEqual([...shortConcepts(null)], []);
+test("isFocus: everything with no pick, the item's boxes for an item pick, one box for a box pick", () => {
+  assert.equal(isFocus(ob("1", "swab"), null), true);
+  assert.equal(isFocus(ob("1", "swab"), { concept: "swab" }), true);
+  assert.equal(isFocus(ob("1", "clip"), { concept: "swab" }), false);
+  assert.equal(isFocus(ob("2", "swab"), { concept: "swab", id: "1" }), false);
 });
 
-test("legendItems: one colour per kept concept, sorted, ignored boxes left out", () => {
-  const legend = legendItems([ob("1", "scissors"), ob("2", "forceps"), ob("3", "scissors"), ob("4", "clip", false)]);
-  assert.deepEqual(legend, [{ label: "forceps", colour: colourFor("forceps") }, { label: "scissors", colour: colourFor("scissors") }]);
+test("sawRows puts short items first with the number missing; sawCount reads 14 of 15", () => {
+  const rows = sawRows([{ concept: "scissors", planned: 2, seen: 2 }, { concept: "gauze swab", planned: 15, seen: 14 }, { concept: "clip", planned: 1, seen: null }]);
+  assert.deepEqual(rows.map((r) => [r.concept, r.missing]), [["gauze swab", 1], ["scissors", 0], ["clip", 0]]);
+  assert.equal(rows[0].colour, colourFor("gauze swab"));
+  assert.equal(sawCount(rows[0]), "14 of 15");
+  assert.equal(sawCount(rows[2]), "not checked");
+  assert.deepEqual(sawRows(null), []);
+});
+
+test("boxGroups groups kept boxes by item, sorted, and keeps ignored boxes apart", () => {
+  const { groups, ignored } = boxGroups([ob("1", "scissors"), ob("1", "forceps"), ob("2", "scissors"), ob("3", "forceps", false)]);
+  assert.deepEqual(groups.map((g) => [g.concept, g.boxes.map((b) => b.id)]), [["forceps", ["1"]], ["scissors", ["1", "2"]]]);
+  assert.deepEqual(ignored.map((b) => b.id), ["3"]);
+  assert.deepEqual(boxGroups(undefined), { groups: [], ignored: [] });
 });
 
 test("hasIgnored and ignoredFrameNames find the frames with an ignored box", () => {
@@ -215,13 +226,16 @@ test("a photo read with regions names both models in the viewer chip", () => {
   assert.equal(evidenceView({ kind: "monitor", calls, regions: [], raw: {} }, { rows: [] }).chip, "SAM 3.1 + Spark 1.3 · live");
 });
 
-test("the viewer shows the ignored toggle, sparklines and label toggle only when they mean something", async () => {
+test("the viewer lists what the AI saw beside the picture and opens an expanded view", async () => {
   const fs = await import("node:fs");
   const jsx = fs.readFileSync(new URL("./Evidence.jsx", import.meta.url), "utf8");
-  assert.match(jsx, /\{withIgnored && \(/);
+  const big = fs.readFileSync(new URL("./EvidenceExpand.jsx", import.meta.url), "utf8");
+  assert.match(jsx, /aria-label="What the AI saw"/);
+  assert.match(jsx, /Expand/);
   assert.match(jsx, /\{frames && frames\.length > 1 && \(/);
-  assert.match(jsx, /\{dense && <label className="small"><input type="checkbox" checked=\{showAll\}/);
-  assert.match(jsx, /Show all labels/);
-  assert.match(jsx, /aria-label="Colour legend"/);
-  assert.match(jsx, /from "\.\/Evidence\.jsx"|labelKind/);
+  assert.doesNotMatch(jsx, /Show all labels|Show ignored/);
+  assert.match(big, /role="dialog"/);
+  assert.match(big, /aria-modal="true"/);
+  assert.match(big, /Ignored by AI/);
+  assert.match(big, /Escape/);
 });

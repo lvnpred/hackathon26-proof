@@ -185,21 +185,40 @@ export function drawItems(boxes, regions, rows) {
   ];
 }
 
-// Dense frame (Ruling FW-1): more than 8 boxes, or any full pill wider than 1.5x its box. Each entry is {pill, box} in px.
-export const isDense = (sizes) => sizes.length > 8 || sizes.some((s) => s.pill > 1.5 * s.box);
+// A crowded frame: any full pill wider than 1.5x its box. Each entry is {pill, box} in px.
+export const isDense = (sizes) => sizes.some((s) => s.pill > 1.5 * s.box);
 
-// "full" is the concept id score pill, "tag" the small id inside the box corner. Only dense frames use tags, and only
-// for kept boxes of a concept that is not short; short rows and ignored boxes keep the full pill.
-export function labelKind(o, { dense, showAll, short }) {
-  if (!dense || showAll || !o.kept || short.has(o.label)) return "full";
-  return "tag";
+// "full" is the concept id score pill, "tag" the small id in the box corner. The inline picture always uses tags
+// (the list beside it names the items); the expanded view gives full pills unless they would crowd, and always
+// to the box picked in its panel and to ignored boxes.
+export function labelKind(o, { expanded, dense, focus }) {
+  if (!expanded) return "tag";
+  if (focus && focus.id != null && isFocus(o, focus)) return "full";
+  return !o.kept || !dense ? "full" : "tag";
 }
 
-export const shortConcepts = (rows) => new Set((rows || []).filter((r) => known(r.seen) && r.seen < r.planned).map((r) => r.concept));
+// A box stays bright when nothing is picked, when its item is picked, or when it is the picked box.
+export const isFocus = (o, focus) => !focus || (o.label === focus.concept && (focus.id == null || o.id === focus.id));
 
-export function legendItems(boxes) {
-  const labels = [...new Set((boxes || []).filter((o) => o.kept).map((o) => o.label))].sort();
-  return labels.map((label) => ({ label, colour: colourFor(label) }));
+// The "What the AI saw" rows: items that came up short first, each with its colour and the number missing.
+export function sawRows(rows) {
+  const list = (rows || []).map((r) => ({
+    concept: r.concept, name: itemName(r), colour: colourFor(r.concept), seen: r.seen, planned: r.planned,
+    missing: known(r.seen) && r.seen < r.planned ? r.planned - r.seen : 0,
+  }));
+  return [...list.filter((r) => r.missing), ...list.filter((r) => !r.missing)];
+}
+
+export const sawCount = (r) => (known(r.seen) ? `${r.seen} of ${r.planned}` : "not checked");
+
+// The expanded panel: kept boxes grouped by item, and the ignored ones apart.
+export function boxGroups(boxes) {
+  const kept = (boxes || []).filter((o) => o.kept);
+  const concepts = [...new Set(kept.map((o) => o.label))].sort();
+  return {
+    groups: concepts.map((concept) => ({ concept, colour: colourFor(concept), boxes: kept.filter((o) => o.label === concept) })),
+    ignored: (boxes || []).filter((o) => !o.kept),
+  };
 }
 
 export const hasIgnored = (frames) => objectsOf(frames).some((o) => !o.kept);

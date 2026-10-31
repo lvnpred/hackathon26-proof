@@ -48,6 +48,7 @@ class Settings:
     sam_fps: int
     # Doctor Dictation, read over HTTP for the prescription (option A: no shared code).
     dd_base: str = "http://127.0.0.1:8000"
+    ops_agent: bool = False
 
     @property
     def db_path(self) -> Path:
@@ -102,4 +103,5 @@ def get_settings() -> Settings:
         dd_base=os.environ.get(
             "DD_BASE_URL", f"http://127.0.0.1:{os.environ.get('DD_PORT', '8000')}"
         ).rstrip("/"),
+        ops_agent=os.environ.get("CG_OPS_AGENT", "0") == "1",
     )

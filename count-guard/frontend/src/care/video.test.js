@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, taskCheckLine, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
+import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, pickedUpload, taskCheckLine, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const file = (type, mb) => ({ type, size: mb * 1024 * 1024 });
@@ -123,4 +123,15 @@ test("a task's set-up line takes its media from the check", () => {
   };
   assert.equal(taskCheckLine(view, view.tasks[0]), "Checked from photos: everything planned was seen.");
   assert.equal(taskCheckLine(view, view.tasks[1]), "");
+});
+
+test("pickedUpload hands over one video or the photo list, or the problem", () => {
+  assert.deepEqual(pickedUpload([]), { problem: "", upload: null });
+  const clip = file("video/mp4", 1);
+  assert.equal(pickedUpload([clip]).upload, clip);
+  const photos = [file("image/png", 1), file("image/png", 1)];
+  assert.deepEqual(pickedUpload(photos), { problem: "", upload: photos });
+  const bad = pickedUpload([file("text/plain", 1)]);
+  assert.equal(bad.upload, null);
+  assert.ok(bad.problem);
 });

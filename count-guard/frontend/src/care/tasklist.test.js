@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone, taskStatusText, taskGroups, rowMark } from "./tasklist.js";
+import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone, taskStatusText, taskGroups, rowMark, orderDetail } from "./tasklist.js";
 import { H, M } from "./clock.js";
 import { ADVICE } from "../../scripts/demo/beats.mjs";
 
@@ -141,4 +141,23 @@ test("an observation row stays primary even when its time is not yet due", async
   const form = fs.readFileSync(new URL("./ObsForm.jsx", import.meta.url), "utf8");
   assert.match(tasks, /<ObsForm[^>]*primary=\{mark\.primary\}/);
   assert.match(form, /isPrimary \? "primary"/);
+});
+
+test("orderDetail reads who signed, the acknowledgement and each item's task status", () => {
+  const view = {
+    state: "ward",
+    order_list: [{ id: "o1", by: "Dr. A. Rao (synthetic)", at_ms: 12 * M, acknowledged_by: "Nurse Meena (synthetic)", items: [{ text: "Paracetamol 1 g every 6 hours" }, { text: "Review wound" }] }],
+    tasks: [{ id: "t1", order_id: "o1", title: "Paracetamol 1 g every 6 hours", status: "open", due_ms: 370 * M, done: [] }],
+  };
+  const typed = { id: "o1", capability: "typed_orders", written: [] };
+  const detail = orderDetail(view, typed, 0);
+  assert.equal(detail.head, "Signed by Dr. A. Rao at 09:12 \u00b7 acknowledged by Nurse Meena");
+  assert.deepEqual(detail.lines.map((l) => l.text), ["Paracetamol 1 g every 6 hours \u00b7 next at 15:10", "Review wound"]);
+  const dictated = { id: "d1", capability: "orders", written: [{ event_id: "d1" }, { event_id: "o1" }] };
+  assert.equal(orderDetail(view, dictated, 0).lines.length, 2);
+  view.order_list[0].acknowledged_by = null;
+  assert.equal(orderDetail(view, typed, 0).head, "Signed by Dr. A. Rao at 09:12");
+  assert.equal(orderDetail(view, { id: "x", capability: "tray" }, 0), null);
+  assert.equal(orderDetail(view, { id: "zz", capability: "orders", written: [] }, 0), null);
+  assert.doesNotMatch(detail.head, ADVICE);
 });

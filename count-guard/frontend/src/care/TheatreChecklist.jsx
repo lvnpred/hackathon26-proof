@@ -4,7 +4,7 @@ import { canRecord, checklistState, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
 import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
-import { toUpload, videoProblem } from "./video";
+import { pickedUpload } from "./video";
 
 const NURSE = "Nurse Asha (synthetic)";
 const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -21,9 +21,9 @@ function TrayAgain({ busy, onFile }) {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
     if (!files.length) return;
-    const bad = videoProblem(files);
+    const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
-    if (!bad) await onFile(toUpload(files));
+    if (upload) await onFile(upload);
   }
   return (
     <>

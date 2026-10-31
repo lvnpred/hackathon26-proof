@@ -81,7 +81,7 @@ export default function Chart() {
 
       <MedicinesFromHome view={view} role={ward.role} act={act} busy={ward.busy} />
 
-      <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} />
+      <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} />
 
       <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />
     </>

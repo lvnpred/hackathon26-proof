@@ -1,5 +1,5 @@
 import { chipFor } from "./moments.js";
-import { checkLabel, toUpload, videoProblem } from "./video";
+import { checkLabel, pickedUpload } from "./video";
 import { useState } from "react";
 import { Evidence } from "./Evidence.jsx";
 import { seenCell } from "./evidence.js";
@@ -13,9 +13,9 @@ export default function VideoCheck({ title, kind, check, busy, onFile, step = ""
     const files = Array.from(event.target.files || []);
     event.target.value = "";
     if (!files.length) return;
-    const bad = videoProblem(files);
+    const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
-    if (!bad) await onFile(toUpload(files));
+    if (upload) await onFile(upload);
   }
   return (
     <section className="card" aria-label={title}>

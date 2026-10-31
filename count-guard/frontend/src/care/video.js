@@ -44,6 +44,13 @@ export function toUpload(files) {
   return files.length === 1 && VIDEO_TYPES.includes(files[0].type) ? files[0] : files;
 }
 
+// What a file input hands over: the plain problem ("" when none) and the upload, null when nothing can be sent.
+export function pickedUpload(files) {
+  if (!files.length) return { problem: "", upload: null };
+  const problem = videoProblem(files);
+  return { problem, upload: problem ? null : toUpload(files) };
+}
+
 // An unknown match reads as "kept, not checked".
 export function checkLabel(check) {
   if (!check) return "";

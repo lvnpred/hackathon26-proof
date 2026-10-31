@@ -1,5 +1,6 @@
 import { hhmm } from "./clock.js";
 import { taskDue, waitedText } from "./derive.js";
+import { displayName } from "./names.js";
 
 const ORDER = { overdue: 0, due: 1, running: 2, later: 3, paused: 3, done: 4, closed: 5 };
 
@@ -67,6 +68,21 @@ export function orderLines(order, tasks) {
   });
   for (const task of mine.filter((candidate) => !used.has(candidate.id))) lines.push({ key: task.id, text: task.title, task });
   return lines;
+}
+
+// The detail under a signed-order row in Record & evidence: who signed and when, the acknowledgement,
+// and each item with its task status. Null for a moment that is not a signed order.
+export function orderDetail(view, moment, nowMs) {
+  if (!moment || (moment.capability !== "typed_orders" && moment.capability !== "orders")) return null;
+  const ids = [moment.id, ...(moment.written || []).map((w) => w.event_id)];
+  const order = (view?.order_list || []).find((o) => ids.includes(o.id));
+  if (!order) return null;
+  const ack = order.acknowledged_by ? ` \u00b7 acknowledged by ${displayName(order.acknowledged_by)}` : "";
+  const lines = orderLines(order, view.tasks || []).map(({ key, text, task }) => ({
+    key,
+    text: task ? `${text} \u00b7 ${taskStatusText(task, nowMs, view.state)}` : text,
+  }));
+  return { head: `Signed by ${displayName(order.by)} at ${hhmm(order.at_ms)}${ack}`, lines };
 }
 
 // What happens to an order: its acknowledgement, or what the visit state means for it.

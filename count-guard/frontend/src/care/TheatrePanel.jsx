@@ -3,6 +3,7 @@ import { cameraPrefill, closingBody } from "./capture";
 import { displayName } from "./names";
 import { packLine, swabFigures } from "./theatre";
 import VideoCheck from "./VideoCheck";
+import { momentFor } from "./moments.js";
 import { latestCheck, swabTotal } from "./video";
 
 const NURSE = "Nurse Asha (synthetic)";
@@ -95,6 +96,7 @@ export default function TheatrePanel({ episodeId, view, busy, act, upload, repla
           episodeId={episodeId}
           version={view.timeline?.length}
           check={thisStay}
+          moment={momentFor(view, thisStay?.id)}
           busy={busy}
           onFile={(file) => upload("/video", file, { check: "swabs", by })}
         />

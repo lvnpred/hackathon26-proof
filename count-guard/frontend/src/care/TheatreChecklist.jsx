@@ -2,6 +2,7 @@ import { useState } from "react";
 import TheatrePanel from "./TheatrePanel";
 import { canRecord, checklistState, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
+import { momentFor } from "./moments.js";
 
 const NURSE = "Nurse Asha (synthetic)";
 const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -16,7 +17,7 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
   const nurse = role === "nurse";
   if (step.key === "tray") {
     return nurse
-      ? <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={view.tray?.latest} busy={busy} onFile={(file) => upload("/video", file, { check: "tray", by })} />
+      ? <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={view.tray?.latest} moment={momentFor(view, view.tray?.latest?.id)} busy={busy} onFile={(file) => upload("/video", file, { check: "tray", by })} />
       : <p className="small muted">The theatre nurse records the tray check.</p>;
   }
   if (step.key === "count") {
@@ -49,7 +50,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
             {(step.status === "done" || step.status === "open") && <Line step={step} />}
             {!step.done && !canRecord(view, step.key) && <p className="step-line muted">{step.title} · {step.wait}</p>}
             {step.key === "tray" && step.done && flagged && !canRecord(view, "tray") && (
-              <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={view.tray.latest} busy={busy} hideUpload onFile={() => {}} />
+              <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={view.tray.latest} moment={momentFor(view, view.tray.latest.id)} busy={busy} hideUpload onFile={() => {}} />
             )}
             {canRecord(view, step.key) && (
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} />

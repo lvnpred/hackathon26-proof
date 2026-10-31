@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useMatch, useSearchParams } from "react-router-dom";
 import { chipFor, findingFor, statusLabel } from "./moments.js";
-import { TABS, correctionLine, modelRows, readInspect, recordLine, resolveMoment, tabsFor } from "./inspect.js";
+import { TABS, correctionLine, inspectEpisode, modelRows, readInspect, recordLine, resolveMoment, tabsFor } from "./inspect.js";
 import { findPatient } from "./Patients";
+import { PhotoFound, RawOutput, VisualFound, VisualInput } from "./InspectVisual.jsx";
 
 // Registration point: Tasks 3-5 fill each kind with { Input, Found }; the ops agent adds `agent`.
 // Both components take { moment, episodeId, view, role, lens, focus, setFocus }.
 // An unregistered kind renders the finding only.
 export const KIND_VIEWS = {
-  visual: null,
-  photo_read: null,
+  visual: { Input: VisualInput, Found: VisualFound },
+  photo_read: { Input: VisualInput, Found: PhotoFound },
   voice: null,
   answer: null,
   rule: null,
@@ -41,7 +42,7 @@ export function useInspector() {
   return { momentId: read?.momentId ?? null, episodeId: read?.episodeId ?? null, focus: read?.focus ?? null, openInspector, closeInspector };
 }
 
-function ModelTab({ moment }) {
+function ModelTab({ moment, episodeId }) {
   const rows = modelRows(moment.calls, moment.handmade);
   return (
     <div className="inspector-model">
@@ -52,7 +53,7 @@ function ModelTab({ moment }) {
         </table>
       ) : <p>No model call.</p>}
       {moment.kind === "rule" && moment.refs?.rule && <p>{moment.refs.rule}</p>}
-      <p className="muted">No raw output is kept for this result.</p>
+      <RawOutput moment={moment} episodeId={episodeId} />
     </div>
   );
 }
@@ -74,19 +75,19 @@ function RecordTab({ moment, episodeId, lens }) {
   );
 }
 
-function Body({ moment, tab, episodeId, view, role, lens }) {
-  const [focus, setFocus] = useState(null);
+function Body({ moment, tab, episodeId, view, role, lens, initialFocus }) {
+  const [focus, setFocus] = useState(initialFocus);
   const views = KIND_VIEWS[moment.kind];
   const props = { moment, episodeId, view, role, lens, focus, setFocus };
   const finding = <p>{findingFor(moment, lens)}</p>;
   if (tab === "record") return <RecordTab moment={moment} episodeId={episodeId} lens={lens} />;
-  if (tab === "model") return <ModelTab moment={moment} />;
+  if (tab === "model") return <ModelTab moment={moment} episodeId={episodeId} />;
   const View = views?.[tab === "input" ? "Input" : "Found"];
   return View ? <View {...props} /> : finding;
 }
 
 export default function Inspector({ ward }) {
-  const { momentId, episodeId: paramEpisode, closeInspector } = useInspector();
+  const { momentId, episodeId: paramEpisode, focus: urlFocus, closeInspector } = useInspector();
   const [tab, setTab] = useState("found");
   const chartId = useMatch("/chart/:episodeId")?.params.episodeId;
   useEffect(() => { setTab("found"); }, [momentId]);
@@ -100,7 +101,7 @@ export default function Inspector({ ward }) {
 
   const lens = ward.role === "patient" ? "patient" : "staff";
   const own = ward.role === "patient" ? findPatient(ward.patients, ward.patientBed)?.id : null;
-  const episodeId = paramEpisode || chartId || own || null;
+  const episodeId = inspectEpisode({ lens, param: paramEpisode, chartId, own });
   const patient = (ward.patients || []).find((p) => p.id === episodeId);
   const moment = resolveMoment(patient?.view?.ai_moments, momentId, lens);
   const status = moment && statusLabel(moment, ward.role);
@@ -126,7 +127,7 @@ export default function Inspector({ ward }) {
             ))}
           </div>
           <div role="tabpanel" className="inspector-panel">
-            <Body moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} />
+            <Body key={moment.id} initialFocus={urlFocus} moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} />
           </div>
         </>
       )}

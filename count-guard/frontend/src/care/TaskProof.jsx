@@ -3,6 +3,7 @@ import { EvidenceThumb } from "./Evidence.jsx";
 import ObsForm from "./ObsForm";
 import { prefillObs } from "./capture";
 import { doneBody, MATCH_LABEL, newestPhoto, sourceLabel } from "./drafts";
+import { chipFor, momentFor } from "./moments.js";
 import { obsValues } from "./tasklist";
 
 const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v)]));
@@ -42,6 +43,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
     if (await act(`/tasks/${task.id}/done`, { by, ...out.body })) onClear();
   }
 
+  const photoMoment = momentFor(view, photo?.check?.evidence_id);
   return (
     <section className="card" aria-label="Confirm task">
       <p className="label">Confirm task</p>
@@ -60,7 +62,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       {photo && (
         <p className="small">
           <span className={`pill ${photo.check?.match === "mismatch" ? "sun" : "info"}`}>{MATCH_LABEL[photo.check?.match] || MATCH_LABEL.none}</span>{" "}
-          <span className="muted">({sourceLabel(photo.check?.source)})</span>{" "}
+          {photoMoment && <><span className="chip">{chipFor(photoMoment)}</span>{" "}</>}
           {photo.check?.why}
         </p>
       )}

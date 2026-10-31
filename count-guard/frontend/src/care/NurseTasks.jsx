@@ -7,6 +7,7 @@ import VideoCheck from "./VideoCheck";
 import { answerHow } from "./askText";
 import { lastDoneLine, rowSession } from "./drafts";
 import { rowMark, taskGroups } from "./tasklist";
+import { momentFor } from "./moments.js";
 import { latestCheck, taskVideoLabel } from "./video";
 
 function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProof, onSession }) {
@@ -59,6 +60,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           episodeId={view.episode?.id}
           version={view.timeline?.length}
           check={latestCheck(view, "setup", task.id)}
+          moment={momentFor(view, latestCheck(view, "setup", task.id)?.id)}
           busy={busy}
           onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
         />

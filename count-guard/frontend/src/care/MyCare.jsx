@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { label } from "./clock";
-import { MATCH_LABEL, proofOf, sourceLabel } from "./drafts";
+import { MATCH_LABEL, proofOf } from "./drafts";
+import { chipFor, momentFor } from "./moments.js";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
@@ -41,7 +42,7 @@ export default function MyCare() {
                         <p className="small muted" key={`${task.id}:${index}`}>
                           Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
                           {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
-                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> <span className="muted">({sourceLabel(d.source || proof.photo?.check?.source)})</span></>}
+                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> {momentFor(view, proof.photo?.check?.evidence_id) && <span className="chip">{chipFor(momentFor(view, proof.photo.check.evidence_id))}</span>}</>}
                         </p>
                       );
                     })}

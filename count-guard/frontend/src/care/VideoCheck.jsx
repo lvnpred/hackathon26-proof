@@ -1,4 +1,4 @@
-import { sourceLabel } from "./drafts";
+import { chipFor } from "./moments.js";
 import { checkLabel, toUpload, videoProblem } from "./video";
 import { useState } from "react";
 import { Evidence } from "./Evidence.jsx";
@@ -7,7 +7,7 @@ import { seenCell } from "./evidence.js";
 const DROP_LABEL = { tray: "Upload tray video or photos", swabs: "Upload a clip or photos of the returned swabs" };
 
 // A tray, set-up or swab clip: pick it, and the result shows beside the planned list. A flag never blocks.
-export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "", episodeId, version = 0 }) {
+export default function VideoCheck({ title, kind, check, busy, onFile, hideUpload = false, step = "", episodeId, version = 0, moment = null }) {
   const [problem, setProblem] = useState("");
   async function pick(event) {
     const files = Array.from(event.target.files || []);
@@ -27,18 +27,18 @@ export default function VideoCheck({ title, kind, check, busy, onFile, hideUploa
         </label>
       )}
       {problem && <p className="note" role="alert">{problem}</p>}
-      {check && <CheckResult check={check} episodeId={episodeId} version={version} />}
+      {check && <CheckResult check={check} episodeId={episodeId} version={version} moment={moment} />}
     </section>
   );
 }
 
-function CheckResult({ check, episodeId, version }) {
+function CheckResult({ check, episodeId, version, moment }) {
   const proved = Boolean(check.evidence_id && episodeId);
   return (
     <div>
       <p className="small">
         <span className={`pill ${check.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span>{" "}
-        <span className="muted">({sourceLabel(check.source)})</span> {check.why}
+        {moment && <><span className="chip">{chipFor(moment)}</span>{" "}</>}{check.why}
       </p>
       {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} version={version} />}
       {!proved && (check.rows || []).length > 0 && (

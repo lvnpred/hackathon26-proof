@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { TABS, modelRows, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
+import { REGION_FIELD, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
 
 const src = (f) => fs.readFileSync(new URL(f, import.meta.url), "utf8");
 
@@ -56,4 +56,44 @@ test("Inspector renders inside .app without a portal or dialog role", () => {
   assert.match(s, /replace: true/);
   assert.match(s, /export const KIND_VIEWS/);
   assert.match(src("./CareShell.jsx"), /from "\.\/Inspector\.jsx"/);
+});
+
+test("regionFieldLine names the form field each value filled", () => {
+  assert.equal(regionFieldLine({ label: "SBP", value: "88" }, "monitor"), "SBP 88 \u2192 Obs \u00b7 systolic");
+  assert.equal(regionFieldLine({ label: "HR", value: null }, "monitor"), "HR not read");
+  assert.equal(regionFieldLine({ label: "Amlodipine 10 mg", value: null }, "strip"), "Amlodipine 10 mg \u2192 Dose \u00b7 medicine");
+  assert.equal(regionFieldLine({ label: null }, "strip"), "not read");
+  assert.equal(regionFieldLine({ label: "Amlodipine 10 mg" }, "medicines"), "Amlodipine 10 mg \u2192 Medicines from home");
+  assert.equal(REGION_FIELD.monitor.DBP, "Obs \u00b7 diastolic");
+});
+
+test("focusRegion reads a digit string or a region object", () => {
+  assert.equal(focusRegion("1"), 1);
+  assert.equal(focusRegion({ region: 2 }), 2);
+  assert.equal(focusRegion("amlodipine"), null);
+  assert.equal(focusRegion(null), null);
+});
+
+test("a patient inspects only their own episode, whatever ?episode= says", () => {
+  assert.equal(inspectEpisode({ lens: "patient", param: "ep-other", chartId: null, own: "ep-mine" }), "ep-mine");
+  assert.equal(inspectEpisode({ lens: "staff", param: "ep-2", chartId: "ep-1", own: null }), "ep-2");
+  assert.equal(inspectEpisode({ lens: "staff", param: null, chartId: "ep-1", own: null }), "ep-1");
+});
+
+test("Inspector seeds focus from the URL and resets per moment", () => {
+  const body = src("Inspector.jsx");
+  assert.match(body, /useState\(initialFocus\)/);
+  assert.match(body, /<Body key=\{moment\.id\} initialFocus=\{urlFocus\}/);
+  assert.match(body, /inspectEpisode\(/);
+});
+
+test("the Model tab shows raw output through RawOutput", () => {
+  assert.match(src("Inspector.jsx"), /<RawOutput moment=\{moment\}/);
+  assert.match(src("Inspector.jsx"), /visual: \{ Input: VisualInput, Found: VisualFound \}/);
+});
+
+test("VideoCheck shows the moment chip, not the source label", () => {
+  assert.doesNotMatch(src("VideoCheck.jsx"), /sourceLabel\(/);
+  assert.doesNotMatch(src("TaskProof.jsx"), /sourceLabel\(photo/);
+  assert.doesNotMatch(src("MyCare.jsx"), /sourceLabel\(/);
 });

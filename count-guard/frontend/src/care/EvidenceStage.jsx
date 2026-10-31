@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { drawItems, isDense, isFocus, labelKind, nudgeLabels } from "./evidence.js";
+import { drawItems, isDense, isFocus, isFocusRegion, labelKind, nudgeLabels } from "./evidence.js";
 
 // Draw boxes (normalised [x, y, w, h]) over the image's displayed size. Kept: solid colour. Ignored: dashed grey.
 // A white outer stroke keeps a box visible on any picture. The inline picture labels each box with a small id tag;
@@ -20,7 +20,10 @@ function draw(canvas, img, { boxes, regions, labels, rows, expanded, focus }) {
   const FONT = Math.max(10, Math.round(12 * scale));
   ctx.font = `${FONT}px sans-serif`;
   const items = drawItems(boxes, regions, rows);
-  const alpha = (it) => (it.box && !isFocus(it.box, focus) ? 0.25 : 1);
+  const alpha = (it) => {
+    if (it.region != null) return isFocusRegion(it.region, focus) ? 1 : 0.25;
+    return it.box && focus?.region == null && !isFocus(it.box, focus) ? 0.25 : 1;
+  };
   for (const it of items) {
     const [x, y, bw, bh] = it.bbox;
     ctx.globalAlpha = alpha(it);

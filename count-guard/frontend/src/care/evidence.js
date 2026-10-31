@@ -179,9 +179,9 @@ const EDGE = "#888";
 export function drawItems(boxes, regions, rows) {
   return [
     ...(boxes || []).map((o) => ({ bbox: o.bbox, colour: o.kept ? colourFor(o.label) : EDGE, dashed: !o.kept, ignored: !o.kept, box: o, text: boxLabel(o) })),
-    ...(regions || []).filter((r) => r.bbox).map((r) => (rows
-      ? { bbox: r.bbox, colour: TONE_COLOUR[stripTone(stripMatch(rows[r.row]))], dashed: false, text: stripLabel(r, rows) }
-      : { bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r) })),
+    ...(regions || []).map((r, i) => ({ r, i })).filter(({ r }) => r.bbox).map(({ r, i }) => (rows
+      ? { bbox: r.bbox, colour: TONE_COLOUR[stripTone(stripMatch(rows[r.row]))], dashed: false, text: stripLabel(r, rows), region: i }
+      : { bbox: r.bbox, colour: EDGE, dashed: false, text: regionLabel(r), region: i })),
   ];
 }
 
@@ -196,6 +196,9 @@ export function labelKind(o, { expanded, dense, focus }) {
   if (focus && focus.id != null && isFocus(o, focus)) return "full";
   return !o.kept || !dense ? "full" : "tag";
 }
+
+// A photo region stays bright when no region is picked (or the pick is not a region) or it is the picked one.
+export const isFocusRegion = (i, focus) => !focus || focus.region == null || focus.region === i;
 
 // A box stays bright when nothing is picked, when its item is picked, or when it is the picked box.
 export const isFocus = (o, focus) => !focus || (o.label === focus.concept && (focus.id == null || o.id === focus.id));

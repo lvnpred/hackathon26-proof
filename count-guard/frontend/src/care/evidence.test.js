@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  PALETTE, boxLabel, drawItems, hasIgnored, ignoredFrameNames, isDense, isFocus, labelKind, sawCount, sawRows, boxGroups, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
+  isFocusRegion, PALETTE, boxLabel, drawItems, hasIgnored, ignoredFrameNames, isDense, isFocus, labelKind, sawCount, sawRows, boxGroups, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
   regionLabel, seenCell, startImage, itemName, nudgeLabels,
 } from "./evidence.js";
 
@@ -238,4 +238,19 @@ test("the viewer lists what the AI saw beside the picture and opens an expanded 
   assert.match(big, /aria-modal="true"/);
   assert.match(big, /Ignored by AI/);
   assert.match(big, /Escape/);
+});
+
+test("isFocusRegion", () => {
+  assert.equal(isFocusRegion(1, { region: 1 }), true);
+  assert.equal(isFocusRegion(0, { region: 1 }), false);
+  assert.equal(isFocusRegion(0, null), true);
+  assert.equal(isFocusRegion(0, { concept: "x" }), true);
+});
+
+test("visual Found falls back without a sidecar", () => {
+  assert.equal(evidenceView(null, { rows: [] }).fallback, true);
+});
+
+test("the twin of backend visual_finding", () => {
+  assert.equal(explain([{ concept: "needle holder", planned: 3, seen: 2 }], null, 0.45, "photos")[0], "Saw 2 of 3 needle holders.");
 });

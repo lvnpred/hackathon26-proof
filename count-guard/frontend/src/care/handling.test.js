@@ -31,6 +31,9 @@ test("undoLabel", () => {
   assert.equal(undoLabel(600_000, 120_000), "Undo (8 min)");
   assert.equal(undoLabel(600_000, 600_000), "");
   assert.equal(undoLabel(null, 0), "");
+  assert.equal(undoLabel(600_000, 570_000), "Undo (1 min)");
+  assert.equal(undoLabel(600_000, 510_000), "Undo (2 min)");
+  assert.equal(undoLabel(600_000, 700_000), "");
 });
 
 test("handlingRows keeps order, strips synthetic and marks undone", () => {
@@ -71,7 +74,7 @@ test("agentMoment is a full moment (PF-3)", () => {
   assert.equal(m.level, "act");
   assert.equal(m.undoUntilMs, 10 * MIN);
   assert.deepEqual(m.refs, { workId: "w1", episodeId: "ep1", reason: "Obs were overdue", inputs: m.inputs, level: "act", undoUntilMs: 10 * MIN });
-  assert.equal(agentMoment(row("w2", { status: "undone" }), "ep1").status, "failed");
+  assert.equal(agentMoment(row("w2", { status: "undone" }), "ep1").status, "undone");
   const p = agentMoment(prop("p1"), "ep1");
   assert.deepEqual([p.status, p.owner, p.title], ["open", "doctor", "Ready to move to the ward"]);
 });
@@ -81,7 +84,8 @@ test("agentMoments resolve for staff, never for the patient, and work with chip 
   assert.deepEqual(list.map((m) => m.id), ["w1", "w2", "p1"]);
   assert.equal(resolveMoment(list, "w1", "patient"), null);
   assert.equal(resolveMoment(list, "w1", "staff").id, "w1");
-  assert.equal(chipFor(list[0]), "");
+  assert.equal(chipFor(list[0]), "Rules");
+  assert.equal(statusLabel(list[1], "nurse").text, "Undone");
   assert.equal(statusLabel(list[0], "nurse").text, "Recorded");
   assert.equal(statusLabel(list[2], "doctor").text, "Needs you");
   assert.equal(statusLabel(list[2], "nurse").text, "Waiting for the doctor");

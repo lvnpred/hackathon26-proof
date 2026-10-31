@@ -41,9 +41,9 @@ export function agentMoment(row, episodeId) {
     id: workId, kind: "agent", capability: "ops",
     title: displayName(proposal ? row.sentence : row.summary),
     finding: reason, patient_finding: null,
-    status: proposal ? "open" : row.status === "undone" ? "failed" : "recorded",
+    status: proposal ? "open" : row.status === "undone" ? "undone" : "recorded",
     owner: proposal ? row.owner_role : null,
-    calls: [], handmade: false, written: [],
+    calls: [], handmade: false, written: [], source: "rules",
     refs: { workId, episodeId, reason, inputs, level, undoUntilMs },
     workId, episodeId, reason, inputs, level, undoUntilMs,
   };

@@ -14,6 +14,7 @@ export function statusLabel(moment, role) {
   if (status === "open") return { text: owner ? `Waiting for ${WHO[owner]}` : "Open", tone: "grey" };
   if (status === "matches") return { text: "Matches", tone: "green" };
   if (status === "recorded") return { text: "Recorded", tone: "green" };
+  if (status === "undone") return { text: "Undone", tone: "grey" };
   return { text: "Failed", tone: "grey" };
 }
 

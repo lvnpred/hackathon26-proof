@@ -35,3 +35,27 @@ test("the patient's product bar shows no doctor chip (the greeting row keeps it)
   const today = fs.readFileSync(new URL("./Today.jsx", import.meta.url), "utf8");
   assert.match(today, /<DoctorChip/);
 });
+
+test("the AI chip and pause switch are staff only and posted by the dock role", async () => {
+  const fs = await import("node:fs");
+  const dock = fs.readFileSync(new URL("./DemoDock.jsx", import.meta.url), "utf8");
+  assert.match(dock, /canSeeAi\(ward\.role\)/);
+  assert.match(dock, /staff && paused != null/);
+  assert.match(dock, /Demo dock \(\$\{ROLE_NAME\[role\]\}\)/);
+  assert.match(dock, /\/journey\/ops\/\$\{paused \? "resume" : "pause"\}/);
+  const { canSeeAi } = await import("./ai.js");
+  assert.equal(canSeeAi("patient"), false);
+});
+
+test("the AI feed reads the ops feed, checks it and reloads after Undo", async () => {
+  const fs = await import("node:fs");
+  const feed = fs.readFileSync(new URL("./AiFeed.jsx", import.meta.url), "utf8");
+  assert.match(feed, /\/journey\/ops\/feed\?ids=\$\{ids\}/);
+  assert.match(feed, /isFeed\(out\)/);
+  assert.match(feed, /aria-label="AI did this"/);
+  assert.match(feed, /Nothing handled yet\./);
+  assert.match(feed, /ward\.act\(r\.episodeId[\s\S]*await load\(\)/);
+  assert.match(feed, /\{r\.undo &&/);
+  const dash = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
+  assert.ok(dash.indexOf("<ModelCards") < dash.indexOf("<AiFeed"));
+});

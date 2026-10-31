@@ -4,6 +4,7 @@ import { PageLead } from "../App";
 import { PIPELINES, PIPELINE_KIND, STAFF_ONLY, activityRows, canSeeAi, emptyLine, storyCounts, storyLine } from "./ai.js";
 import { shortName } from "./names.js";
 import { useCareWard } from "./CareShell";
+import AiFeed from "./AiFeed.jsx";
 import ActivityList from "./ActivityList.jsx";
 import ModelCards from "./ModelCards.jsx";
 
@@ -16,6 +17,7 @@ export default function AiDashboard() {
   if (!staff) return <PageLead kicker="Staff" title="AI activity" body={STAFF_ONLY} />;
   const story = storyLine(storyCounts(rows));
   const shown = filter ? rows.filter((r) => r.moment.kind === filter) : rows;
+  const ids = ward.patients.map((p) => p.id).join(",");
   const first = ward.patients[0];
   const empty = first ? <Link to={`/chart/${first.id}`}>{emptyLine(shortName(first.name))}</Link> : "Nothing yet today.";
   return (
@@ -34,7 +36,8 @@ export default function AiDashboard() {
         })}
       </ol>
       <ActivityList rows={shown} role={ward.role} empty={rows.length === 0 ? empty : "Nothing here for this filter."} />
-      <ModelCards ids={ward.patients.map((p) => p.id).join(",")} />
+      <ModelCards ids={ids} />
+      <AiFeed ids={ids} nowMs={ward.nowMs} ward={ward} />
     </>
   );
 }

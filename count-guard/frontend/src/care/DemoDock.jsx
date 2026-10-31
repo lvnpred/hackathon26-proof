@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Banner } from "../App";
 import { call } from "../journey";
 import { label, skipTargets } from "./clock";
-import { ROLE_NAME, dockSummary, modelsText } from "./dock";
+import { canSeeAi } from "./ai.js";
+import { ROLE_NAME, aiChip, dockSummary, modelsText, pauseLabel } from "./dock";
 import Fault from "./Fault";
 import { CLOCK } from "./faults";
 import { findPatient } from "./Patients";
@@ -17,10 +18,24 @@ function useModelsLive() {
   return live;
 }
 
+// Whether the ops agent is paused. Null until the server answers; staff only.
+function useOpsPaused(staff) {
+  const [paused, setPaused] = useState(null);
+  useEffect(() => {
+    if (!staff) return;
+    call("/journey/ops").then((o) => setPaused(Boolean(o.paused))).catch(() => setPaused(null));
+  }, [staff]);
+  const toggle = (role) => call(`/journey/ops/${paused ? "resume" : "pause"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by: `Demo dock (${ROLE_NAME[role]})` }) })
+    .then((o) => setPaused(Boolean(o.paused))).catch(() => {});
+  return [paused, toggle];
+}
+
 // Every demo control in one dark strip: role, patient, clock, the synthetic-data and research notices.
 export default function DemoDock({ ward, showClock, pick }) {
   const [open, setOpen] = useState(false);
   const live = useModelsLive();
+  const staff = canSeeAi(ward.role);
+  const [paused, togglePause] = useOpsPaused(staff);
   return (
     <section className={`demo-dock${open ? " open" : ""}`} aria-label="Demo">
       <button type="button" className="dock-summary" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
@@ -48,6 +63,12 @@ export default function DemoDock({ ward, showClock, pick }) {
             <button type="button" disabled={ward.busy} onClick={ward.reset}>Reset</button>
             <Fault fault={ward.fault} episodeId={null} only={[CLOCK]} />
           </div>
+        )}
+        {staff && paused != null && (
+          <>
+            <span className="pill">{aiChip(paused)}</span>
+            <button type="button" onClick={() => togglePause(ward.role)}>{pauseLabel(paused)}</button>
+          </>
         )}
         <span>{modelsText(live)}</span>
       </div>

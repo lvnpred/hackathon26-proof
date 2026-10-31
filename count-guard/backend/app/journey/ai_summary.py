@@ -6,7 +6,8 @@ import statistics
 
 from app.journey.ask import short_name
 from app.journey.live import mode_of
-from app.journey.stories import clock, plain
+from app.journey.clocktext import latest_ms, when_text
+from app.journey.stories import plain
 
 MODELS = [
     {"key": "voice", "name": "Muse Voice", "role": "Writes down what staff say: orders, discharges, answers and task updates."},
@@ -60,6 +61,7 @@ def _card(model: dict, rows: list[dict], configured: dict) -> dict:
 
 
 def _recent(rows: list[dict]) -> list[dict]:
+    now_ms = max((r["event"]["ts_ms"] for r in rows), default=0)  # the newest call is the ward's now
     names = {m["key"]: m["name"] for m in MODELS}
     newest_first = sorted(rows, key=lambda r: -r["event"]["ts_ms"])  # stable: ties keep record order
     out = []
@@ -67,7 +69,7 @@ def _recent(rows: list[dict]) -> list[dict]:
         event, call = r["event"], r["call"]
         out.append({
             "at_ms": event["ts_ms"],
-            "when": clock(event["ts_ms"]),
+            "when": when_text(event["ts_ms"], now_ms),
             "model": call.get("model"),
             "name": names.get(call.get("model"), call.get("model")),
             "mode": mode_of(call.get("source", "")) or "prepared",

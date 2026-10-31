@@ -80,7 +80,7 @@ export default function Chart() {
       <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} fault={ward.fault} />
       <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES, OPS_SCOPE]} />
 
-      <MedicinesFromHome view={view} role={ward.role} act={act} busy={ward.busy} />
+      <MedicinesFromHome view={view} role={ward.role} nowMs={ward.nowMs} act={act} busy={ward.busy} />
 
       <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} />
 

@@ -144,7 +144,7 @@ test("header, verb and photo day", () => {
   assert.equal(inboxHeader("R. Kumar, 58 M (synthetic)", items), "From R. Kumar \u00b7 3 waiting");
   assert.equal(inboxHeader("R. Kumar, 58 M", []), "From R. Kumar");
   assert.equal(sendVerb("R. Kumar, 58 M (synthetic)"), "Send to R. Kumar");
-  assert.equal(photoDay(3 * 24 * H + 5 * M), "Day 3");
+  assert.equal(photoDay(3 * 24 * H + 5 * M), "Thu 5 Nov");
 });
 test("inbox copy has no advice words", () => {
   for (const s of ["Type or say your answer", "+ add a note", "After surgery", "From R. Kumar \u00b7 2 waiting"]) assert.doesNotMatch(s, ADVICE);

@@ -102,8 +102,8 @@ def test_record_lines_from_a_full_record(tmp_path):
         "Prescription from Dr. A. Rao (synthetic): Tab. Amlodipine 5 mg — 1 in the morning; After food; for 30 days."
     )
     assert "Discharge summary from Dr. A. Rao (synthetic): Wound is clean." in {l["text"] for l in lines}
-    assert any(l["text"].startswith("Order signed by Dr. A. Rao (synthetic) at Day 0 09:00: BP every 1 h") for l in lines)
-    assert any(l["kind"] == "task" and l["text"].endswith("done by Nurse Asha (synthetic) at Day 0 09:00.") for l in lines)
+    assert any(l["text"].startswith("Order signed by Dr. A. Rao (synthetic) at 09:00: BP every 1 h") for l in lines)
+    assert any(l["kind"] == "task" and l["text"].endswith("done by Nurse Asha (synthetic) at 09:00.") for l in lines)
     assert any(l["text"].startswith("Warning sign on your discharge card: ") for l in lines)
 
 

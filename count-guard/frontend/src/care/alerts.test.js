@@ -3,7 +3,7 @@ import test from "node:test";
 import { showTrayFlag } from "./derive.js";
 import { SAFETY, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
 
-const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "Day 0 10:00" });
+const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "10:00" });
 const pill = (episodeId, name, who, what, role = "nurse") => ({ key: `${episodeId}:${what}`, episodeId, name, who, what, role });
 
 test("surname", () => assert.equal(surname("R. Kumar, 58 M (synthetic)"), "Kumar"));

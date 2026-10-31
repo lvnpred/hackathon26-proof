@@ -313,8 +313,8 @@ def test_handover_template_lists_recorded_facts_with_their_events(tmp_path):
     _, base = _ward(api)
     handover = _handover(api, base)
     texts = [line["text"] for line in handover["lines"]]
-    assert "Day 0 10:00: Paracetamol 1 g logged by Nurse A." in texts
-    assert "Paracetamol is ordered every 6 h; by that order the next is due Day 0 16:00." in texts
+    assert "10:00: Paracetamol 1 g logged by Nurse A." in texts
+    assert "Paracetamol is ordered every 6 h; by that order the next is due 16:00." in texts
     assert "Still open: Systolic BP 86 is below the limit of 90 set by Dr. Test." in texts
     assert all(line["evidence"] for line in handover["lines"])
     assert handover["wording"] == "template" and handover["model_note"] == "no Meta Model API key"
@@ -327,7 +327,7 @@ def test_handover_keeps_a_spark_rewording_that_adds_nothing(tmp_path):
 
     def write(prompt):
         seen["prompt"] = prompt
-        return "Paracetamol 1 g was logged at Day 0 10:00 by Nurse A. Systolic BP 86 is below the limit of 90."
+        return "Paracetamol 1 g was logged at 10:00 by Nurse A. Systolic BP 86 is below the limit of 90."
 
     api.app.state.handover_write = write
     handover = _handover(api, base)
@@ -371,7 +371,7 @@ def test_accepting_a_handover_completes_the_nurse_story(tmp_path):
     assert next(step for step in nurse["steps"] if step["id"] == "handover")["done"] is True
     assert api.post(f"{base}/handover/nope/accept", json={"by": "x"}).status_code == 404
     second = _handover(api, base, at_ms=5 * H)
-    assert second["since"] == "Day 0 12:00"  # starts where the last handover ended
+    assert second["since"] == "12:00"  # starts where the last handover ended
 
 
 def test_handover_after_discharge_drops_ward_due_times(tmp_path):

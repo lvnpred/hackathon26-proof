@@ -194,8 +194,8 @@ def test_strip_photo_batch_is_one_moment_with_calls_on_the_first_row():
 
 
 def test_line_of_is_a_citable_line():
-    line = line_of(_ev("g1", "dose.given", 0, name="Paracetamol", amount="1 g", by=ASHA))
-    assert set(line) == {"id", "type", "when", "by", "plain"} and line["when"] == "Day 0 09:00" and line["by"] == ASHA
+    line = line_of(_ev("g1", "dose.given", 0, name="Paracetamol", amount="1 g", by=ASHA), 0)
+    assert set(line) == {"id", "type", "when", "by", "plain"} and line["when"] == "09:00" and line["by"] == ASHA
 
 
 def test_view_has_ai_moments(tmp_path):

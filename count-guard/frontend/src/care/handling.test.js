@@ -154,7 +154,7 @@ test("every C6 UI string passes the no-advice check", () => {
 });
 
 test("agentMoment carries what the action wrote and the model that worded it (M1, M5)", () => {
-  const written = [{ event_id: "e9", type: "order.acknowledged", when: "Day 0 09:00", by: "AI (on behalf of Ward 4)", plain: "Orders acknowledged." }];
+  const written = [{ event_id: "e9", type: "order.acknowledged", when: "09:00", by: "AI (on behalf of Ward 4)", plain: "Orders acknowledged." }];
   const m = agentMoment(row("w1", { written, model: "rules" }), "ep1");
   assert.deepEqual(m.written, written);
   assert.deepEqual([m.source, m.calls], ["rules", []]);

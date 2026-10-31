@@ -102,7 +102,7 @@ test("a photo sidecar explains its regions", () => {
 
 test("capturedLine", () => {
   assert.equal(capturedLine({ type: "tray.checked", when: 9 * 60000 - 9 * 60000 + 18 * 60000, by: "Nurse Asha (synthetic)" }), "Captured to record: tray.checked · 09:18 · Nurse Asha");
-  assert.equal(capturedLine({ type: "tray.checked", when: "Day 0 09:18", by: "Nurse Asha" }), "Captured to record: tray.checked · 09:18 · Nurse Asha");
+  assert.equal(capturedLine({ type: "tray.checked", when: "Mon 2 Nov, 09:18", by: "Nurse Asha" }), "Captured to record: tray.checked · 09:18 · Nurse Asha");
 });
 
 test("viewer copy has no advice words", () => {
@@ -214,7 +214,7 @@ test("explain counts an ignored detection once however many frames it appears in
 });
 
 test("capturedLine joins only the parts it has", () => {
-  assert.equal(capturedLine({ type: "tray.checked", when: "Day 0 09:18", by: "" }), "Captured to record: tray.checked · 09:18");
+  assert.equal(capturedLine({ type: "tray.checked", when: "09:18", by: "" }), "Captured to record: tray.checked · 09:18");
   assert.equal(capturedLine({ type: "tray.checked", when: "", by: "Nurse Asha" }), "Captured to record: tray.checked · Nurse Asha");
 });
 

@@ -12,7 +12,7 @@ from app.journey.dictation import ADVICE, _DRUG, _STOP, _WORD, _json_of, digits,
 from app.journey.rx import key_of
 from app.journey.schedule import build, schedule_text
 from app.journey.states import DID
-from app.journey.stories import clock
+from app.journey.clocktext import latest_ms, when_text
 from app.morning.discharge import visible_events
 
 NOT_FOUND = "I can't find that in your record."
@@ -71,10 +71,10 @@ def _sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", text or "") if s.strip()]
 
 
-def _event_lines(event: dict, ctx: dict) -> list[tuple]:
+def _event_lines(event: dict, ctx: dict, now_ms: int | None = None) -> list[tuple]:
     """(kind, text) pairs for one event; a prescription row adds its key. The wrapper is fixed; the content is the record's own."""
     kind, p = event["event_type"], event.get("payload") or {}
-    when = clock(event["ts_ms"])
+    when = when_text(event["ts_ms"], now_ms)
     if kind == "rx.ordered" and event["id"] in ctx["rx"]:
         by = p.get("by")
         rows = [
@@ -109,9 +109,10 @@ def _event_lines(event: dict, ctx: dict) -> list[tuple]:
     return []
 
 
-def record_lines(events: list[dict]) -> list[dict]:
+def record_lines(events: list[dict], now_ms: int | None = None) -> list[dict]:
     """The patient's record as numbered lines, in ledger order, each tied to the event it came from."""
     shown = visible_events(events)
+    now_ms = latest_ms(events) if now_ms is None else now_ms
     done: dict[str, str] = {}
     for event in shown:
         if event["event_type"] == "task.done":
@@ -124,7 +125,7 @@ def record_lines(events: list[dict]) -> list[dict]:
     }
     lines = []
     for event in shown:
-        for kind, text, *key in _event_lines(event, ctx):
+        for kind, text, *key in _event_lines(event, ctx, now_ms):
             if text is None:
                 continue
             line = {"id": f"L{len(lines) + 1}", "kind": kind, "text": text[:MAX_LINE], "event_id": event["id"]}

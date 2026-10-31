@@ -4,7 +4,7 @@ import { H, M } from "./clock.js";
 import { queueRows, todos, waitingPills, taskDue, dueLabel, STATE_LABEL } from "./derive.js";
 
 const nudge = (id, to, at_ms, says = "Observations are overdue.") => ({
-  id, key: "obs_overdue", kind: "obs_overdue", to, says, at_ms, when: "Day 1 13:00",
+  id, key: "obs_overdue", kind: "obs_overdue", to, says, at_ms, when: "13:00",
 });
 const order = (id, at_ms, acknowledged_by = null) => ({ id, by: "Dr. A. Rao", items: [], at_ms, acknowledged_by });
 const view = (over = {}) => ({ state: "ward", order_list: [order("o0", 0, "Nurse")], tasks: [], handover: null, nudges: [], ...over });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { label } from "./clock";
+import { whenText } from "./when.js";
 import AiMoment from "./AiMoment.jsx";
 import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
@@ -13,27 +13,27 @@ const DECISIONS = [["no_visit", "No visit needed"], ["come_in", "Come in to the 
 const THUMB = { objectFit: "cover", borderRadius: 6 };
 const Waited = ({ item }) => (item.open ? <span className="pill">{item.waited}</span> : null);
 
-function Answered({ answer, text }) {
+function Answered({ answer, text, nowMs }) {
   const source = answerSourceLine(answer);
   const how = answer.via === "voice" ? "by voice" : answer.via === "text" ? "typed" : "";
   return (
     <p className="small">
-      {text} <span className="muted">{answer.by} · {label(answer.at_ms)}{how ? ` · ${how}` : ""}{source ? ` · ${source}` : ""}</span>
+      {text} <span className="muted">{answer.by} · {whenText(answer.at_ms, nowMs)}{how ? ` · ${how}` : ""}{source ? ` · ${source}` : ""}</span>
     </p>
   );
 }
 
-function QuestionCard({ q, item, role, name, busy, act, ask }) {
+function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
   const path = `/questions/${q.id}/answer`;
   const hear = (file) => ask("/ask/hear", file, { by: DOCTOR }, path);
   const send = ({ text, heard }) => act(path, { text, by: DOCTOR, ...answerHow(heard?.text, text, heard?.by) });
   return (
     <article className="card inbox-card" data-line={q.id}>
-      <p className="small muted">{q.by} · {label(q.at_ms)} <Waited item={item} /></p>
+      <p className="small muted">{q.by} · {whenText(q.at_ms, nowMs)} <Waited item={item} /></p>
       <p className="quote">{"\u201c"}{questionText(role, q)}{"\u201d"}</p>
-      {q.answer && <Answered answer={q.answer} text={q.answer.text} />}
+      {q.answer && <Answered answer={q.answer} text={q.answer.text} nowMs={nowMs} />}
       {!q.answer && role === "doctor" && (
-        <section aria-label={`Your answer to ${q.by} at ${label(q.at_ms)}`}>
+        <section aria-label={`Your answer to ${q.by} at ${whenText(q.at_ms, nowMs)}`}>
           <Dictate bare label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} onHear={hear} onSend={send} />
         </section>
       )}
@@ -42,25 +42,25 @@ function QuestionCard({ q, item, role, name, busy, act, ask }) {
 }
 
 // A question the record bot already answered, shown to staff with its answer as one AI moment.
-function RecordBotItem({ q, moment, role, episodeId }) {
+function RecordBotItem({ q, moment, role, episodeId, nowMs }) {
   return (
     <article className="card inbox-card" data-line={q.id}>
       <p className="label">Answered by record bot</p>
-      <p className="small muted">{q.by} · {label(q.at_ms)}</p>
+      <p className="small muted">{q.by} · {whenText(q.at_ms, nowMs)}</p>
       <p className="quote">{"\u201c"}{questionText(role, q)}{"\u201d"}</p>
       {moment && <AiMoment moment={moment} role={role} episodeId={episodeId} />}
     </article>
   );
 }
 
-function ReviewCard({ r, item, role, busy, act, reference }) {
+function ReviewCard({ r, item, role, nowMs, busy, act, reference }) {
   const [note, setNote] = useState("");
   const [noting, setNoting] = useState(false);
   const decide = (decision) => act(`/reviews/${r.id}/answer`, { decision, note: note.trim(), by: DOCTOR });
   return (
     <article className="card inbox-card" data-line={r.id}>
       <p className="label">Healing photo</p>
-      <p className="small muted">{r.by} · {label(r.at_ms)} <Waited item={item} /></p>
+      <p className="small muted">{r.by} · {whenText(r.at_ms, nowMs)} <Waited item={item} /></p>
       {noteText(role, r) && <p className="quote">{"\u201c"}{noteText(role, r)}{"\u201d"}</p>}
       <div className="row">
         <figure>
@@ -74,7 +74,7 @@ function ReviewCard({ r, item, role, busy, act, reference }) {
           </figure>
         )}
       </div>
-      {r.answer && <Answered answer={{ ...r.answer, via: "", source: "" }} text={`${r.answer.label}${r.answer.note ? `: ${r.answer.note}` : ""}`} />}
+      {r.answer && <Answered answer={{ ...r.answer, via: "", source: "" }} text={`${r.answer.label}${r.answer.note ? `: ${r.answer.note}` : ""}`} nowMs={nowMs} />}
       {!r.answer && role === "doctor" && (
         <>
           {noting ? (
@@ -105,10 +105,10 @@ export default function AskInbox({ view, role, name, nowMs, busy, act, ask, faul
   const reference = references[references.length - 1];
   const { open, answered } = inboxGroups(items);
   const card = (item) => (item.kind === "bot"
-    ? <RecordBotItem key={item.id} q={questions.get(item.id)} moment={botMoment(view, item.id)} role={role} episodeId={episodeId} />
+    ? <RecordBotItem key={item.id} q={questions.get(item.id)} moment={botMoment(view, item.id)} role={role} episodeId={episodeId} nowMs={nowMs} />
     : item.kind === "question"
-    ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} busy={busy} act={act} ask={ask} />
-    : <ReviewCard key={item.id} r={reviews.get(item.id)} item={item} role={role} busy={busy} act={act} reference={reference} />);
+    ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} nowMs={nowMs} busy={busy} act={act} ask={ask} />
+    : <ReviewCard key={item.id} r={reviews.get(item.id)} item={item} role={role} nowMs={nowMs} busy={busy} act={act} reference={reference} />);
   return (
     <section aria-label="Ask inbox">
       <p className="label">{inboxHeader(name, items)}</p>

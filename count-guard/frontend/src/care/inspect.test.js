@@ -27,7 +27,7 @@ test("modelRows", () => {
 });
 
 test("recordLine", () => {
-  const w = { type: "tray.checked", when: "Day 0 09:20", by: "Nurse Asha (synthetic)", plain: "Tray checked, 14 of 15." };
+  const w = { type: "tray.checked", when: "09:20", by: "Nurse Asha (synthetic)", plain: "Tray checked, 14 of 15." };
   assert.equal(recordLine(w, "staff"), "tray.checked · 09:20 · Nurse Asha · Tray checked, 14 of 15.");
   assert.equal(recordLine(w, "patient"), "09:20 · Tray checked, 14 of 15.");
   assert.doesNotMatch(recordLine(w, "patient"), /\b[a-z]+\.[a-z_]+\b/);
@@ -153,7 +153,7 @@ test("voice kind is registered and its copy passes ADVICE", () => {
 });
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
-const line = (id, type) => ({ id, type, when: "Day 0 09:20", by: "Dr. A. Rao (synthetic)", plain: "Amlodipine 5 mg ordered." });
+const line = (id, type) => ({ id, type, when: "09:20", by: "Dr. A. Rao (synthetic)", plain: "Amlodipine 5 mg ordered." });
 
 test("ruleCards: both sides, a missing fact, and a patient lens with no event code", () => {
   const both = ruleCards({ intent: line("a", "rx.ordered"), fact: line("b", "dose.logged") }, "staff");

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.journey.ask import short_name
+from app.journey.clocktext import latest_ms, when_text
 from app.morning.guide import explain_event
 
 DAY_MS = 24 * 3_600_000
@@ -261,10 +262,11 @@ def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> s
     return plain(event)
 
 
-def timeline_items(events: list[dict]) -> list[dict]:
+def timeline_items(events: list[dict], now_ms: int | None = None) -> list[dict]:
+    now_ms = latest_ms(events) if now_ms is None else now_ms
     tasks = {e["id"]: e.get("payload") or {} for e in events if e["event_type"] == "task.created"}
     signed = any(e["event_type"] == "discharge.signed" for e in events)
-    return [{"id": e["id"], "when": clock(e["ts_ms"]), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed),
+    return [{"id": e["id"], "when": when_text(e["ts_ms"], now_ms), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed),
              "evidence_id": (e.get("payload") or {}).get("evidence_id"), "calls": (e.get("payload") or {}).get("calls") or []}
             for e in events if e["event_type"] not in HIDDEN_FROM_TIMELINE]
 
@@ -302,7 +304,7 @@ def audit_rows(events: list[dict]) -> list[dict]:
         rows.append(
             {
                 "id": event["id"],
-                "when": clock(event["ts_ms"]),
+                "when": when_text(event["ts_ms"], None),
                 "written_at": event["wall_clock"],
                 "who": p.get("by") or p.get("source") or "system",
                 "what": plain(event),

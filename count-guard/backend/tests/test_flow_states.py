@@ -263,7 +263,7 @@ def test_state_line_with_no_earlier_state_reads_as_an_admission(tmp_path):
 
 
 def test_patient_now_speaks_to_you_for_each_kind_of_event(tmp_path):
-    from app.journey.stories import clock
+    from app.journey.clocktext import when_text
 
     client, eid = _new(tmp_path)
     assert _view(client, eid)["now_next"]["you_now"] == "You are in clinic."
@@ -273,21 +273,21 @@ def test_patient_now_speaks_to_you_for_each_kind_of_event(tmp_path):
     view = client.post(
         f"/journey/episodes/{eid}/orders/sign", json={"items": items, "by": "Dr. A. Rao (synthetic)", "at_ms": 600_000}
     ).json()
-    assert view["now_next"]["you_now"] == f"Dr. A. Rao signed new orders for you at {clock(600_000)}."
+    assert view["now_next"]["you_now"] == f"Dr. A. Rao signed new orders for you at {when_text(600_000, 600_000)}."
     order = view["order_list"][0]
     view = client.post(
         f"/journey/episodes/{eid}/orders/{order['id']}/ack", json={"by": "Nurse Meena (synthetic)", "at_ms": 900_000}
     ).json()
-    assert view["now_next"]["you_now"] == f"Nurse Meena acknowledged your orders at {clock(900_000)}."
+    assert view["now_next"]["you_now"] == f"Nurse Meena acknowledged your orders at {when_text(900_000, 900_000)}."
     assert view["now_next"]["now"] != view["now_next"]["you_now"]
     task = view["tasks"][0]
     view = client.post(
         f"/journey/episodes/{eid}/tasks/{task['id']}/done",
         json={"by": "Nurse Meena (synthetic)", "via": "tap", "at_ms": 1_200_000},
     ).json()
-    assert view["now_next"]["you_now"] == f"Nurse Meena finished Check wound dressing at {clock(1_200_000)}."
+    assert view["now_next"]["you_now"] == f"Nurse Meena finished Check wound dressing at {when_text(1_200_000, 1_200_000)}."
     asked = client.post(f"/journey/episodes/{eid}/ask/doctor", json={"text": "Is this normal?", "at_ms": 1_500_000}).json()
-    assert asked["now_next"]["you_now"] == f"You sent a question to the doctor at {clock(1_500_000)}."
+    assert asked["now_next"]["you_now"] == f"You sent a question to the doctor at {when_text(1_500_000, 1_500_000)}."
 
 
 def test_patient_now_names_the_nurse_who_gave_a_dose(tmp_path):

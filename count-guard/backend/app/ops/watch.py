@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.journey import states, tasks
 from app.journey.ask import short_name
-from app.journey.stories import clock
+from app.journey.clocktext import when_text
 from app.morning.discharge import visible_events
 from app.ops.items import WorkItem, assignees, routes, work_items
 from app.ops.policy import FILE_AFTER_MS
@@ -38,7 +38,7 @@ def orders_unacknowledged(events: list[dict], at_ms: int, opened: set[str]) -> l
     for order in tasks.orders_list(events):
         if order["acknowledged_by"]:
             continue
-        reason = f"{short_name(order['by'])} signed orders at {clock(signed[order['id']]['ts_ms'])[-5:]}; not acknowledged yet."
+        reason = f"{short_name(order['by'])} signed orders at {when_text(signed[order['id']]['ts_ms'], at_ms)}; not acknowledged yet."
         out.append(_item("ack_order", "orders_unacknowledged", reason, (order["id"],), "nurse", order["id"]))
     return out
 
@@ -74,7 +74,7 @@ def question_waiting(events: list[dict], at_ms: int, opened: set[str]) -> list[W
     for q in _of(shown, "question.asked"):
         if q["payload"].get("to") != "doctor" or q["id"] in answered:
             continue
-        when = f"The patient asked the doctor a question at {clock(q['ts_ms'])[-5:]}; not answered yet."
+        when = f"The patient asked the doctor a question at {when_text(q['ts_ms'], at_ms)}; not answered yet."
         if q["id"] not in routed:
             out.append(_item("route_question", "question_waiting", when, (q["id"],), "doctor", q["id"]))
         if card:

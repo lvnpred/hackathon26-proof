@@ -10,7 +10,8 @@ from app.journey import moment_text as text
 from app.journey.finding import classify
 from app.journey import nudges
 from app.journey.medicines import day_plan
-from app.journey.stories import clock, count_of, plain
+from app.journey.clocktext import latest_ms, when_text
+from app.journey.stories import count_of, plain
 from app.morning.discharge import visible_events
 
 MONITOR_KEYS = (("sbp", "SBP"), ("dbp", "DBP"), ("hr", "HR"))
@@ -18,10 +19,10 @@ FAILED_SOURCES = ("failed", "unreadable", "prepared (live call failed)", "rules 
 VISUAL = {"tray.checked": "tray", "setup.checked": "setup", "swabs.counted": "swabs"}
 
 
-def line_of(event: dict) -> dict:
+def line_of(event: dict, now_ms: int | None = None) -> dict:
     """C2: one recorded event as a citable line."""
     return {
-        "id": event["id"], "type": event["event_type"], "when": clock(event["ts_ms"]),
+        "id": event["id"], "type": event["event_type"], "when": when_text(event["ts_ms"], now_ms),
         "by": (event.get("payload") or {}).get("by"), "plain": plain(event),
     }
 
@@ -42,8 +43,9 @@ def visual_finding(rows: list[dict]) -> str:
 class _Index:
     """The follow-up lookups, built once per call."""
 
-    def __init__(self, events: list[dict]):
+    def __init__(self, events: list[dict], now_ms: int | None = None):
         self.events = events
+        self.now_ms = latest_ms(events) if now_ms is None else now_ms
         self.shown = visible_events(events)
         self.order = {e["id"]: i for i, e in enumerate(events)}
         self.by_id = {e["id"]: e for e in events}
@@ -73,7 +75,7 @@ class _Index:
 
     def line(self, event_id: str | None) -> dict | None:
         found = self.by_id.get(event_id) if event_id else None
-        return line_of(found) if found else None
+        return line_of(found, self.now_ms) if found else None
 
 
 def _written(ix: _Index, anchor: dict, extra: list[dict]) -> list[dict]:
@@ -84,7 +86,7 @@ def _written(ix: _Index, anchor: dict, extra: list[dict]) -> list[dict]:
     for e in sorted(rows.values(), key=lambda e: ix.order[e["id"]]):
         p = e["payload"]
         out.append({
-            "event_id": e["id"], "type": e["event_type"], "when": clock(e["ts_ms"]), "by": p.get("by"), "plain": plain(e),
+            "event_id": e["id"], "type": e["event_type"], "when": when_text(e["ts_ms"], ix.now_ms), "by": p.get("by"), "plain": plain(e),
             **{k: p[k] for k in ("read", "saved") if k in p},
         })
     return out
@@ -333,7 +335,7 @@ def _day_plan(ix: _Index) -> dict | None:
     k = len(rx["payload"].get("rows") or []) or len(keys)
     rows = [{k2: i[k2] for k2 in ("key", "medicine", "text", "region")} for i in items]
     shown = {**rx, "ts_ms": read["ts_ms"]}
-    refs = {"lines": [{"text": f"{r['medicine']}: {r['text']}", "evidence": [line_of(rx)]} for r in rows], "rows": rows,
+    refs = {"lines": [{"text": f"{r['medicine']}: {r['text']}", "evidence": [line_of(rx, ix.now_ms)]} for r in rows], "rows": rows,
             "photo_id": plan["photo_id"], "evidence_id": plan["evidence_id"]}
     moment = _moment(ix, shown, "day_plan", text.day_plan_text(k, len(matched)), "recorded", refs,
                      patient_finding=f"Your day plan lists {count_of(k, 'medicine')}.", calls=[], source="rules",
@@ -342,9 +344,9 @@ def _day_plan(ix: _Index) -> dict | None:
     return moment
 
 
-def moments(events: list[dict]) -> list[dict]:
+def moments(events: list[dict], now_ms: int | None = None) -> list[dict]:
     """C1: every AI moment of one episode, newest first (`at_ms` desc, ties by record order desc)."""
-    ix = _Index(events)
+    ix = _Index(events, now_ms)
     built = [(e, BUILDERS[e["event_type"]](ix, e)) for e in ix.shown if e["event_type"] in BUILDERS]
     rows = [(ix.order[e["id"]], m) for e, m in built if m]
     plan = _day_plan(ix)

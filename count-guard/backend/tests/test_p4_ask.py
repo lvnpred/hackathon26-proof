@@ -149,12 +149,12 @@ def test_question_to_doctor_answered_by_text(tmp_path):
     assert question["to"] == "doctor" and question["answer"] is None
     assert open_for_doctor(_events(client, kumar)) == {"questions": 1, "reviews": 0}
     assert view["now_next"]["next"] == "The doctor answers the question."
-    assert view["now_next"]["now"] == "R. Kumar sent a question to the doctor at Day 0 09:00."
+    assert view["now_next"]["now"] == "R. Kumar sent a question to the doctor at 09:00."
     body = {"text": "A little redness is expected. Send a photo.", "by": DOC, "at_ms": 5000}
     done = client.post(_url(kumar, f"questions/{question['id']}/answer"), json=body).json()
     answer = done["ask"]["questions"][-1]["answer"]
     assert answer["via"] == "text" and answer["by"] == DOC and answer["source"] == "doctor" and answer["found"]
-    assert done["now_next"]["now"] == f"{DOC} answered the question at Day 0 09:00."
+    assert done["now_next"]["now"] == f"{DOC} answered the question at 09:00."
     assert done["now_next"]["next"] != "The doctor answers the question."
     assert any(
         line["kind"] == "answer" and line["text"] == f"{DOC} answered your question: {body['text']}"
@@ -211,8 +211,8 @@ def test_healing_review_no_visit_needed(tmp_path):
     assert client.get(review["photo"]["url"]).content == PNG
     assert [p["purpose"] for p in view["photos"]] == ["healing"]
     assert view["now_next"]["next"] == "The doctor reviews the healing photo."
-    assert view["now_next"]["now"] == "R. Kumar sent a healing photo at Day 0 09:00."
-    assert view["now_next"]["you_now"] == "You sent a healing photo at Day 0 09:00."
+    assert view["now_next"]["now"] == "R. Kumar sent a healing photo at 09:00."
+    assert view["now_next"]["you_now"] == "You sent a healing photo at 09:00."
     decided = client.post(
         _url(kumar, f"reviews/{review['id']}/answer"), json={"decision": "no_visit", "by": DOC, "at_ms": 9000}
     ).json()

@@ -1,5 +1,5 @@
 import AiMoment from "./AiMoment.jsx";
-import { label } from "./clock";
+import { whenText } from "./when.js";
 import { DOCTOR } from "./DoctorActions";
 import { markLine, regionOfRow, stripLabel, stripMatch, stripTone, cropStyle } from "./brownbag.js";
 import { medicineLine } from "./askText.js";
@@ -28,7 +28,7 @@ function Row({ photo, row, index, regions, rows, marks, doctor, busy, onMark }) 
 }
 
 // The patient's medicines photo on a staff chart: each strip against the prescription, with the doctor's marks (R29).
-export default function MedicinesFromHome({ view, role, act, busy }) {
+export default function MedicinesFromHome({ view, role, nowMs, act, busy }) {
   const reads = [...(view.ask?.medicines || [])].reverse();
   if (!reads.length) return null;
   return (
@@ -37,7 +37,7 @@ export default function MedicinesFromHome({ view, role, act, busy }) {
       {reads.map((m) => (
         <div key={m.id}>
           {momentFor(view, m.id) && <AiMoment moment={momentFor(view, m.id)} role={role} episodeId={view.episode?.id} />}
-          <p className="small muted">Photo {label(m.at_ms)}</p>
+          <p className="small muted">Photo {whenText(m.at_ms, nowMs)}</p>
           <ul className="task-list">
             {m.rows.map((row, i) => (
               <Row key={i} photo={m.photo} row={row} index={i} regions={m.regions} rows={m.rows} marks={m.marks || []}

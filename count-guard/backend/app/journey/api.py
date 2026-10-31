@@ -18,8 +18,9 @@ from app.journey.play import play_journey
 from app.journey.rx import document_for, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
 from app.journey.seed import card_payload, seed_ward
+from app.journey.clocktext import latest_ms, when_text
 from app.journey.states import flow_view
-from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, clock, timeline_items
+from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, timeline_items
 from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
 from app.morning.druglog import parse_drug_phrase
@@ -169,6 +170,7 @@ def view(request: Request, episode_id: str) -> dict:
     episode = _require(request, episode_id)
     store = _store(request)
     events = store.events(episode_id)
+    now = latest_ms(events)  # the record's own now: the newest time written
     rx = _latest(events, "rx.ordered")
     card = _latest(events, "discharge.card")
     orders = _latest(events, "ward.orders_set")
@@ -189,13 +191,13 @@ def view(request: Request, episode_id: str) -> dict:
         "handover": handover,
         "strips": [e["payload"] for e in visible_events(events) if e["event_type"] == "brownbag.med_found"],
         "nudges": [
-            {**e["payload"], "id": e["id"], "when": clock(e["ts_ms"])} for e in rules.open_nudges(events)
+            {**e["payload"], "id": e["id"], "when": when_text(e["ts_ms"], now)} for e in rules.open_nudges(events)
         ],
-        "timeline": timeline_items(events),
-        "ai_moments": moments(events),
-        "ops": ops_view(events, paused=ops_site.paused(store)[0]),
+        "timeline": timeline_items(events, now),
+        "ai_moments": moments(events, now),
+        "ops": ops_view(events, paused=ops_site.paused(store)[0], now_ms=now),
         "templates": {key: value["title"] for key, value in CARE_TEMPLATES.items()},
-        **flow_view(events),
+        **flow_view(events, now),
         # Present once reminders were added, so a reload keeps the download link without a second post.
         "ics_url": f"/journey/episodes/{episode_id}/reminders.ics"
         if any(e["event_type"] == "reminders.added" for e in events)

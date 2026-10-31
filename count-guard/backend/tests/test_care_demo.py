@@ -60,14 +60,14 @@ def test_seen_takes_demo_time(tmp_path):
     nudge = _overdue(client, eid)
     r = client.post(f"/journey/episodes/{eid}/nudges/{nudge['id']}/seen", json={"by": "Nurse Meena", "at_ms": 3 * H})
     assert r.status_code == 200
-    assert _rows(client, eid, "nudge.seen")[-1]["when"] == "Day 0 12:00"
+    assert _rows(client, eid, "nudge.seen")[-1]["when"] == "Mon 2 Nov, 12:00"
 
 
 def test_seen_never_before_the_nudge(tmp_path):
     client, eid = _episode_with_orders(tmp_path)
     nudge = _overdue(client, eid)
     client.post(f"/journey/episodes/{eid}/nudges/{nudge['id']}/seen", json={"by": "Nurse Meena", "at_ms": 0})
-    assert _rows(client, eid, "nudge.seen")[-1]["when"] == nudge["when"]
+    assert _rows(client, eid, "nudge.seen")[-1]["when"].endswith(nudge["when"])  # the audit shows the full date
 
 
 def _drafted(client, eid):
@@ -80,14 +80,14 @@ def test_accept_takes_demo_time(tmp_path):
     drafted = _drafted(client, eid)
     r = client.post(f"/journey/episodes/{eid}/handover/{drafted['id']}/accept", json={"by": "Nurse B", "at_ms": 5 * H})
     assert r.status_code == 200
-    assert _rows(client, eid, "handover.accepted")[-1]["when"] == "Day 0 14:00"
+    assert _rows(client, eid, "handover.accepted")[-1]["when"] == "Mon 2 Nov, 14:00"
 
 
 def test_accept_never_before_the_handover(tmp_path):
     client, eid = _episode_with_orders(tmp_path)
     drafted = _drafted(client, eid)
     client.post(f"/journey/episodes/{eid}/handover/{drafted['id']}/accept", json={"by": "Nurse B", "at_ms": 0})
-    assert _rows(client, eid, "handover.accepted")[-1]["when"] == "Day 0 12:00"
+    assert _rows(client, eid, "handover.accepted")[-1]["when"] == "Mon 2 Nov, 12:00"
 
 
 def _count(client, eid, **body):

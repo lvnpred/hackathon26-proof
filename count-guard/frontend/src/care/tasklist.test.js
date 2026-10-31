@@ -35,9 +35,9 @@ import { surgeryNow } from "./tasklist.js";
 
 test("surgeryNow reads only the current theatre stay and returns its times", () => {
   const line = (type, when) => ({ type, when });
-  assert.deepEqual(surgeryNow([line("patient.state"), line("surgery.began", "Day 0 11:05")]), { began: "Day 0 11:05", ended: null });
-  const both = [line("patient.state"), line("surgery.began", "Day 0 11:05"), line("surgery.ended", "Day 0 12:40")];
-  assert.deepEqual(surgeryNow(both), { began: "Day 0 11:05", ended: "Day 0 12:40" });
+  assert.deepEqual(surgeryNow([line("patient.state"), line("surgery.began", "11:05")]), { began: "11:05", ended: null });
+  const both = [line("patient.state"), line("surgery.began", "11:05"), line("surgery.ended", "12:40")];
+  assert.deepEqual(surgeryNow(both), { began: "11:05", ended: "12:40" });
   const second = [...both, line("patient.state"), line("patient.state")];
   assert.deepEqual(surgeryNow(second), { began: null, ended: null });
   assert.deepEqual(surgeryNow([]), { began: null, ended: null });

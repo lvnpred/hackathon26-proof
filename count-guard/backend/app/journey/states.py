@@ -11,7 +11,8 @@ from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name,
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient, in_theatre
 from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
-from app.journey.stories import by_ai, clock
+from app.journey.clocktext import latest_ms, when_text
+from app.journey.stories import by_ai
 from app.journey.video import checks_view, tray_state
 from app.morning.discharge import visible_events
 
@@ -177,15 +178,16 @@ YOU_DID = {
 }
 
 
-def _latest_happening(events: list[dict], you: bool = False) -> str | None:
+def _latest_happening(events: list[dict], you: bool = False, now_ms: int | None = None) -> str | None:
     """The most recent of: order signed, order acknowledged, task began or done, state move.
 
     With `you`, the line is addressed to the patient, with short names and the dose that was given."""
     rows = visible_events(events)
+    now_ms = latest_ms(events) if now_ms is None else now_ms
     made = {e["id"]: e["payload"] for e in rows if e["event_type"] == "task.created"}
     best = None
     for index, e in enumerate(rows):
-        p, kind, at = e["payload"], e["event_type"], clock(e["ts_ms"])
+        p, kind, at = e["payload"], e["event_type"], when_text(e["ts_ms"], now_ms)
         if you and by_ai(p):
             continue  # the patient never reads AI bookkeeping
         who = short_name(p.get("by")) if you else p.get("by")
@@ -375,10 +377,10 @@ def closing_payload(events: list[dict], returned: int, by: str, *, evidence_id: 
     return payload
 
 
-def now_next(events: list[dict]) -> dict:
+def now_next(events: list[dict], now_ms: int | None = None) -> dict:
     state = current_state(events)
-    now = _latest_happening(events) or "The patient is in clinic."
-    you_now = _latest_happening(events, you=True) or "You are in clinic."
+    now = _latest_happening(events, now_ms=now_ms) or "The patient is in clinic."
+    you_now = _latest_happening(events, you=True, now_ms=now_ms) or "You are in clinic."
     return {
         "now": now,
         "next": _next_step(events, state),
@@ -389,7 +391,7 @@ def now_next(events: list[dict]) -> dict:
     }
 
 
-def flow_view(events: list[dict]) -> dict:
+def flow_view(events: list[dict], now_ms: int | None = None) -> dict:
     procedure = next(
         (e["payload"]["procedure"] for e in reversed(events) if e["event_type"] == "patient.state" and e["payload"].get("procedure")),
         None,
@@ -403,7 +405,7 @@ def flow_view(events: list[dict]) -> dict:
         "state": current_state(events),
         "visited": journey_path(events),
         "count": theatre_count(events),
-        "now_next": now_next(events),
+        "now_next": now_next(events, now_ms),
         "allowed": allowed_moves(events),
         "procedure": {"key": procedure, "title": PROCEDURES[procedure]} if procedure else None,
         "procedures": dict(PROCEDURES),

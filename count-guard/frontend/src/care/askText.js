@@ -1,4 +1,4 @@
-import { label } from "./clock.js";
+import { whenText } from "./when.js";
 import { waitedText } from "./derive.js";
 import { displayName, shortName } from "./names.js";
 import { draftChip, heardChip } from "./moments.js";
@@ -53,8 +53,8 @@ export function inboxHeader(name, items) {
   return n > 0 ? `From ${shortName(name)} · ${n} waiting` : `From ${shortName(name)}`;
 }
 
-// "Day 3": the demo-clock day of a photo (R23).
-export const photoDay = (atMs) => label(atMs).split(" ").slice(0, 2).join(" ");
+// "Mon 2 Nov": the date of a photo (R23).
+export const photoDay = (atMs) => whenText(atMs, null).split(",")[0];
 export const sendVerb = (name) => `Send to ${shortName(name)}`;
 
 // Who answered, and how: the bot names its source; the doctor says typed or by voice.

@@ -11,7 +11,7 @@ test("card words", () => {
   assert.deepEqual([null, 2400].map(latencyText), ["Prepared · timing shown when live", "2.4 s median"]);
   assert.equal(modeLabel("failed"), "Failed");
   assert.equal(modeLabel("Sample"), "Sample");
-  assert.equal(recentText({ when: "Day 0 09:24", name: "SAM 3.1", patient: "R. Kumar (synthetic)", what: "Tray check by video: x" }), "09:24 SAM 3.1 · R. Kumar · Tray check by video: x");
+  assert.equal(recentText({ when: "Yesterday 09:24", name: "SAM 3.1", patient: "R. Kumar (synthetic)", what: "Tray check by video: x" }), "09:24 SAM 3.1 · R. Kumar · Tray check by video: x");
 });
 
 test("the three pipelines", () => {
@@ -54,7 +54,7 @@ test("the dev proxy forwards every /journey path the frontend calls", () => {
 });
 
 test("the recent line drops the synthetic tag from the event text", () => {
-  assert.equal(recentText({ when: "Day 0 09:10", name: "Muse Voice", patient: "R. Kumar", what: "Dr. A. Rao (synthetic) dictated 2 orders." }), "09:10 Muse Voice · R. Kumar · Dr. A. Rao dictated 2 orders.");
+  assert.equal(recentText({ when: "09:10", name: "Muse Voice", patient: "R. Kumar", what: "Dr. A. Rao (synthetic) dictated 2 orders." }), "09:10 Muse Voice · R. Kumar · Dr. A. Rao dictated 2 orders.");
 });
 
 test("a card says nothing about timing until it has calls", () => {

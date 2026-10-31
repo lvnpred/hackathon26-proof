@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { label } from "./clock";
+import { whenText } from "./when.js";
 import { MATCH_LABEL, proofOf } from "./drafts";
 import { chipFor, momentFor } from "./moments.js";
 import { PageLead } from "../App";
@@ -40,7 +40,7 @@ export default function MyCare() {
                       const moment = momentFor(view, proof.photo?.check?.evidence_id);
                       return (
                         <p className="small muted" key={`${task.id}:${index}`}>
-                          Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
+                          Done by {d.by} at {whenText(d.at_ms, ward.nowMs)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
                           {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
                           {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> {moment && <span className="chip">{chipFor(moment)}</span>}</>}
                         </p>

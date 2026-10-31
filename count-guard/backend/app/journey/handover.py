@@ -15,7 +15,7 @@ from app.adapters.spark import SparkAdapter
 from app.agent.verifier import ADVICE
 from app.journey.live import call_of
 from app.journey.nudges import HOUR_MS, hours, open_nudges
-from app.journey.stories import clock
+from app.journey.clocktext import when_text
 from app.morning.discharge import visible_events
 from app.morning.vitals import wording_ok
 
@@ -56,7 +56,7 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
     given = [e for e in shown if e["event_type"] == "dose.given" and since_ms <= e["ts_ms"]]
     for dose in given:
         p = dose["payload"]
-        lines.append(_line(f"{clock(dose['ts_ms'])}: {p['name']} {p.get('amount') or ''} logged by {p['by']}.".replace("  ", " "), dose["id"]))
+        lines.append(_line(f"{when_text(dose['ts_ms'], at_ms)}: {p['name']} {p.get('amount') or ''} logged by {p['by']}.".replace("  ", " "), dose["id"]))
     if orders and latest("discharge.card") is None:  # ward order times end at discharge
         all_given = [e for e in shown if e["event_type"] == "dose.given"]
         for order in orders["payload"]["doses"]:
@@ -64,7 +64,7 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
             if mine:
                 due = mine[-1]["ts_ms"] + int(order["every_h"] * HOUR_MS)
                 lines.append(_line(
-                    f"{order['name']} is ordered every {hours(order['every_h'])}; by that order the next is due {clock(due)}.",
+                    f"{order['name']} is ordered every {hours(order['every_h'])}; by that order the next is due {when_text(due, at_ms)}.",
                     orders["id"], mine[-1]["id"],
                 ))
 
@@ -73,7 +73,7 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
         last = readings[-1]
         p = last["payload"]
         lines.append(_line(
-            f"Last observations {clock(last['ts_ms'])}: BP {p['sbp']}/{p['dbp']}, HR {p['hr']}, SpO2 {p.get('spo2')}, T {p.get('temp')}.",
+            f"Last observations {when_text(last['ts_ms'], at_ms)}: BP {p['sbp']}/{p['dbp']}, HR {p['hr']}, SpO2 {p.get('spo2')}, T {p.get('temp')}.",
             last["id"],
         ))
 
@@ -82,7 +82,7 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
         reply = answered.get(nudge["id"])
         if reply:
             note = (reply["payload"].get("note") or "seen").rstrip(".")
-            lines.append(_line(f"Nudge {clock(nudge['ts_ms'])}: {nudge['payload']['says']} Answer: {note}.", nudge["id"], reply["id"]))
+            lines.append(_line(f"Nudge {when_text(nudge['ts_ms'], at_ms)}: {nudge['payload']['says']} Answer: {note}.", nudge["id"], reply["id"]))
     for nudge in open_nudges(shown):
         if nudge["payload"]["to"] == "nurse":
             lines.append(_line(f"Still open: {nudge['payload']['says']}", nudge["id"]))
@@ -133,8 +133,8 @@ def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, u
     return {
         "from": from_nurse,
         "to": to_nurse,
-        "since": clock(since_ms),
-        "until": clock(at_ms),
+        "since": when_text(since_ms, at_ms),
+        "until": when_text(at_ms, at_ms),
         "lines": lines,
         "text": text if ok else None,
         "wording": "muse-spark-1.3" if ok else "template",

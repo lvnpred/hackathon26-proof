@@ -50,14 +50,14 @@ def test_swab_event_carries_count_and_opened(tmp_path):
 def test_camera_count_goes_once_a_closing_stands(tmp_path):
     client, eid = _new(tmp_path)
     ev = _counted(client, eid)["evidence_id"]
-    assert _closing(client, eid, returned=14, evidence_id=ev).status_code == 200
+    assert _closing(client, eid, returned=14, evidence_id=ev, detail="One swab not found.").status_code == 200
     assert client.get(f"/journey/episodes/{eid}").json()["count"]["camera"] is None
 
 
 def test_closing_by_camera_keeps_read_and_saved(tmp_path):
     client, eid = _new(tmp_path)
     ev = _counted(client, eid)["evidence_id"]
-    _closing(client, eid, returned=15, evidence_id=ev)
+    _closing(client, eid, returned=15, evidence_id=ev, detail="Found under the drape.")
     p = [e for e in _events(client, eid) if e["event_type"] == "count.closing"][-1]["payload"]
     assert (p["via"], p["evidence_id"], p["read"], p["saved"]) == ("camera", ev, {"returned": 14}, {"returned": 15})
     cited = client.get(f"/journey/episodes/{eid}/evidence/{ev}").json()["cited_by"]
@@ -68,7 +68,7 @@ def test_closing_by_camera_keeps_read_and_saved(tmp_path):
 def test_closing_by_camera_unchanged_has_no_correction(tmp_path):
     client, eid = _new(tmp_path)
     ev = _counted(client, eid)["evidence_id"]
-    _closing(client, eid, returned=14, evidence_id=ev)
+    _closing(client, eid, returned=14, evidence_id=ev, detail="One swab not found.")
     p = [e for e in _events(client, eid) if e["event_type"] == "count.closing"][-1]["payload"]
     assert p["via"] == "camera" and "read" not in p and "saved" not in p
 
@@ -89,7 +89,7 @@ def test_typed_closing_has_no_evidence(tmp_path):
     _to_theatre(client, eid)
     _surgery(client, eid, "began")
     client.post(f"/journey/episodes/{eid}/count", json={"step": "opened", "quantity": 15, "by": NURSE, "at_ms": 0})
-    _closing(client, eid, returned=14)
+    _closing(client, eid, returned=14, detail="One swab not found.")
     p = [e for e in _events(client, eid) if e["event_type"] == "count.closing"][-1]["payload"]
     assert "evidence_id" not in p and p.get("via", "typed") == "typed"
 
@@ -169,9 +169,9 @@ def test_timeline_items_carry_evidence(tmp_path):
 def test_a_corrected_closing_keeps_what_the_camera_read(tmp_path):
     client, eid = _new(tmp_path)
     ev = _counted(client, eid)["evidence_id"]
-    first = _closing(client, eid, returned=14, evidence_id=ev)
+    first = _closing(client, eid, returned=14, evidence_id=ev, detail="One swab not found.")
     first_id = [e for e in _events(client, eid) if e["event_type"] == "count.closing"][-1]["id"]
     assert first.status_code == 200
-    assert _closing(client, eid, returned=15, supersedes_id=first_id).status_code == 200
+    assert _closing(client, eid, returned=15, supersedes_id=first_id, detail="Found under the drape.").status_code == 200
     count = client.get(f"/journey/episodes/{eid}").json()["count"]
     assert (count["returned"], count["read"], count["saved"], count["closed_by"]) == (15, {"returned": 14}, {"returned": 15}, NURSE)

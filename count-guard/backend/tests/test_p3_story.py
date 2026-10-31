@@ -72,7 +72,7 @@ def test_p3_done_when_without_a_key(tmp_path):
     _post(client, kumar, "surgery", {"step": "began", "at_ms": 2 * H + 15 * MIN, **by})
     swabs = plan["swab_total"]
     _post(client, kumar, "count", {"step": "opened", "quantity": swabs, "at_ms": 2 * H + 16 * MIN, **by})
-    short = _post(client, kumar, "count", {"step": "closing", "returned": swabs - 1, "at_ms": 3 * H, **by})
+    short = _post(client, kumar, "count", {"step": "closing", "returned": swabs - 1, "detail": "Looking for it.", "at_ms": 3 * H, **by})
     assert [n["kind"] for n in short["nudges"]] == ["count_open"]
     first = next(e for e in _events(client, kumar) if e["event_type"] == "count.closing")["id"]
     _post(client, kumar, "count", {"step": "closing", "returned": swabs, "supersedes_id": first,

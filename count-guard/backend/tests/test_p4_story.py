@@ -60,8 +60,11 @@ def test_p4_done_when_without_a_key(tmp_path):
     _ok(_move(client, kumar, "theatre", procedure="hernia-repair", at_ms=2 * H))
     assert chip(2 * H) == THEATRE == _chip(client, board, ids, 2 * H + 20 * MIN).json()["text"]
     assert _chip(client, board, ids, 2 * H).json()["until_ms"] == free_about(2 * H, 31)
-    for step, at in (("began", 2 * H + 10 * MIN), ("ended", 2 * H + 40 * MIN)):
-        _ok(client.post(_url(kumar, "surgery"), json={"step": step, "by": NURSE, "at_ms": at}))
+    for step, at in (("began", 2 * H + 10 * MIN), ("opened", 2 * H + 15 * MIN), ("closing", 2 * H + 35 * MIN),
+                     ("ended", 2 * H + 40 * MIN)):
+        extra = {"quantity": 20} if step == "opened" else {"returned": 20} if step == "closing" else {}
+        route = "count" if step in ("opened", "closing") else "surgery"
+        _ok(client.post(_url(kumar, route), json={"step": step, "by": NURSE, "at_ms": at, **extra}))
     _ok(_move(client, kumar, "ward", at_ms=3 * H, reason=""))
     assert chip(3 * H + MIN) == AVAILABLE
     _sign_discharge(client, kumar, 3 * H + 5 * MIN)

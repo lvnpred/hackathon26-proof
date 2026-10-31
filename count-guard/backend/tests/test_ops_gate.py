@@ -204,7 +204,7 @@ def test_person_closing_keeps_camera_read_and_saved(tmp_path):
     client = _ops_client(tmp_path)
     eid = _theatre_with_pack(client)
     client.post(_url(eid, "tick"), json={"at_ms": 1000 + 6 * M})
-    view = client.post(_url(eid, "count"), json={"step": "closing", "returned": 15, "by": ASHA,
+    view = client.post(_url(eid, "count"), json={"step": "closing", "returned": 15, "by": ASHA, "detail": "Found under the drape.",
                                                  "evidence_id": EVIDENCE, "at_ms": 1000 + 6 * M}).json()
     closing = _of(client, eid, "count.closing")[0]["payload"]
     assert closing["by"] == ASHA and closing["via"] == "camera" and closing["evidence_id"] == EVIDENCE

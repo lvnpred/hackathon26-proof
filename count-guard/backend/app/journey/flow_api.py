@@ -69,6 +69,10 @@ def surgery(episode_id: str, body: SurgeryIn, request: Request) -> dict:
         raise HTTPException(status_code=409, detail="Surgery has already begun.")
     if body.step == "ended" and status != "began":
         raise HTTPException(status_code=409, detail="Surgery has not begun, or has already ended.")
+    if body.step == "ended" and not states.count_reconciled(events):
+        closed = states.stay_latest(events, "count.closing") is not None
+        raise HTTPException(status_code=409, detail=("The swab count does not add up. Record what the team did first."
+                                                     if closed else "Save the swab count first."))
     return _act(request, episode_id, f"surgery.{body.step}", {"by": body.by}, body.at_ms)
 
 

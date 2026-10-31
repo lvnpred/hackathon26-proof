@@ -11,6 +11,7 @@ from app.journey import states
 from app.journey.api import At, _act, _require, _store
 
 count_router = APIRouter(prefix="/journey/episodes/{episode_id}")
+NEEDS_REASON = "Say what the team did: the count does not match."
 NOT_THIS_STAY = "That camera count is not from this patient's theatre stay."
 
 
@@ -66,4 +67,7 @@ def count(episode_id: str, body: CountIn, request: Request) -> dict:
                                          camera=camera)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    read = camera["payload"].get("count") if camera else None
+    if not body.detail.strip() and (payload["unaccounted"] != 0 or (read is not None and body.returned != read)):
+        raise HTTPException(status_code=422, detail=NEEDS_REASON)
     return _act(request, episode_id, "count.closing", payload, body.at_ms, body.supersedes_id)

@@ -78,9 +78,10 @@ def test_chip_flips_when_kumar_enters_theatre(tmp_path):
     status = next(e for e in _events(client, ids["4"]) if e["event_type"] == "doctor.status")
     assert status["payload"]["by"] == "Dr. A. Rao (synthetic)" and status["ts_ms"] == 2 * H
     nurse = "Nurse Asha (synthetic)"
-    for step, at in (("began", 2 * H + 10 * MIN), ("ended", 3 * H)):
-        body = {"step": step, "by": nurse, "at_ms": at}
-        assert client.post(_url(ids["4"], "surgery"), json=body).status_code == 200
+    for step, at in (("began", 2 * H + 10 * MIN), ("opened", 2 * H + 20 * MIN), ("closing", 2 * H + 50 * MIN), ("ended", 3 * H)):
+        body = {"step": step, "by": nurse, "at_ms": at, **({"quantity": 20} if step == "opened" else {"returned": 20} if step == "closing" else {})}
+        route = "count" if step in ("opened", "closing") else "surgery"
+        assert client.post(_url(ids["4"], route), json=body).status_code == 200
     assert _chip(client, board, ids, 3 * H).json()["status"] == "in_theatre"
     assert _move(client, ids["4"], "ward", at_ms=3 * H + MIN, reason="").status_code == 200
     assert _chip(client, board, ids, 4 * H).json()["text"] == AVAILABLE

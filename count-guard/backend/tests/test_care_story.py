@@ -90,7 +90,7 @@ def test_three_paths_by_tap(tmp_path):
     assert kumar.move("theatre", 2 * H, procedure="hernia-repair")["state"] == "theatre"
     kumar.post("surgery", {"step": "began", "by": SCRUB, "at_ms": 2 * H + 5 * M})
     kumar.count(2 * H + 20 * M, step="opened", quantity=20)
-    view = kumar.count(3 * H + 30 * M, step="closing", returned=19)
+    view = kumar.count(3 * H + 30 * M, step="closing", returned=19, detail="Looking for it.")
     assert [n["kind"] for n in view["nudges"]] == ["count_open"]
     first = kumar.audit("count.closing")[0]["id"]
     kumar.count(3 * H + 35 * M, step="closing", returned=20, supersedes_id=first)

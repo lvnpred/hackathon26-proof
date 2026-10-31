@@ -100,7 +100,8 @@ def _new_episode(client):
 
 def _short_count(client, eid):
     _count(client, eid, step="opened", quantity=20, by="Nurse Scrub", at_ms=24 * H)
-    view = _count(client, eid, step="closing", returned=19, by="Nurse Scrub", at_ms=24 * H + 50 * 60_000).json()
+    view = _count(client, eid, step="closing", returned=19, by="Nurse Scrub", at_ms=24 * H + 50 * 60_000,
+                  detail="Looking for it.").json()
     return view
 
 

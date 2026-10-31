@@ -87,10 +87,10 @@ export const STEPS = {
     await H.click("Record pack opened");
     await H.file("Swab camera count", "eval/p3/swabs-closing.mp4");
     await H.waitText("Camera count: 14");
-    await H.click("Record closing count");
     await before(H, "kumar-count");
     await H.fill("Closing count (returned)", "15");
-    await H.click("Correct the count");
+    await H.fill("Detail", "Found under the drape");
+    await H.click("Record closing count");
   },
   async "kumar-back"(H) {
     await H.click("Surgery ended");

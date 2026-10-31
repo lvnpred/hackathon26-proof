@@ -92,6 +92,15 @@ def count_open(events: list[dict]) -> bool:
     return any(n["kind"] == "count_open" for n in count_and_patient(visible_events(events)))
 
 
+def count_reconciled(events: list[dict]) -> bool:
+    """True when this stay's closing count that still stands adds up or carries a reason (spec 5.3)."""
+    closing = _latest(stay_events(events), "count.closing")
+    if closing is None:
+        return False
+    payload = closing["payload"]
+    return payload.get("unaccounted") == 0 or bool((payload.get("detail") or "").strip())
+
+
 def surgery_status(events: list[dict]) -> str:
     """'none', 'began' or 'ended' for the current stay in theatre."""
     last = _last_state_event(events)

@@ -137,11 +137,11 @@ On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `
 > Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Inspect shows what SAM 3.1 saw.
 
 #### `kumar-count` · 1:29 · nurse · 9 s
-Clicks: 1) Button "Close" in "Inspector"; 2) Button "Surgery began"; 3) Button "Record pack opened" (prefilled 15); 4) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 5) Button "Record closing count" (prefilled 14 by the camera); 6) Field "Closing count (returned)" <- 15; 7) Button "Correct the count"
+Clicks: 1) Button "Close" in "Inspector"; 2) Button "Surgery began"; 3) Button "Record pack opened" (prefilled 15); 4) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 5) Field "Closing count (returned)" <- 15 (the camera read 14); 6) Field "Detail" <- "Found under the drape"; 7) Button "Record closing count"
 
-On screen: `Closing count: 14 of 15 back, 1 unaccounted.` · `Correction recorded.` · `Read 14, saved 15 by Nurse Asha`
+On screen: `Read 14, saved 15 by Nurse Asha`
 
-> Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the count is corrected to 15 when one is found.
+> Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the nurse saves 15 with the reason: one was found under the drape.
 
 #### `kumar-back` · 1:38 · nurse · 4 s
 Clicks: 1) Button "Surgery ended"; 2) Button "Back to ward"
@@ -339,7 +339,7 @@ Export `MODEL_API_KEY` in your shell, then run `.venv/bin/python eval/record_fix
 ### Known limits
 
 - The tray list comes from open incisional hernia counts, while the template title says inguinal. The preview shows the source note (P5-R4).
-- The swab total is 15. The count beat shows `14 of 15` first, then the correction to 15.
+- The swab total is 15. The camera reads 14 of 15; the nurse saves 15 and must give the reason, so the record shows what was read and what was saved.
 - No openly licensed tray or saline footage exists. NC-licensed footage is excluded (P3-R1). The media are drawn stand-ins until filmed (D12, P2-R2).
 - A photo cannot be attached when a begin-and-end task is begun, except through the set-up check.
 - Iyer's card uses the hernia care template (P5-R3).

@@ -16,6 +16,9 @@ def test_due_nudges_pause_in_theatre_and_resume(tmp_path):
     assert _move(client, eid, "theatre", procedure="hernia-repair").status_code == 200
     tick = lambda at: client.post(f"/journey/episodes/{eid}/tick", json={"at_ms": at}).json()
     assert not _kinds(tick(7 * H)) & {"dose_overdue", "obs_overdue"}
-    _surgery(client, eid, "began"); _surgery(client, eid, "ended")
+    _surgery(client, eid, "began")
+    for step, extra in (("opened", {"quantity": 20}), ("closing", {"returned": 20})):
+        client.post(f"/journey/episodes/{eid}/count", json={"step": step, "by": "Nurse Asha (synthetic)", "at_ms": 7 * H, **extra})
+    _surgery(client, eid, "ended")
     assert _move(client, eid, "ward", by="Nurse Asha (synthetic)", reason="", checklist={}, at_ms=7 * H + 1000).status_code == 200
     assert {"dose_overdue", "obs_overdue"} <= _kinds(tick(7 * H + 2000))

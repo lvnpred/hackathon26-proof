@@ -80,6 +80,8 @@ def _propose_move(client):
     assert _move(client, eid, "ward", 10, checklist=ADMIT).status_code == 200
     assert _move(client, eid, "theatre", 20, procedure="hernia-repair").status_code == 200
     assert client.post(_url(eid, "surgery"), json={"step": "began", "by": DR, "at_ms": 30}).status_code == 200
+    for step, extra in (("opened", {"quantity": 15}), ("closing", {"returned": 15})):
+        assert client.post(_url(eid, "count"), json={"step": step, "by": ASHA, "at_ms": 35, **extra}).status_code == 200
     assert client.post(_url(eid, "surgery"), json={"step": "ended", "by": DR, "at_ms": 40}).status_code == 200
     return eid
 

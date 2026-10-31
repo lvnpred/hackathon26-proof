@@ -42,7 +42,7 @@ test("the AI chip and pause switch are staff only and posted by the dock role", 
   assert.match(dock, /canSeeAi\(ward\.role\)/);
   assert.match(dock, /staff && paused != null/);
   assert.match(dock, /Demo dock \(\$\{ROLE_NAME\[role\]\}\)/);
-  assert.match(dock, /\/journey\/ops\/\$\{paused \? "resume" : "pause"\}/);
+  assert.match(dock, /paused \? "resume" : "pause"[\s\S]*\/journey\/ops\/\$\{verb\}/);
   const { canSeeAi } = await import("./ai.js");
   assert.equal(canSeeAi("patient"), false);
 });
@@ -58,4 +58,16 @@ test("the AI feed reads the ops feed, checks it and reloads after Undo", async (
   assert.match(feed, /\{r\.undo &&/);
   const dash = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
   assert.ok(dash.indexOf("<ModelCards") < dash.indexOf("<AiFeed"));
+});
+
+test("a failed pause shows an alert, the button waits, and the feed follows the ward", async () => {
+  const fs = await import("node:fs");
+  const dock = fs.readFileSync(new URL("./DemoDock.jsx", import.meta.url), "utf8");
+  assert.match(dock, /Could not \$\{verb\} the AI\./);
+  assert.match(dock, /disabled=\{pauseBusy\}/);
+  assert.doesNotMatch(dock, /catch\(\(\) => \{\}\)/);
+  assert.doesNotMatch("Could not pause the AI. Could not resume the AI.", ADVICE);
+  const feed = fs.readFileSync(new URL("./AiFeed.jsx", import.meta.url), "utf8");
+  assert.match(feed, /\[load, ward\.patients\]/);
+  assert.match(feed, /mine === seq\.current/);
 });

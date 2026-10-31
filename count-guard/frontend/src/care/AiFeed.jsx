@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { call } from "../journey";
 import Fault from "./Fault";
 import { BAD_ANSWER } from "./ai.js";
@@ -10,14 +10,17 @@ export default function AiFeed({ ids, nowMs, ward }) {
   const { openInspector } = useInspector();
   const [feed, setFeed] = useState(null);
   const [error, setError] = useState(null);
+  const seq = useRef(0);
   const [failedIn, setFailedIn] = useState(null);
   const load = useCallback(() => {
     if (!ids) return Promise.resolve();
+    const mine = ++seq.current;
     return call(`/journey/ops/feed?ids=${ids}`)
-      .then((out) => { if (!isFeed(out)) throw new Error(BAD_ANSWER); setFeed(out); setError(null); })
-      .catch((e) => setError((e && e.message) || "That did not work. Try again."));
+      .then((out) => { if (!isFeed(out)) throw new Error(BAD_ANSWER); if (mine === seq.current) { setFeed(out); setError(null); } })
+      .catch((e) => mine === seq.current && setError((e && e.message) || "That did not work. Try again."));
   }, [ids]);
-  useEffect(() => { load(); }, [load]);
+  // Reload when the ward changes (a clock jump, an act); load never writes ward.patients.
+  useEffect(() => { load(); }, [load, ward.patients]);
   const rows = feedRows(feed, nowMs);
   const undo = async (r) => {
     setFailedIn(r.episodeId);
@@ -28,7 +31,7 @@ export default function AiFeed({ ids, nowMs, ward }) {
     <section aria-label="AI did this">
       <h3>AI did this</h3>
       {error && <p className="error small" role="alert">{error}</p>}
-      {rows.length === 0 ? <p className="empty small">Nothing handled yet.</p> : (
+      {rows.length === 0 ? (error && !feed ? null : <p className="empty small">Nothing handled yet.</p>) : (
         <ul className="ai-handling-list">
           {rows.map((r) => (
             <li key={r.workId}>

@@ -39,14 +39,18 @@ test("latestReview and latestMedicines pick the newest, or null", () => {
 });
 
 test("answerByLine names the bot with its source label, and the doctor with how it was given", () => {
-  assert.equal(answerByLine({ by: "Record bot", source: "rules", via: "" }), "Record bot · Rules (no model)");
-  assert.equal(answerByLine({ by: "Record bot", source: "muse-spark-1.3" }), "Record bot · Muse Spark");
+  assert.equal(answerByLine({ by: "Record bot", source: "rules", via: "" }), "Record bot");
+  assert.equal(answerByLine({ by: "Record bot", source: "muse-spark-1.3" }), "Record bot");
   assert.equal(answerByLine({ by: "Dr. A. Rao (synthetic)", source: "doctor", via: "voice" }), "Dr. A. Rao (synthetic), by voice");
   assert.equal(answerByLine({ by: "Dr. A. Rao (synthetic)", source: "doctor", via: "text" }), "Dr. A. Rao (synthetic), typed");
 });
 
+test("answerByLine({source: rules}) is Record bot", () => {
+  assert.equal(answerByLine({ source: "rules" }), "Record bot");
+});
+
 test("answerByLine reads a bot answer with an empty source as the bot, not the doctor", () => {
-  assert.equal(answerByLine({ by: "Record bot", source: "", via: "" }), "Record bot · Not read");
+  assert.equal(answerByLine({ by: "Record bot", source: "", via: "" }), "Record bot");
 });
 
 test("medicineLine shows the schedule, and the whole why for any flagged row", () => {

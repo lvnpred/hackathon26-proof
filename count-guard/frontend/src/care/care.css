@@ -216,3 +216,8 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 /* Voice inspector: a heard word and the order chip it became light together. */
 .inspector-found .mark { background: #fff3c4; border: 0; border-radius: 3px; padding: 0 2px; font: inherit; cursor: pointer; }
 .inspector-found .mark.lit, .inspector-found button.chip.lit { background: #ffd54a; outline: 2px solid #b8860b; }
+
+/* Rule inspector: two records side by side, stacked on a phone. */
+.rule-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 600px) { .rule-cards { grid-template-columns: 1fr; } }
+.inspector-found .plan-item.lit { background: #ffd54a33; outline: 2px solid #b8860b; border-radius: 6px; }

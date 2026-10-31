@@ -70,8 +70,8 @@ export const BEATS = [
     id: "das-ask", path: "das", role: "patient", seconds: 12, film: true,
     say: "Mr. Das asks his own record about his tablet, and the answer comes from the record, with its source named.",
     clicks: ["Role Patient", "Pick A. Das", "Tab Ask", 'Textarea in "Ask your record" <- When do I take amlodipine?', 'Button "Ask the record"'],
-    expect: ["Here is what your record says.", "Amlodipine", "Rules (no model)"],
-    keyed: "No model call: a medicine question is answered by quoting the prescription row. The label reads Rules (no model) with or without a key.",
+    expect: ["Here is what your record says.", "Amlodipine", "Answered from your record"],
+    keyed: "No model call: a medicine question is answered by quoting the prescription row. The label reads Rules with or without a key.",
   },
   {
     id: "das-mycare", path: "das", role: "patient", seconds: 6, film: true,

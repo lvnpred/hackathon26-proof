@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { FIELD_LABEL, REGION_FIELD, diffLine, fieldDiffs, segments, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
+import { NOT_RECORDED, draftSources, ruleCards, FIELD_LABEL, REGION_FIELD, diffLine, fieldDiffs, segments, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
 
 const src = (f) => fs.readFileSync(new URL(f, import.meta.url), "utf8");
 
@@ -143,4 +143,34 @@ test("voice kind is registered and its copy passes ADVICE", () => {
   assert.match(jsx, /No word links for this draft\./);
   assert.match(jsx, /className=\{`mark/);
   assert.doesNotMatch(jsx, /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i);
+});
+
+const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
+const line = (id, type) => ({ id, type, when: "Day 0 09:20", by: "Dr. A. Rao (synthetic)", plain: "Amlodipine 5 mg ordered." });
+
+test("ruleCards: both sides, a missing fact, and a patient lens with no event code", () => {
+  const both = ruleCards({ intent: line("a", "rx.ordered"), fact: line("b", "dose.logged") }, "staff");
+  assert.deepEqual(both.map((c) => c.heading), ["Ordered / prescribed", "Recorded / read"]);
+  assert.match(both[0].line, /^rx\.ordered · 09:20 · /);
+  const none = ruleCards({ intent: line("a", "rx.ordered"), fact: null }, "staff");
+  assert.equal(none[1].line, NOT_RECORDED);
+  assert.equal(none[1].line, "Not recorded");
+  const patient = ruleCards({ intent: line("a", "rx.ordered"), fact: line("b", "dose.logged") }, "patient");
+  for (const c of patient) assert.doesNotMatch(c.line, /\b[a-z]+\.[a-z_]+\b/);
+});
+
+test("draftSources dedupes cited lines in order", () => {
+  const refs = { lines: [{ text: "x", evidence: [line("a"), line("b")] }, { text: "y", evidence: [line("a")] }] };
+  assert.deepEqual(draftSources(refs).map((l) => l.id), ["a", "b"]);
+  assert.deepEqual(draftSources(undefined), []);
+});
+
+test("InspectText is registered and its copy is not advice", () => {
+  assert.match(src("./Inspector.jsx"), /answer: \{ Input: AnswerInput, Found: AnswerFound \}/);
+  assert.match(src("./Inspector.jsx"), /draft: \{ Input: DraftInput, Found: DraftFound \}/);
+  const s = src("./InspectText.jsx");
+  assert.match(s, /No input: this check compares two records\./);
+  for (const text of ["No input: this check compares two records.", "No record lines were cited.", "Not recorded", "Ordered / prescribed", "Recorded / read", "Rule: The strength read from a strip is compared with the prescription row for the same medicine."]) {
+    assert.doesNotMatch(text, ADVICE);
+  }
 });

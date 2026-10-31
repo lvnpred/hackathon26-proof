@@ -71,7 +71,7 @@ On screen: `Clinic visit closed` · `The visit is closed. No further steps.`
 #### `das-ask` · 0:36 · patient · 12 s
 Clicks: 1) Role Patient; 2) Pick A. Das; 3) Tab Ask; 4) Textarea in "Ask your record" <- When do I take amlodipine?; 5) Button "Ask the record"
 
-On screen: `Here is what your record says.` · `Amlodipine` · `Rules (no model)`
+On screen: `Here is what your record says.` · `Amlodipine` · `Answered from your record`
 
 > Mr. Das asks his own record about his tablet, and the answer comes from the record, with its source named.
 
@@ -278,7 +278,7 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 |---|---|
 | `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The dock reads models: live, not offline, when a key is set. |
 | `ai` | Try sample makes live calls with a key: SAM 3.1 runs one image call per tray concept (7). The chip reads live in place of Sample or prepared. |
-| `das-ask` | No model call: a medicine question is answered by quoting the prescription row. The label reads Rules (no model) with or without a key. |
+| `das-ask` | No model call: a medicine question is answered by quoting the prescription row. The label reads Rules with or without a key. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
 | `kumar-count` | SAM 3.1 video call for the swab camera count. The label reads SAM 3.1. Switch: SWABS_LIVE. |

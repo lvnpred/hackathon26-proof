@@ -2,11 +2,13 @@ import { ASK_DOCTOR, NOT_FOUND, answerByLine, medicineLine } from "./askText.js"
 import { patientMarkLine } from "./brownbag.js";
 import { Evidence } from "./Evidence.jsx";
 import { sourceLabel } from "./drafts";
+import AiMoment from "./AiMoment.jsx";
+import { momentFor } from "./moments.js";
 import { threadItems, threadStatus } from "./thread.js";
 
 const THUMB = { objectFit: "cover", borderRadius: 6 };
 
-function Answer({ item, onAskDoctor, episodeId, version }) {
+function Answer({ item, onAskDoctor, episodeId, version, moment }) {
   const { kind, answer, raw } = item;
   if (kind === "record" && answer) {
     return (
@@ -14,6 +16,7 @@ function Answer({ item, onAskDoctor, episodeId, version }) {
         <p>{answer.text || NOT_FOUND}</p>
         {answer.found && <ul>{(answer.sources || []).map((line) => <li key={line.id}><q>{line.text}</q></li>)}</ul>}
         <p className="small muted">{answerByLine(answer)}</p>
+        {moment && <AiMoment moment={moment} role="patient" lens="patient" episodeId={episodeId} quiet />}
         {!answer.found && <button onClick={() => onAskDoctor(item.said)}>{ASK_DOCTOR}</button>}
       </>
     );
@@ -64,7 +67,7 @@ export default function Thread({ view, nowMs, onAskDoctor }) {
             <li className="thread-row" data-line={item.id} key={item.id}>
               <p className="small"><b>{item.title}</b> <span className="pill">{threadStatus(item, nowMs)}</span></p>
               {item.said && <p className="quote">{"“"}{item.said}{"”"}</p>}
-              <Answer item={item} onAskDoctor={onAskDoctor} episodeId={view.episode?.id} version={view.timeline?.length} />
+              <Answer item={item} onAskDoctor={onAskDoctor} episodeId={view.episode?.id} version={view.timeline?.length} moment={item.kind === "record" ? momentFor(view, item.id) : null} />
             </li>
           ))}
         </ul>

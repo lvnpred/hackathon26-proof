@@ -146,3 +146,31 @@ export function diffLine(d) {
   if (d.field === "removed") return `Removed at signing: ${d.drafted}`;
   return `${FIELD_LABEL[d.field]}: ${d.drafted} → ${d.signed}`;
 }
+
+// Two records side by side: what was ordered, and what was read or recorded (R16: the patient lens drops the event type).
+export const NOT_RECORDED = "Not recorded";
+export function ruleCards(refs, lens) {
+  const card = (heading, line) => ({
+    heading,
+    line: line ? recordLine(line, lens) : NOT_RECORDED,
+    id: line?.id ?? null,
+  });
+  return [card("Ordered / prescribed", refs?.intent), card("Recorded / read", refs?.fact)];
+}
+
+// The distinct record lines a draft was written from, in first-cited order.
+export function draftSources(refs) {
+  const seen = new Set();
+  const out = [];
+  for (const row of refs?.lines || []) {
+    for (const line of row.evidence || []) {
+      if (!line || seen.has(line.id)) continue;
+      seen.add(line.id);
+      out.push(line);
+    }
+  }
+  return out;
+}
+
+export const SPARK_WORDING = "muse-spark-1.3";
+export const chartLine = (episodeId, id) => `/chart/${episodeId}?line=${id}`;

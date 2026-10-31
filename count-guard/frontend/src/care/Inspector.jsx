@@ -4,6 +4,7 @@ import { chipFor, findingFor, statusLabel } from "./moments.js";
 import { TABS, correctionLine, inspectEpisode, modelRows, readInspect, recordLine, resolveMoment, tabsFor } from "./inspect.js";
 import { findPatient } from "./Patients";
 import { VoiceFound, VoiceInput } from "./InspectVoice.jsx";
+import { AnswerFound, AnswerInput, DraftFound, DraftInput, RuleFound, RuleInput } from "./InspectText.jsx";
 import { PhotoFound, RawOutput, VisualFound, VisualInput } from "./InspectVisual.jsx";
 
 // Registration point: Tasks 3-5 fill each kind with { Input, Found }; the ops agent adds `agent`.
@@ -13,9 +14,9 @@ export const KIND_VIEWS = {
   visual: { Input: VisualInput, Found: VisualFound },
   photo_read: { Input: VisualInput, Found: PhotoFound },
   voice: { Input: VoiceInput, Found: VoiceFound },
-  answer: null,
-  rule: null,
-  draft: null,
+  answer: { Input: AnswerInput, Found: AnswerFound },
+  rule: { Input: RuleInput, Found: RuleFound },
+  draft: { Input: DraftInput, Found: DraftFound },
 };
 
 const CLEAR = ["inspect", "episode", "focus"];

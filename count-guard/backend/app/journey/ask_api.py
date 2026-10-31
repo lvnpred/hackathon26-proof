@@ -14,7 +14,7 @@ from pydantic import Field
 from app.journey import states
 from app.journey.api import At, _at, _require, _store, settle, view
 from app.journey import live
-from app.journey.ask import DECISIONS, PHOTO_STATES
+from app.journey.ask import ANSWERED, DECISIONS, PHOTO_STATES
 from app.journey.media_api import _heard, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
 from app.journey.medicines import dose_rows, match_medicines, record_holds
 from app.journey.tasks import orders_list
@@ -23,7 +23,6 @@ from app.journey.record import BOT, answer_from_reply, bot_prompt, medicine_answ
 ask_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 
 BOT_ANSWERS = "The record bot answers this question."
-ANSWERED = "This question is answered already."
 REVIEWED = "This photo is reviewed already."
 PHOTO_REFUSED = "A healing photo is sent once the visit is closed or you are home."
 MEDICINES_REFUSED = "A medicines photo is checked once the visit is closed or you are home."

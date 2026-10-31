@@ -15,6 +15,9 @@ NEVER_WORDS = {
     "prescribe": "prescribe", "change_dose": "change a dose", "advise_patient": "advise a patient",
     "clear_count": "clear a count", "discharge": "discharge a patient",
 }
+# Kinds the gate carries out itself (gate.EXECUTABLE must match). They cannot be lowered to L1:
+# approve could not run them with the person as author.
+EXECUTABLE_KINDS = frozenset({"ack_order", "assign_task", "route_question", "file_read", "nudge_obs_overdue"})
 SETTABLE = ("L0", "L1", "L2", "L3")
 
 UNDO_MS = 600_000

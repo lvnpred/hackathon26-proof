@@ -138,12 +138,12 @@ def test_board_events(tmp_path):
 def test_set_level_audits_and_refuses_never(tmp_path):
     store = MorningStore(tmp_path / "m.db")
     assert site.level_of(store, "ack_order") == "L2"
-    site.set_level(store, "ack_order", "L1", "Owner", 0)
-    assert site.level_of(store, "ack_order") == "L1"
+    site.set_level(store, "ack_order", "L3", "Owner", 0)
+    assert site.level_of(store, "ack_order") == "L3"
     changed = [e for e in store.events(site.site_episode(store)) if e["event_type"] == "ops.policy_changed"]
     assert len(changed) == 1
-    assert changed[0]["payload"] == {"kind": "ack_order", "from": "L2", "to": "L1", "by": "Owner"}
-    for kind, level in (("prescribe", "L2"), ("nope", "L1"), ("ack_order", "L9"), ("ack_order", "Never")):
+    assert changed[0]["payload"] == {"kind": "ack_order", "from": "L2", "to": "L3", "by": "Owner"}
+    for kind, level in (("prescribe", "L2"), ("nope", "L1"), ("ack_order", "L9"), ("ack_order", "L1"), ("file_read", "L1"), ("ack_order", "Never")):
         with pytest.raises(ValueError):
             site.set_level(store, kind, level, "Owner", 1)
     assert len(store.events(site.site_episode(store))) == 1
@@ -154,3 +154,9 @@ def test_settings_default_off(monkeypatch):
     assert get_settings().ops_agent is False
     monkeypatch.setenv("CG_OPS_AGENT", "1")
     assert get_settings().ops_agent is True
+
+
+def test_executable_kinds_match_gate():
+    from app.ops import gate
+    from app.ops.policy import EXECUTABLE_KINDS
+    assert gate.EXECUTABLE == EXECUTABLE_KINDS

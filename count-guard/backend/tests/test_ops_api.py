@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from app.journey import ask_api
-from app.ops import gate
+from app.ops import site
 from app.ops.items import ops_view
 from app.ops.policy import AI_BY
 from tests.test_ops_gate import (ADMIT, ASHA, DR, _admit, _events, _kumar_in_clinic, _move, _of, _ops, _ops_client,
@@ -115,7 +114,6 @@ def test_approve_move_no_longer_allowed(tmp_path):
 
 
 def _ask(client, eid):
-    wi = None
     r = client.post(_url(eid, "ask/doctor"), json={"text": "Question?", "at_ms": 100})
     assert r.status_code == 200
     return _proposal(client, eid, "draft_answer")
@@ -148,10 +146,6 @@ def test_approve_answered_question_409(tmp_path):
     r = client.post(_url(eid, f"ops/work/{wi}/approve"), json={"by": DR, "at_ms": 200})
     assert r.status_code == 409
     assert len(_events(client, eid)) == before
-
-
-def test_answered_copy_matches_ask_api():
-    assert gate.ANSWERED == ask_api.ANSWERED
 
 
 def test_never_refused_in_api(tmp_path):
@@ -229,3 +223,19 @@ def test_view_carries_ops(tmp_path):
     client, eid, wi = _admitted(tmp_path)
     view = client.get(_url(eid, "")[:-1]).json()
     assert view["ops"] == ops_view(_events(client, eid))
+
+
+def test_feed_has_no_per_patient_cap_and_pause_default_clock(tmp_path):
+    client = _ops_client(tmp_path)
+    eid = _seed(client)[0]["id"]
+    store = _store(client)
+    for n in range(7):
+        w = store.append(eid, "work.opened", {"kind": "ack_order", "reason": "r", "inputs": [], "owner_role": "nurse",
+                                              "level": "L2", "key": f"k{n}", "by": AI_BY}, ts_ms=n)
+        store.append(eid, "work.done", {"work_id": w["id"], "level": "L2", "summary": f"s{n}", "wrote": []}, ts_ms=n)
+    assert len(client.get(f"/journey/ops/feed?ids={eid}").json()["items"]) == 7
+    assert len(ops_view(_events(client, eid))["handling"]) == 5
+    client.post("/journey/ops/pause", json={"by": "Charge nurse", "at_ms": 5000})
+    client.post("/journey/ops/resume", json={"by": "Charge nurse"})
+    site_events = store.events(site.site_episode(store))
+    assert site_events[-1]["ts_ms"] == 6000

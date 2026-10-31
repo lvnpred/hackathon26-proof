@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.journey import seed
-from app.ops.policy import LEVELS, OPS_LABEL, SETTABLE
+from app.ops.policy import EXECUTABLE_KINDS, LEVELS, OPS_LABEL, SETTABLE
 from app.morning.discharge import visible_events
 
 
@@ -62,6 +62,8 @@ def set_level(store, kind: str, level: str, by: str, at_ms: int) -> None:
         raise ValueError("The AI never does this, so its level cannot change.")
     if level not in SETTABLE:
         raise ValueError("A level is L0, L1, L2 or L3.")
+    if level == "L1" and kind in EXECUTABLE_KINDS:
+        raise ValueError("The AI does this itself, so it cannot be lowered to a proposal.")
     before = level_of(store, kind)
     store.append(site_episode(store), "ops.policy_changed",
                  {"kind": kind, "from": before, "to": level, "by": by}, ts_ms=at_ms)

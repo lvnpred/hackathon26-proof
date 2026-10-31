@@ -99,22 +99,33 @@ def _inputs(ids: list[str], by_id: dict[str, dict]) -> list[dict]:
     return rows
 
 
+def handling_row(row: dict, by_id: dict[str, dict]) -> dict:
+    """The C4 row of one done or undone work item."""
+    d = row["done"]
+    return {
+        "work_id": row["id"], "kind": row["kind"], "level": d.get("level") or row["level"],
+        "summary": d.get("summary", ""), "at_ms": d["at_ms"],
+        "undo_until_ms": d.get("undo_until_ms") if row["status"] == "done" else None,
+        "reason": d.get("reason") or row["reason"],
+        "inputs": _inputs(d.get("inputs") or row["inputs"], by_id), "status": row["status"],
+    }
+
+
+def handled(events: list[dict]) -> list[dict]:
+    """Every done or undone item, newest first, with no per-patient cap (the feed)."""
+    by_id = {event["id"]: event for event in events}
+    rows = [r for r in work_items(events) if r["status"] in ("done", "undone") and r["done"]]
+    rows.sort(key=lambda r: r["done"]["at_ms"], reverse=True)
+    return [handling_row(r, by_id) for r in rows]
+
+
 def ops_view(events: list[dict]) -> dict:
     """The C4 view: what the AI handled, what waits for a person, what is open, who got what."""
     by_id = {event["id"]: event for event in events}
     shown = work_items(events)
     done = [row for row in shown if row["status"] in ("done", "undone") and row["done"]]
     done.sort(key=lambda row: row["done"]["at_ms"])
-    handling = []
-    for row in reversed(done):
-        d = row["done"]
-        handling.append({
-            "work_id": row["id"], "kind": row["kind"], "level": d.get("level") or row["level"],
-            "summary": d.get("summary", ""), "at_ms": d["at_ms"],
-            "undo_until_ms": d.get("undo_until_ms") if row["status"] == "done" else None,
-            "reason": d.get("reason") or row["reason"],
-            "inputs": _inputs(d.get("inputs") or row["inputs"], by_id), "status": row["status"],
-        })
+    handling = [handling_row(row, by_id) for row in reversed(done)]
     proposals = []
     for row in shown:
         if row["status"] != "proposed":

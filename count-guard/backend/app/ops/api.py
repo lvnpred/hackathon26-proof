@@ -9,7 +9,7 @@ from app.journey.ai_api import _ids
 from app.journey.api import At, _at, _require, _store, settle, view
 from app.journey.ask import short_name
 from app.ops import gate, site
-from app.ops.items import ops_view
+from app.ops.items import handled
 from app.ops.run import _LOCK
 
 router = APIRouter(prefix="/journey/episodes/{episode_id}/ops/work/{work_id}")
@@ -83,7 +83,7 @@ def get_state(request: Request) -> dict:
 def _switch(request: Request, body: ByIn, paused: bool) -> dict:
     _person(body.by)
     store = _store(request)
-    site.set_paused(store, paused, body.by, body.at_ms or 0)
+    site.set_paused(store, paused, body.by, _at(store, site.site_episode(store), body.at_ms))
     return _state(store)
 
 
@@ -106,6 +106,6 @@ def feed(request: Request, ids: str = Query(...)) -> dict:
         episode = _require(request, episode_id)
         patient = short_name(episode.get("label"))
         items += [{**row, "episode_id": episode_id, "patient": patient}
-                  for row in ops_view(store.events(episode_id))["handling"]]
+                  for row in handled(store.events(episode_id))]
     items.sort(key=lambda row: row["at_ms"], reverse=True)
     return {"items": items[:FEED_MAX]}

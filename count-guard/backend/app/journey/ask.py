@@ -7,6 +7,7 @@ from __future__ import annotations
 
 DECISIONS = {"no_visit": "No visit needed", "come_in": "Come in to the clinic", "call": "The doctor will call you"}
 PHOTO_STATES = ("clinic_done", "home")
+ANSWERED = "This question is answered already."
 
 
 def short_name(label: str | None) -> str:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.journey import states, tasks
+from app.journey.ask import ANSWERED
 from app.journey.stories import by_ai
 from app.morning.discharge import visible_events
 from app.ops.items import Action, work_items
@@ -15,7 +16,6 @@ WINDOW_CLOSED = "The undo window has closed."
 PERSON_ACTED = "A person has already acted on this, so it cannot be undone here."
 NOT_WAITING = "This proposal is no longer waiting."
 DOCTOR_ONLY = "Only the doctor approves an answer to the patient."
-ANSWERED = "This question is answered already."  # a test pins it to ask_api.ANSWERED (ops cannot import ask_api)
 NOT_APPROVABLE = "This proposal cannot be approved here."
 DOCTOR_PREFIX = "Dr. "
 

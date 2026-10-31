@@ -398,3 +398,17 @@ def test_next_mine_speaks_to_the_owner(tmp_path):
     for text in NEXT_MINE.values():
         assert not ADVICE.search(text)
         assert not text.startswith(("Doctor ", "Nurse ", "The doctor", "The nurse"))
+
+
+def test_next_mine_names_a_waiting_order_draft(tmp_path):
+    from tests.test_p2_dictation import _typed
+
+    client, eid = _new(tmp_path)
+    view = _typed(client, eid, "dictate/orders", "Paracetamol one gram every six hours").json()
+    nn = view["now_next"]
+    assert nn["next_mine"] == "Check and sign the 1 drafted order, then admit the patient or close the visit."
+    assert nn["next"] == "Doctor admits the patient or closes the visit."  # other roles keep the plain step
+    assert not ADVICE.search(nn["next_mine"])
+    signed = client.post(f"/journey/episodes/{eid}/orders/sign", json={
+        "items": view["drafts"]["order"]["items"], "by": "Dr. A. Rao (synthetic)", "draft_id": view["drafts"]["order"]["id"], "at_ms": 0}).json()
+    assert signed["now_next"]["next_mine"] == "Admit the patient or close the visit."

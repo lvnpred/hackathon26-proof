@@ -266,6 +266,10 @@ def _next_step(events: list[dict], state: str, you: bool = False, mine: bool = F
         ack = say(nurse, "acknowledge", f"the new orders from {fresh[-1]['by']}.")
         then = f"complete {own} admission" if mine else f"completes {own} admission"
         next_ = ack if state == "ward" else f"{ack[:-1]}, then {then}."
+    draft = open_drafts(events)["order"] if mine and state in ("clinic", "ward") and not fresh else None
+    if draft:  # the owner's card names the waiting draft before the step it blocks
+        n = len(draft.get("items") or [])
+        next_ = f"Check and sign the {n} drafted order{'' if n == 1 else 's'}, then {next_[0].lower()}{next_[1:]}"
     if state == "theatre" and surgery_status(events) == "none":
         tray = tray_state(events)
         if tray["planned"] and not tray["latest"]:

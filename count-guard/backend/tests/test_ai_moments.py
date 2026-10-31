@@ -215,3 +215,39 @@ def test_handmade_fixture_check_gives_a_handmade_moment(tmp_path, fake_frames):
     assert tray[0]["handmade"] is True
     assert _one(moments([_ev("t1", "tray.checked", 1, rows=[], match="none", why="w", source="prepared", by=ASHA,
                               frame_ids=[])]))["handmade"] is False
+
+
+# Spec Appendix B rows 1-17 (care flow), each as the events that make the moment. Row 18 is the AI activity page,
+# built client-side from these moments (frontend ai.test.js `activityRows`); it is not a moment itself.
+AUDIT = [
+    (1, "orders", "voice", _ev("a1", "order.drafted", 1, items=[DOSE], transcript="a b", heard_by="prepared", source="rules", calls=[VOICE], by=RAO)),
+    (2, "discharge", "voice", _ev("a2", "discharge.drafted", 2, sections=[{"title": "t"}], transcript="a b", heard_by="prepared", source="rules", calls=[VOICE], by=RAO)),
+    (3, "task_voice", "voice", _ev("a3", "task.done", 3, task_id="t", by=ASHA, via="voice", transcript="done", heard_by="prepared", calls=[VOICE])),
+    (4, "answer_voice", "voice", _ev("a4", "question.answered", 4, question_id="q", answer="fine", source="doctor", via="voice", by=RAO, calls=[VOICE])),
+    (5, "monitor", "photo_read", _ev("a5", "proof.checked", 5, photo_id="p", task_id="t", match="ok", why="w", source="prepared", values_read={"sbp": 88}, calls=[SAM])),
+    (6, "dose_strip", "photo_read", _ev("a6", "proof.checked", 6, photo_id="p", task_id="t", read="x", match="ok", why="w", source="prepared", calls=[SAM])),
+    (7, "medicines", "photo_read", _ev("a7", "medicines.read", 7, photo_id="p", rows=[], match="none", why="w", source="prepared", calls=[])),
+    (8, "strips", "photo_read", _ev("a8", "brownbag.med_found", 8, name_as_read="Amlodipine", generic="amlodipine", strength="10 mg", photo_id="p", evidence_id=EID, source="prepared", calls=[SAM])),
+    (9, "tray", "visual", _ev("a9", "tray.checked", 9, rows=[], match="ok", why="w", source="prepared", by=ASHA, frame_ids=[])),
+    (10, "setup", "visual", _ev("a10", "setup.checked", 10, rows=[], match="ok", why="w", source="prepared", by=ASHA, frame_ids=[])),
+    (11, "swabs", "visual", _ev("a11", "swabs.counted", 11, rows=[], match="ok", why="w", source="prepared", by=ASHA, frame_ids=[])),
+    (12, "healing_photo", "record", _ev("a12", "review.requested", 12, photo_id="p", by="p")),
+    (13, "record_bot", "answer", _ev("a13", "question.answered", 13, question_id="q", answer="x", sources=[], found=False, source="rules", calls=[])),
+    (14, "nudge", "rule", _ev("a14", "nudge.raised", 14, key="k", kind="dose_overdue", to="nurse", says="s", says_staff="s", intent_id=None, fact_id=None, at_ms=14)),
+    (15, "handover", "draft", _ev("a15", "handover.drafted", 15, lines=[], text=None, wording="template", calls=[], by=ASHA)),
+    (16, "discharge_card", "draft", _ev("a16", "discharge.card", 16, warning_signs=["w"], schedule=[], wound_care="c")),
+]
+
+
+@pytest.mark.parametrize("row,capability,kind,event", AUDIT, ids=[f"row{r[0]}-{r[1]}" for r in AUDIT])
+def test_appendix_b_row_has_a_moment(row, capability, kind, event):
+    rows = moments([event])
+    got = [m for m in rows if m["capability"] == capability]
+    assert got, f"Appendix B row {row}: no {capability} moment from {event['event_type']}"
+    assert got[0]["kind"] == kind
+
+
+def test_appendix_b_row_17_day_plan_has_a_moment():
+    read = _ev("m1", "medicines.read", 2, photo_id="p1", rows=[], match="none", why="w", source="prepared", calls=[])
+    got = [m for m in moments([_rx(), read]) if m["capability"] == "day_plan"]
+    assert got and got[0]["kind"] == "draft"

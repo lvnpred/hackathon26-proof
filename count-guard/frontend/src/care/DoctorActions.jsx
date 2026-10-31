@@ -39,14 +39,23 @@ function PhotoCard({ title, busy, upload }) {
   );
 }
 
-// Dictation, the order form that loads its draft, and the reference photo input.
+// Dictation, the order form that loads its draft, and the reference photo input. While a draft waits to be signed the
+// order form sits under the Next card (OrderDraft) and the finished dictation box folds away (spec P3).
+function OrderDraft({ view, busy, signOrders }) {
+  const draft = view.drafts?.order;
+  return <OrderForm busy={busy} onSign={signOrders} draft={draft} moment={momentFor(view, draft?.id)} episodeId={view.episode?.id} />;
+}
+
 function OrdersDictation({ view, busy, upload, ask, signOrders }) {
-  const signed = view.drafts?.order ? null : lastSigned(view.ai_moments, "orders");
+  const draft = view.drafts?.order;
+  const signed = draft ? null : lastSigned(view.ai_moments, "orders");
+  const dictate = <Dictate label="Dictate orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />;
+  if (draft) return <details className="fold"><summary>Dictate again</summary>{dictate}</details>;
   return (
     <>
-      <Dictate label="Dictate orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />
+      {dictate}
       {signed && <AiMoment moment={signed} role="doctor" episodeId={view.episode?.id} />}
-      <OrderForm busy={busy} onSign={signOrders} draft={view.drafts?.order} moment={momentFor(view, view.drafts?.order?.id)} episodeId={view.episode?.id} />
+      <OrderDraft view={view} busy={busy} signOrders={signOrders} />
     </>
   );
 }
@@ -204,7 +213,7 @@ export default function DoctorActions({ state, card, view, act, upload, ask, bus
   const { inside, below } = doctorBlocks(state, card);
   return (
     <>
-      <NextCard card={card}>{inside.map((key) => primary[key])}</NextCard>
+      <NextCard card={card} lead={open("orders") && view.drafts?.order ? <OrderDraft view={view} busy={busy} signOrders={signOrders} /> : null}>{inside.map((key) => primary[key])}</NextCard>
       <ActionBar actions={quietActions(state, "doctor")} isOpen={open} onToggle={toggle} />
       {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}

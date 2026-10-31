@@ -85,3 +85,12 @@ test("the brown-bag tone dots never share the Ask unread dot class, which stays 
   assert.match(jsx, /tone-dot \$\{stripTone/);
   assert.doesNotMatch(jsx, /className=\{`dot /);
 });
+
+test("care.css styles the AI moment, chips, tone pills and the Inspector drawer", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.ai-moment \{/);
+  assert.match(css, /\.chip \{/);
+  for (const tone of ["blue", "amber", "green", "grey"]) assert.match(css, new RegExp(`\\.pill\\.tone-${tone}`));
+  assert.match(css, /\.inspector \{[^}]*width:\s*480px/);
+  assert.match(css, /@media \(max-width: 600px\) \{\s*\.inspector \{[^}]*width:\s*100%/);
+});

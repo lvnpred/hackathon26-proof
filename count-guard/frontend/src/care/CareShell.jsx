@@ -4,6 +4,7 @@ import { Mark } from "../App";
 import { stripPills } from "./alerts";
 import { alertCount, alertsLabel } from "./dock";
 import DemoDock from "./DemoDock";
+import Inspector from "./Inspector.jsx";
 import { waitingPills } from "./derive";
 import { chipClass } from "./status";
 import "./care.css";
@@ -129,6 +130,7 @@ export default function CareShell({ ward, children }) {
       {alerts > 0 && alertsOpen && <Strip mine={mine} others={others} />}
       <main className="page">
         {children}
+        <Inspector ward={ward} />
       </main>
       <footer className="care-foot">
         <Link to="/guide">Guide</Link>

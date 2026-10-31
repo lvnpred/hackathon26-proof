@@ -82,3 +82,9 @@ export function markOpened(episodeId, ms) {
     // Storage may be blocked; the unread dot then stays until the next open.
   }
 }
+
+// Where the AI sent the patient's question, read from view.ops.routes.
+export function routedLine(view, questionId) {
+  const to = view?.ops?.routes?.[questionId];
+  return to ? `Your question went to ${displayName(to)}` : "";
+}

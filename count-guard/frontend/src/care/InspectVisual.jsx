@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Evidence, useEvidence } from "./Evidence.jsx";
 import { Stage } from "./EvidenceStage.jsx";
-import { explainRegions } from "./evidence.js";
-import { focusRegion, regionFieldLine, stepFrame } from "./inspect.js";
+import { focusRegion, regionFieldLine, stepFrame, whyRegions } from "./inspect.js";
 import { checkLabel } from "./video.js";
 
 const NO_RAW = "No raw output is kept for this result.";
@@ -57,7 +56,7 @@ export function PhotoFound({ moment, episodeId, focus, setFocus }) {
           </li>
         ))}
       </ul>
-      <p className="small">Why: {explainRegions(regions).join(" ")}</p>
+      <p className="small">Why: {whyRegions(reader, regions).join(" ")}</p>
     </div>
   );
 }

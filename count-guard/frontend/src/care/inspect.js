@@ -2,7 +2,7 @@
 import { correctionLine } from "./capture.js";
 import { INSPECT_ID } from "./moments.js";
 import { displayName } from "./names.js";
-import { regionLabel } from "./evidence.js";
+import { explainRegions, plural, regionLabel } from "./evidence.js";
 import { stripLabel } from "./brownbag.js";
 
 export const TABS = [["input", "Input"], ["found", "What the AI found"], ["record", "Record"], ["model", "Model"]];
@@ -75,3 +75,14 @@ export const focusRegion = (focus) => {
   if (focus && typeof focus === "object") return focus.region ?? null;
   return /^\d+$/.test(String(focus ?? "")) ? Number(focus) : null;
 };
+
+// The "Why" sentences of a photo read. A monitor counts values; strips are read by label, never by value (numbers only).
+export function whyRegions(reader, regions) {
+  if (reader !== "strip" && reader !== "medicines") return explainRegions(regions);
+  const list = regions || [];
+  const boxed = list.length;
+  const read = list.filter((r) => r.label !== null && r.label !== undefined).length;
+  const out = [`Read ${read} ${plural("strip", read)} from ${boxed} ${plural("region", boxed)}.`];
+  if (boxed > read) out.push(boxed - read === 1 ? "1 region had no strip read." : `${boxed - read} regions had no strip read.`);
+  return out;
+}

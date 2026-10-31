@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { REGION_FIELD, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
+import { REGION_FIELD, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
 
 const src = (f) => fs.readFileSync(new URL(f, import.meta.url), "utf8");
 
@@ -96,4 +96,14 @@ test("VideoCheck shows the moment chip, not the source label", () => {
   assert.doesNotMatch(src("VideoCheck.jsx"), /sourceLabel\(/);
   assert.doesNotMatch(src("TaskProof.jsx"), /sourceLabel\(photo/);
   assert.doesNotMatch(src("MyCare.jsx"), /sourceLabel\(/);
+});
+
+test("whyRegions counts values for a monitor and labels for strips", () => {
+  const monitor = [{ label: "SBP", value: "88", bbox: [0, 0, 1, 1] }, { label: "HR", value: null, bbox: [0, 0, 1, 1] }];
+  assert.equal(whyRegions("monitor", monitor).join(" "), "Read 1 values from 2 regions. 1 region had no value read.");
+  const strip = [{ label: "Amlodipine 10 mg", value: null, bbox: [0, 0, 1, 1] }];
+  assert.deepEqual(whyRegions("strip", strip), ["Read 1 strip from 1 region."]);
+  const meds = [{ label: "A", value: null }, { label: "B", value: null }, { label: null, value: null }];
+  assert.deepEqual(whyRegions("medicines", meds), ["Read 2 strips from 3 regions.", "1 region had no strip read."]);
+  for (const line of [...whyRegions("strip", strip), ...whyRegions("medicines", meds)]) assert.doesNotMatch(line, /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i);
 });

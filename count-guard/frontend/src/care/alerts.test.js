@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { showTrayFlag } from "./derive.js";
-import { SAFETY, alertNow, bannerAlerts, bannerClass, stripPills, surname } from "./alerts.js";
+import { SAFETY, alertNow, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
 
 const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "Day 0 10:00" });
 const pill = (episodeId, name, who, what, role = "nurse") => ({ key: `${episodeId}:${what}`, episodeId, name, who, what, role });
@@ -77,4 +77,11 @@ test("stripPills keeps a pill with an unknown role, in a group named by that rol
   const viewer = stripPills(pills, "e4", "pharmacist");
   assert.equal(viewer.mine.length, 2);
   assert.deepEqual(viewer.others.map((g) => g.text), ["+1 for nurse"]);
+});
+
+test("nudgeText gives staff the staff wording and the patient the patient wording", () => {
+  assert.equal(nudgeText({ says: "a", says_staff: "b" }, "doctor"), "b");
+  assert.equal(nudgeText({ says: "a", says_staff: "b" }, "nurse"), "b");
+  assert.equal(nudgeText({ says: "a", says_staff: "b" }, "patient"), "a");
+  for (const role of ["doctor", "nurse", "patient"]) assert.equal(nudgeText({ says: "a" }, role), "a");
 });

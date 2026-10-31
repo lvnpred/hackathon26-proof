@@ -26,6 +26,9 @@ export function stripPills(pills, episodeId, role) {
   return { mine: shown.filter((p) => p.role === role), others };
 }
 
+// A nudge reads in the patient's words for the patient and in staff words for staff; an older nudge has one wording.
+export const nudgeText = (nudge, role) => (role === "patient" ? nudge.says : nudge.says_staff || nudge.says);
+
 // The newest open safety nudge, as the NOW line.
 export function alertNow(view) {
   const safety = (view?.nudges || []).filter((n) => SAFETY.includes(n.kind));

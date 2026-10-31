@@ -4,6 +4,7 @@ import { getAudit } from "../journey";
 import { useCareWard } from "./CareShell";
 import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
+import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import History from "./History";
 import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
@@ -39,14 +40,15 @@ export default function Chart() {
     return () => { live = false; };
   }, [episodeId, Boolean(patient), stamp]);
 
-  // The ward nurse opening a chart has seen its check-ins: one Seen per check-in, one after the other (R22).
+  // The ward nurse or the doctor opening a chart has seen its check-ins: one Seen per check-in, one after the other (R22, R15).
   const checkinCount = view?.ask?.checkins?.length;
   useEffect(() => {
-    if (ward.role !== "nurse" || !view) return;
-    const ids = unseenCheckins(view, WARD_NURSE);
+    const reader = ward.role === "nurse" ? WARD_NURSE : ward.role === "doctor" ? DOCTOR : null;
+    if (!reader || !view) return;
+    const ids = unseenCheckins(view, reader);
     (async () => {
       for (const id of ids) {
-        if (!(await ward.markSeen(episodeId, id, WARD_NURSE))) break;
+        if (!(await ward.markSeen(episodeId, id, reader))) break;
       }
     })();
   }, [episodeId, checkinCount, ward.role]);

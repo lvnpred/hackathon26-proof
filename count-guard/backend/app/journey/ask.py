@@ -101,3 +101,8 @@ def open_for_doctor(events: list[dict]) -> dict:
         "questions": sum(q["to"] == "doctor" and q["answer"] is None for q in view["questions"]),
         "reviews": sum(r["answer"] is None for r in view["reviews"]),
     }
+
+
+def unseen_by_doctor(events: list[dict]) -> list[dict]:
+    """Check-ins no doctor has seen, oldest first. A nurse's Seen does not count (R15)."""
+    return [c for c in ask_view(events)["checkins"] if not any(s["by"].startswith("Dr. ") for s in c["seen"])]

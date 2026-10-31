@@ -57,7 +57,7 @@ On screen: `In clinic` · `Amlodipine`
 #### `das-strip` · 0:28 · doctor · 5 s
 Clicks: 1) Field "One strip per line: name then strength" <- Amlodipine 10 mg; 2) Button "Check these strips"
 
-On screen: `The prescription says Amlodipine 5 mg`
+On screen: `Strip reads amlodipine 10 mg; prescription says 5 mg.`
 
 > A pharmacy strip is checked against the prescription, and the mismatch is named.
 

@@ -55,7 +55,7 @@ export const BEATS = [
     id: "das-strip", path: "das", role: "doctor", seconds: 5, film: true,
     say: "A pharmacy strip is checked against the prescription, and the mismatch is named.",
     clicks: ['Field "One strip per line: name then strength" <- Amlodipine 10 mg', 'Button "Check these strips"'],
-    expect: ["The prescription says Amlodipine 5 mg"],
+    expect: ["Strip reads amlodipine 10 mg; prescription says 5 mg."],
     keyed: "No model call; this check is plain text matching.",
   },
   {

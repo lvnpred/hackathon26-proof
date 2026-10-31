@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.adapters.spark import SparkAdapter
 from app.config import BANNER
 from app.journey import nudges as rules
+from app.journey.ai_moments import moments
 from app.journey.handover import draft as draft_handover
 from app.journey.medicines import day_plan
 from app.journey.play import play_journey
@@ -178,6 +179,7 @@ def view(request: Request, episode_id: str) -> dict:
             {**e["payload"], "id": e["id"], "when": clock(e["ts_ms"])} for e in rules.open_nudges(events)
         ],
         "timeline": timeline_items(events),
+        "ai_moments": moments(events),
         "templates": {key: value["title"] for key, value in CARE_TEMPLATES.items()},
         **flow_view(events),
         # Present once reminders were added, so a reload keeps the download link without a second post.

@@ -33,12 +33,13 @@ def span(ms: int) -> str:
     return f"{hours} h" if hours else f"{minutes} min"
 
 
-def _nudge(key, kind, to, says, intent, fact, at_ms):
+def _nudge(key, kind, to, says, intent, fact, at_ms, says_staff=None):
     return {
         "key": key,
         "kind": kind,
         "to": to,
         "says": says,
+        "says_staff": says_staff or says,
         "intent_id": intent["id"] if intent else None,
         "fact_id": fact["id"] if fact else None,
         "at_ms": at_ms,
@@ -69,13 +70,15 @@ def strips_vs_rx(events: list[dict]) -> list[dict]:
         read = f"{name} {found.get('strength') or ''}".strip()
         if row is None:
             says = f"The strip {read} is not on the prescription from {rx['payload']['by']}. Show it to your doctor."
-            out.append(_nudge(f"strip-off-rx:{strip['id']}", "strip_not_prescribed", "patient", says, rx, strip, strip["ts_ms"]))
+            staff = f"Strip reads {read}; not on the prescription from {rx['payload']['by']}."
+            out.append(_nudge(f"strip-off-rx:{strip['id']}", "strip_not_prescribed", "patient", says, rx, strip, strip["ts_ms"], staff))
         elif found.get("strength") and row["strength"] and _norm(found["strength"]) != _norm(row["strength"]):
             says = (
                 f"This strip reads {read}. The prescription says {row['name']} {row['strength']}. "
                 "Show both to your pharmacist or doctor."
             )
-            out.append(_nudge(f"strip-strength:{strip['id']}", "strip_strength_differs", "patient", says, rx, strip, strip["ts_ms"]))
+            staff = f"Strip reads {read}; prescription says {row['strength']}."
+            out.append(_nudge(f"strip-strength:{strip['id']}", "strip_strength_differs", "patient", says, rx, strip, strip["ts_ms"], staff))
     return out
 
 

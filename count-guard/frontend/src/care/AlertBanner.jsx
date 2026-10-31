@@ -1,5 +1,5 @@
 import { Nudge } from "../screens/WardPanel";
-import { bannerAlerts, bannerClass } from "./alerts";
+import { bannerAlerts, bannerClass, nudgeText } from "./alerts";
 import { showTrayFlag } from "./derive";
 import { trayFlag } from "./video";
 
@@ -13,9 +13,9 @@ export default function AlertBanner({ view, role, line, busy, act }) {
       {alerts.map(({ nudge, safety, canAnswer }) => (
         <div key={nudge.id} data-line={nudge.id} className={`alert-item${safety ? " alert-safety" : ""}${nudge.id === line ? " line-hit" : ""}`}>
           {canAnswer ? (
-            <Nudge nudge={nudge} busy={busy} act={act} />
+            <Nudge nudge={{ ...nudge, says: nudgeText(nudge, role) }} busy={busy} act={act} />
           ) : (
-            <p><span className="tag">{nudge.when}</span> <b>{nudge.says}</b></p>
+            <p><span className="tag">{nudge.when}</span> <b>{nudgeText(nudge, role)}</b></p>
           )}
         </div>
       ))}

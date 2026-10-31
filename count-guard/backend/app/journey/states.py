@@ -7,7 +7,7 @@ plain reason before anything is written.
 
 from __future__ import annotations
 
-from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name
+from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name, unseen_by_doctor
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient, in_theatre
 from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
@@ -277,6 +277,13 @@ def _next_step(events: list[dict], state: str, you: bool = False, mine: bool = F
             next_ = say("The doctor", "review", f"{own} healing photo.")
         elif waiting["questions"]:
             next_ = say("The doctor", "answer", f"{own} question.")
+        elif unseen_by_doctor(events):
+            day = unseen_by_doctor(events)[0]["day"]
+            next_ = (
+                f"Day {day} check-in not seen." if mine
+                else f"Dr. Rao has not seen your day {day} check-in yet." if you
+                else f"Day {day} check-in not seen by the doctor."
+            )
     return next_
 
 
@@ -304,7 +311,7 @@ def next_role(events: list[dict], state: str) -> str | None:
             role = "nurse"
     if state in PHOTO_STATES:
         waiting = open_for_doctor(events)
-        if waiting["reviews"] or waiting["questions"]:
+        if waiting["reviews"] or waiting["questions"] or unseen_by_doctor(events):
             role = "doctor"
     return role
 

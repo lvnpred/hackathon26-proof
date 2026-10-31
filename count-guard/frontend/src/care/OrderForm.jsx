@@ -50,7 +50,9 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
             <OrderSentence row={row} index={index} onChange={(next) => setRows((list) => list.map((r, i) => (i === index ? next : r)))} />
             <button type="button" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Remove row</button>
           </div>
-          {errors[index] && <p className="error small" role="alert">{errors[index]}</p>}
+          {errors[index] && (
+            <p className="error small" role="alert">{errors[index]} <button type="button" onClick={() => setAll(true)}>Open the full form</button></p>
+          )}
         </div>
       ) : (
         <div className="stack" key={index}>

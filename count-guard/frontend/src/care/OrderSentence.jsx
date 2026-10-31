@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { FIELD_LABEL } from "./inspect.js";
-import { CHIP_INPUT, chipEdit, chipValid, chipValue, orderSentence, rowItem } from "./orders.js";
+import { CHIP_INPUT, chipEdit, chipValue, missingChips, numberProblem, orderSentence, rowItem } from "./orders.js";
 
 // One drafted order as chips. Tapping a chip opens an input for that field; Enter or blur commits, Esc cancels.
 export default function OrderSentence({ row, index, onChange }) {
   const [editing, setEditing] = useState(null);
   const [value, setValue] = useState("");
   const [problem, setProblem] = useState("");
-  const chips = row.text.trim() ? orderSentence(rowItem(row)) : [{ field: "text", text: "Add order text" }];
+  const chips = row.text.trim() ? [...orderSentence(rowItem(row)), ...missingChips(row)] : [{ field: "text", text: "Add order text" }];
 
   function open(field) {
     setEditing(field);
@@ -15,8 +15,9 @@ export default function OrderSentence({ row, index, onChange }) {
     setProblem("");
   }
   function commit(field, next) {
-    if (!chipValid(field, next)) {
-      setProblem(`${FIELD_LABEL[field]} must be a number.`);
+    const bad = numberProblem(field, next);
+    if (bad) {
+      setProblem(bad);
       return false;
     }
     onChange(chipEdit(row, field, next));

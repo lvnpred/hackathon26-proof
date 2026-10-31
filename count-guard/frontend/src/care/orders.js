@@ -14,6 +14,10 @@ export const PREFILL = {
 const blank = (value) => String(value).trim() === "";
 const number = (value) => (blank(value) ? null : Number(value));
 
+// The one rule for a typed number: the form rows and the chip inputs share it.
+const NUMBER_LABEL = { every_h: "Every h", "limits.sbp_min": "Systolic BP min", "limits.sbp_max": "Systolic BP max" };
+export const numberProblem = (field, value) => (field in NUMBER_LABEL && !blank(value) && !Number.isFinite(Number(value)) ? `${NUMBER_LABEL[field]} must be a number.` : "");
+
 // Rows with no text are dropped. Blank optional fields are left out; limits go on observations only.
 // Returns { items, errors }; errors maps a row's index to its plain message. A typed value that is
 // not a number, or a dose with no medicine name, is an error, never a silent drop.
@@ -22,10 +26,10 @@ export function orderRowsToItems(rows) {
   const errors = {};
   rows.forEach((row, index) => {
     if (!row.text.trim()) return;
-    const fields = [["Every h", row.every_h]];
-    if (row.kind === "obs") fields.push(["Systolic BP min", row.sbp_min], ["Systolic BP max", row.sbp_max]);
-    const bad = fields.find(([, value]) => !blank(value) && !Number.isFinite(number(value)));
-    if (bad) errors[index] = `${bad[0]} must be a number.`;
+    const fields = [["every_h", row.every_h]];
+    if (row.kind === "obs") fields.push(["limits.sbp_min", row.sbp_min], ["limits.sbp_max", row.sbp_max]);
+    const bad = fields.map(([field, value]) => numberProblem(field, value)).find(Boolean);
+    if (bad) errors[index] = bad;
     else if (row.kind === "dose" && blank(row.name)) errors[index] = "Medicine name is needed for a dose.";
     const item = { kind: row.kind, text: row.text.trim(), mode: row.mode, proof: row.proof };
     const everyH = number(row.every_h);
@@ -89,14 +93,13 @@ export const rowItem = (row) => orderRowsToItems([row]).items[0] ?? { kind: row.
 // Chip fields edited as text unless listed here.
 export const CHIP_INPUT = { proof: "select" };
 
-const NUMERIC_CHIP = new Set(["every_h", "limits.sbp_min", "limits.sbp_max"]);
 const ROW_FIELD = { "limits.sbp_min": "sbp_min", "limits.sbp_max": "sbp_max" };
 
 // The form row's value behind a chip, as the string an input shows.
 export const chipValue = (row, field) => row[ROW_FIELD[field] ?? field] ?? "";
 
-// A chip edit is valid unless a numeric field holds something that is not a number.
-export const chipValid = (field, value) => !NUMERIC_CHIP.has(field) || blank(value) || Number.isFinite(Number(value));
+// Placeholder chips for a field the order needs and the row lacks: a dose with no medicine name.
+export const missingChips = (row) => (row.kind === "dose" && blank(row.name) ? [{ field: "name", text: "Add medicine" }] : []);
 
 // The row with one chip's field replaced; the value is stored as typed, as the form does.
 export const chipEdit = (row, field, value) => ({ ...row, [ROW_FIELD[field] ?? field]: value });

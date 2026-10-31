@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { blankRow, chipEdit, chipValid, CHIP_INPUT, obsLabel, orderRowsToItems, orderSentence, PREFILL, rowItem, sentenceText } from "./orders.js";
+import { blankRow, chipEdit, missingChips, numberProblem, CHIP_INPUT, obsLabel, orderRowsToItems, orderSentence, PREFILL, rowItem, sentenceText } from "./orders.js";
 
 test("empty rows are dropped", () => {
   assert.deepEqual(orderRowsToItems([blankRow("other"), { ...blankRow("dose"), text: "  " }]).items, []);
@@ -96,11 +96,26 @@ test("chipEdit sets one field and limits map to the row", () => {
   assert.deepEqual(CHIP_INPUT, { proof: "select" });
 });
 
-test("chipValid rejects a non-number in a numeric chip", () => {
-  assert.equal(chipValid("every_h", "abc"), false);
-  assert.equal(chipValid("limits.sbp_min", "9x"), false);
-  assert.equal(chipValid("every_h", "6"), true);
-  assert.equal(chipValid("amount", "a lot"), true);
+test("one rule words a bad number for the chip and the form", () => {
+  const msg = numberProblem("every_h", "abc");
+  assert.equal(msg, "Every h must be a number.");
+  assert.equal(orderRowsToItems([{ ...PREFILL.dose(), every_h: "abc" }]).errors[0], msg);
+  assert.equal(numberProblem("limits.sbp_min", "9x"), "Systolic BP min must be a number.");
+  assert.equal(numberProblem("every_h", "6"), "");
+  assert.equal(numberProblem("amount", "a lot"), "");
+});
+
+test("a dose with no medicine name gets a tappable placeholder chip", () => {
+  assert.deepEqual(missingChips({ ...PREFILL.dose(), name: " " }), [{ field: "name", text: "Add medicine" }]);
+  assert.deepEqual(missingChips(PREFILL.dose()), []);
+  assert.deepEqual(missingChips(PREFILL.obs()), []);
+});
+
+test("new Task 7 copy gives no advice", () => {
+  const copy = ["Add order text", "Add medicine", "Edit all fields", "Open the full form", numberProblem("every_h", "x"), numberProblem("limits.sbp_max", "x")];
+  for (const text of copy) assert.doesNotMatch(text, /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i);
+  const form = readFileSync(new URL("./OrderForm.jsx", import.meta.url), "utf8");
+  assert.match(form, /Open the full form/);
 });
 
 test("a prefilled dose reads as a sentence", () => {

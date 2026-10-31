@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from app.journey import doctor_status, states, tasks
+import re
+
+from app.agent import verifier
+from app.journey import doctor_status, handover, states, tasks
 from app.journey.ask import short_name
 from app.morning.discharge import visible_events
 from app.ops import watch
@@ -20,6 +23,8 @@ TEMPLATES = {
     "propose_move": "Back to ward: {patient}",
     "draft": "Your discharge card lists these warning signs: {signs}. {care}",
 }
+OPS_PROMPT = ("Reword these record lines as one short plain sentence for a doctor to approve. "
+              "Add no number, medicine or instruction that is not in the lines.\n\n")
 _OPEN = ("open", "running")
 _OBS_FIELDS = tasks.OBS_FIELDS
 
@@ -78,6 +83,20 @@ def _patient(events: list[dict]) -> str:
     """The patient's short name from the record. Only the patient's own question carries it."""
     asked = _latest(events, "question.asked")
     return short_name(asked["payload"].get("by")) if asked else "the patient"
+
+
+def _worded(template: str, cited: list[dict], settings, write) -> tuple[str, str]:
+    """(text, model): the model's reword when every check passes, else the template. Never raises."""
+    if not cited or (write is None and (settings is None or not settings.spark_configured)):
+        return template, "rules"
+    text, _why = handover.reword(cited, settings, write, prompt=OPS_PROMPT)
+    ok, _problem = handover.checked(text, cited)
+    if not ok:
+        return template, "rules"
+    figures = {f"n{i}": int(n) for i, n in enumerate(re.findall(r"\b\d+\b", " ".join(r["text"] for r in cited)))}
+    if verifier.check_sentence(text, evidence_ids=[], known_ids=set(), figures=figures, claims={}):
+        return template, "rules"
+    return text, "spark"
 
 
 def _ack_order(item, events, board, at_ms, patient=""):
@@ -150,7 +169,7 @@ def _file_read(item, events, board, at_ms, patient=""):
                   TEMPLATES["file_swabs"].format(n=p["count"], opened=opened))
 
 
-def _draft_answer(item, events, board, at_ms, patient=""):
+def _draft_answer(item, events, board, at_ms, patient="", settings=None, write=None):
     question = _find(events, item.inputs[0], "question.asked")
     rows = cited_card(events)
     card_signs = (_latest(events, "discharge.card") or {"payload": {}})["payload"].get("warning_signs")
@@ -160,8 +179,9 @@ def _draft_answer(item, events, board, at_ms, patient=""):
     draft = TEMPLATES["draft"].format(signs="; ".join(card.get("warning_signs") or []),
                                       care=card.get("wound_care", "")).strip()
     sentence = TEMPLATES["draft_answer"].format(patient=short_name(question["payload"].get("by")))
+    draft, model = _worded(draft, rows, settings, write)
     return Action("draft_answer", {"question_id": question["id"]}, sentence, sentence=sentence,
-                  draft=draft, cited=tuple(rows))
+                  draft=draft, cited=tuple(rows), model=model)
 
 
 def _propose_move(item, events, board, at_ms, patient=""):
@@ -183,4 +203,7 @@ def plan(item: WorkItem, events: list[dict], *, board=(), at_ms: int = 0, settin
     """The action for a work item, or None when the work is no longer needed.
 
     `settings` and `write` are for the reword. `patient` is the episode's short name for the move sentence."""
-    return _PLANNERS[item.kind](item, events, board, at_ms, patient)
+    planner = _PLANNERS[item.kind]
+    if planner is _draft_answer:  # only the L1 draft is reworded; propose_move has no cited rows, so it stays a template
+        return planner(item, events, board, at_ms, patient, settings, write)
+    return planner(item, events, board, at_ms, patient)

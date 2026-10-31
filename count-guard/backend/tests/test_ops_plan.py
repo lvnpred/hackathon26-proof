@@ -234,3 +234,67 @@ def test_draft_answer_none_when_card_has_no_signs():
 def test_nudge_prefers_staff_wording():
     nudge = _ev("nudge.raised", {"kind": "obs_overdue", "key": "k", "says": "A", "says_staff": "B"}, "n1", 500)
     assert planner.plan(_item("nudge_obs_overdue", "n1"), _ward() + [nudge]).summary == "Nudged Nurse Meena: B"
+
+
+# --- Task 6: optional model reword with template fallback ---
+from tests.test_p3_video import _keyed, _no_key, no_network  # noqa: E402,F401  (no_network is autouse)
+from app.journey import handover  # noqa: E402
+
+
+def _draft(settings=None, write=None):
+    evs = _ward() + [_card(), _ask()]
+    return planner.plan(_item("draft_answer", "q1", "d1"), evs, settings=settings, write=write), evs
+
+
+def test_reword_used_when_checked(tmp_path):
+    act, _ = _draft(_no_key(tmp_path), lambda p: "Your discharge card lists fever above 38 °C as a warning sign.")
+    assert act.model == "spark"
+    assert act.draft == "Your discharge card lists fever above 38 °C as a warning sign."
+
+
+def test_reword_with_advice_falls_back(tmp_path):
+    base, _ = _draft()
+    act, _ = _draft(_no_key(tmp_path), lambda p: "You should watch for fever above 38 °C.")
+    assert (act.draft, act.model) == (base.draft, "rules")
+
+
+def test_reword_new_number_falls_back(tmp_path):
+    base, _ = _draft()
+    act, _ = _draft(_no_key(tmp_path), lambda p: "Fever above 38 °C within 72 hours is a warning sign.")
+    assert (act.draft, act.model) == (base.draft, "rules")
+
+
+def test_reword_model_error_falls_back(tmp_path):
+    def boom(prompt):
+        raise RuntimeError("down")
+    base, _ = _draft()
+    act, _ = _draft(_no_key(tmp_path), boom)
+    assert (act.draft, act.model) == (base.draft, "rules")
+
+
+def test_reword_sends_ops_prompt(tmp_path):
+    seen = []
+    _draft(_no_key(tmp_path), lambda p: seen.append(p) or "")
+    assert seen and seen[0].startswith(planner.OPS_PROMPT)
+
+
+def test_no_key_no_write_is_template(tmp_path):
+    act, _ = _draft(_no_key(tmp_path), None)
+    assert act.model == "rules" and act.draft.startswith("Your discharge card lists these warning signs")
+
+
+def test_propose_move_stays_template(tmp_path):
+    seen = []
+    evs = _ward()
+    item = _item("propose_move", "m1")
+    act = planner.plan(item, evs, at_ms=10**9, settings=_no_key(tmp_path), write=lambda p: seen.append(p) or "x",
+                       patient="Asha")
+    if act is not None:
+        assert act.model == "rules" and act.sentence == "Back to ward: Asha"
+    assert seen == []
+
+
+def test_handover_prompt_default_unchanged(tmp_path):
+    seen = []
+    handover.reword([{"text": "A fact.", "evidence": []}], _no_key(tmp_path), write=lambda p: seen.append(p) or "ok")
+    assert seen[0].startswith(handover.PROMPT) and not seen[0].startswith(planner.OPS_PROMPT)

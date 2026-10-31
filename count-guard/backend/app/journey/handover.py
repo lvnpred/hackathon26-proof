@@ -91,7 +91,7 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
     return lines
 
 
-def reword(lines: list[dict], settings, write=None) -> tuple[str | None, str]:
+def reword(lines: list[dict], settings, write=None, prompt: str = PROMPT) -> tuple[str | None, str]:
     """Ask Muse Spark 1.3 (Meta Model API key) for one paragraph. Returns (text or None, why not used).
 
     No tools are needed here, so the handover runs on the same key as strips and the second look.
@@ -102,7 +102,7 @@ def reword(lines: list[dict], settings, write=None) -> tuple[str | None, str]:
         write = SparkAdapter(settings).write
     facts = "\n".join(f"{n}. {line['text']}" for n, line in enumerate(lines, 1))
     try:
-        text = (write(PROMPT + facts) or "").strip()
+        text = (write(prompt + facts) or "").strip()
     except (httpx.HTTPError, RuntimeError, KeyError, ValueError) as exc:
         return None, f"model call failed ({type(exc).__name__})"
     return text or None, "" if text else "empty reply"

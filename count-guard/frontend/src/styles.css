@@ -20,6 +20,9 @@
   --leaf: #1d7445;
   --leaf-soft: #e1f2e7;
   --dusk: #14120E;
+  --on-dusk: #f4eee3;
+  --dusk-muted: #b4aa98;
+  --dusk-line: #807664;
   --status-fine: var(--leaf);
   --status-fine-soft: var(--leaf-soft);
   --status-wait: var(--sky);

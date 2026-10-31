@@ -22,7 +22,7 @@ Decision for the owner: film offline or keyed (see Owner handover). The script b
 4. Use a 1200-wide window. The patient beats can be filmed in a phone-sized window.
 5. Do not press Reset in the first second.
 6. The intro beat names port 5273, which is the check's own port. Use your own port when filming.
-7. Confirm the dock reads `Synthetic data · models: offline (prepared)` before the first take. If it reads Models: live, stop and restart with the key empty.
+7. Confirm the dock reads `models: offline (prepared)` before the first take. If it reads Models: live, stop and restart with the key empty.
 
 ## Offline script
 
@@ -33,7 +33,7 @@ Each beat shows its id, start time, role and length. Clicks are numbered. "On sc
 #### `intro` · 0:00 · none · 3 s
 Clicks: 1) Open http://127.0.0.1:5273/; 2) Role Doctor
 
-On screen: `Synthetic data · models: offline (prepared)` · `Research demo. Not for clinical use.`
+On screen: `Research demo · Synthetic data · Not for clinical use` · `models: offline (prepared)`
 
 > Count Guard is a research demo on a synthetic ward, running with no live model.
 

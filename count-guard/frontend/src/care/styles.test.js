@@ -42,18 +42,22 @@ test("care.css styles the journey bar, the next card and the quiet row", () => {
   assert.match(css, /\.quiet-row/);
 });
 
-test("the dock folds to one line at phone width and the clock keeps its disabled style", () => {
+test("the demo dock is dusk and dashed, folds to a round button on a phone and keeps the disabled clock style", () => {
   const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.demo-dock \{[^}]*position: fixed[^}]*dashed[^}]*var\(--dusk\)/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.demo-dock:not\(\.open\) \.dock-body \{[^}]*display:\s*none/);
-  assert.match(css, /\.demo-dock \{[^}]*background/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.demo-dock \{[^}]*border-radius: 50%/);
+  assert.match(css, /\.app \{ padding-bottom: calc\(var\(--dock-h/);
   assert.doesNotMatch(css, /\.demo-toggle/);
 });
 
-test("the research notice sits outside the folded dock body", () => {
-  const jsx = fs.readFileSync(new URL("./DemoDock.jsx", import.meta.url), "utf8");
-  const body = jsx.match(/<div className="dock-body">([\s\S]*?)\n      <\/div>/)[1];
-  assert.doesNotMatch(body, /<Banner/);
-  assert.match(jsx, /<Banner \/>/);
+test("the safety strip is never hidden by a media query", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.product-strip \{/);
+  assert.doesNotMatch(css, /\.product-strip[^{]*\{[^}]*display:\s*none/);
+  for (const block of css.match(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/g) || []) {
+    assert.doesNotMatch(block, /product-strip[^{]*\{[^}]*(display:\s*none|visibility:\s*hidden)/);
+  }
 });
 
 test("care.css styles the patient thread rows and the unread dot", () => {

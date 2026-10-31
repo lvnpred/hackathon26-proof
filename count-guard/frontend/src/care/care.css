@@ -1,4 +1,4 @@
-/* Care shell: role switch, waiting strip, demo clock bar, patient list */
+/* Care shell: role switch, waiting strip, demo dock, patient list */
 .role-switch { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface-sunk); }
 .role-switch button { min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-muted); font: inherit; font-weight: 700; cursor: pointer; }
 .role-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sheet); }
@@ -15,7 +15,6 @@
 .open-cue { margin-left: auto; color: var(--sky); font-weight: 600; }
 .patient-list { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .patient-list a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-decoration: none; }
-.care-foot { display: flex; gap: 16px; padding: 16px 24px; font-size: 14px; }
 
 /* Chart: lens chips, timeline, deep-link highlight */
 button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun-text); }
@@ -29,24 +28,35 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .alert-safety { border-left: 4px solid var(--record); padding-left: 8px; }
 .action-bar { display: flex; flex-wrap: wrap; gap: 8px; }
 .action-bar button[aria-expanded="true"]:not(:disabled) { background: var(--action); border-color: var(--action); color: var(--on-action); }
-.demo-dock { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 24px; background: var(--ink); color: var(--surface); font-size: 14px; }
-.dock-summary { display: none; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--surface); font: inherit; font-weight: 700; cursor: pointer; }
+/* Demo dock: apart from the product, fixed to the bottom, always open on desktop */
+.app { padding-bottom: calc(var(--dock-h, 0px) + 12px); }
+.demo-dock { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 16px; border: 1px dashed var(--dusk-line); border-radius: 12px; background: var(--dusk); color: var(--on-dusk); font-size: 14px; }
+.demo-dock a { color: var(--on-dusk); }
+.dock-label { text-transform: uppercase; letter-spacing: 0.06em; color: var(--dusk-muted); }
+.dock-summary { display: none; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--on-dusk); font: inherit; font-weight: 700; cursor: pointer; }
 .dock-body { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
-.demo-dock .role-switch { background: transparent; border: 1px solid var(--surface); }
-.demo-dock .role-switch button { color: var(--surface); }
-.demo-dock .role-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: none; }
+.demo-dock .role-switch { background: transparent; border: 1px solid var(--on-dusk); }
+.demo-dock .role-switch button { color: var(--on-dusk); }
+.demo-dock .role-switch button[aria-pressed="true"] { background: var(--on-dusk); color: var(--dusk); box-shadow: none; }
 .demo-dock .clock-bar { padding: 0; background: transparent; border: 0; }
-.demo-dock .clock-bar button, .demo-dock select { border: 1px solid var(--surface); background: transparent; color: var(--surface); }
-.demo-dock .clock-bar button:disabled { border-color: var(--ink-muted); color: var(--ink-muted); }
-.demo-dock select { min-height: 44px; max-width: 100%; border-radius: 10px; }
-.demo-dock .note { background: transparent; border: 0; padding: 0; color: var(--surface); }
+.demo-dock .clock-bar button, .demo-dock select, .demo-dock .dock-body > button { min-height: 44px; border: 1px solid var(--on-dusk); border-radius: 10px; background: transparent; color: var(--on-dusk); }
+.demo-dock .clock-bar button:disabled, .demo-dock .dock-body > button:disabled { border-color: var(--dusk-muted); color: var(--dusk-muted); }
+.demo-dock select { max-width: 100%; }
+.demo-dock .pill { background: transparent; color: var(--on-dusk); border: 1px solid var(--dusk-muted); }
+.demo-dock .pill::before { background: var(--dusk-muted); }
+.product-strip { margin: 0; padding: 6px 24px; background: var(--sun-soft); color: var(--sun-text); border-bottom: 1px solid var(--sun); font-size: 13px; line-height: 18px; font-weight: 700; text-align: center; }
+.paused-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 24px; background: var(--status-check-soft); color: var(--status-check); border-bottom: 1px solid var(--status-check); font-weight: 700; }
+.ai-admin, .signed-in { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--sun-soft); color: var(--sun-text); font-size: 12px; font-weight: 800; }
 .app-bar .nav { margin-left: auto; }
 @media (max-width: 640px) {
-  .demo-dock { padding: 0 16px; }
-  .dock-summary { display: inline-flex; align-items: center; }
-  .demo-dock > .note { flex: 1 1 100%; padding-bottom: 8px; }
+  .app { padding-bottom: calc(var(--dock-h, 0px) + 20px); }
+  .demo-dock { left: auto; right: 12px; bottom: 12px; width: 56px; height: 56px; padding: 0; border-radius: 50%; }
+  .dock-summary { display: inline-flex; align-items: center; justify-content: center; }
   .demo-dock:not(.open) .dock-body { display: none; }
-  .demo-dock.open .dock-body { padding-bottom: 8px; }
+  .demo-dock.open { left: 0; right: 0; bottom: 0; width: auto; height: auto; padding: 0 16px 16px; border-radius: 16px 16px 0 0; }
+  .demo-dock.open .dock-summary { width: 100%; height: 44px; border-radius: 0; text-align: left; justify-content: flex-start; }
+  .product-strip, .paused-banner { padding-left: 16px; padding-right: 16px; }
 }
 
 /* Dictate: one box that takes a mic, an audio file or typing */

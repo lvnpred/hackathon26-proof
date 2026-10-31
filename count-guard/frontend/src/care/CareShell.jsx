@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from "react-router-dom";
-import { Mark } from "../App";
+import { Navigate, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from "react-router-dom";
 import { stripPills } from "./alerts";
-import { alertCount, alertsLabel } from "./dock";
+import { alertCount } from "./dock";
 import DemoDock from "./DemoDock";
+import ProductHeader, { PausedBanner } from "./ProductHeader.jsx";
+import ProductStrip from "./ProductStrip.jsx";
+import { useOpsPaused } from "./useOpsPaused.js";
 import Inspector from "./Inspector.jsx";
 import { waitingPills } from "./derive";
 import { chipClass } from "./status";
@@ -104,38 +106,29 @@ export default function CareShell({ ward, children }) {
     else if (ward.role === "patient" || pathname === "/queue" || pathname === "/patients") navigate(role === "doctor" ? "/patients" : "/queue");
   }
 
+  const ops = useOpsPaused(ward.role, ward.nowMs);
+  const clinicChart = ward.role === "doctor" && ward.patients.find((p) => p.id === chartId)?.view.state === "clinic";
+
   return (
     <div className="app">
-      <DemoDock ward={ward} showClock={DEMO} pick={pick} />
-      <header className="app-bar">
-        <Link to="/" className="brand">
-          <span className="brand-logo"><Mark /></span>
-          <span className="brand-names">
-            <span className="brand-name"><b>lightday</b> <span>· Count Guard</span></span>
-            <span className="brand-sub">Ward care. Records only, no medical advice.</span>
-          </span>
-        </Link>
-        <nav className="nav" aria-label="Main">
-          {tabs.map(([to, name]) => (
-            <NavLink key={to} to={to}>{name}{to === "/ask" && unread > 0 && <span className="dot" aria-hidden="true" />}</NavLink>
-          ))}
-        </nav>
-        {alerts > 0 && (
-          <button type="button" className="pill wait" aria-expanded={alertsOpen} onClick={() => setAlertsOpen((v) => !v)}>
-            {alertsLabel(alerts)}
-          </button>
-        )}
-        {ward.role !== "patient" && <DoctorChip status={ward.doctorStatus} />}
-      </header>
+      <ProductStrip />
+      <ProductHeader
+        role={ward.role}
+        tabs={tabs}
+        unread={unread}
+        alerts={alerts}
+        alertsOpen={alertsOpen}
+        onAlerts={() => setAlertsOpen((v) => !v)}
+        ops={ops}
+        chip={ward.role !== "patient" && <DoctorChip status={ward.doctorStatus} />}
+      />
       {alerts > 0 && alertsOpen && <Strip mine={mine} others={others} />}
+      {ward.role !== "patient" && <PausedBanner ops={ops} nowMs={ward.nowMs} />}
       <main className="page">
         {children}
         <Inspector ward={ward} />
       </main>
-      <footer className="care-foot">
-        <Link to="/guide">Guide</Link>
-        <Link to="/older">Older screens</Link>
-      </footer>
+      <DemoDock ward={ward} showClock={DEMO} pick={pick} ops={ops} demoRx={clinicChart ? () => ward.act(chartId, "/rx/demo", {}) : null} />
     </div>
   );
 }

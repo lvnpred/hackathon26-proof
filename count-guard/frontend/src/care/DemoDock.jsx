@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Banner } from "../App";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { call } from "../journey";
 import { label, skipTargets } from "./clock";
-import { canSeeAi } from "./ai.js";
-import { ROLE_NAME, aiChip, dockSummary, modelsText, pauseLabel } from "./dock";
+import { ROLE_NAME, aiChip, modelsText, pauseLabel } from "./dock";
 import Fault from "./Fault";
 import { CLOCK } from "./faults";
 import { findPatient } from "./Patients";
@@ -18,39 +16,31 @@ function useModelsLive() {
   return live;
 }
 
-// Whether the ops agent is paused. Null until the server answers; staff only.
-function useOpsPaused(staff) {
-  const [paused, setPaused] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+// The page keeps room for the fixed dock: --dock-h is the dock's height, so it never covers the last controls.
+function useDockSpace(ref) {
   useEffect(() => {
-    if (!staff) return;
-    call("/journey/ops").then((o) => setPaused(Boolean(o.paused))).catch(() => setPaused(null));
-  }, [staff]);
-  const toggle = (role) => {
-    const verb = paused ? "resume" : "pause";
-    setBusy(true);
-    setError("");
-    return call(`/journey/ops/${verb}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by: `Demo dock (${ROLE_NAME[role]})` }) })
-      .then((o) => setPaused(Boolean(o.paused)))
-      .catch(() => setError(`Could not ${verb} the AI.`))
-      .finally(() => setBusy(false));
-  };
-  return { paused, toggle, busy, error };
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const set = () => document.documentElement.style.setProperty("--dock-h", `${el.offsetHeight}px`);
+    set();
+    const watch = new ResizeObserver(set);
+    watch.observe(el);
+    return () => { watch.disconnect(); document.documentElement.style.removeProperty("--dock-h"); };
+  }, []);
 }
 
-// Every demo control in one dark strip: role, patient, clock, the synthetic-data and research notices.
-export default function DemoDock({ ward, showClock, pick }) {
+// Demo tools, set apart from the product: role, patient, clock, AI shortcut and the demo prescription.
+// demoRx is a function while the doctor has a clinic patient open, else null.
+export default function DemoDock({ ward, showClock, pick, ops, demoRx }) {
   const [open, setOpen] = useState(false);
   const live = useModelsLive();
-  const staff = canSeeAi(ward.role);
-  const { paused, toggle: togglePause, busy: pauseBusy, error: pauseError } = useOpsPaused(staff);
+  const ref = useRef(null);
+  useDockSpace(ref);
   return (
-    <section className={`demo-dock${open ? " open" : ""}`} aria-label="Demo">
-      <button type="button" className="dock-summary" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        {dockSummary(ward.role, ward.nowMs)} ▾
-      </button>
+    <section ref={ref} className={`demo-dock${open ? " open" : ""}`} aria-label="Demo">
+      <button type="button" className="dock-summary" aria-expanded={open} onClick={() => setOpen((v) => !v)}>Demo</button>
       <div className="dock-body">
+        <span className="dock-label t-caption">Demo</span>
         <div className="role-switch" role="group" aria-label="Role">
           {Object.entries(ROLE_NAME).map(([id, name]) => (
             <button key={id} type="button" aria-pressed={ward.role === id} onClick={() => pick(id)}>{name}</button>
@@ -73,16 +63,17 @@ export default function DemoDock({ ward, showClock, pick }) {
             <Fault fault={ward.fault} episodeId={null} only={[CLOCK]} />
           </div>
         )}
-        {staff && paused != null && (
+        {demoRx && <button type="button" disabled={ward.busy} onClick={demoRx}>Use the demo prescription</button>}
+        {ops.paused != null && (
           <>
-            <span className="pill">{aiChip(paused)}</span>
-            <button type="button" disabled={pauseBusy} onClick={() => togglePause(ward.role)}>{pauseLabel(paused)}</button>
-            {pauseError && <span className="error small" role="alert">{pauseError}</span>}
+            <span className="pill">{aiChip(ops.paused)}</span>
+            <button type="button" disabled={ops.busy} onClick={ops.toggle}>{pauseLabel(ops.paused)}</button>
           </>
         )}
         <span>{modelsText(live)}</span>
+        <Link to="/guide">Guide</Link>
+        <Link to="/older">Older screens</Link>
       </div>
-      <Banner />
     </section>
   );
 }

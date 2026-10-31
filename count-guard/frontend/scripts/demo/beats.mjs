@@ -36,7 +36,7 @@ export const BEATS = [
     id: "intro", path: "intro", role: "none", seconds: 3, film: true,
     say: "Count Guard is a research demo on a synthetic ward, running with no live model.",
     clicks: ["Open http://127.0.0.1:5273/", "Role Doctor"],
-    expect: ["Synthetic data · models: offline (prepared)", "Research demo. Not for clinical use."],
+    expect: ["Research demo · Synthetic data · Not for clinical use", "models: offline (prepared)"],
     keyed: "No model call. The dock reads models: live, not offline, when a key is set.",
   },
   {

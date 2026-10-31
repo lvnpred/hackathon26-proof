@@ -2,7 +2,7 @@ import { useState } from "react";
 import DoctorOrders from "./DoctorOrders";
 
 export function RxTable({ rx }) {
-  if (!rx) return <p className="empty small">No prescription yet. Import one or use the demo prescription.</p>;
+  if (!rx) return <p className="empty small">No prescription yet. Import one from Doctor Dictation.</p>;
   return (
     <div className="stack">
       <div className="table-box">
@@ -35,7 +35,7 @@ export function RxTable({ rx }) {
   );
 }
 
-// Prescription import: a Doctor Dictation document number, or the demo prescription.
+// Prescription import: a Doctor Dictation document number. The demo prescription lives in the demo dock.
 export function RxImport({ busy, act }) {
   const [documentId, setDocumentId] = useState("");
   const docNumber = Number(documentId);
@@ -52,7 +52,6 @@ export function RxImport({ busy, act }) {
       >
         Import from Doctor Dictation
       </button>
-      <button disabled={busy} onClick={() => act("/rx/demo", {})}>Use the demo prescription</button>
     </div>
   );
 }

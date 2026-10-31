@@ -9,6 +9,7 @@ from __future__ import annotations
 from app.journey import nudges
 from app.journey.stories import clock, count_of
 
+CHECK_EVENT = {"tray": "tray.checked", "setup": "setup.checked"}
 OVERDUE = ("dose_overdue", "obs_overdue")
 
 
@@ -47,13 +48,19 @@ def _nudge(status: str, moment: dict, ix) -> tuple[str, str]:
     payload = ix.by_id[moment["id"]]["payload"]
     kind = payload.get("kind")
     if status == "open":
+        if kind == "count_open":
+            n = _open_count(moment, ix)
+            if n:
+                return "danger", _unaccounted_text(n)
         if kind == "obs_past_limit":
-            return "danger", "Below limit" if " below " in payload.get("says", "") else "Above limit"
+            side = nudges.LIMIT_TEXT[str(payload.get("key", "")).rsplit(":", 1)[-1]][1]
+            return "danger", f"{side.capitalize()} limit"
         if kind in OVERDUE:
             return "check", _late(_late_minutes(payload, ix))
         return _waiting(moment)
-    if kind == "count_open":  # a correction closed it: the person's count now matches the pack
-        return "fine", "Count complete"
+    if kind == "count_open":  # closed by a correction or by an answer: only the count itself can make it complete
+        n = _open_count(moment, ix)
+        return ("danger", _unaccounted_text(n)) if n else ("fine", "Count complete")
     return "done", f"Saved {_hhmm(moment['at_ms'])}"
 
 
@@ -65,10 +72,11 @@ def _unaccounted_text(n: int) -> str:
     return f"{count_of(n, 'swab')} unaccounted"
 
 
-def _open_count(moment: dict, ix) -> int | None:
-    """Unaccounted swabs of the closing count a still-open count_open nudge reports."""
-    fact = ix.by_id.get((moment["refs"].get("fact") or {}).get("id"))
-    return (fact["payload"].get("unaccounted") or 0) if fact else None
+def _open_count(moment: dict, ix) -> int:
+    """Unaccounted swabs of the latest closing count not superseded; the nudge's own fact when none is shown."""
+    closings = [e for e in ix.shown if e["event_type"] == "count.closing"]
+    fact = closings[-1] if closings else ix.by_id.get((moment["refs"].get("fact") or {}).get("id"))
+    return (fact["payload"].get("unaccounted") or 0) if fact else 0
 
 
 def classify(cap: str, status: str, moment: dict, ix, resolver: dict | None = None) -> tuple[str, str]:
@@ -76,10 +84,6 @@ def classify(cap: str, status: str, moment: dict, ix, resolver: dict | None = No
     if status == "undone":
         return "done", "Undone"
     if cap == "nudge":
-        if status == "open" and moment["refs"].get("kind") == "count_open":
-            n = _open_count(moment, ix)
-            if n:
-                return "danger", _unaccounted_text(n)
         return _nudge(status, moment, ix)
     if cap in ("tray", "setup", "swabs"):
         if status == "flagged":
@@ -87,11 +91,15 @@ def classify(cap: str, status: str, moment: dict, ix, resolver: dict | None = No
         if resolver is not None:
             if cap == "swabs":
                 return "done", "Replaced by count"
-            return "fine", f"Checked by {resolver['payload'].get('by') or 'staff'}"
+            by = resolver["payload"].get("by")
+            if resolver["event_type"] == CHECK_EVENT[cap] and by:  # a person checked it again
+                return "fine", f"Checked by {by}"
+            return "check", "Not checked: left theatre"  # nobody re-checked; the patient moved on
     if status == "open":
         return _waiting(moment)
     if status == "matches":
         return "fine", "Matches"
     if status in ("flagged", "failed"):
         return "check", "Check this"
-    return "done", f"Signed {_signed_time(moment)}" if _signed_time(moment) else f"Saved {_hhmm(moment['at_ms'])}"
+    signed = _signed_time(moment)
+    return "done", f"Signed {signed}" if signed else f"Saved {_hhmm(moment['at_ms'])}"

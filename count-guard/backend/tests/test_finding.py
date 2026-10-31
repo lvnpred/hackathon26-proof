@@ -61,7 +61,7 @@ def test_limit_nudge_is_danger_while_open():
     nudge = _ev("n1", "nudge.raised", 3, key="obs:b1:sbp_min", kind="obs_past_limit", to="nurse",
                 says="Systolic BP 82 is below the limit of 90 set by x.", says_staff="s", intent_id="o1", fact_id="b1", at_ms=3)
     assert _pill(moments([_orders(), obs, nudge]), "nudge") == ("danger", "Below limit")
-    up = {**nudge, "payload": {**nudge["payload"], "says": "Heart rate 130 is above the limit of 120 set by x."}}
+    up = {**nudge, "payload": {**nudge["payload"], "key": "obs:b1:hr_max"}}
     assert _pill(moments([_orders(), obs, up]), "nudge") == ("danger", "Above limit")
 
 
@@ -108,3 +108,32 @@ def test_other_recorded_is_saved_with_a_time():
 def test_nothing_is_ever_called_recorded():
     rows = moments([_swab_flag(), _closing("c1", 11, 14), _closing("c2", 12, 15)])
     assert rows and all("Recorded" not in m["finding_text"] for m in rows)
+
+
+def _tray_flag():
+    return _ev("t1", "tray.checked", 10, rows=[{"concept": "needle holder", "planned": 3, "seen": 2}], match="mismatch",
+               why="w", media="video", source="prepared", calls=[SAM], by=ASHA, evidence_id="e" * 32, frame_ids=[])
+
+
+def test_leaving_theatre_does_not_make_a_flag_green():
+    state = lambda eid, ts, to: _ev(eid, "patient.state", ts, to=to)  # noqa: E731
+    rows = moments([state("s1", 1, "theatre"), _tray_flag(), state("s2", 20, "ward")])
+    role, text = _pill(rows, "tray")
+    assert (role, text) == ("check", "Not checked: left theatre")
+
+
+def test_limit_direction_comes_from_the_key():
+    obs = _ev("b1", "obs.recorded", 2, by=ASHA, sbp=82, dbp=54, hr=140)
+
+    def nudge(name):
+        return _ev("n1", "nudge.raised", 3, key=f"obs:b1:{name}", kind="obs_past_limit", to="nurse", says="s",
+                   says_staff="s", intent_id="o1", fact_id="b1", at_ms=3)
+
+    assert _pill(moments([_orders(), obs, nudge("sbp_min")]), "nudge") == ("danger", "Below limit")
+    assert _pill(moments([_orders(), obs, nudge("hr_max")]), "nudge") == ("danger", "Above limit")
+
+
+def test_answered_count_nudge_is_not_count_complete_while_swabs_are_missing():
+    seen = _ev("n2", "nudge.seen", 4, nudge_id="n1", by=ASHA, note="found later")
+    rows = moments([_swab_flag(), _closing("c1", 2, 14), _count_nudge(), seen])
+    assert _pill(rows, "nudge") == ("danger", "1 swab unaccounted")

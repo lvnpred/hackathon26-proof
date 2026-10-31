@@ -6,7 +6,7 @@ const WHO = { doctor: "the doctor", nurse: "the nurse", patient: "the patient" }
 // Moments the backend does not build (the AI agent's own rows) have no finding fields yet.
 function ownFinding({ status, owner, at_ms: at }) {
   if (status === "undone") return { role: "done", text: "Undone" };
-  if (status === "open") return { role: "wait", text: owner ? `Waiting for ${WHO[owner]}` : "Waiting" };
+  if (status === "open") return { role: "wait", text: WHO[owner] ? `Waiting for ${WHO[owner]}` : "Waiting" };
   return { role: "done", text: at == null ? "Saved" : `Saved ${hhmm(at)}` };
 }
 

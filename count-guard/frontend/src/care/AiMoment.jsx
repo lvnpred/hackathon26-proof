@@ -6,7 +6,7 @@ import { useInspector } from "./Inspector.jsx";
 // One AI result as one line: chip, finding, status, Inspect (C6).
 export default function AiMoment({ moment, role, lens = "staff", episodeId, thumb = null, quiet = false }) {
   const { openInspector } = useInspector();
-    const finding = findingFor(moment, lens);
+  const finding = findingFor(moment, lens);
   return (
     <div className="ai-moment" data-moment={moment.id}>
       {thumb}

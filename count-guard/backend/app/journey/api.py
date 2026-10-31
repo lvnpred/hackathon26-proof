@@ -24,6 +24,7 @@ from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
 from app.morning.druglog import parse_drug_phrase
 from app.ops import run as ops_run
+from app.ops.items import ops_view
 
 router = APIRouter(prefix="/journey/episodes/{episode_id}")
 demo_router = APIRouter(prefix="/journey/demo")
@@ -190,6 +191,7 @@ def view(request: Request, episode_id: str) -> dict:
         ],
         "timeline": timeline_items(events),
         "ai_moments": moments(events),
+        "ops": ops_view(events),
         "templates": {key: value["title"] for key, value in CARE_TEMPLATES.items()},
         **flow_view(events),
         # Present once reminders were added, so a reload keeps the download link without a second post.

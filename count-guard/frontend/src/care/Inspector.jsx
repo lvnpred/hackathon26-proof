@@ -80,10 +80,10 @@ function RecordTab({ moment, episodeId, lens }) {
   );
 }
 
-function Body({ moment, tab, episodeId, view, role, lens, initialFocus, act, nowMs, busy }) {
+function Body({ moment, tab, episodeId, view, role, lens, initialFocus, act, nowMs, busy, fault }) {
   const [focus, setFocus] = useState(initialFocus);
   const views = KIND_VIEWS[moment.kind];
-  const props = { moment, episodeId, view, role, lens, focus, setFocus, act, nowMs, busy };
+  const props = { moment, episodeId, view, role, lens, focus, setFocus, act, nowMs, busy, fault };
   const finding = <p>{findingFor(moment, lens)}</p>;
   if (tab === "record") return <RecordTab moment={moment} episodeId={episodeId} lens={lens} />;
   if (tab === "model") return <ModelTab moment={moment} episodeId={episodeId} />;
@@ -132,7 +132,7 @@ export default function Inspector({ ward }) {
             ))}
           </div>
           <div role="tabpanel" className="inspector-panel">
-            <Body key={moment.id} initialFocus={urlFocus} moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} nowMs={ward.nowMs} busy={ward.busy} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
+            <Body key={moment.id} initialFocus={urlFocus} moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} nowMs={ward.nowMs} busy={ward.busy} fault={ward.fault} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
           </div>
         </>
       )}

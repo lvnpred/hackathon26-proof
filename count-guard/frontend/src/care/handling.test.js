@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   OPS_SCOPE, STAFF_BY, agentMoment, agentMoments, citedLine, feedRows, handlingRows, isFeed,
-  myPatientsStrip, needsTitle, proposalsFor, stripTitle, undoLabel,
+  levelWords, liveCount, myPatientsStrip, needsTitle, proposalsFor, stripTitle, undoLabel,
 } from "./handling.js";
 import { aiChip, pauseLabel } from "./dock.js";
 import { routedLine } from "./thread.js";
@@ -12,7 +12,7 @@ import { chipFor, statusLabel } from "./moments.js";
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const MIN = 60_000;
 const row = (id, over = {}) => ({
-  work_id: id, kind: "nudge", level: "act", summary: "Reminded Nurse Meena (synthetic)", at_ms: 8 * 60 * MIN,
+  work_id: id, kind: "nudge", level: "L2", summary: "Reminded Nurse Meena (synthetic)", at_ms: 8 * 60 * MIN,
   undo_until_ms: 10 * MIN, reason: "Obs were overdue", inputs: [{ id: "e1", label: "Obs", when: "08:00" }], status: "done", ...over,
 });
 const prop = (id) => ({
@@ -71,9 +71,9 @@ test("agentMoment is a full moment (PF-3)", () => {
   assert.deepEqual([m.calls, m.handmade, m.written], [[], false, []]);
   assert.equal(m.workId, "w1");
   assert.equal(m.episodeId, "ep1");
-  assert.equal(m.level, "act");
+  assert.equal(m.level, "L2");
   assert.equal(m.undoUntilMs, 10 * MIN);
-  assert.deepEqual(m.refs, { workId: "w1", episodeId: "ep1", reason: "Obs were overdue", inputs: m.inputs, level: "act", undoUntilMs: 10 * MIN });
+  assert.deepEqual(m.refs, { workId: "w1", episodeId: "ep1", reason: "Obs were overdue", inputs: m.inputs, level: "L2", undoUntilMs: 10 * MIN });
   assert.equal(agentMoment(row("w2", { status: "undone" }), "ep1").status, "undone");
   const p = agentMoment(prop("p1"), "ep1");
   assert.deepEqual([p.status, p.owner, p.title], ["open", "doctor", "Ready to move to the ward"]);
@@ -117,6 +117,19 @@ test("myPatientsStrip keeps the newest live row per patient", () => {
   const patients = [{ id: "ep1", name: "A", view: { ops: two } }, { id: "ep2", name: "B", view: { ops: { handling: [row("z")] } } }];
   const s = myPatientsStrip(patients, "nurse");
   assert.deepEqual(s.rows.map((r) => [r.episodeId, r.text]), [["ep1", "Newest"], ["ep2", "Reminded Nurse Meena"]]);
+});
+
+test("levelWords names the real levels and falls back", () => {
+  assert.match(levelWords("L2"), /on its own/);
+  assert.match(levelWords("L1"), /proposed/);
+  assert.match(levelWords("L3"), /only told/);
+  assert.match(levelWords("zz"), /by its rules/);
+  for (const l of ["L1", "L2", "L3", null]) assert.doesNotMatch(levelWords(l), ADVICE);
+});
+
+test("strip count ignores undone rows", () => {
+  assert.equal(liveCount(ops), 1);
+  assert.equal(liveCount({}), 0);
 });
 
 test("dock chip, pause label, routed line, constants", () => {

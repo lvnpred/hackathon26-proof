@@ -6,6 +6,15 @@ export const STAFF_BY = { doctor: "Dr. A. Rao (synthetic)", nurse: "Nurse Meena 
 export const OPS_SCOPE = "/ops/";
 
 export const stripTitle = (n) => `AI is handling · ${n}`;
+const LEVELS = {
+  L2: "The AI did this on its own, and you can undo it.",
+  L1: "The AI proposed this and waited for a person to approve it.",
+  L3: "The AI only told someone about this.",
+};
+export const levelWords = (level) => LEVELS[level] || "The AI handled this by its rules.";
+// Undone rows stay listed but do not count as live.
+export const liveCount = (ops) => (ops?.handling || []).filter((r) => r.status !== "undone").length;
+
 export const needsTitle = (n) => `Needs you · ${n}`;
 
 export function undoLabel(untilMs, nowMs) {

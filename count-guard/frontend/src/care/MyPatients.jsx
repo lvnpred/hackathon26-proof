@@ -46,9 +46,10 @@ function AiStrip({ ward }) {
         <div key={p.work_id}>
           <p className="small muted">{name}</p>
           <ProposalCard p={p} role={ward.role} busy={ward.busy} episodeId={episodeId} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
-          <Fault fault={ward.fault} episodeId={episodeId} only={[OPS_SCOPE]} />
         </div>
       ))}
+      {proposals.map(({ episodeId }) => episodeId).filter((id, n, all) => all.indexOf(id) === n)
+        .map((id) => <Fault key={id} fault={ward.fault} episodeId={id} only={[OPS_SCOPE]} />)}
     </section>
   );
 }

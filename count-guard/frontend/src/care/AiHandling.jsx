@@ -1,6 +1,6 @@
 import Fault from "./Fault";
 import ProposalCard from "./ProposalCard.jsx";
-import { OPS_SCOPE, STAFF_BY, handlingRows, needsTitle, proposalsFor, stripTitle } from "./handling.js";
+import { OPS_SCOPE, STAFF_BY, handlingRows, liveCount, needsTitle, proposalsFor, stripTitle } from "./handling.js";
 import { useInspector } from "./Inspector.jsx";
 
 // What the AI is handling on this chart, and what it hands to the role. Staff only: the patient sees one routed line in Messages.
@@ -12,7 +12,7 @@ export default function AiHandling({ view, role, nowMs, act, episodeId, busy, fa
   const undo = (id) => act(`/ops/work/${id}/undo`, { by: STAFF_BY[role] }, `${OPS_SCOPE}undo`);
   return (
     <section className="ai-handling" aria-label="AI is handling">
-      <p className="label">{stripTitle(rows.length)}</p>
+      <p className="label">{stripTitle(liveCount(view.ops))}</p>
       {rows.length === 0 ? <p className="empty small">Nothing handled yet.</p> : (
         <ul className="ai-handling-list">
           {rows.map((r) => (

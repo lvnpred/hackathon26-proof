@@ -19,6 +19,17 @@
   --record-soft: #fbe3df;
   --leaf: #1d7445;
   --leaf-soft: #e1f2e7;
+  --dusk: #14120E;
+  --status-fine: var(--leaf);
+  --status-fine-soft: var(--leaf-soft);
+  --status-wait: var(--sky);
+  --status-wait-soft: var(--sky-soft);
+  --status-check: var(--sun-text);
+  --status-check-soft: var(--sun-soft);
+  --status-danger: var(--record);
+  --status-danger-soft: var(--record-soft);
+  --status-done: var(--ink-muted);
+  --status-done-soft: var(--surface-sunk);
   --sheet: #ffffff;
   --sheet-ink: #1c1a17;
   --sheet-muted: #5f584c;
@@ -53,6 +64,16 @@
     --record-soft: #3d1814;
     --leaf: #5bc98b;
     --leaf-soft: #14301f;
+    --status-fine: var(--leaf);
+    --status-fine-soft: var(--leaf-soft);
+    --status-wait: var(--sky);
+    --status-wait-soft: var(--sky-soft);
+    --status-check: var(--sun-text);
+    --status-check-soft: var(--sun-soft);
+    --status-danger: var(--record);
+    --status-danger-soft: var(--record-soft);
+    --status-done: var(--ink-muted);
+    --status-done-soft: var(--surface-sunk);
     --shadow-sheet: 0 1px 3px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.4);
   }
 }

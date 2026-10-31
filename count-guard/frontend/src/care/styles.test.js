@@ -101,3 +101,34 @@ test("care.css styles the AI handling strip and the proposal card with 44 px tar
   assert.match(css, /\.proposal-card/);
   assert.match(css, /\.ai-handling button[^{]*\{[^}]*min-height:\s*44px/);
 });
+
+test("status tokens are defined in light and redefined in the dark block", () => {
+  const css = fs.readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  const light = css.match(/:root \{[\s\S]*?\n\}/)[0];
+  const dark = css.match(/prefers-color-scheme: dark\) \{[\s\S]*?\n  \}\n\}/)[0];
+  for (const role of ["fine", "wait", "check", "danger", "done"]) {
+    for (const suffix of ["", "-soft"]) {
+      const re = new RegExp(`--status-${role}${suffix}:`);
+      assert.match(light, re);
+      assert.match(dark, re);
+    }
+  }
+  assert.match(light, /--dusk:\s*#14120E/);
+});
+
+test("the status pill, AI mark and type scale are styled", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  const pill = css.match(/\.status-pill \{[^}]*\}/)[0];
+  assert.match(pill, /min-height:\s*26px/);
+  assert.match(pill, /white-space:\s*nowrap/);
+  assert.match(css.match(/\.ai-mark \{[^}]*\}/)[0], /border:\s*1px solid var\(--line-control\)/);
+  assert.match(css.match(/\.t-display \{[^}]*\}/)[0], /font-variant-numeric:\s*tabular-nums/);
+  assert.match(css, /\.t-heading \{/);
+  assert.match(css, /\.t-caption \{/);
+  for (const role of ["fine", "wait", "check", "danger", "done"]) assert.match(css, new RegExp(`\\.status-pill\\.s-${role} \\{`));
+});
+
+test("dead stage-bar and dock link CSS is gone", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.doesNotMatch(css, /\.stage-bar|\.stage-btn|\.dock-body a/);
+});

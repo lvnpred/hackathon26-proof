@@ -50,7 +50,8 @@ export function momentFor(view, id) {
 
 export const findingFor = (moment, lens) => (lens === "patient" ? moment.patient_finding : moment.finding) || "";
 
-export const canInspect = (moment) => moment.kind !== "record";
+// Record rows have nothing to open. The patient lens never opens a camera count (its raw output stays off the patient page).
+export const canInspect = (moment, lens = "staff") => moment.kind !== "record" && !(lens === "patient" && moment.kind === "visual");
 
 export const FILTERS = [["all", "All"], ["needs", "Needs you"], ["photos", "Photos"], ["video", "Video"], ["voice", "Voice"], ["answers", "Answers"], ["alerts", "Alerts"]];
 

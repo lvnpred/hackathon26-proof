@@ -184,7 +184,7 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .activity-list { list-style: none; padding: 0; display: grid; gap: 10px; }
 .activity-list li { display: grid; gap: 2px; min-width: 0 }
 .pipelines button[aria-pressed="true"] { outline: 2px solid var(--sun); border-radius: 12px }
-.pipelines button.linklike { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 2px; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; text-align: left }
+.pipelines button.linklike { min-height: 44px; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 2px; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; text-align: left }
 .plan-grid { display: grid; gap: 8px }
 .plan-row { border-top: 1px solid var(--line); padding-top: 6px }
 .plan-list { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px }
@@ -216,10 +216,10 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 }
 
 /* Voice inspector: a heard word and the order chip it became light together. */
-.inspector-found .mark { background: #fff3c4; border: 0; border-radius: 3px; padding: 0 2px; font: inherit; cursor: pointer; }
-.inspector-found .mark.lit, .inspector-found button.chip.lit { background: #ffd54a; outline: 2px solid #b8860b; }
+.inspector-found .mark { background: var(--sun-soft); color: var(--ink); border: 0; border-radius: 3px; padding: 0 2px; font: inherit; cursor: pointer; }
+.inspector-found .mark.lit, .inspector-found button.chip.lit { background: var(--sun); color: var(--on-sun); outline: 2px solid var(--sun-text); }
 
 /* Rule inspector: two records side by side, stacked on a phone. */
 .rule-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 600px) { .rule-cards { grid-template-columns: 1fr; } }
-.inspector-found .plan-item.lit { background: #ffd54a33; outline: 2px solid #b8860b; border-radius: 6px; }
+.inspector-found .plan-item.lit { background: var(--sun-soft); color: var(--ink); outline: 2px solid var(--sun-text); border-radius: 6px; }

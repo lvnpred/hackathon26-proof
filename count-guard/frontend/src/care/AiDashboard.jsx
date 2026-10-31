@@ -26,7 +26,7 @@ export default function AiDashboard() {
           const kind = PIPELINE_KIND[steps[0]];
           return (
             <li key={steps[0]}>
-              <button type="button" className="linklike" aria-pressed={filter === kind} onClick={() => setFilter(filter === kind ? null : kind)}>
+              <button type="button" className="linklike" aria-label={steps.join(", ")} aria-pressed={filter === kind} onClick={() => setFilter(filter === kind ? null : kind)}>
                 {steps.map((step, i) => <span key={step}>{i > 0 && <span className="step-arrow" aria-hidden="true">→</span>}<span className="step-chip">{step}</span></span>)}
               </button>
             </li>

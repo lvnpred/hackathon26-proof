@@ -41,7 +41,7 @@ export const stepFrame = (i, delta, n) => Math.max(0, Math.min(n - 1, i + delta)
 
 // A patient never resolves a staff-only moment, whatever the URL says.
 export function resolveMoment(moments, id, lens) {
-  const seen = (m) => lens !== "patient" || m.patient_finding != null;
+  const seen = (m) => lens !== "patient" || (m.patient_finding != null && m.kind !== "visual");
   const list = moments || [];
   // An exact id wins; a photo, evidence or follow-up event id falls back to the first moment this lens may see.
   return list.find((m) => m.id === id && seen(m))

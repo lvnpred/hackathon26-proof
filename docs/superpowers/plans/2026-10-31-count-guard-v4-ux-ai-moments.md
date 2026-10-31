@@ -92,7 +92,7 @@ Format: `Ruling: <decision> — <why> — <cost if wrong>`. They bind all tasks.
 }
 ```
 
-`written` lists the anchor and its follow-up events, oldest first; `read`/`saved` appear only when present. Follow-ups: `order.signed`/`discharge.signed` by `draft_id`; events whose payload `evidence_id` equals the moment's; `brownbag.marked` by `read_id`; `nudge.seen` by `nudge_id`; `handover.accepted` by `handover_id`; `question.answered` by `question_id`; `review.answered` by `review_id`.
+`refs` for `record_bot` also carries `question_id` (the asked question's event id, used by the frontend to find the question). A flagged `tray`/`setup`/`swabs` moment becomes `recorded` with `owner: null` once resolved: swabs when a later closing count equals the pack opened; tray/setup when the patient has left theatre or a later check of the same kind matches. A `proof.checked` with nothing read is a `photo` moment titled "Proof photo". `written` lists the anchor and its follow-up events, oldest first; `read`/`saved` appear only when present. Follow-ups: `order.signed`/`discharge.signed` by `draft_id`; events whose payload `evidence_id` equals the moment's; `brownbag.marked` by `read_id`; `nudge.seen` by `nudge_id`; `handover.accepted` by `handover_id`; `question.answered` by `question_id`; `review.answered` by `review_id`.
 
 `title`, `filter` and `owner` by capability:
 

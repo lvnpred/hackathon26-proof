@@ -27,12 +27,13 @@ export function VisualInput({ moment, episodeId, view }) {
 }
 
 // The check line, then today's viewer: What the AI saw, tap to highlight, Expand.
-export function VisualFound({ moment, episodeId, view }) {
+export function VisualFound({ moment, episodeId, view, lens = "staff" }) {
   const check = moment.refs?.check;
+  const staff = lens !== "patient";
   return (
     <div className="inspector-found">
-      <p className="small"><span className={`pill ${check?.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span></p>
-      <Evidence episodeId={episodeId} evidenceId={moment.evidence_id} check={check} version={view?.timeline?.length} />
+      {staff && <p className="small"><span className={`pill ${check?.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span></p>}
+      <Evidence episodeId={episodeId} evidenceId={moment.evidence_id} check={check} linkLines={staff} version={view?.timeline?.length} />
     </div>
   );
 }

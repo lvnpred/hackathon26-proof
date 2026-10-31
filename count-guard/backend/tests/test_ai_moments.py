@@ -251,3 +251,49 @@ def test_appendix_b_row_17_day_plan_has_a_moment():
     read = _ev("m1", "medicines.read", 2, photo_id="p1", rows=[], match="none", why="w", source="prepared", calls=[])
     got = [m for m in moments([_rx(), read]) if m["capability"] == "day_plan"]
     assert got and got[0]["kind"] == "draft"
+
+
+def _swab_flag(eid="s1", ts=10):
+    return _ev(eid, "swabs.counted", ts, rows=[{"concept": "gauze swab", "planned": 15, "seen": 14}], match="mismatch",
+               why="w", source="prepared", by=ASHA, frame_ids=[], count=14, opened=15)
+
+
+def _closing(eid, ts, returned, opened=15):
+    return _ev(eid, "count.closing", ts, opened=opened, returned=returned, unaccounted=opened - returned, by=ASHA)
+
+
+def test_swab_flag_resolves_when_a_closing_count_equals_the_pack():
+    open_ = _one([m for m in moments([_swab_flag(), _closing("c1", 11, 14)]) if m["capability"] == "swabs"])
+    assert (open_["status"], open_["owner"]) == ("flagged", "nurse")
+    fixed = [m for m in moments([_swab_flag(), _closing("c1", 11, 14), _closing("c2", 12, 15)]) if m["capability"] == "swabs"]
+    assert (fixed[0]["status"], fixed[0]["owner"]) == ("recorded", None)
+
+
+def _state(eid, ts, to):
+    return _ev(eid, "patient.state", ts, to=to)
+
+
+def _tray_flag(eid="t1", ts=10):
+    rows = [{"concept": "needle holder", "planned": 3, "seen": 2}]
+    return _ev(eid, "tray.checked", ts, rows=rows, match="mismatch", why="w", media="video", source="prepared", by=ASHA, frame_ids=[])
+
+
+def test_tray_flag_is_recorded_after_the_patient_leaves_theatre():
+    during = moments([_state("s0", 5, "theatre"), _tray_flag()])
+    assert (during[0]["status"], during[0]["owner"]) == ("flagged", "doctor")
+    after = moments([_state("s0", 5, "theatre"), _tray_flag(), _state("s1", 20, "ward")])
+    assert (after[0]["status"], after[0]["owner"]) == ("recorded", None)
+
+
+def test_tray_flag_is_recorded_when_a_later_check_matches():
+    ok = _ev("t2", "tray.checked", 20, rows=[{"concept": "needle holder", "planned": 3, "seen": 3}], match="ok", why="w",
+             media="video", source="prepared", by=ASHA, frame_ids=[])
+    rows = {m["id"]: m for m in moments([_state("s0", 5, "theatre"), _tray_flag(), ok])}
+    assert rows["t1"]["status"] == "recorded" and rows["t1"]["owner"] is None and rows["t2"]["status"] == "matches"
+
+
+def test_proof_photo_with_nothing_read_is_a_record_row():
+    e = _ev("c9", "proof.checked", 3, photo_id="ph9", task_id="t", read="", match="none", why="w", source="none", calls=[])
+    m = _one(moments([e]))
+    assert (m["kind"], m["title"], m["photo_id"], m["status"], m["filter"]) == ("record", "Proof photo", "ph9", "recorded", "photos")
+    assert m["finding"] == "Proof photo kept, not checked." and not ADVICE.search(m["finding"])

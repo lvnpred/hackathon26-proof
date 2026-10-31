@@ -12,7 +12,7 @@ export default function AiMoment({ moment, role, lens = "staff", episodeId, thum
       <span className="chip">{chipFor(moment)}</span>
       {!quiet && finding && <span className="ai-moment-text">{finding}</span>}
       <span className={`pill tone-${status.tone}`}>{status.text}</span>
-      {canInspect(moment) && (
+      {canInspect(moment, lens) && (
         <button type="button" className="quiet" onClick={() => openInspector(moment.id, { episodeId })}>
           Inspect <span aria-hidden="true">›</span>
         </button>

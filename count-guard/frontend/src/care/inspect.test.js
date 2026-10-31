@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { NOT_RECORDED, draftSources, ruleCards, FIELD_LABEL, REGION_FIELD, diffLine, fieldDiffs, segments, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
+import { canInspect } from "./moments.js";
 
 const src = (f) => fs.readFileSync(new URL(f, import.meta.url), "utf8");
 
@@ -178,5 +179,36 @@ test("InspectText is registered and its copy is not advice", () => {
   assert.match(s, /No input: this check compares two records\./);
   for (const text of ["No input: this check compares two records.", "No record lines were cited.", "Not recorded", "Ordered / prescribed", "Recorded / read", "Rule: The strength read from a strip is compared with the prescription row for the same medicine."]) {
     assert.doesNotMatch(text, ADVICE);
+  }
+});
+
+test("the patient lens opens no camera count: no Inspect, no resolve", () => {
+  const visual = { id: "v", kind: "visual", patient_finding: "The tray was checked by camera before your surgery.", evidence_id: "e" };
+  assert.equal(canInspect(visual, "patient"), false);
+  assert.equal(canInspect(visual, "staff"), true);
+  assert.equal(canInspect({ kind: "photo_read" }, "patient"), true);
+  assert.equal(resolveMoment([visual], "v", "patient"), null);
+  assert.equal(resolveMoment([visual], "e", "patient"), null);
+  assert.equal(resolveMoment([visual], "v", "staff").id, "v");
+  assert.match(src("./AiMoment.jsx"), /canInspect\(moment, lens\)/);
+});
+
+test("the visual Found view in the patient lens has no raw output, no chart links and no staff flag sentence", () => {
+  const s = src("./InspectVisual.jsx");
+  assert.match(s, /linkLines=\{staff\}/);
+  assert.match(s, /const staff = lens !== "patient"/);
+  assert.match(s, /\{staff && <p className="small">.*checkLabel\(check\)/);
+  // Raw output and the event-code lines only render when linkLines is true.
+  const ev = src("./Evidence.jsx");
+  assert.match(ev, /\{linkLines && <details><summary>Raw output/);
+  assert.match(ev, /\{linkLines && view\.cited\.map/);
+});
+
+test("lit marks and chips use theme tokens and an explicit text colour", () => {
+  const css = src("./care.css");
+  for (const rule of [/\.inspector-found \.mark \{[^}]*\}/, /\.mark\.lit[^{]*\{[^}]*\}/, /\.plan-item\.lit \{[^}]*\}/]) {
+    const block = css.match(rule)[0];
+    assert.doesNotMatch(block, /#[0-9a-f]{3,8}\b/i);
+    assert.match(block, /color: var\(--(ink|on-sun)\)/);
   }
 });

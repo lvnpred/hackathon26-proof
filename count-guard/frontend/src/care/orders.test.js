@@ -126,3 +126,16 @@ test("the form has Edit all fields and the nurse list uses sentenceText", () => 
   assert.match(readFileSync(new URL("./OrderForm.jsx", import.meta.url), "utf8"), /Edit all fields/);
   assert.match(readFileSync(new URL("./NurseActions.jsx", import.meta.url), "utf8"), /sentenceText\(/);
 });
+
+test("editing a dose or observation chip rebuilds the order text", () => {
+  const dose = PREFILL.dose();
+  const every8 = chipEdit(dose, "every_h", "8");
+  assert.equal(every8.text, "Paracetamol 1 g every 8 h");
+  assert.equal(orderRowsToItems([every8]).items[0].text, "Paracetamol 1 g every 8 h");
+  assert.equal(chipEdit(dose, "amount", "500 mg").text, "Paracetamol 500 mg every 6 h");
+  assert.equal(chipEdit(dose, "name", "ibuprofen").text, "Ibuprofen 1 g every 6 h");
+  assert.equal(chipEdit(dose, "every_h", "").text, "Paracetamol 1 g");
+  assert.equal(chipEdit({ ...PREFILL.obs(), text: "BP and pulse every 1 h" }, "every_h", "2").text, "BP and pulse every 2 h");
+  const proc = PREFILL.procedure();
+  assert.equal(chipEdit(proc, "proof", "photo").text, proc.text);
+});

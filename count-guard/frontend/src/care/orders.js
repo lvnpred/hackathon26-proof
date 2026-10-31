@@ -102,4 +102,15 @@ export const chipValue = (row, field) => row[ROW_FIELD[field] ?? field] ?? "";
 export const missingChips = (row) => (row.kind === "dose" && blank(row.name) ? [{ field: "name", text: "Add medicine" }] : []);
 
 // The row with one chip's field replaced; the value is stored as typed, as the form does.
-export const chipEdit = (row, field, value) => ({ ...row, [ROW_FIELD[field] ?? field]: value });
+// A dose or observation edit rebuilds the order's text from its fields, so the signed text never contradicts them.
+const TEXT_FIELDS = { dose: ["name", "amount", "every_h"], obs: ["every_h"] };
+function restate(row) {
+  const every = blank(row.every_h) ? "" : `every ${String(row.every_h).trim()} h`;
+  if (row.kind === "dose") return [capital(row.name.trim()), row.amount.trim(), every].filter(Boolean).join(" ");
+  return [obsLabel(row.text), every].filter(Boolean).join(" ");
+}
+
+export function chipEdit(row, field, value) {
+  const next = { ...row, [ROW_FIELD[field] ?? field]: value };
+  return TEXT_FIELDS[row.kind]?.includes(field) && restate(next) ? { ...next, text: restate(next) } : next;
+}

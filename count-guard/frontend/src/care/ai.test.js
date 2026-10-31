@@ -122,3 +122,15 @@ test("the pipelines are chips with arrows and fit 390 px", () => {
   const page = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
   assert.match(page, /step-chip/);
 });
+
+test("pipeline buttons have a spaced name and a 44 px target; the two fallback strings give no advice", () => {
+  const page = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
+  assert.match(page, /aria-label=\{steps\.join\(", "\)\}/);
+  assert.equal(PIPELINES[0].join(", "), "Voice, Draft orders, Nurse tasks");
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.pipelines button\.linklike \{[^}]*min-height:\s*44px/);
+  const lead = page.match(/body=\{story \|\| "([^"]+)"\}/)[1];
+  assert.equal(lead, "What the AI did on this ward, by patient and pipeline.");
+  for (const s of [lead, "Nothing yet today."]) assert.doesNotMatch(s, ADVICE);
+  assert.match(page, /"Nothing yet today\."/);
+});

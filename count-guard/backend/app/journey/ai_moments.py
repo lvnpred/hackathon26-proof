@@ -110,14 +110,39 @@ def _check_status(p: dict) -> str:
     return "failed" if p.get("source") in FAILED_SOURCES else "recorded"
 
 
+def _resolved(ix: _Index, e: dict) -> bool:
+    """A flagged camera check stops needing anyone once the record answers it (I-1)."""
+    later = [x for x in ix.shown if ix.order[x["id"]] > ix.order[e["id"]]]
+    if e["event_type"] == "swabs.counted":  # a closing count saved equal to the pack opened
+        return any(x["event_type"] == "count.closing" and (x["payload"].get("unaccounted") or 0) == 0 for x in later)
+    if any(x["event_type"] == e["event_type"] and x["payload"].get("match") == "ok" for x in later):
+        return True  # a later check of the same kind matched
+    before = [x for x in ix.shown if ix.order[x["id"]] < ix.order[e["id"]] and x["event_type"] == "patient.state"]
+    in_theatre = bool(before) and before[-1]["payload"].get("to") == "theatre"
+    for x in later:  # the patient has left theatre
+        if x["event_type"] == "patient.state":
+            if x["payload"].get("to") == "theatre":
+                in_theatre = True
+            elif in_theatre:
+                return True
+    return False
+
+
 def _visual(ix: _Index, e: dict) -> dict:
     p, cap = e["payload"], VISUAL[e["event_type"]]
+    status = _check_status(p)
+    resolved = status == "flagged" and _resolved(ix, e)
+    if resolved:
+        status = "recorded"
     check = {"check": cap, "rows": p.get("rows") or [], "missing": p.get("missing"), "match": p.get("match"),
              "why": p.get("why"), "media": p.get("media", "video"), "unchecked": p.get("unchecked") or []}
     frames = p.get("frame_ids") or []
-    return _moment(ix, e, cap, visual_finding(check["rows"]), _check_status(p),
-                   {"check": check}, patient_finding=text.PATIENT_TEXT[cap], source=p.get("source", ""),
-                   photo_id=frames[0] if frames else None)
+    moment = _moment(ix, e, cap, visual_finding(check["rows"]), status,
+                     {"check": check}, patient_finding=text.PATIENT_TEXT[cap], source=p.get("source", ""),
+                     photo_id=frames[0] if frames else None)
+    if resolved:
+        moment["owner"] = None  # nobody is waiting on it any more
+    return moment
 
 
 def _monitor_finding(values: dict) -> str:
@@ -134,8 +159,9 @@ def _proof(ix: _Index, e: dict) -> dict | None:
                 "match": p.get("match"), "why": p.get("why")}
         return _moment(ix, e, "monitor", _monitor_finding(values), status, refs, patient_finding=text.PATIENT_TEXT["monitor"],
                        source=p.get("source", ""), photo_id=p.get("photo_id"))
-    if p.get("source") == "none":  # a proof photo for a task with nothing to read
-        return None
+    if p.get("source") == "none":  # a proof photo for a task with nothing to read: kept as a record row
+        return _moment(ix, e, "photo", "Proof photo kept, not checked.", "recorded", {}, patient_finding="Proof photo kept, not checked.",
+                       calls=[], photo_id=p.get("photo_id"), title="Proof photo")
     finding = {"ok": "Strip photo matches the task.", "mismatch": "Strip photo does not match the task."}.get(
         p.get("match"), "Photo kept, not checked.")
     refs = {"reader": "strip", "regions": p.get("regions") or [], "values_read": None, "rows": None,

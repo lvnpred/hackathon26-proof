@@ -29,12 +29,12 @@ export function stripPills(pills, episodeId, role) {
 // A nudge reads in the patient's words for the patient and in staff words for staff; an older nudge has one wording.
 export const nudgeText = (nudge, role) => (role === "patient" ? nudge.says : nudge.says_staff || nudge.says);
 
-// The newest open safety nudge, as the NOW line.
-export function alertNow(view) {
+// The newest open safety nudge, as the NOW line. Staff screens read the staff wording; the patient keeps `says`.
+export function alertNow(view, role) {
   const safety = (view?.nudges || []).filter((n) => SAFETY.includes(n.kind));
   if (!safety.length) return null;
   const latest = safety.reduce((a, b) => (b.at_ms >= a.at_ms ? b : a));
-  return `Waiting for ${WHO[latest.to] || latest.to}'s answer: ${latest.says}`;
+  return `Waiting for ${WHO[latest.to] || latest.to}'s answer: ${nudgeText(latest, role)}`;
 }
 
 // Every open nudge, safety first. The nurse, the addressee and the deep-linked line may answer.

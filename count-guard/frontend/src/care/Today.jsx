@@ -9,6 +9,7 @@ import { checkinStatusLine, readOpened, unreadLine } from "./thread.js";
 import { CheckIn, MyCard, NeedHelp } from "../screens/PatientCard";
 import { Nudges, Reminders, Strips } from "../screens/TodayPanel";
 import DayPlan from "./DayPlan.jsx";
+import { dayPlanMoment } from "./moments.js";
 
 function Answered({ view }) {
   const answered = doctorQuestions(view).filter((q) => q.answer);
@@ -57,7 +58,7 @@ function TodayBody({ ward, patient }) {
     medicines: (
       <>
         <DayPlan
-          plan={view.day_plan} regions={read?.regions || []} onAsk={(ask) => navigate("/ask", { state: { ask } })}
+          plan={view.day_plan} moment={dayPlanMoment(view)} episodeId={patient.id} regions={read?.regions || []} onAsk={(ask) => navigate("/ask", { state: { ask } })}
           photoUrl={view.day_plan?.photo_id ? `/journey/episodes/${patient.id}/photos/${view.day_plan.photo_id}` : ""}
         />
         <Reminders {...common} />

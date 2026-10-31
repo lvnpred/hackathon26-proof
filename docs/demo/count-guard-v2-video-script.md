@@ -16,7 +16,7 @@ Decision for the owner: film offline or keyed (see Owner handover). The script b
 
 ## Before filming
 
-1. Run `make demo-check` once, or run the three generators (`eval/p2/make_media.py`, `eval/p3/make_clips.py`, `eval/p4/make_photos.py`). They write the files named in this script: `kumar-orders.wav`, `kumar-paracetamol.wav`, `kumar-discharge.wav`, `rao-answer.wav`, `iyer-bp.wav`, `iyer-saline.wav`, `strip-paracetamol.png`, `tray-hernia.mp4`, `saline-setup.mp4`, `swabs-closing.mp4`, `wound-day0.png`, `wound-day3.png`, `meds-iyer.png`.
+1. Run `make demo-check` once, or run the three generators (`eval/p2/make_media.py`, `eval/p3/make_clips.py`, `eval/p4/make_photos.py`). They write the files named in this script: `kumar-orders.wav`, `kumar-paracetamol.wav`, `kumar-discharge.wav`, `rao-answer.wav`, `iyer-bp.wav`, `iyer-saline.wav`, `strip-paracetamol.png`, `tray-hernia.mp4`, `saline-setup.mp4`, `swabs-closing.mp4`, `wound-day0.png`, `wound-day3.png`, `meds-iyer.png`, `strip-amlodipine.png`.
 2. Stop the keyed server on port 8100 first (or pass other `CG_API_PORT` and `CG_WEB_PORT` values). Delete the data folder before each take. Start a clean offline server: `rm -rf /tmp/cg-film && make dev MODEL_API_KEY= COUNT_GUARD_DATA=/tmp/cg-film`.
 3. Open a new private window. The ward state lives in session storage.
 4. Use a 1200-wide window. The patient beats can be filmed in a phone-sized window.
@@ -55,11 +55,11 @@ On screen: `In clinic` · `Amlodipine`
 > Dr. Rao opens Mr. Das, an outpatient, and loads the prescription for his clinic visit.
 
 #### `das-strip` · 0:28 · doctor · 5 s
-Clicks: 1) Field "One strip per line: name then strength" <- Amlodipine 10 mg; 2) Button "Check these strips"
+Clicks: 1) File eval/p4/strip-amlodipine.png into "Photo of strips"
 
 On screen: `Strip reads amlodipine 10 mg; prescription says 5 mg.`
 
-> A pharmacy strip is checked against the prescription, and the mismatch is named.
+> A photo of the pharmacy strip is read and checked against the prescription, and the mismatch is named.
 
 #### `das-close` · 0:33 · doctor · 3 s
 Clicks: 1) Button "Close visit"
@@ -272,12 +272,13 @@ On screen: `Dr. A. Rao: Available`
 
 Answer first: keyed changes the labels and turns prepared answers into live ones. Every other beat is the same as offline. Beats with no model call are not listed.
 
-Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels read `Muse Voice`, `Muse Spark` or `SAM 3.1`, and answers are prose. Live speech can use the mic button, the WAV files, or typing in the box.
+Offline chips read `Rules`, or the model names with `prepared` or `Sample` (for example `SAM 3.1 → Muse Spark 1.3 · Sample`). Keyed chips read the model names with `live` (for example `Muse Voice → Muse Spark 1.3 · live`), and answers are prose. Live speech can use the mic button, the WAV files, or typing in the box.
 
 | Beat | Model calls and label change |
 |---|---|
 | `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The dock reads models: live, not offline, when a key is set. |
 | `ai` | Try sample makes live calls with a key: SAM 3.1 runs one image call per tray concept (7). The chip reads live in place of Sample or prepared. |
+| `das-strip` | 1 SAM 3.1 image call (strip regions) and 1 Spark vision call. Switch: MEDICINES_LIVE. |
 | `das-ask` | No model call: a medicine question is answered by quoting the prescription row. The label reads Rules with or without a key. |
 | `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
@@ -328,8 +329,8 @@ Export `MODEL_API_KEY` in your shell, then run `.venv/bin/python eval/record_fix
 
 ### Keyed vs offline
 
-- Offline (the default, and what `make demo-check` runs): no model key, labels read `Rules (no model)` and `Prepared demo result`, no credits spent.
-- Keyed: you start the backend with a key and film by hand. Labels change to `Muse Voice`, `Muse Spark` or `SAM 3.1`. See "Keyed variant" for the calls per beat. The run is never keyed.
+- Offline (the default, and what `make demo-check` runs): no model key, chips read `Rules`, `prepared` or `Sample`, no credits spent.
+- Keyed: you start the backend with a key and film by hand. Chips change to `live`. See "Keyed variant" for the calls per beat. The run is never keyed.
 
 ### Running the check
 

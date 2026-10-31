@@ -17,6 +17,7 @@ export const MEDIA = {
   "wound-day0.png": "eval/p4",
   "wound-day3.png": "eval/p4",
   "meds-iyer.png": "eval/p4",
+  "strip-amlodipine.png": "eval/p4",
 };
 
 export const GENERATOR = {
@@ -54,10 +55,11 @@ export const BEATS = [
   },
   {
     id: "das-strip", path: "das", role: "doctor", seconds: 5, film: true,
-    say: "A pharmacy strip is checked against the prescription, and the mismatch is named.",
-    clicks: ['Field "One strip per line: name then strength" <- Amlodipine 10 mg', 'Button "Check these strips"'],
+    say: "A photo of the pharmacy strip is read and checked against the prescription, and the mismatch is named.",
+    clicks: ['File eval/p4/strip-amlodipine.png into "Photo of strips"'],
     expect: ["Strip reads amlodipine 10 mg; prescription says 5 mg."],
-    keyed: "No model call; this check is plain text matching.",
+    files: ["strip-amlodipine.png"],
+    keyed: "1 SAM 3.1 image call (strip regions) and 1 Spark vision call. Switch: MEDICINES_LIVE.",
   },
   {
     id: "das-close", path: "das", role: "doctor", seconds: 3, film: true,

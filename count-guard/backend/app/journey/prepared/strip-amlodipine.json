@@ -1,0 +1,17 @@
+{
+  "text": "{\"strips\": [{\"name\": \"Amlodipine\", \"strength\": \"10 mg\"}]}",
+  "regions": [
+    {
+      "bbox": [
+        0.0556,
+        0.25,
+        0.8889,
+        0.5
+      ],
+      "label": "Amlodipine 10 mg",
+      "value": "Amlodipine 10 mg",
+      "row": 0
+    }
+  ],
+  "handmade": true
+}

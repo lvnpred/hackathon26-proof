@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { parseStrips } from "../journey";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
 import { answerHow } from "./askText";
 import ActionBar from "./ActionBar";
@@ -13,25 +12,10 @@ import { lastSigned, momentFor } from "./moments";
 import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
+import StripPhoto from "./StripPhoto.jsx";
 import { TrayPreview } from "./VideoCheck";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
-
-function StripCheck({ busy, act }) {
-  const [lines, setLines] = useState("");
-  return (
-    <section className="card">
-      <p className="label">Check strips</p>
-      <label className="field">
-        One strip per line: name then strength
-        <textarea rows={3} value={lines} onChange={(e) => setLines(e.target.value)} />
-      </label>
-      <button type="button" disabled={busy || !lines.trim()} onClick={() => act("/strips", { strips: parseStrips(lines) })}>
-        Check these strips
-      </button>
-    </section>
-  );
-}
 
 // Hear a recording as text to check, then draft from that text. heard_by keeps who heard it.
 const hearing = (ask, path) => (file) => ask("/ask/hear", file, { by: DOCTOR }, path);
@@ -91,7 +75,7 @@ function Admit({ view, busy, act }) {
 }
 
 // The clinic cards that sit below the quiet row (R25).
-function Clinic({ view, busy, act }) {
+function Clinic({ view, busy, act, upload }) {
   return (
     <>
       <section className="card">
@@ -99,7 +83,7 @@ function Clinic({ view, busy, act }) {
         <RxImport busy={busy} act={act} />
         <RxTable rx={view.rx} />
       </section>
-      <StripCheck busy={busy} act={act} />
+      <StripPhoto view={view} busy={busy} upload={upload} act={act} />
     </>
   );
 }
@@ -225,7 +209,7 @@ export default function DoctorActions({ state, card, view, act, upload, ask, bus
       {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
       {below.map((key) => primary[key])}
-      {state === "clinic" && <Clinic view={view} busy={busy} act={act} />}
+      {state === "clinic" && <Clinic view={view} busy={busy} act={act} upload={upload} />}
       {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} />}
     </>
   );

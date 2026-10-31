@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import base64
-
 import httpx
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.adapters.spark import SparkAdapter
 from app.config import BANNER
 from app.journey import nudges as rules
 from app.journey.ai_moments import moments
@@ -24,7 +21,6 @@ from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, clock
 from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
 from app.morning.druglog import parse_drug_phrase
-from app.morning.strips import parse_strip_text
 
 router = APIRouter(prefix="/journey/episodes/{episode_id}")
 demo_router = APIRouter(prefix="/journey/demo")
@@ -248,31 +244,6 @@ def scan_strips(episode_id: str, body: StripsIn, request: Request) -> dict:
         found = {**read_strip(strip.name, strip.strength), "by": "patient", "source": "typed"}
         store.append(episode_id, "brownbag.med_found", found, ts_ms=ts + offset)
     raise_nudges(store, episode_id, ts + len(body.strips))
-    return view(request, episode_id)
-
-
-@router.post("/strips/photo")
-async def strips_photo(episode_id: str, request: Request, file: UploadFile = File(...)) -> dict:
-    """Muse Spark 1.3 reads the strip labels. Without a key the photo is not sent anywhere."""
-    _require(request, episode_id)
-    settings = request.app.state.settings
-    if not settings.spark_configured:
-        raise HTTPException(status_code=409, detail="No Meta Model API key. Type the strip names instead.")
-    raw = await file.read()
-    if not raw or len(raw) > MAX_PHOTO_BYTES:
-        raise HTTPException(status_code=400, detail="Send one photo under 8 MB.")
-    kind = file.content_type if (file.content_type or "").startswith("image/") else "image/jpeg"
-    data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
-    try:
-        text = SparkAdapter(settings).read_strips(data_url)
-        strips = parse_strip_text(text)
-    except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
-        raise HTTPException(status_code=502, detail="The strip reader did not return a usable list.") from exc
-    store = _store(request)
-    ts = _at(store, episode_id, None)
-    for offset, strip in enumerate(strips):
-        store.append(episode_id, "brownbag.med_found", {**strip, "by": "patient", "source": "muse-spark-1.3"}, ts_ms=ts + offset)
-    raise_nudges(store, episode_id, ts + len(strips))
     return view(request, episode_id)
 
 

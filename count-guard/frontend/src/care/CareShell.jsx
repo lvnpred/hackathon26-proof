@@ -89,7 +89,7 @@ export default function CareShell({ ward, children }) {
   const { clearFault } = ward;
   const chartId = useMatch("/chart/:episodeId")?.params.episodeId;
   const [alertsOpen, setAlertsOpen] = useState(false);
-  const { mine, others } = stripPills(waitingPills(ward.patients, ward.nowMs), chartId, ward.role);
+  const { mine, others } = stripPills(waitingPills(ward.patients, ward.nowMs, ward.role), chartId, ward.role);
   const me = ward.role === "patient" ? findPatient(ward.patients, ward.patientBed) : null;
   const unread = me ? unreadCount(me.view, readOpened(me.id)) : 0;
   const alerts = alertCount({ mine, others }, ward.role);

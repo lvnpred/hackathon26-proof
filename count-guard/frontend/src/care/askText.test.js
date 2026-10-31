@@ -153,3 +153,16 @@ test("answerHow compares trimmed text", () => {
   assert.deepEqual(answerHow(" the bp is fine \n", "the bp is fine", "Dr. A. Rao (synthetic)"), { via: "voice", heard_by: "Dr. A. Rao (synthetic)" });
   assert.deepEqual(answerHow("the bp is fine", "the bp is fine today", "x"), { via: "text", heard_by: "" });
 });
+
+test("inboxItems adds answered bot questions, never open, and the header count is unchanged", () => {
+  const withBot = { ask: { questions: [
+    { id: "b1", to: "bot", at_ms: 5 * M, answer: { text: "From the record." } },
+    { id: "b2", to: "bot", at_ms: 6 * M, answer: null },
+    { id: "q1", to: "doctor", at_ms: 10 * M, answer: null },
+  ], reviews: [] } };
+  const items = inboxItems(withBot, "nurse", 30 * M);
+  assert.deepEqual(items.map((i) => [i.kind, i.id, i.open]), [["question", "q1", true], ["bot", "b1", false]]);
+  assert.equal(inboxHeader("R. Kumar, 58 M (synthetic)", items), "From R. Kumar \u00b7 1 waiting");
+  assert.deepEqual(inboxGroups(items).answered.map((i) => i.kind), ["bot"]);
+  assert.doesNotMatch("Answered by record bot", ADVICE);
+});

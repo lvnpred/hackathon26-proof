@@ -81,6 +81,7 @@ function nudgeRows(patient, nowMs) {
     row(patient, `nudge:${nudge.id}`, "nudge", nudge.says, {
       ...timed(nowMs, nudge.at_ms),
       lineId: nudge.id,
+      staffSays: nudge.says_staff || nudge.says,
       to: nudge.to,
       owner: ROLE_NAME[nudge.to] || nudge.to,
       role: nudge.to,
@@ -168,7 +169,8 @@ export function queueRows(patients, role, nowMs) {
   return sorted(rows).map(strip);
 }
 
-export function waitingPills(patients, nowMs) {
+// `role` is the viewer: staff read a nudge's staff wording, the patient reads `says`.
+export function waitingPills(patients, nowMs, role) {
   // Nurse first, so a nudge the doctor also sees keeps its own recipient.
   const seen = new Set();
   const rows = ["nurse", "patient", "doctor"]
@@ -180,7 +182,7 @@ export function waitingPills(patients, nowMs) {
     name: names[r.episodeId] || "",
     who: r.owner,
     role: r.role,
-    what: r.says,
+    what: role === "patient" ? r.says : r.staffSays || r.says,
     waited: r.waited,
     late: r.waitedMs >= H,
     episodeId: r.episodeId,

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { label } from "./clock";
+import AiMoment from "./AiMoment.jsx";
 import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import { INBOX_SCOPES } from "./faults";
+import { botMoment } from "./moments.js";
 import { answerHow, answerSourceLine, checkinLine, inboxGroups, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
 
 // The three fixed review decisions, as the server names them.
@@ -35,6 +37,18 @@ function QuestionCard({ q, item, role, name, busy, act, ask }) {
           <Dictate bare label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} onHear={hear} onSend={send} />
         </section>
       )}
+    </article>
+  );
+}
+
+// A question the record bot already answered, shown to staff with its answer as one AI moment.
+function RecordBotItem({ q, moment, role, episodeId }) {
+  return (
+    <article className="card inbox-card" data-line={q.id}>
+      <p className="label">Answered by record bot</p>
+      <p className="small muted">{q.by} · {label(q.at_ms)}</p>
+      <p className="quote">{"\u201c"}{questionText(role, q)}{"\u201d"}</p>
+      {moment && <AiMoment moment={moment} role={role} episodeId={episodeId} />}
     </article>
   );
 }
@@ -90,7 +104,9 @@ export default function AskInbox({ view, role, name, nowMs, busy, act, ask, faul
   const references = (view.photos || []).filter((p) => p.purpose === "reference");
   const reference = references[references.length - 1];
   const { open, answered } = inboxGroups(items);
-  const card = (item) => (item.kind === "question"
+  const card = (item) => (item.kind === "bot"
+    ? <RecordBotItem key={item.id} q={questions.get(item.id)} moment={botMoment(view, item.id)} role={role} episodeId={episodeId} />
+    : item.kind === "question"
     ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} busy={busy} act={act} ask={ask} />
     : <ReviewCard key={item.id} r={reviews.get(item.id)} item={item} role={role} busy={busy} act={act} reference={reference} />);
   return (

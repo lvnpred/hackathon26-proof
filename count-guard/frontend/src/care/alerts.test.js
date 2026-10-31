@@ -85,3 +85,9 @@ test("nudgeText gives staff the staff wording and the patient the patient wordin
   assert.equal(nudgeText({ says: "a", says_staff: "b" }, "patient"), "a");
   for (const role of ["doctor", "nurse", "patient"]) assert.equal(nudgeText({ says: "a" }, role), "a");
 });
+test("alertNow words a strip nudge for staff and keeps the patient's wording for the patient", () => {
+  const strip = { ...n("s", "count_open", "patient", 5, "This strip reads amlodipine 10 mg."), says_staff: "Strip reads amlodipine 10 mg; prescription says 5 mg." };
+  assert.equal(alertNow({ nudges: [strip] }, "nurse"), "Waiting for the patient's answer: Strip reads amlodipine 10 mg; prescription says 5 mg.");
+  assert.equal(alertNow({ nudges: [strip] }, "patient"), "Waiting for the patient's answer: This strip reads amlodipine 10 mg.");
+  assert.equal(alertNow({ nudges: [n("a", "count_open", "nurse", 1, "Old wording.")] }, "doctor"), "Waiting for the nurse's answer: Old wording.");
+});

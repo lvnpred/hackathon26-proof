@@ -65,3 +65,21 @@ export function filterMoments(moments, filter, role, lens = "staff") {
 // The newest signed moment of one capability (moments arrive newest first).
 export const lastSigned = (moments, capability) =>
   (moments || []).find((m) => m.capability === capability && m.status === "recorded") || null;
+
+const STRIP_NUDGES = ["strip_strength_differs", "strip_not_prescribed"];
+
+// The strips-photo moments of a chart, and the strip alerts they raised. Each list keeps the newest-first order.
+export function stripMoments(view) {
+  const all = view?.ai_moments || [];
+  return {
+    strips: all.filter((m) => m.capability === "strips"),
+    nudges: all.filter((m) => m.capability === "nudge" && STRIP_NUDGES.includes(m.refs?.kind)),
+  };
+}
+
+// The record-bot answer moment of one question, by the question's id.
+export const botMoment = (view, questionId) =>
+  (view?.ai_moments || []).find((m) => m.capability === "record_bot" && m.refs?.question_id === questionId) || null;
+
+// The day-plan moment of a chart (its id is `dayplan:<prescription id>`), or null before a medicines photo is matched.
+export const dayPlanMoment = (view) => (view?.ai_moments || []).find((m) => m.capability === "day_plan") || null;

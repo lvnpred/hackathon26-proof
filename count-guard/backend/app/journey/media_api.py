@@ -10,7 +10,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app.journey import dictation, evidence, live, proof, spoken, states, tasks
-from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, view
+from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, raise_nudges, view
 from app.journey.regions import strips_from
 from app.journey.rx import key_of
 
@@ -258,3 +258,36 @@ def get_photo(episode_id: str, photo_id: str, request: Request) -> FileResponse:
     if not path.is_relative_to(data_dir / "journey_media") or not path.is_file():
         raise HTTPException(status_code=404, detail="Photo not found")
     return FileResponse(path, headers={"X-Content-Type-Options": "nosniff"})
+
+
+NO_STRIPS = "No strips were read from the photo. Type them instead."
+
+
+@media_router.post("/strips/photo")
+def strips_photo(
+    episode_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    by: str = Form("patient", min_length=1, max_length=80),
+    at_ms: int | None = Form(None, ge=0),
+) -> dict:
+    """A photo of strips is read like the medicines photo: boxes, values, a kept sidecar. Offline it uses the prepared fixture (R11)."""
+    from app.journey.ask_api import MEDICINES_LIVE  # ask_api imports this module, so import it late
+
+    _require(request, episode_id)
+    raw, kind = read_upload_photo(file)
+    store, settings = _store(request), request.app.state.settings
+    read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
+    strips = strips_from(read["text"] or "")
+    if not strips:
+        raise HTTPException(status_code=422, detail=NO_STRIPS)
+    ts = _at(store, episode_id, at_ms)
+    photo = write_photo(settings, store, episode_id, raw, kind, {"purpose": "strips", "by": by}, ts)
+    kept = keep_photo_evidence(settings, episode_id, "strip", photo["id"], read, read["regions"])
+    for offset, strip in enumerate(strips):
+        row = {**strip, "by": by, "source": read["source"], "photo_id": photo["id"], **({"evidence_id": kept["evidence_id"]} if kept else {})}
+        if offset == 0:
+            row["calls"] = read["calls"]  # one row carries the calls, so the summary counts each call once (R12)
+        store.append(episode_id, "brownbag.med_found", row, ts_ms=ts + 1 + offset)
+    raise_nudges(store, episode_id, ts + 1 + len(strips))
+    return view(request, episode_id)

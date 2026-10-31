@@ -24,8 +24,7 @@ export const STEPS = {
     await H.click("Use the demo prescription");
   },
   async "das-strip"(H) {
-    await H.fill("One strip per line: name then strength", "Amlodipine 10 mg");
-    await H.click("Check these strips");
+    await H.file("Photo of strips", "eval/p4/strip-amlodipine.png");
   },
   async "das-close"(H) {
     await H.click("Close visit");

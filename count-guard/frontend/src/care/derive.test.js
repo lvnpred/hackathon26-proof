@@ -238,3 +238,13 @@ test("nurse rows: orders signed in clinic wait for the admission", () => {
   const admitting = patient("e1", "Bed 1", view({ state: "admitting", order_list: [order("o1", T - 10 * M)] }));
   assert.ok(queueRows([admitting], "nurse", T).some((r) => r.says === "New orders from Dr. A. Rao"));
 });
+
+test("pills and queue rows read a nudge's staff wording; the patient's pills keep says", () => {
+  const strip = { ...nudge("n1", "patient", 28 * H, "This strip reads amlodipine 10 mg."), says_staff: "Strip reads amlodipine 10 mg; prescription says 5 mg." };
+  const patients = [patient("e1", "Bed 1", view({ nudges: [strip] }))];
+  assert.equal(waitingPills(patients, 30 * H, "nurse")[0].what, "Strip reads amlodipine 10 mg; prescription says 5 mg.");
+  assert.equal(waitingPills(patients, 30 * H, "doctor")[0].what, "Strip reads amlodipine 10 mg; prescription says 5 mg.");
+  assert.equal(waitingPills(patients, 30 * H, "patient")[0].what, "This strip reads amlodipine 10 mg.");
+  const old = [patient("e1", "Bed 1", view({ nudges: [nudge("n2", "patient", 28 * H, "Old wording.")] }))];
+  assert.equal(waitingPills(old, 30 * H, "nurse")[0].what, "Old wording.");
+});

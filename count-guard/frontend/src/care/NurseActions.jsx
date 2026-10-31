@@ -1,5 +1,6 @@
 import { sentenceText } from "./orders.js";
 import Checklist from "./Checklist";
+import HandoverCard from "./HandoverCard.jsx";
 import NextCard from "./NextCard";
 import NurseTasks from "./NurseTasks";
 import TheatreChecklist from "./TheatreChecklist";
@@ -53,6 +54,7 @@ export default function NurseActions({ state, card, view, act, upload, ask, busy
   return (
     <>
       <NextCard card={card}>{card.actions.map((key) => primary[key])}</NextCard>
+      {state === "ward" && <HandoverCard view={view} busy={busy} act={act} />}
       {(state === "ward" || state === "theatre") && <NurseTasks view={view} nowMs={nowMs} state={state} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
       {!["admitting", "ward", "theatre", "discharging"].includes(state) && <p className="empty small">Nothing for the nurse to do from this state.</p>}
     </>

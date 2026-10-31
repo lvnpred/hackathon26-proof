@@ -1,7 +1,9 @@
+import AiMoment from "./AiMoment.jsx";
 import { label } from "./clock";
 import { DOCTOR } from "./DoctorActions";
 import { markLine, regionOfRow, stripLabel, stripMatch, stripTone, cropStyle } from "./brownbag.js";
 import { medicineLine } from "./askText.js";
+import { momentFor } from "./moments.js";
 
 function Row({ photo, row, index, regions, rows, marks, doctor, busy, onMark }) {
   const mark = marks.find((m) => m.row === index);
@@ -34,6 +36,7 @@ export default function MedicinesFromHome({ view, role, act, busy }) {
       <p className="label">Medicines from home</p>
       {reads.map((m) => (
         <div key={m.id}>
+          {momentFor(view, m.id) && <AiMoment moment={momentFor(view, m.id)} role={role} episodeId={view.episode?.id} />}
           <p className="small muted">Photo {label(m.at_ms)}</p>
           <ul className="task-list">
             {m.rows.map((row, i) => (

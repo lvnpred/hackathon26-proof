@@ -27,13 +27,15 @@ export const doctorOpenItems = (view) =>
   + (view?.ask?.reviews || []).filter((r) => !r.answer).length
   + (view?.nudges || []).filter((n) => n.to === "doctor").length;
 
-// The doctor's inbox: questions to the doctor and reviews, open and answered, for every role (R23).
+// The doctor's inbox: questions to the doctor and reviews, open and answered, for every role (R23), and the bot's answers.
 // Open items first, then answered, each oldest first (R22).
 export function inboxItems(view, _role, nowMs) {
   const make = (kind) => (item) => ({ kind, id: item.id, atMs: item.at_ms, open: !item.answer, waited: item.answer ? "" : waitedText(nowMs - item.at_ms) });
   const all = [
     ...((view?.ask?.questions) || []).filter((q) => q.to === "doctor").map(make("question")),
     ...((view?.ask?.reviews) || []).map(make("review")),
+    // The record bot's answers read as answered items for staff; they are never open.
+    ...((view?.ask?.questions) || []).filter((q) => q.to === "bot" && q.answer).map((q) => ({ kind: "bot", id: q.id, atMs: q.at_ms, open: false, waited: "" })),
   ];
   const byTime = (a, b) => a.atMs - b.atMs;
   return [...all.filter((i) => i.open).sort(byTime), ...all.filter((i) => !i.open).sort(byTime)];

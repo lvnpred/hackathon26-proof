@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { canInspect, chipFor, draftChip, FILTERS, filterMoments, findingFor, heardChip, lastSigned, momentFor, statusLabel } from "./moments.js";
+import { canInspect, chipFor, draftChip, FILTERS, filterMoments, findingFor, heardChip, lastSigned, momentFor, statusLabel, stripMoments, botMoment, dayPlanMoment } from "./moments.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const call = (model, source) => ({ model, source });
@@ -115,4 +115,51 @@ test("RecordEvidence copy, aria-pressed chips and thumbnail", () => {
   assert.match(src, /Nothing here for this filter\./);
   assert.match(src, /\/journey\/episodes\/\$\{episodeId\}\/photos\/\$\{moment\.photo_id\}/);
   assert.match(src, /width=\{40\}/);
+});
+
+test("stripMoments splits the strips photo moments from the strip alerts", () => {
+  const view = { ai_moments: [
+    { id: "n1", capability: "nudge", refs: { kind: "strip_strength_differs" } },
+    { id: "n2", capability: "nudge", refs: { kind: "dose_overdue" } },
+    { id: "s1", capability: "strips", refs: {} },
+    { id: "m1", capability: "medicines", refs: {} },
+  ] };
+  const { strips, nudges } = stripMoments(view);
+  assert.deepEqual(strips.map((m) => m.id), ["s1"]);
+  assert.deepEqual(nudges.map((m) => m.id), ["n1"]);
+  assert.deepEqual(stripMoments({}), { strips: [], nudges: [] });
+});
+
+test("botMoment and dayPlanMoment find their moment", () => {
+  const view = { ai_moments: [{ id: "a1", capability: "record_bot", refs: { question_id: "q1" } }, { id: "dayplan:rx1", capability: "day_plan" }] };
+  assert.equal(botMoment(view, "q1").id, "a1");
+  assert.equal(botMoment(view, "q2"), null);
+  assert.equal(dayPlanMoment(view).id, "dayplan:rx1");
+  assert.equal(dayPlanMoment({}), null);
+});
+
+test("capabilities in the flow: sources use the new components", () => {
+  const read = (name) => fs.readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
+  const strip = read("StripPhoto.jsx");
+  assert.match(strip, /aria-label="Photo of strips"/);
+  assert.match(strip, /Type instead/);
+  assert.match(strip, /aria-expanded=\{typing\}/);
+  assert.match(strip, /accept="image\/\*" capture="environment"/);
+  assert.match(strip, /upload\("\/strips\/photo", file, \{ by: DOCTOR \}\)/);
+  assert.match(strip, /Check these strips/);
+  const doctor = read("DoctorActions.jsx");
+  assert.doesNotMatch(doctor, /One strip per line: name then strength/);
+  assert.match(doctor, /<StripPhoto /);
+  assert.match(read("NurseActions.jsx"), /<HandoverCard /);
+  assert.match(read("DayPlan.jsx"), /openInspector\(/);
+  assert.match(read("AlertBanner.jsx"), /<AiMoment /);
+  assert.match(read("MedicinesFromHome.jsx"), /<AiMoment /);
+  assert.match(read("AskInbox.jsx"), /Answered by record bot/);
+  const handover = read("HandoverCard.jsx");
+  for (const text of ["Shift handover", "Ask Muse Spark 1.3 to word it", "Draft handover", "Accept as {taker}"]) assert.ok(handover.includes(text), text);
+  assert.match(handover, /\/handover\/\$\{handover\.id\}\/accept/);
+});
+
+test("new copy has no advice words", () => {
+  for (const s of ["Photo of strips", "Type instead", "Check these strips", "Shift handover", "Ask Muse Spark 1.3 to word it", "Draft handover", "Accept as Nurse Kavya (synthetic)", "Answered by record bot", "Inspect"]) assert.doesNotMatch(s, ADVICE);
 });

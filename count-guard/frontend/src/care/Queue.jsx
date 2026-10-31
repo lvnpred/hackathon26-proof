@@ -25,7 +25,7 @@ function QueueRow({ row, ward, open, toggle }) {
       >
         <td className="num">Bed {row.bed}</td>
         <td className="left">{row.name}</td>
-        <td>{row.says}</td>
+        <td>{row.staffSays || row.says}</td>
         <td>{row.waited}</td>
         <td>
           {DEMO && nudge && <button onClick={toggle}>{open ? "Close" : "Answer"}</button>} <Link to={to} tabIndex={-1}>Open →</Link>

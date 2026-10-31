@@ -276,11 +276,11 @@ def test_inputs_are_checked_at_the_boundary(tmp_path):
     assert api.post("/journey/episodes/missing/play").status_code == 404
 
 
-def test_strip_photo_is_refused_without_a_model_key(tmp_path):
+def test_strip_photo_that_is_not_an_image_is_refused(tmp_path):
     api = _client(tmp_path)
     eid = _episode(api)
     response = api.post(f"/journey/episodes/{eid}/strips/photo", files={"file": ("s.jpg", b"x", "image/jpeg")})
-    assert response.status_code == 409
+    assert response.status_code == 400
 
 
 def test_rule_functions_are_pure_over_events():

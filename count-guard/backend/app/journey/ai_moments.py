@@ -220,7 +220,7 @@ def _answered(ix: _Index, e: dict) -> dict | None:
     sources = [{"id": s.get("id"), "text": s.get("text")} if isinstance(s, dict) else {"id": s, "text": ""}
                for s in p.get("sources") or []]
     asked = ix.by_id.get(p.get("question_id"))
-    refs = {"question": (asked["payload"].get("text") if asked else None), "answer": p.get("answer"),
+    refs = {"question_id": p.get("question_id"), "question": (asked["payload"].get("text") if asked else None), "answer": p.get("answer"),
             "found": bool(p.get("found")), "sources": sources}
     return _moment(ix, e, "record_bot", text.bot_text(len(sources), bool(p.get("found"))), "recorded", refs,
                    patient_finding=text.bot_text(len(sources), bool(p.get("found")), patient=True),

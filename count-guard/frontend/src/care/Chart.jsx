@@ -8,14 +8,11 @@ import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import History from "./History";
 import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
-import { trayOnNurseCard } from "./derive";
 import MedicinesFromHome from "./MedicinesFromHome.jsx";
-import OrderTasks from "./OrderTasks";
-import Photos from "./Photos";
+import RecordEvidence from "./RecordEvidence.jsx";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
 import { unseenCheckins } from "./thread.js";
-import VideoChecks from "./VideoChecks";
 
 const WARD_NURSE = "Nurse Meena (synthetic)"; // the ward nurse, as in NurseActions.jsx
 
@@ -69,8 +66,6 @@ export default function Chart() {
   const upload = (path, file, fields, scope) => ward.upload(episodeId, path, file, fields, scope);
   const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
-  const tasks = view.tasks || [];
-  const orders = view.order_list || [];
 
   return (
     <>
@@ -84,13 +79,9 @@ export default function Chart() {
       <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
       <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES]} />
 
-      <Photos view={view} />
-
       <MedicinesFromHome view={view} role={ward.role} act={act} busy={ward.busy} />
 
-      <VideoChecks view={view} hideTray={trayOnNurseCard(ward.role, view.state)} />
-
-      <OrderTasks orders={orders} tasks={tasks} photos={view.photos} nowMs={ward.nowMs} state={view.state} role={ward.role} />
+      <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} />
 
       <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />
     </>

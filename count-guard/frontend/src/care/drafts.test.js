@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { photoPurposeLabel, doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL, lastDoneLine, rowSession } from "./drafts.js";
+import { doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL, lastDoneLine, rowSession } from "./drafts.js";
 import { orderRowsToItems } from "./orders.js";
 
 // The Task 2 Kumar draft, in the shape orderRowsToItems emits (P2-R9).
@@ -69,13 +69,6 @@ test("draftChanged is true only when a draft with a new id appears", () => {
   assert.equal(draftChanged("a", null), false);
 });
 
-test("photoCheckLabel gives every backend match a plain label", () => {
-  assert.equal(photoCheckLabel(null), "");
-  assert.equal(photoCheckLabel({ match: "ok" }), MATCH_LABEL.ok);
-  assert.equal(photoCheckLabel({ match: "none" }), MATCH_LABEL.none);
-  assert.equal(photoCheckLabel({ match: "weird" }), MATCH_LABEL.none);
-});
-
 test("sourceLabel falls back to the raw source, never a blank", () => {
   assert.equal(sourceLabel("typed"), "Typed");
   assert.equal(sourceLabel("none"), "Not read");
@@ -141,14 +134,6 @@ test("sourceLabel names a failed or fallback read", () => {
   assert.equal(sourceLabel("prepared (live call failed)"), "Prepared demo result (the live call failed)");
   assert.equal(sourceLabel("none"), "Not read");
   assert.equal(sourceLabel("muse-spark-1.3"), "Muse Spark");
-});
-
-test("photoPurposeLabel names each purpose, and unknown ones plainly", () => {
-  assert.equal(photoPurposeLabel("proof"), "Proof");
-  assert.equal(photoPurposeLabel("reference"), "Reference");
-  assert.equal(photoPurposeLabel("healing"), "Healing photo");
-  assert.equal(photoPurposeLabel("medicines"), "Medicines photo");
-  assert.equal(photoPurposeLabel("other"), "Photo");
 });
 
 test("lastDoneLine names time, who and how, with the photo match", () => {

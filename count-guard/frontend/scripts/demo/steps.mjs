@@ -81,8 +81,10 @@ export const STEPS = {
     await H.role("Nurse");
     await H.chart(KUMAR);
     await H.file("Tray check", "eval/p3/tray-hernia.mp4");
+    await H.click("Inspect", "Theatre steps");
   },
   async "kumar-count"(H) {
+    await H.click("Close", "Inspector");
     await H.click("Surgery began");
     await H.click("Record pack opened");
     await H.file("Swab camera count", "eval/p3/swabs-closing.mp4");
@@ -117,7 +119,7 @@ export const STEPS = {
     await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
     await H.click("Draft discharge");
-    await H.page.locator(".ai-moment").filter({ hasText: "sections drafted" }).getByRole("button", { name: "Inspect" }).click();
+    await H.page.locator(".ai-moment").filter({ hasText: "sections drafted" }).first().getByRole("button", { name: "Inspect" }).click();
     await before(H, "kumar-discharge");
     await H.click("Close", "Inspector");
     await H.click("Sign discharge");

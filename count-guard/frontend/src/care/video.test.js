@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, shownChecks, taskCheckLine, taskLineCheckIds, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
+import { CHECK_LABEL, checkLabel, latestCheck, patientCheckLine, taskCheckLine, swabTotal, taskVideoLabel, toUpload, trayFlag, videoProblem } from "./video.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const file = (type, mb) => ({ type, size: mb * 1024 * 1024 });
@@ -98,17 +98,7 @@ test("no UI string reads as advice", () => {
   for (const s of all) assert.doesNotMatch(s, ADVICE, s);
 });
 
-test("shownChecks hides tray checks from the patient and from the nurse's theatre screen", () => {
-  const checks = [{ id: "a", check: "tray" }, { id: "b", check: "setup" }];
-  assert.deepEqual(shownChecks(checks, {}).map((c) => c.id), ["a", "b"]);
-  assert.deepEqual(shownChecks(checks, { patient: true }).map((c) => c.id), ["b"]);
-  assert.deepEqual(shownChecks(checks, { hideTray: true }).map((c) => c.id), ["b"]);
-});
-test("shownChecks keeps swab checks off the patient page and the nurse's theatre screen", () => {
-  const checks = [{ id: "a", check: "swabs" }, { id: "b", check: "setup" }];
-  assert.deepEqual(shownChecks(checks, {}).map((c) => c.id), ["a", "b"]);
-  assert.deepEqual(shownChecks(checks, { patient: true }).map((c) => c.id), ["b"]);
-  assert.deepEqual(shownChecks(checks, { hideTray: true }).map((c) => c.id), ["b"]);
+test("swab check labels", () => {
   assert.equal(checkLabel({ check: "swabs", match: "ok" }), "Swab count matches the pack");
   assert.equal(checkLabel({ check: "swabs", match: "none" }), "Clip kept, not counted");
 });
@@ -126,13 +116,11 @@ test("unchecked photos read in the plural; every patient line is free of advice 
     }
   }
 });
-test("a task's set-up line takes its media from the check; the list skips checks shown on task lines", () => {
+test("a task's set-up line takes its media from the check", () => {
   const view = {
     tasks: [{ id: "t1", video: { id: "c1", match: "ok" } }, { id: "t2" }],
     video_checks: [{ id: "c1", check: "setup", task_id: "t1", media: "photos" }, { id: "c2", check: "setup", task_id: "t3" }],
   };
   assert.equal(taskCheckLine(view, view.tasks[0]), "Checked from photos: everything planned was seen.");
   assert.equal(taskCheckLine(view, view.tasks[1]), "");
-  assert.deepEqual(taskLineCheckIds(view), ["c1"]);
-  assert.deepEqual(shownChecks(view.video_checks, { patient: true, onTaskLines: taskLineCheckIds(view) }).map((c) => c.id), ["c2"]);
 });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Dictate from "./Dictate";
 import ObsForm from "./ObsForm";
-import { EvidenceThumb } from "./Evidence.jsx";
+import AiMoment from "./AiMoment.jsx";
 import TaskProof from "./TaskProof";
 import VideoCheck from "./VideoCheck";
 import { answerHow } from "./askText";
@@ -16,6 +16,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
   const mark = rowMark(task, due);
   const live = due !== "paused";
   const last = lastDoneLine(task, view.photos);
+  const proofMoment = momentFor(view, last?.evidenceId);
   const video = task.proof === "video" && task.has_setup;
 
   const send = async ({ text, heard }) => {
@@ -40,7 +41,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           {last.match && <> · <span className={`pill ${last.flagged ? "sun" : "info"}`}>{last.match}</span></>}
         </p>
       )}
-      {last?.evidenceId && <EvidenceThumb episodeId={view.episode?.id} evidenceId={last.evidenceId} version={view.timeline?.length} />}
+      {proofMoment && <AiMoment moment={proofMoment} role="nurse" episodeId={view.episode?.id} />}
       {micOpen && live && (
         <Dictate
           bare

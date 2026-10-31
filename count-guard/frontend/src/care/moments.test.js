@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { canInspect, chipFor, draftChip, findingFor, heardChip, momentFor, statusLabel } from "./moments.js";
+import { canInspect, chipFor, draftChip, FILTERS, filterMoments, findingFor, heardChip, lastSigned, momentFor, statusLabel } from "./moments.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const call = (model, source) => ({ model, source });
@@ -61,4 +61,58 @@ test("AiMoment hides the arrow from the accessible name", () => {
   const src = fs.readFileSync(new URL("./AiMoment.jsx", import.meta.url), "utf8");
   assert.match(src, /aria-hidden="true">›/);
   assert.match(src, /className="ai-moment" data-moment=/);
+});
+
+const mom = (id, filter, status, owner, patient_finding = "x", capability = "tray") => ({ id, filter, status, owner, patient_finding, capability });
+const ROWS = [
+  mom("a", "photos", "flagged", "nurse"),
+  mom("b", "video", "flagged", "doctor"),
+  mom("c", "voice", "recorded", null, null, "orders"),
+  mom("d", "answers", "matches", null),
+  mom("e", "alerts", "open", "doctor"),
+  mom("f", null, "recorded", null, null, "typed_orders"),
+];
+const ids = (list) => list.map((m) => m.id).join("");
+
+test("filterMoments keeps one chip's rows", () => {
+  assert.deepEqual(FILTERS.map(([key]) => key), ["all", "needs", "photos", "video", "voice", "answers", "alerts"]);
+  assert.equal(ids(filterMoments(ROWS, "all", "doctor")), "abcdef");
+  assert.equal(ids(filterMoments(ROWS, "photos", "doctor")), "a");
+  assert.equal(ids(filterMoments(ROWS, "video", "doctor")), "b");
+  assert.equal(ids(filterMoments(ROWS, "voice", "doctor")), "c");
+  assert.equal(ids(filterMoments(ROWS, "answers", "doctor")), "d");
+  assert.equal(ids(filterMoments(ROWS, "alerts", "doctor")), "e");
+});
+
+test("needs keeps the rows that read Needs you for this role", () => {
+  assert.equal(ids(filterMoments(ROWS, "needs", "doctor")), "be");
+  assert.equal(ids(filterMoments(ROWS, "needs", "nurse")), "a");
+});
+
+test("filterMoments patient lens drops rows without a patient sentence", () => {
+  assert.equal(ids(filterMoments(ROWS, "all", "patient", "patient")), "abde");
+});
+
+test("lastSigned returns the newest recorded moment of the capability", () => {
+  const rows = [mom("n", "voice", "open", "doctor", null, "orders"), mom("y", "voice", "recorded", null, null, "orders"), mom("z", "voice", "recorded", null, null, "orders")];
+  assert.equal(lastSigned(rows, "orders").id, "y");
+  assert.equal(lastSigned(rows, "discharge"), null);
+  assert.equal(lastSigned(undefined, "orders"), null);
+});
+
+test("Chart and MyCare use RecordEvidence; the three cards are gone", () => {
+  const read = (name) => fs.readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
+  assert.doesNotMatch(read("Chart.jsx"), /import .*\b(Photos|VideoChecks|OrderTasks)\b/);
+  assert.match(read("Chart.jsx"), /<RecordEvidence /);
+  assert.match(read("MyCare.jsx"), /<RecordEvidence [^>]*lens="patient"/);
+  for (const name of ["Photos.jsx", "VideoChecks.jsx", "OrderTasks.jsx"]) assert.equal(fs.existsSync(new URL(`./${name}`, import.meta.url)), false);
+});
+
+test("RecordEvidence copy, aria-pressed chips and thumbnail", () => {
+  const src = fs.readFileSync(new URL("./RecordEvidence.jsx", import.meta.url), "utf8");
+  assert.match(src, /aria-label="Record and evidence"/);
+  assert.match(src, /aria-pressed=\{filter === key\}/);
+  assert.match(src, /Nothing here for this filter\./);
+  assert.match(src, /\/journey\/episodes\/\$\{episodeId\}\/photos\/\$\{moment\.photo_id\}/);
+  assert.match(src, /width=\{40\}/);
 });

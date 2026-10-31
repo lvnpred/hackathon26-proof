@@ -1,6 +1,5 @@
 import { hhmm } from "./clock.js";
 import { taskDue, waitedText } from "./derive.js";
-import { displayName } from "./names.js";
 
 const ORDER = { overdue: 0, due: 1, running: 2, later: 3, paused: 3, done: 4, closed: 5 };
 
@@ -118,8 +117,4 @@ export function rowMark(task, due) {
   if (task.kind === "obs") return { label: "Save readings", primary: true };
   if (due === "later") return { label: task.kind === "dose" ? "Given early" : "Mark done early", primary: false };
   return { label: "Mark done", primary: true };
-}
-
-export function orderFoldTitle(order) {
-  return `Signed orders \u00b7 ${displayName(order.by)} ${hhmm(order.at_ms)} \u00b7 ${order.acknowledged_by ? "acknowledged" : "not acknowledged yet"}`;
 }

@@ -7,9 +7,8 @@ import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
 import { findPatient } from "./Patients";
 import Timeline from "./Timeline";
-import VideoChecks from "./VideoChecks";
+import RecordEvidence from "./RecordEvidence.jsx";
 import { orderLines, orderStatus, patientTaskStatus } from "./tasklist";
-import Photos from "./Photos";
 import { taskCheckLine } from "./video";
 
 // The same record as Today, read-only: no forms, no actions.
@@ -38,11 +37,12 @@ export default function MyCare() {
                     {task.video && <p className="small muted">{taskCheckLine(view, task)}</p>}
                     {(task.done || []).map((d, index) => {
                       const proof = proofOf(d, view.photos);
+                      const moment = momentFor(view, proof.photo?.check?.evidence_id);
                       return (
                         <p className="small muted" key={`${task.id}:${index}`}>
                           Done by {d.by} at {label(d.at_ms)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
                           {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
-                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> {momentFor(view, proof.photo?.check?.evidence_id) && <span className="chip">{chipFor(momentFor(view, proof.photo.check.evidence_id))}</span>}</>}
+                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> {moment && <span className="chip">{chipFor(moment)}</span>}</>}
                         </p>
                       );
                     })}
@@ -53,8 +53,7 @@ export default function MyCare() {
           </div>
         ))}
       </section>
-      <Photos view={view} patient />
-      <VideoChecks view={view} patient />
+      <RecordEvidence view={view} role="patient" lens="patient" episodeId={patient.id} />
       <section className="card">
         <p className="label">Timeline</p>
         <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" />

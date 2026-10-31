@@ -51,3 +51,17 @@ export function momentFor(view, id) {
 export const findingFor = (moment, lens) => (lens === "patient" ? moment.patient_finding : moment.finding) || "";
 
 export const canInspect = (moment) => moment.kind !== "record";
+
+export const FILTERS = [["all", "All"], ["needs", "Needs you"], ["photos", "Photos"], ["video", "Video"], ["voice", "Voice"], ["answers", "Answers"], ["alerts", "Alerts"]];
+
+// The Record & evidence rows for one chip. The patient lens keeps only rows that have a patient sentence.
+export function filterMoments(moments, filter, role, lens = "staff") {
+  const rows = (moments || []).filter((m) => lens !== "patient" || m.patient_finding != null);
+  if (!filter || filter === "all") return rows;
+  if (filter === "needs") return rows.filter((m) => statusLabel(m, role).text === "Needs you");
+  return rows.filter((m) => m.filter === filter);
+}
+
+// The newest signed moment of one capability (moments arrive newest first).
+export const lastSigned = (moments, capability) =>
+  (moments || []).find((m) => m.capability === capability && m.status === "recorded") || null;

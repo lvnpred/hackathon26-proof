@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone, taskStatusText, taskGroups, rowMark, orderFoldTitle } from "./tasklist.js";
+import { sortTasks, obsValues, orderLines, patientTaskStatus, orderStatus, markDone, taskStatusText, taskGroups, rowMark } from "./tasklist.js";
 import { H, M } from "./clock.js";
 import { ADVICE } from "../../scripts/demo/beats.mjs";
 
@@ -128,10 +128,6 @@ test("rowMark labels", () => {
   assert.deepEqual(rowMark(k({ kind: "dose" }), "later"), { label: "Given early", primary: false });
   assert.deepEqual(rowMark(k({ kind: "task" }), "later"), { label: "Mark done early", primary: false });
   assert.deepEqual(rowMark(k({ kind: "dose" }), "overdue"), { label: "Mark done", primary: true });
-});
-test("orderFoldTitle", () => {
-  assert.equal(orderFoldTitle({ by: "Dr. A. Rao (synthetic)", at_ms: 2 * M, acknowledged_by: "Nurse Meena" }), "Signed orders \u00b7 Dr. A. Rao 09:02 \u00b7 acknowledged");
-  assert.equal(orderFoldTitle({ by: "D", at_ms: 0, acknowledged_by: null }), "Signed orders \u00b7 D 09:00 \u00b7 not acknowledged yet");
 });
 test("M2 copy has no advice words", () => {
   for (const s of ["Given early", "Save readings", "due now", "paused while in theatre", "Due now", "Later today", "Signed orders"]) assert.doesNotMatch(s, ADVICE);

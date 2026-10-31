@@ -9,7 +9,7 @@ import NextCard from "./NextCard";
 import Dictate from "./Dictate";
 import AiMoment from "./AiMoment.jsx";
 import { draftChanged, sectionsToSummary } from "./drafts";
-import { momentFor } from "./moments";
+import { lastSigned, momentFor } from "./moments";
 import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
@@ -57,9 +57,11 @@ function PhotoCard({ title, busy, upload }) {
 
 // Dictation, the order form that loads its draft, and the reference photo input.
 function OrdersDictation({ view, busy, upload, ask, signOrders }) {
+  const signed = view.drafts?.order ? null : lastSigned(view.ai_moments, "orders");
   return (
     <>
       <Dictate label="Dictate orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />
+      {signed && <AiMoment moment={signed} role="doctor" episodeId={view.episode?.id} />}
       <OrderForm busy={busy} onSign={signOrders} draft={view.drafts?.order} moment={momentFor(view, view.drafts?.order?.id)} episodeId={view.episode?.id} />
     </>
   );

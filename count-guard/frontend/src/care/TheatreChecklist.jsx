@@ -2,7 +2,9 @@ import { useState } from "react";
 import TheatrePanel from "./TheatrePanel";
 import { canRecord, checklistState, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
+import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
+import { toUpload, videoProblem } from "./video";
 
 const NURSE = "Nurse Asha (synthetic)";
 const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -12,13 +14,37 @@ function Line({ step }) {
   return <p className="step-line">✓ {parts.join(" · ")}</p>;
 }
 
+// A compact way to film the tray again while the tray can still be recorded (R18).
+function TrayAgain({ busy, onFile }) {
+  const [problem, setProblem] = useState("");
+  async function pick(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!files.length) return;
+    const bad = videoProblem(files);
+    setProblem(bad);
+    if (!bad) await onFile(toUpload(files));
+  }
+  return (
+    <>
+      <label className="field">
+        Check the tray again
+        <input type="file" accept="video/*,image/*" multiple disabled={busy} onChange={pick} />
+      </label>
+      {problem && <p className="note" role="alert">{problem}</p>}
+    </>
+  );
+}
+
 // The controls inside an expanded step. The doctor reads tray and count; the nurse does all four.
 function Controls({ step, role, view, episodeId, busy, act, upload, replaced, onNote, by }) {
   const nurse = role === "nurse";
   if (step.key === "tray") {
-    return nurse
-      ? <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={view.tray?.latest} moment={momentFor(view, view.tray?.latest?.id)} busy={busy} onFile={(file) => upload("/video", file, { check: "tray", by })} />
-      : <p className="small muted">The theatre nurse records the tray check.</p>;
+    const onFile = (file) => upload("/video", file, { check: "tray", by });
+    if (!nurse) return step.done ? null : <p className="small muted">The theatre nurse records the tray check.</p>;
+    return step.done
+      ? <TrayAgain busy={busy} onFile={onFile} />
+      : <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={null} busy={busy} onFile={onFile} />;
   }
   if (step.key === "count") {
     return nurse
@@ -41,7 +67,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
   const ended = steps[3].done;
   const move = (view.allowed || []).find((m) => m.to === "ward");
   const surgeonMoves = move?.role === "doctor";
-  const flagged = view.tray?.latest?.match === "mismatch";
+  const trayMoment = momentFor(view, view.tray?.latest?.id);
   return (
     <section className="card" aria-label="Theatre steps">
       <ol className="checklist">
@@ -49,9 +75,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
           <li key={step.key} className={`step ${step.status}`}>
             {(step.status === "done" || step.status === "open") && <Line step={step} />}
             {!step.done && !canRecord(view, step.key) && <p className="step-line muted">{step.title} · {step.wait}</p>}
-            {step.key === "tray" && step.done && flagged && !canRecord(view, "tray") && (
-              <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={view.tray.latest} moment={momentFor(view, view.tray.latest.id)} busy={busy} hideUpload onFile={() => {}} />
-            )}
+            {step.key === "tray" && step.done && trayMoment && <AiMoment moment={trayMoment} role={role} episodeId={episodeId || view.episode?.id} />}
             {canRecord(view, step.key) && (
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} />
             )}

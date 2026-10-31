@@ -113,3 +113,13 @@ test("the folded count line renders the correction", async () => {
   const fs = await import("node:fs");
   assert.match(fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8"), /step\.says, step\.correction/);
 });
+
+test("a done tray step folds to its AI moment and offers Check the tray again", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /hideUpload/);
+  assert.match(src, /Check the tray again/);
+  assert.match(src, /<AiMoment moment=\{trayMoment\}/);
+  assert.doesNotMatch(fs.readFileSync(new URL("./VideoCheck.jsx", import.meta.url), "utf8"), /hideUpload/);
+  assert.doesNotMatch("Check the tray again", ADVICE);
+});

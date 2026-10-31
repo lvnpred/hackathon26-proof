@@ -73,19 +73,6 @@ export function taskVideoLabel(task) {
   return task?.video ? checkLabel({ check: "setup", match: task.video.match }) : "";
 }
 
-// Checks to list on a chart. The tray and swab results stay off the patient's page and off the nurse's theatre
-// screen, where her Tray check card already shows it.
-// `onTaskLines` ids are checks already shown on a task line, so the list skips them.
-export function shownChecks(checks, { hideTray = false, patient = false, onTaskLines = [] } = {}) {
-  const noTray = hideTray || patient ? checks.filter((c) => c.check !== "tray" && c.check !== "swabs") : checks;
-  return noTray.filter((c) => !onTaskLines.includes(c.id));
-}
-
-// The ids of the set-up checks that the patient's task lines already show.
-export function taskLineCheckIds(view) {
-  return (view?.tasks || []).map((t) => t.video?.id).filter(Boolean);
-}
-
 // The patient's line for a task's set-up clip; the media (video or photos) comes from the check.
 export function taskCheckLine(view, task) {
   if (!task?.video) return "";

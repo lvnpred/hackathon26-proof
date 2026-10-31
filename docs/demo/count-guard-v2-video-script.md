@@ -130,14 +130,14 @@ On screen: `In theatre with R. Kumar, expected free soon`
 Filming note: `kumar-free-soon` is not in the film. The check moves the clock on one hour here and reads the chip. In the filmed take the +1 h move is skipped (or done off camera and not shown), and `kumar-tray` follows `kumar-chip` directly, so its first two clicks (Role Nurse, Chart R. Kumar) are on camera.
 
 #### `kumar-tray` · 1:23 · nurse · 6 s
-Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "Tray check"
+Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "Tray check"; 4) Button "Inspect" in "Theatre steps"
 
-On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `Needle holder` · `1 missing` · `Saw 2 of 3 needle holders.`
+On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `Needle holder` · `1 missing` · `Saw 2 of 3 needle holders.` · `What the AI found`
 
-> Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon.
+> Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Inspect shows what SAM 3.1 saw.
 
 #### `kumar-count` · 1:29 · nurse · 9 s
-Clicks: 1) Button "Surgery began"; 2) Button "Record pack opened" (prefilled 15); 3) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 4) Button "Record closing count" (prefilled 14 by the camera); 5) Field "Closing count (returned)" <- 15; 6) Button "Correct the count"
+Clicks: 1) Button "Close" in "Inspector"; 2) Button "Surgery began"; 3) Button "Record pack opened" (prefilled 15); 4) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 5) Button "Record closing count" (prefilled 14 by the camera); 6) Field "Closing count (returned)" <- 15; 7) Button "Correct the count"
 
 On screen: `Closing count: 14 of 15 back, 1 unaccounted.` · `Correction recorded.` · `Read 14, saved 15 by Nurse Asha`
 

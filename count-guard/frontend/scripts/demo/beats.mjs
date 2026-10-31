@@ -169,9 +169,9 @@ export const BEATS = [
   {
     id: "kumar-discharge", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Button "Sign discharge"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Button "Inspect" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
     expect: ["Reference", "Being discharged"],
-    before: [HEARD, "5 sections drafted from 40 words."],
+    before: [HEARD, "5 sections drafted from 40 words.", "swab count closed 15 of 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
     keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box.",
   },

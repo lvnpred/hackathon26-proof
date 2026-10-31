@@ -165,9 +165,9 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:56 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Inspect" on the discharge draft line; 9) Button "Close" in "Inspector"; 10) Button "Sign discharge"
 
-On screen: `Reference` · `Being discharged` (the AI moment `Muse Voice → Rules · prepared` · `5 sections drafted from 40 words.` is on screen before Sign discharge)
+On screen: `Reference` · `Being discharged` (the AI moment `Muse Voice → Rules · prepared` · `5 sections drafted from 40 words.` is on screen before Sign discharge, and the Inspector shows `swab count closed 15 of 15`)
 
 > Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.
 

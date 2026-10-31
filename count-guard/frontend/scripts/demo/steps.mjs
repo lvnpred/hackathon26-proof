@@ -117,7 +117,9 @@ export const STEPS = {
     await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
     await H.click("Draft discharge");
+    await H.page.locator(".ai-moment").filter({ hasText: "sections drafted" }).getByRole("button", { name: "Inspect" }).click();
     await before(H, "kumar-discharge");
+    await H.click("Close", "Inspector");
     await H.click("Sign discharge");
   },
   async "kumar-home"(H) {

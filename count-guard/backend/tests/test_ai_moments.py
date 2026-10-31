@@ -10,6 +10,8 @@ import pytest
 from app.journey.ai_moments import line_of, moments, visual_finding
 from app.journey.rx import document_for, from_document
 from tests.test_care_demo import _client, _seed
+from tests.test_flow_states import _new, _to_theatre
+from tests.test_p3_tray import _events, _upload, fake_frames  # noqa: F401  (fixture)
 
 ADVICE = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
 EID = "e" * 32
@@ -201,3 +203,15 @@ def test_view_has_ai_moments(tmp_path):
     patients = _seed(client)
     body = client.get(f"/journey/episodes/{patients[0]['id']}").json()
     assert isinstance(body["ai_moments"], list)
+
+
+def test_handmade_fixture_check_gives_a_handmade_moment(tmp_path, fake_frames):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    assert _upload(client, eid).status_code == 200
+    payload = [e for e in _events(client, eid) if e["event_type"] == "tray.checked"][-1]["payload"]
+    assert payload["handmade"] is True
+    tray = [m for m in client.get(f"/journey/episodes/{eid}").json()["ai_moments"] if m["capability"] == "tray"]
+    assert tray[0]["handmade"] is True
+    assert _one(moments([_ev("t1", "tray.checked", 1, rows=[], match="none", why="w", source="prepared", by=ASHA,
+                              frame_ids=[])]))["handmade"] is False

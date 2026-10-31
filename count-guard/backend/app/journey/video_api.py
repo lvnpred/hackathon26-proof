@@ -216,7 +216,7 @@ def add_video(
         "clip": filename.lower() if live.safe_stem(filename) else "",
         "frame_ids": frame_ids,
         "by": by,
-        **({"evidence_id": saved} if saved else {}),
+        **({"evidence_id": saved, "handmade": bool(found["handmade"])} if saved else {}),
     }
     if check == "swabs":
         seen = result["rows"][0]["seen"]

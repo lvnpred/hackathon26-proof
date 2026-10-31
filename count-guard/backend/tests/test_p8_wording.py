@@ -73,3 +73,29 @@ def test_reviews_and_questions_come_before_checkins():
     question = _ev("q", "question.asked", 3, to="doctor", text="Why?", by="R. Kumar, 58 M (synthetic)")
     assert now_next(base + [review])["next_mine"] == "Review the healing photo."
     assert now_next(base + [question])["next_mine"] == "Answer the question."
+
+
+def _templates():
+    """Every string template in moment_text and both R14 staff templates, rendered with sample numbers."""
+    from app.journey import moment_text as t
+
+    out = list(t.TITLE.values()) + list(t.PHOTO_TITLE.values()) + list(t.PATIENT_TEXT.values()) + list(t.RULE_TEXT.values())
+    out += [t.NOTHING_SEEN, t.order_text(2, 25), t.discharge_text(1, 1), t.task_voice_text(5), t.answer_voice_text(5)]
+    out += [t.bot_text(n, found, patient) for n in (0, 1, 3) for found in (True, False) for patient in (True, False)]
+    out += [t.medicines_text(4, 3, 1), t.strips_text(2, 1, 1), t.strips_text(1, 0, 0), t.strips_text(3, 2, 0),
+            t.handover_text(1, 1), t.handover_text(5, 3), t.card_text(5, 4), t.day_plan_text(4, 2)]
+    out += ["Saw 2 of 3 needle holders.", "Saw every planned item: 15 of 15.", "Read SBP 88, DBP 54, HR 112.",
+            "Strip photo matches the task.", "Strip photo does not match the task.", "Photo kept, not checked.",
+            "Healing photo waiting for review.", "Reviewed: Healing well.", "Reference photo.", "Wound photo.",
+            "2 orders signed.", "4 medicines read from your photo.", "2 strips read from your photo.",
+            "Your day plan lists 4 medicines."]
+    rx = _rx("amlodipine", "Amlodipine", "5 mg")
+    out += [n["says_staff"] for n in strips_vs_rx([rx, _strip("Amlodipine", "10 mg")])]
+    out += [n["says_staff"] for n in strips_vs_rx([rx, _strip("Ibuprofen", "400 mg")])]
+    return out
+
+
+def test_every_moment_template_is_free_of_advice_words():
+    templates = _templates()
+    assert len(templates) > 60
+    assert not [s for s in templates if ADVICE.search(s)]

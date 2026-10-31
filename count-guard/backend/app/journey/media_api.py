@@ -162,7 +162,7 @@ def keep_photo_evidence(settings, episode_id: str, kind: str, photo_id: str, rea
         "frames": None, "regions": regions, "expected": None, "min_score": settings.low_confidence, "fps": None,
         "calls": read["calls"], "raw": read["raw"], "handmade": read["handmade"],
     })
-    return {"evidence_id": saved, "regions": regions}
+    return {"evidence_id": saved, "regions": regions, "handmade": bool(read["handmade"])}
 
 
 def _check_photo(settings, episode_id: str, photo_id: str, task: dict, raw: bytes, name: str, kind: str, stated: dict) -> dict:

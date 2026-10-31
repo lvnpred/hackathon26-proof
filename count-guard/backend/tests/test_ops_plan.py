@@ -237,7 +237,7 @@ def test_nudge_prefers_staff_wording():
 
 
 # --- Task 6: optional model reword with template fallback ---
-from tests.test_p3_video import _keyed, _no_key, no_network  # noqa: E402,F401  (no_network is autouse)
+from tests.test_p3_video import _no_key, no_network  # noqa: E402,F401  (no_network is autouse)
 from app.journey import handover  # noqa: E402
 
 
@@ -272,6 +272,14 @@ def test_reword_model_error_falls_back(tmp_path):
     assert (act.draft, act.model) == (base.draft, "rules")
 
 
+def test_reword_unexpected_error_falls_back(tmp_path):
+    def boom(prompt):
+        raise TypeError("odd")
+    base, _ = _draft()
+    act, _ = _draft(_no_key(tmp_path), boom)
+    assert (act.draft, act.model) == (base.draft, "rules")
+
+
 def test_reword_sends_ops_prompt(tmp_path):
     seen = []
     _draft(_no_key(tmp_path), lambda p: seen.append(p) or "")
@@ -285,12 +293,9 @@ def test_no_key_no_write_is_template(tmp_path):
 
 def test_propose_move_stays_template(tmp_path):
     seen = []
-    evs = _ward()
-    item = _item("propose_move", "m1")
-    act = planner.plan(item, evs, at_ms=10**9, settings=_no_key(tmp_path), write=lambda p: seen.append(p) or "x",
-                       patient="Asha")
-    if act is not None:
-        assert act.model == "rules" and act.sentence == "Back to ward: Asha"
+    act = planner.plan(_item("propose_move", "s1"), _theatre(), settings=_no_key(tmp_path),
+                       write=lambda p: seen.append(p) or "x", patient="Asha")
+    assert act.model == "rules" and act.sentence == "Back to ward: Asha"
     assert seen == []
 
 

@@ -89,12 +89,15 @@ def _worded(template: str, cited: list[dict], settings, write) -> tuple[str, str
     """(text, model): the model's reword when every check passes, else the template. Never raises."""
     if not cited or (write is None and (settings is None or not settings.spark_configured)):
         return template, "rules"
-    text, _why = handover.reword(cited, settings, write, prompt=OPS_PROMPT)
-    ok, _problem = handover.checked(text, cited)
-    if not ok:
-        return template, "rules"
-    figures = {f"n{i}": int(n) for i, n in enumerate(re.findall(r"\b\d+\b", " ".join(r["text"] for r in cited)))}
-    if verifier.check_sentence(text, evidence_ids=[], known_ids=set(), figures=figures, claims={}):
+    try:
+        text, _why = handover.reword(cited, settings, write, prompt=OPS_PROMPT)
+        ok, _problem = handover.checked(text, cited)
+        if not ok:
+            return template, "rules"
+        figures = {f"n{i}": int(n) for i, n in enumerate(re.findall(r"\b\d+\b", " ".join(r["text"] for r in cited)))}
+        if verifier.check_sentence(text, evidence_ids=[], known_ids=set(), figures=figures, claims={}):
+            return template, "rules"
+    except Exception:  # any model-side failure keeps the template; the run pass must go on
         return template, "rules"
     return text, "spark"
 

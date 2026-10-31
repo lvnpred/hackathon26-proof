@@ -149,11 +149,11 @@ def test_set_level_audits_and_refuses_never(tmp_path):
     assert len(store.events(site.site_episode(store))) == 1
 
 
-def test_settings_default_off(monkeypatch):
+def test_settings_default_on(monkeypatch):
     monkeypatch.delenv("CG_OPS_AGENT", raising=False)
-    assert get_settings().ops_agent is False
-    monkeypatch.setenv("CG_OPS_AGENT", "1")
     assert get_settings().ops_agent is True
+    monkeypatch.setenv("CG_OPS_AGENT", "0")
+    assert get_settings().ops_agent is False
 
 
 def test_executable_kinds_match_gate():

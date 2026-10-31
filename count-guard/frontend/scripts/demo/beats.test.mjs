@@ -81,14 +81,19 @@ test("expected strings follow the accepted rulings", () => {
   assert.ok(by.ai.expect.includes("Saw 2 of 3 needle holders."));
   assert.ok(by["iyer-meds"].expect.includes("Pantoprazole 40 mg:"));
   const title = "Saline 1 litre over 2 hours, video check of the set-up";
+  const ACK = "Acknowledged Dr. A. Rao's orders";
+  assert.ok(by["kumar-admit"].expect.includes(ACK));
+  assert.ok(by["kumar-admission"].before.includes(ACK) && by["kumar-admission"].expect.includes(ACK));
+  assert.ok(by["iyer-orders"].expect.includes(ACK));
+  assert.ok(!by["kumar-admission"].clicks.includes('Button "Acknowledge"'));
+  assert.ok(!by["iyer-setup"].clicks.includes('Button "Acknowledge"'));
+  assert.ok(by["kumar-ask"].expect.includes("Your question went to Dr. A. Rao"));
   assert.ok(by["iyer-setup"].expect.includes(`${title} running`));
   assert.ok(by["iyer-end"].expect.includes(`finished ${title} at`));
   assert.ok(by["kumar-count"].before.includes("Closing count: 14 of 15 back, 1 unaccounted."));
   const GONE_AFTER_SIGN = ["Muse Voice → Rules · prepared", "5 sections drafted from 40 words.", "swab count closed 15 of 15"];
-  const NEXT_ADMIT = "Acknowledge the new orders from Dr. A. Rao, then complete the admission.";
   // kumar-review: the Dictate chip goes once the answer is sent, so it is checked before and not in expect.
   // kumar-discharge: the chip, the finding and the Inspector's swab count are gone once the discharge is signed, so they are checked before only.
-  // kumar-admission: the NEXT card sentence goes once the orders are acknowledged.
   // kumar-count: the swab viewer goes once the count is corrected, because the count step folds.
-  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-discharge" && GONE_AFTER_SIGN.includes(s)) || (b.id === "kumar-admission" && s === NEXT_ADMIT) || (b.id === "kumar-count" && s === "Saw 14 of 15 gauze swabs."), `${b.id} ${s}`);
+  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-discharge" && GONE_AFTER_SIGN.includes(s)) || (b.id === "kumar-count" && s === "Saw 14 of 15 gauze swabs."), `${b.id} ${s}`);
 });

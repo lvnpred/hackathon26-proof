@@ -95,16 +95,16 @@ On screen: `Draft from dictation` · `Muse Voice → Rules · prepared` · `2 or
 #### `kumar-admit` · 1:02 · doctor · 4 s
 Clicks: 1) Button "Sign orders"; 2) Button "Admit"
 
-On screen: `Being admitted` · `Nurse acknowledges the new orders from Dr. A. Rao, then completes the admission.`
+On screen: `Being admitted` · `Acknowledged Dr. A. Rao's orders` · `Nurse completes the admission.`
 
-> Dr. Rao signs the orders and admits him; the screen says which nurse step comes next.
+> Dr. Rao signs the orders and admits him; the AI acknowledges the orders, and the screen says which nurse step comes next.
 
 #### `kumar-admission` · 1:06 · nurse · 6 s
-Clicks: 1) Role Nurse; 2) Tab "My queue"; 3) Chart R. Kumar; 4) Tick "Wristband on", "Allergies checked", "Baseline observations taken", "Consent on file"; 5) Button "Complete admission"; 6) Button "Acknowledge"
+Clicks: 1) Role Nurse; 2) Tab "My queue"; 3) Chart R. Kumar; 4) Tick "Wristband on", "Allergies checked", "Baseline observations taken", "Consent on file"; 5) Button "Complete admission"
 
-On screen: `On the ward` · `acknowledged the orders at`
+On screen: `On the ward` · `Acknowledged Dr. A. Rao's orders` (already on screen before Complete admission)
 
-> Nurse Meena sees the new orders in her queue, ticks the admission checks and acknowledges the orders.
+> Nurse Meena finds the orders already acknowledged by the AI, with an undo, ticks the admission checks and completes the admission.
 
 #### `kumar-theatre` · 1:12 · doctor · 6 s
 Clicks: 1) Role Doctor; 2) Select "Procedure" <- hernia-repair; 3) Button "Send to theatre"
@@ -181,9 +181,9 @@ On screen: `Home`
 #### `kumar-ask` · 2:07 · patient · 12 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Day 3; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
 
-On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.`
+On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.` · `Your question went to Dr. A. Rao`
 
-> At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says who is waiting.
+> At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says where the question went and who is waiting.
 
 #### `kumar-review` · 2:19 · doctor · 9 s
 Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
@@ -212,16 +212,16 @@ On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
 #### `iyer-orders` · 2:40 · doctor · 7 s
 Clicks: 1) Role Doctor; 2) Tab "My patients" (row reads "Observation past its limit"); 3) Chart S. Iyer; 4) Button "Dictate orders"; 5) File eval/p2/iyer-saline.wav into "Dictate orders"; 6) Button "Draft orders"; 7) Button "Sign orders"
 
-On screen: `Draft from dictation` · `Nurse acknowledges the new orders from Dr. A. Rao.`
+On screen: `Draft from dictation` · `Acknowledged Dr. A. Rao's orders`
 
-> Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them.
+> Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them; the AI acknowledges them at once.
 
 #### `iyer-setup` · 2:47 · nurse · 8 s
-Clicks: 1) Role Nurse; 2) Button "Acknowledge"; 3) File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"; 4) Button "Begin"
+Clicks: 1) Role Nurse; 2) File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"; 3) Button "Begin"
 
 On screen: `Set-up matches the list` · `Saline 1 litre over 2 hours, video check of the set-up running`
 
-> The nurse acknowledges the orders, films the saline set-up, and the check matches the list before she begins.
+> The nurse films the saline set-up, and the check matches the list before she begins.
 
 #### `iyer-end` · 2:55 · nurse · 2 s
 Clicks: 1) Button "+1 h" twice; 2) Button "End"

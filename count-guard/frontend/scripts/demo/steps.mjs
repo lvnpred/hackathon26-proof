@@ -58,7 +58,6 @@ export const STEPS = {
     await before(H, "kumar-admission");
     await H.tick(...ADMISSION);
     await H.click("Complete admission");
-    await H.click("Acknowledge");
   },
   async "kumar-theatre"(H) {
     await H.role("Doctor");
@@ -174,7 +173,6 @@ export const STEPS = {
   async "iyer-setup"(H) {
     await H.role("Nurse");
     await H.chart(IYER);
-    await H.click("Acknowledge");
     await H.file("Set-up check", "eval/p3/saline-setup.mp4");
     await H.waitText("Set-up matches the list");
     await H.click("Begin");

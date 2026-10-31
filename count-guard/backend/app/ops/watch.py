@@ -99,18 +99,17 @@ def monitor_reads(events: list[dict]) -> list[dict]:
 
 
 def read_unfiled(events: list[dict], at_ms: int, opened: set[str]) -> list[WorkItem]:
+    """Monitor reads only (ruling F-I3). A camera swab count is never filed by the AI: a person saves the closing."""
     reason = f"The read was not saved within {FILE_AFTER_MS // 60_000} minutes."
-    out = [_item("file_read", "read_unfiled", reason, (e["id"],), "nurse", e["id"])
-           for e in monitor_reads(events) if at_ms - e["ts_ms"] >= FILE_AFTER_MS]
-    if states.current_state(events) == "theatre":
-        stay = states.stay_events(events)
-        camera, pack = states.stay_latest(events, "swabs.counted"), states.stay_latest(events, "count.pack_opened")
-        closing = states.stay_latest(events, "count.closing")
-        fresh = camera and (closing is None or stay.index(camera) > stay.index(closing))
-        if (fresh and pack and camera["payload"].get("count") is not None
-                and at_ms - camera["ts_ms"] >= FILE_AFTER_MS):
-            out.append(_item("file_read", "read_unfiled", reason, (camera["id"], pack["id"]), "nurse", camera["id"]))
-    return out
+    return [_item("file_read", "read_unfiled", reason, (e["id"],), "nurse", e["id"])
+            for e in monitor_reads(events) if at_ms - e["ts_ms"] >= FILE_AFTER_MS]
+
+
+def count_unclosed(events: list[dict]) -> bool:
+    """True when this stay has a pack opened and no closing count after it."""
+    stay = states.stay_events(events)
+    pack, closing = states.stay_latest(events, "count.pack_opened"), states.stay_latest(events, "count.closing")
+    return bool(pack) and (closing is None or stay.index(closing) < stay.index(pack))
 
 
 def _move_to_ward(events: list[dict]) -> dict | None:
@@ -123,10 +122,9 @@ def move_ready(events: list[dict], at_ms: int, opened: set[str]) -> list[WorkIte
     move = _move_to_ward(events)
     if not move:
         return []
-    stay = states.stay_events(events)
-    pack, closing = states.stay_latest(events, "count.pack_opened"), states.stay_latest(events, "count.closing")
-    if pack and (closing is None or stay.index(closing) < stay.index(pack)):
+    if count_unclosed(events):
         return []  # a count was started and never closed: never nudge leaving theatre
+    closing = states.stay_latest(events, "count.closing")
     last = _latest(visible_events(events), "patient.state")
     reason = ("Surgery has ended and the count is closed; the patient can go back to the ward." if closing
               else "Surgery has ended; no swab count was started.")
@@ -158,7 +156,7 @@ def stale(events: list[dict]) -> list[tuple[str, str, str]]:
             continue
         if row["kind"] == "draft_answer" and row["inputs"] and row["inputs"][0] in answered:
             out.append((row["id"], "done_by_person", "The question was already answered."))
-        elif row["kind"] == "propose_move" and not _move_to_ward(events):
+        elif row["kind"] == "propose_move" and not move_ready(events, 0, set()):
             if states.current_state(events) == "ward":
                 out.append((row["id"], "done_by_person", "The patient was already moved to the ward."))
             else:

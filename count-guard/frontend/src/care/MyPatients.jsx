@@ -42,10 +42,10 @@ function AiStrip({ ward }) {
         ))}
       </ul>
       {proposals.length > 0 && <p className="label">{needsTitle(proposals.length)}</p>}
-      {proposals.map(({ episodeId, name, p }) => (
+      {proposals.map(({ episodeId, name, p, view }) => (
         <div key={p.work_id}>
           <p className="small muted">{name}</p>
-          <ProposalCard p={p} role={ward.role} busy={ward.busy} episodeId={episodeId} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
+          <ProposalCard p={p} role={ward.role} view={view} busy={ward.busy} episodeId={episodeId} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
         </div>
       ))}
       {proposals.map(({ episodeId }) => episodeId).filter((id, n, all) => all.indexOf(id) === n)

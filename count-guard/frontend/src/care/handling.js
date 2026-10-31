@@ -3,7 +3,17 @@ import { displayName } from "./names.js";
 
 // Words and shapes for the AI handling strip, proposals and feed. Pure, so node can test them.
 export const STAFF_BY = { doctor: "Dr. A. Rao (synthetic)", nurse: "Nurse Meena (synthetic)" };
+export const THEATRE_NURSE = "Nurse Asha (synthetic)";
 export const OPS_SCOPE = "/ops/";
+
+// Who acts for the role on this chart: the nurse in theatre is Nurse Asha, as in NurseActions; else the role's name.
+export const staffBy = (role, view) => (role === "nurse" && view?.state === "theatre" ? THEATRE_NURSE : STAFF_BY[role]);
+
+export const PAUSED_TITLE = "AI is paused";
+// While the agent is paused: what it would have done, each as "{reason} · Paused · not done". Staff only.
+export const pausedRows = (ops, role) =>
+  role === "patient" ? [] : (ops?.open || []).filter((r) => r.paused_note)
+    .map((r) => ({ workId: r.work_id, text: `${displayName(r.reason)} · ${r.paused_note}` }));
 
 export const stripTitle = (n) => `AI is handling · ${n}`;
 const LEVELS = {
@@ -46,13 +56,16 @@ export function agentMoment(row, episodeId) {
   const level = row.level ?? null;
   const undoUntilMs = row.undo_until_ms ?? null;
   const workId = row.work_id;
+  const spark = row.model === "spark";
   return {
     id: workId, kind: "agent", capability: "ops",
     title: displayName(proposal ? row.sentence : row.summary),
     finding: reason, patient_finding: null,
     status: proposal ? "open" : row.status === "undone" ? "undone" : "recorded",
     owner: proposal ? row.owner_role : null,
-    calls: [], handmade: false, written: [], source: "rules",
+    // The reword names the same model and mode chipFor reads elsewhere: "Spark 1.3 · live".
+    calls: spark ? [{ model: "spark", source: "muse-spark-1.3" }] : [], handmade: false,
+    written: row.written || [], source: spark ? "spark" : "rules",
     refs: { workId, episodeId, reason, inputs, level, undoUntilMs },
     workId, episodeId, reason, inputs, level, undoUntilMs,
   };
@@ -77,7 +90,7 @@ export function myPatientsStrip(patients, role) {
     const live = (ops?.handling || []).filter((r) => r.status !== "undone");
     const newest = live.reduce((best, r) => (best == null || r.at_ms > best.at_ms ? r : best), null);
     if (newest) rows.push({ episodeId: patient.id, name, text: toRow(newest, 0).text });
-    for (const p of proposalsFor(ops, role)) proposals.push({ episodeId: patient.id, name, p });
+    for (const p of proposalsFor(ops, role)) proposals.push({ episodeId: patient.id, name, p, view: patient.view });
   }
   return { rows, proposals };
 }

@@ -90,8 +90,45 @@ def test_ops_view_open_and_proposals():
                                  "draft": "d", "cited": [], "editable": True, "reason": "r",
                                  "inputs": ["o1"]}, "b1", 2)]
     view = items.ops_view(evs)
-    assert view["open"][0]["paused_note"] == "Paused · not done"
+    assert view["open"][0]["work_id"] == "a" and "paused_note" not in view["open"][0]  # running: no note (I4)
     assert view["proposals"][0]["work_id"] == "b" and view["proposals"][0]["owner_role"] == "nurse"
+    assert view["proposals"][0]["level"] == "L1" and view["proposals"][0]["model"] == "rules"  # M4, M5
+    paused = items.ops_view(evs, paused=True)
+    assert [(o["work_id"], o["paused_note"]) for o in paused["open"]] == [("a", "Paused · not done")]
+
+
+def test_paused_open_lists_only_executable_levels():
+    evs = [_opened("a"), _opened("m", 1, "propose_move", ("s1",))]  # L2 and L1, both open
+    assert [o["work_id"] for o in items.ops_view(evs, paused=True)["open"]] == ["a"]
+    assert all("paused_note" not in o for o in items.ops_view(evs)["open"])
+
+
+def test_handling_row_carries_written_and_model():
+    task = _ev("task.created", {"order_id": "o1", "title": "BP and pulse every 1 h", "kind": "obs"}, "t1", 1)
+    ack = _ev("order.acknowledged", {"order_id": "o1", "by": AI_BY}, "k1", 1)
+    done = _ev("work.done", {"work_id": "a", "level": "L2", "by": AI_BY, "reason": "r", "summary": "s",
+                             "inputs": ["o1"], "wrote": ["k1", "t1"], "undo_until_ms": 5, "model": "spark"}, "d1", 2)
+    row = items.ops_view([_opened("a"), ack, task, done])["handling"][0]
+    assert row["model"] == "spark"
+    assert [w["event_id"] for w in row["written"]] == ["k1", "t1", "d1"]
+    first = row["written"][0]
+    assert set(first) == {"event_id", "type", "when", "by", "plain"} and first["by"] == AI_BY and first["plain"]
+
+
+def test_task_input_labels_name_the_task_and_stay_plain():
+    advice = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
+    rows = [_ev("task.created", {"order_id": "o1", "title": "BP and pulse every 1 h", "kind": "obs"}, "t1"),
+            _ev("task.created", {"order_id": "o1", "title": "", "name": "Paracetamol", "kind": "dose"}, "t2"),
+            _ev("task.created", {"order_id": "o1", "kind": "obs"}, "t3"),
+            _ev("task.created", {"order_id": "o1", "title": "Give paracetamol 1 g", "kind": "dose"}, "t4"),
+            _ev("task.created", {"order_id": "o1", "title": "check wound_site"}, "t5"),
+            _ev("task.created", {"order_id": "o1"}, "t6")]
+    by_id = {e["id"]: e for e in rows}
+    labels = [r["label"] for r in items._inputs([e["id"] for e in rows], by_id)]
+    assert labels == ["Nurse task: BP and pulse every 1 h", "Nurse task: Paracetamol", "Nurse task: obs",
+                      "Nurse task", "Nurse task", "Nurse task"]
+    for label in labels:
+        assert not advice.search(label) and not SNAKE.search(label), label
 
 
 def test_ops_view_no_snake_case():

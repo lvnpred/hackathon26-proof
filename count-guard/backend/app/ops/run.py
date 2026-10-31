@@ -13,9 +13,19 @@ from app.ops.policy import AI_BY, MAX_PASSES, MAX_PROPOSALS
 
 DONE_BY_PERSON = "A person already did this."
 NO_LONGER_NEEDED = "No longer needed."
-# One run at a time, across episodes: two overlapping writes must not plan the same item, and the
-# gate's before/after diff of event ids must hold only its own events.
-_LOCK = threading.Lock()
+# One run at a time per episode (ruling F-I5): two overlapping writes to one episode must not plan the same
+# item. Episodes never wait on each other, so a slow reword on one chart does not stall another.
+_GUARD = threading.Lock()
+_LOCKS: dict[str, threading.Lock] = {}
+
+
+def episode_lock(episode_id: str) -> threading.Lock:
+    """The lock for one episode, created under a small guard the first time it is asked for."""
+    with _GUARD:
+        lock = _LOCKS.get(episode_id)
+        if lock is None:
+            lock = _LOCKS[episode_id] = threading.Lock()
+        return lock
 
 
 def _open(store, episode_id: str, item: WorkItem, at_ms: int) -> dict:
@@ -40,8 +50,7 @@ def _person_acted(events: list[dict], item: WorkItem) -> bool:
         if (kind == "order.acknowledged" and item.kind == "ack_order" and p.get("order_id") == first) \
                 or (kind == "question.answered" and item.kind in ("route_question", "draft_answer")
                     and p.get("question_id") == first) \
-                or (kind == "task.done" and item.kind == "file_read" and p.get("proof_id") == first) \
-                or (kind == "count.closing" and item.kind == "file_read"):
+                or (kind == "task.done" and item.kind == "file_read" and p.get("proof_id") == first):
             return True
     return False
 
@@ -79,7 +88,7 @@ def run(store, episode_id: str, at_ms: int, *, settings, write=None) -> list[dic
     if not settings.ops_agent:
         return []
     written: list[dict] = []
-    with _LOCK:
+    with episode_lock(episode_id):
         episode = store.get_episode(episode_id)
         patient = short_name(episode["label"]) if episode else ""
         board = site.board_events(store)

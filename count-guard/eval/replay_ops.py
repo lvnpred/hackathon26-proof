@@ -1,8 +1,9 @@
 """Replay recorded days through the ops agent and print proposal precision and undo rate.
 
-Each --db is one recorded day (a morning.db). The replay drops everything the agent wrote, feeds the
-person's events back in order and lets the agent run again, so the table shows what the rules would do
-today on that day. No live model is called: write=None and no key.
+Each --db is one recorded day (a morning.db). Precision and undo rate come from the events recorded that
+day (the agent's work.* events as they were written). The replay only feeds the `same` line: it drops what
+the agent wrote, feeds the person's events back in order and lets today's rules run again, then counts how
+many recorded work items they open again. No live model is called: write=None and no key.
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from app.agent import verifier
-from app.journey import doctor_status, handover, states, tasks
+from app.journey import doctor_status, handover, tasks
 from app.journey.ask import short_name
 from app.morning.discharge import visible_events
 from app.ops import watch
@@ -15,10 +15,9 @@ from app.ops.policy import DOCTORS, NURSES
 TEMPLATES = {
     "ack_order": "Acknowledged {doctor}'s orders",
     "assign_task": "Assigned {n} {noun} to {names}",
-    "nudge_obs_overdue": "Nudged {nurse}: {says}",
+    "nudge_obs_overdue": "Nudged {nurse}: {what} overdue",
     "route_question": "Sent the patient's question to {doctor}",
     "file_monitor": "Filed the monitor read {sbp}/{dbp}, pulse {hr}",
-    "file_swabs": "Filed the camera count: {n} of {opened} swabs back",
     "draft_answer": "Draft answer to {patient}'s question",
     "propose_move": "Back to ward: {patient}",
     "draft": "Your discharge card lists these warning signs: {signs}. {care}",
@@ -26,6 +25,7 @@ TEMPLATES = {
 OPS_PROMPT = ("Reword these record lines as one short plain sentence for a doctor to approve. "
               "Add no number, medicine or instruction that is not in the lines.\n\n")
 _OPEN = ("open", "running")
+_OVERDUE_WHAT = {"obs": "observations are", "dose": "a dose is"}
 _OBS_FIELDS = tasks.OBS_FIELDS
 
 
@@ -132,8 +132,10 @@ def _nudge(item, events, board, at_ms, patient=""):
     nurse = next((given[t["id"]] for t in tasks.task_list(events)
                   if t["kind"] == kind and t["status"] in _OPEN and t["id"] in given), NURSES[0])
     says = nudge["payload"].get("says_staff") or nudge["payload"].get("says", "")
+    # A short fixed summary per kind (M3); the nudge's full staff wording stays in the reason.
     return Action("nudge_obs_overdue", {"nudge_id": nudge["id"], "nurse": nurse},
-                  TEMPLATES["nudge_obs_overdue"].format(nurse=short_name(nurse), says=says))
+                  TEMPLATES["nudge_obs_overdue"].format(nurse=short_name(nurse), what=_OVERDUE_WHAT[kind]),
+                  reason=says)
 
 
 def _route(item, events, board, at_ms, patient=""):
@@ -147,29 +149,15 @@ def _route(item, events, board, at_ms, patient=""):
 
 
 def _file_read(item, events, board, at_ms, patient=""):
+    """Monitor reads only (ruling F-I3): the AI never writes a swab closing count."""
     read = next((e for e in watch.monitor_reads(events) if e["id"] == item.inputs[0]), None)
-    if read is not None:
-        p = read["payload"]
-        values = {k: p["values_read"][k] for k in _OBS_FIELDS if p["values_read"].get(k) is not None}
-        return Action("file_read", {"source": "monitor", "task_id": p["task_id"], "photo_id": p["photo_id"],
-                                    "values": values},
-                      TEMPLATES["file_monitor"].format(sbp=values["sbp"], dbp=values["dbp"], hr=values["hr"]))
-    camera = _find(events, item.inputs[0], "swabs.counted")
-    if camera is None or states.current_state(events) != "theatre":
+    if read is None:
         return None
-    stay = states.stay_events(events)
-    closing = states.stay_latest(events, "count.closing")
-    pack = states.stay_latest(events, "count.pack_opened")
-    p = camera["payload"]
-    if (pack is None or camera["id"] != (states.stay_latest(events, "swabs.counted") or {}).get("id")
-            or (closing and stay.index(closing) > stay.index(camera))
-            or p.get("count") is None or not p.get("evidence_id")):
-        return None
-    opened = p.get("opened")
-    if opened is None:
-        opened = pack["payload"]["quantity"]
-    return Action("file_read", {"source": "swabs", "count": p["count"], "evidence_id": p["evidence_id"]},
-                  TEMPLATES["file_swabs"].format(n=p["count"], opened=opened))
+    p = read["payload"]
+    values = {k: p["values_read"][k] for k in _OBS_FIELDS if p["values_read"].get(k) is not None}
+    return Action("file_read", {"source": "monitor", "task_id": p["task_id"], "photo_id": p["photo_id"],
+                                "values": values},
+                  TEMPLATES["file_monitor"].format(sbp=values["sbp"], dbp=values["dbp"], hr=values["hr"]))
 
 
 def _draft_answer(item, events, board, at_ms, patient="", settings=None, write=None):

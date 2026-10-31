@@ -10,7 +10,7 @@ from app.journey.api import At, _at, _require, _store, settle, view
 from app.journey.ask import short_name
 from app.ops import gate, site
 from app.ops.items import handled
-from app.ops.run import _LOCK
+from app.ops.run import episode_lock
 
 router = APIRouter(prefix="/journey/episodes/{episode_id}/ops/work/{work_id}")
 ops_site_router = APIRouter(prefix="/journey/ops")
@@ -36,12 +36,12 @@ def _person(by: str) -> None:
 
 
 def _run(request: Request, episode_id: str, at_ms: int | None, act) -> dict:
-    """One gate call under the agent's lock (so it never overlaps a run), then settle and return the view."""
+    """One gate call under the episode's lock (so it never overlaps a run on it), then settle and return the view."""
     _require(request, episode_id)
     store = _store(request)
     ts = _at(store, episode_id, at_ms)
     try:
-        with _LOCK:
+        with episode_lock(episode_id):
             act(store, ts)
     except gate.OpsError as exc:
         raise HTTPException(status_code=exc.status, detail=exc.detail) from exc

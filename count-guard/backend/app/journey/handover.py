@@ -64,7 +64,7 @@ def template_lines(events: list[dict], *, since_ms: int, at_ms: int, patient: st
             if mine:
                 due = mine[-1]["ts_ms"] + int(order["every_h"] * HOUR_MS)
                 lines.append(_line(
-                    f"{order['name']} is ordered every {hours(order['every_h'])} h; by that order the next is due {clock(due)}.",
+                    f"{order['name']} is ordered every {hours(order['every_h'])}; by that order the next is due {clock(due)}.",
                     orders["id"], mine[-1]["id"],
                 ))
 

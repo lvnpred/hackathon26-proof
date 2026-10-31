@@ -355,7 +355,7 @@ def theatre_count(events: list[dict]) -> dict:
 
 def closing_payload(events: list[dict], returned: int, by: str, *, evidence_id: str | None = None, detail: str = "",
                     camera: dict | None = None) -> dict:
-    """The `count.closing` payload the human save and the AI filing both write.
+    """The `count.closing` payload a person's save writes (the AI never writes a closing count, ruling F-I3).
 
     With an `evidence_id` that names this stay's camera count it adds via/evidence_id, and read/saved when the
     saved figure differs from the camera's. A caller that already holds the camera event may pass it as `camera`.

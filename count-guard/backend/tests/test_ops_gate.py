@@ -190,25 +190,27 @@ def _theatre_with_pack(client, opened_at=0):
     return eid
 
 
-def test_file_read_keeps_human_correction(tmp_path):
+def test_camera_count_is_never_filed_by_the_ai(tmp_path):
+    """Ruling F-I3: no file_read opens for a camera count, even long after 5 minutes; the AI writes no closing."""
     client = _ops_client(tmp_path)
     eid = _theatre_with_pack(client)
-    client.post(_url(eid, "tick"), json={"at_ms": 1000 + 5 * M})
-    closing = _of(client, eid, "count.closing")[0]
-    assert closing["payload"]["by"] == AI_BY and closing["payload"]["via"] == "camera"
-    assert closing["payload"]["returned"] == 14 and closing["payload"]["evidence_id"] == EVIDENCE
+    for at in (1000 + 4 * M, 1000 + 5 * M, 1000 + 30 * M):
+        client.post(_url(eid, "tick"), json={"at_ms": at})
+    assert not _of(client, eid, "count.closing")
+    assert not [e for e in _of(client, eid, "work.opened") if e["payload"]["kind"] == "file_read"]
+
+
+def test_person_closing_keeps_camera_read_and_saved(tmp_path):
+    client = _ops_client(tmp_path)
+    eid = _theatre_with_pack(client)
+    client.post(_url(eid, "tick"), json={"at_ms": 1000 + 6 * M})
     view = client.post(_url(eid, "count"), json={"step": "closing", "returned": 15, "by": ASHA,
-                                                 "supersedes_id": closing["id"], "at_ms": 1000 + 6 * M}).json()
+                                                 "evidence_id": EVIDENCE, "at_ms": 1000 + 6 * M}).json()
+    closing = _of(client, eid, "count.closing")[0]["payload"]
+    assert closing["by"] == ASHA and closing["via"] == "camera" and closing["evidence_id"] == EVIDENCE
     assert view["count"]["read"] == {"returned": 14}
     assert view["count"]["saved"] == {"returned": 15}
     assert view["count"]["closed_by"] == ASHA
-
-
-def test_file_read_waits_five_minutes(tmp_path):
-    client = _ops_client(tmp_path)
-    eid = _theatre_with_pack(client)
-    client.post(_url(eid, "tick"), json={"at_ms": 1000 + 4 * M})
-    assert not _of(client, eid, "count.closing")
 
 
 def test_patient_never_sees_work(tmp_path):

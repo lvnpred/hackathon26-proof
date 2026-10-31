@@ -147,14 +147,13 @@ def test_read_unfiled_grace_and_saved():
     assert watch.watch(strip, 10_000_000) == []
 
 
-def test_read_unfiled_camera_count():
+def test_read_unfiled_never_for_a_camera_count():
+    """Ruling F-I3: the AI files monitor reads only. A swab closing is always saved by a person."""
     evs = _theatre() + [_ev("count.pack_opened", {"quantity": 10}, "k1", 13),
-                        _ev("swabs.counted", {"count": 10, "opened": 10}, "c1", 20)]
-    got = [i for i in watch.watch(evs, 20 + FILE_AFTER_MS) if i.kind == "file_read"]
-    assert len(got) == 1 and got[0].inputs[0] == "c1"
-    assert [i for i in watch.watch(evs, 20 + FILE_AFTER_MS - 1) if i.kind == "file_read"] == []
-    closed = evs + [_ev("count.closing", {"opened": 10, "returned": 10, "unaccounted": 0}, "k2", 30)]
-    assert [i for i in watch.watch(closed, 10_000_000) if i.kind == "file_read"] == []
+                        _ev("swabs.counted", {"count": 10, "opened": 10, "evidence_id": "ev1"}, "c1", 20)]
+    for at in (20 + FILE_AFTER_MS, 20 + 5 * FILE_AFTER_MS, 10_000_000):
+        assert [i for i in watch.watch(evs, at) if i.kind == "file_read"] == []
+        assert watch.read_unfiled(evs, at, set()) == []
 
 
 def test_move_ready_only_theatre_to_ward():
@@ -190,6 +189,11 @@ def test_stale_codes():
     got = watch.stale(base + [move, mprop, reopened])
     assert [(w, c) for w, c, _ in got] == [("w2", "no_longer_allowed")]
     assert not ADVICE.search(got[0][2]) and not SNAKE.search(got[0][2])
+    pack = _ev("count.pack_opened", {"quantity": 10}, "k8", 40)  # a new count started after the proposal (I2)
+    got = watch.stale(base + [move, mprop, pack])
+    assert [(w, c) for w, c, _ in got] == [("w2", "no_longer_allowed")]
+    no_pack = _theatre() + [move, mprop]
+    assert watch.stale(no_pack) == [] and watch.stale(no_pack + [pack]) != []
     done = _ev("work.dropped", {"work_id": "w2", "by": "x", "reason": "r", "code": "rejected"}, "z", 50)
     assert watch.stale(base + [move, mprop, reopened, done]) == []
 

@@ -21,8 +21,10 @@ LIMIT_TEXT = {
 
 
 def hours(value: float) -> str:
-    """6.0 -> '6', 1.5 -> '1.5'. Forms send floats; people read whole hours."""
-    return f"{value:g}"
+    """An interval with its unit: 6.0 -> '6 h', 1.5 -> '1.5 h', 0.25 -> '15 min'. Below an hour reads in minutes."""
+    if 0 < value < 1:
+        return f"{round(value * 60):g} min"
+    return f"{value:g} h"
 
 
 def span(ms: int) -> str:
@@ -116,14 +118,14 @@ def doses_vs_orders(events: list[dict], at_ms: int) -> list[dict]:
             if gap < every - GRACE_MS:
                 says = (
                     f"{order['name']} was logged {span(gap)} after the previous dose. "
-                    f"The order from {orders['payload']['by']} says every {hours(order['every_h'])} h."
+                    f"The order from {orders['payload']['by']} says every {hours(order['every_h'])}."
                 )
                 out.append(_nudge(f"dose-early:{after['id']}", "dose_logged_early", "nurse", says, orders, after, after["ts_ms"]))
         last = mine[-1] if mine else None
         since = last["ts_ms"] if last else orders["ts_ms"]
         if not paused and at_ms - since > every + GRACE_MS:
             what = f"The last dose was logged {span(at_ms - since)} ago." if last else f"No dose is logged in the {span(at_ms - since)} since the order."
-            says = f"{order['name']} is ordered every {hours(order['every_h'])} h. {what}"
+            says = f"{order['name']} is ordered every {hours(order['every_h'])}. {what}"
             anchor = last["id"] if last else orders["id"]
             out.append(_nudge(f"dose-due:{key}:{anchor}", "dose_overdue", "nurse", says, orders, last, at_ms))
     return out
@@ -152,7 +154,7 @@ def obs_vs_limits(events: list[dict], at_ms: int) -> list[dict]:
     if every_h and readings and not in_theatre(events):  # the round starts with the first ward set, not in theatre
         last = readings[-1]
         if at_ms - last["ts_ms"] > every_h * HOUR_MS + GRACE_MS:
-            says = f"Observations are ordered every {hours(every_h)} h. The last set was logged {span(at_ms - last['ts_ms'])} ago."
+            says = f"Observations are ordered every {hours(every_h)}. The last set was logged {span(at_ms - last['ts_ms'])} ago."
             out.append(_nudge(f"obs-due:{last['id']}", "obs_overdue", "nurse", says, orders, last, at_ms))
     return out
 

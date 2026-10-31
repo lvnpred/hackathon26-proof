@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { citedLine, OPS_SCOPE, STAFF_BY } from "./handling.js";
+import { citedLine, OPS_SCOPE, staffBy } from "./handling.js";
 import { displayName } from "./names.js";
 import { useInspector } from "./Inspector.jsx";
 
 // One thing the AI will not do alone: the sentence, the draft, what it cites, and four buttons.
 // act(path, body, scope) is already tied to the patient's episode by the caller.
-export default function ProposalCard({ p, act, busy, role, episodeId }) {
+export default function ProposalCard({ p, act, busy, role, view, episodeId }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(p.draft || "");
   const { openInspector } = useInspector();
-  const by = STAFF_BY[role];
+  const by = staffBy(role, view);
   const base = `/ops/work/${p.work_id}`;
   const cited = citedLine(p.cited);
   const blank = editing && !text.trim();

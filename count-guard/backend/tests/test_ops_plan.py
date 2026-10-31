@@ -148,12 +148,13 @@ def test_nudge_names_assignee_else_first_nurse():
     evs = _ward() + [_task("t1"), _assign("t1", ASHA, "a1"), nudge]
     act = planner.plan(_item("nudge_obs_overdue", "n1"), evs)
     assert act.args == {"nudge_id": "n1", "nurse": ASHA}
-    assert act.summary == "Nudged Nurse Asha: Observations are ordered every 4 h."
+    assert act.summary == "Nudged Nurse Asha: observations are overdue"
+    assert act.reason == "Observations are ordered every 4 h."
     bare = planner.plan(_item("nudge_obs_overdue", "n1"), _ward() + [nudge])
     assert bare.args["nurse"] == seed.NURSE
 
 
-def test_file_read_monitor_and_swabs():
+def test_file_read_monitor_only():
     task = _task("t1")
     read = _ev("proof.checked", {"photo_id": "p1", "task_id": "t1", "values_read": MONITOR}, "c1", 1000)
     evs = _ward() + [_ev("order.acknowledged", {"order_id": "o1", "by": "n"}, "k0", 105), task, read]
@@ -163,13 +164,11 @@ def test_file_read_monitor_and_swabs():
     saved = evs + [_ev("task.done", {"task_id": "t1", "by": "n", "via": "tap", "note": "", "proof_id": "p1"}, "d1", 1200)]
     assert planner.plan(_item("file_read", "c1"), saved) is None
 
+    # Ruling F-I3: a camera count is never filed by the AI, even long after it was taken.
     camera = _ev("swabs.counted", {"count": 9, "opened": 10, "evidence_id": "ev1"}, "k5", 100)
     stay = [_state("theatre", "s1", 10, "ward"), _ev("count.pack_opened", {"quantity": 10}, "k1", 13), camera]
-    act = planner.plan(_item("file_read", "k5", "k1"), stay)
-    assert act.args == {"source": "swabs", "count": 9, "evidence_id": "ev1"}
-    assert act.summary == "Filed the camera count: 9 of 10 swabs back"
-    closed = stay + [_ev("count.closing", {"opened": 10, "returned": 9, "unaccounted": 1}, "k9", 200)]
-    assert planner.plan(_item("file_read", "k5", "k1"), closed) is None
+    assert planner.plan(_item("file_read", "k5", "k1"), stay, at_ms=10_000_000) is None
+    assert "file_swabs" not in planner.TEMPLATES
 
 
 def test_propose_move():
@@ -208,22 +207,8 @@ def test_templates_pass_both_regexes():
         texts.append(planner.plan(_item("nudge_obs_overdue", "n1"), evs + [nudge]).summary)
     read = _ev("proof.checked", {"photo_id": "p1", "task_id": "t1", "values_read": MONITOR}, "c1", 1000)
     texts.append(planner.plan(_item("file_read", "c1"), evs + [read]).summary)
-    camera = _ev("swabs.counted", {"count": 9, "opened": 10, "evidence_id": "ev1"}, "k5", 100)
-    stay = [_state("theatre", "s1", 10, "ward"), _ev("count.pack_opened", {"quantity": 10}, "k1", 13), camera]
-    texts.append(planner.plan(_item("file_read", "k5", "k1"), stay).summary)
     texts += list(planner.TEMPLATES.values())
     _clean(*[t for t in texts if t])
-
-
-def test_swabs_only_newest_camera_count_after_a_pack():
-    pack = _ev("count.pack_opened", {"quantity": 10}, "k1", 13)
-    old = _ev("swabs.counted", {"count": 8, "opened": 10, "evidence_id": "ev1"}, "k5", 100)
-    new = _ev("swabs.counted", {"count": 9, "opened": 10, "evidence_id": "ev2"}, "k6", 200)
-    stay = [_state("theatre", "s1", 10, "ward"), pack, old, new]
-    assert planner.plan(_item("file_read", "k5", "k1"), stay) is None
-    assert planner.plan(_item("file_read", "k6", "k1"), stay).args["evidence_id"] == "ev2"
-    no_pack = [_state("theatre", "s1", 10, "ward"), new]
-    assert planner.plan(_item("file_read", "k6"), no_pack) is None
 
 
 def test_draft_answer_none_when_card_has_no_signs():
@@ -233,7 +218,11 @@ def test_draft_answer_none_when_card_has_no_signs():
 
 def test_nudge_prefers_staff_wording():
     nudge = _ev("nudge.raised", {"kind": "obs_overdue", "key": "k", "says": "A", "says_staff": "B"}, "n1", 500)
-    assert planner.plan(_item("nudge_obs_overdue", "n1"), _ward() + [nudge]).summary == "Nudged Nurse Meena: B"
+    act = planner.plan(_item("nudge_obs_overdue", "n1"), _ward() + [nudge])
+    assert (act.summary, act.reason) == ("Nudged Nurse Meena: observations are overdue", "B")
+    dose = _ev("nudge.raised", {"kind": "dose_overdue", "key": "d", "says": "A", "says_staff": "C"}, "n2", 500)
+    act = planner.plan(_item("nudge_obs_overdue", "n2"), _ward() + [dose])
+    assert (act.summary, act.reason) == ("Nudged Nurse Meena: a dose is overdue", "C")
 
 
 # --- Task 6: optional model reword with template fallback ---

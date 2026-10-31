@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   OPS_SCOPE, STAFF_BY, agentMoment, agentMoments, citedLine, feedRows, handlingRows, isFeed,
   levelWords, liveCount, myPatientsStrip, needsTitle, proposalsFor, stripTitle, undoLabel,
+  PAUSED_TITLE, THEATRE_NURSE, pausedRows, staffBy,
 } from "./handling.js";
 import { aiChip, pauseLabel } from "./dock.js";
 import { routedLine } from "./thread.js";
@@ -149,4 +150,43 @@ test("every C6 UI string passes the no-advice check", () => {
   const strings = [stripTitle(1), needsTitle(1), undoLabel(600_000, 0), aiChip(true), aiChip(false), pauseLabel(true), pauseLabel(false),
     routedLine({ ops }, "q1"), citedLine(prop("p").cited), "Undone"];
   for (const s of strings) assert.doesNotMatch(s, ADVICE, s);
+});
+
+test("agentMoment carries what the action wrote and the model that worded it (M1, M5)", () => {
+  const written = [{ event_id: "e9", type: "order.acknowledged", when: "Day 0 09:00", by: "AI (on behalf of Ward 4)", plain: "Orders acknowledged." }];
+  const m = agentMoment(row("w1", { written, model: "rules" }), "ep1");
+  assert.deepEqual(m.written, written);
+  assert.deepEqual([m.source, m.calls], ["rules", []]);
+  assert.equal(chipFor(m), "Rules");
+  const s = agentMoment({ ...prop("p1"), model: "spark" }, "ep1");
+  assert.equal(s.source, "spark");
+  assert.deepEqual(s.calls, [{ model: "spark", source: "muse-spark-1.3" }]);
+  assert.equal(chipFor(s), "Muse Spark 1.3 · live");
+  assert.deepEqual(agentMoment(row("w3"), "ep1").written, []);
+});
+
+test("pausedRows show what the paused agent has not done, staff only (I4)", () => {
+  const open = [{ work_id: "o1", kind: "ack_order", reason: "Dr. A. Rao signed orders at 09:02; not acknowledged yet.", paused_note: "Paused · not done" },
+    { work_id: "o2", kind: "propose_move", reason: "r" }];
+  const rows = pausedRows({ open }, "nurse");
+  assert.deepEqual(rows, [{ workId: "o1", text: "Dr. A. Rao signed orders at 09:02; not acknowledged yet. · Paused · not done" }]);
+  assert.deepEqual(pausedRows({ open }, "patient"), []);
+  assert.deepEqual(pausedRows({ open: [open[1]] }, "doctor"), []);  // running: no note, no row
+  assert.deepEqual(pausedRows(null, "nurse"), []);
+  for (const t of [PAUSED_TITLE, rows[0].text]) assert.doesNotMatch(t, ADVICE, t);
+  assert.equal(PAUSED_TITLE, "AI is paused");
+});
+
+test("staffBy names the theatre nurse in theatre, as NurseActions does (M10)", () => {
+  assert.equal(staffBy("nurse", { state: "theatre" }), THEATRE_NURSE);
+  assert.equal(staffBy("nurse", { state: "ward" }), "Nurse Meena (synthetic)");
+  assert.equal(staffBy("nurse", null), "Nurse Meena (synthetic)");
+  assert.equal(staffBy("doctor", { state: "theatre" }), "Dr. A. Rao (synthetic)");
+  assert.equal(THEATRE_NURSE, "Nurse Asha (synthetic)");
+});
+
+test("myPatientsStrip hands each proposal its patient's view", () => {
+  const view = { ops, state: "theatre" };
+  const s = myPatientsStrip([{ id: "ep1", name: "A", view }], "doctor");
+  assert.equal(s.proposals[0].view, view);
 });

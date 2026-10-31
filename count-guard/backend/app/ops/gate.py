@@ -6,6 +6,7 @@ from app.journey import states, tasks
 from app.journey.ask import ANSWERED
 from app.journey.stories import by_ai
 from app.morning.discharge import visible_events
+from app.ops import watch
 from app.ops.items import Action, work_items
 from app.ops.policy import AI_BY, LEVELS, NEVER_WORDS, UNDO_MS
 from app.ops.site import level_of
@@ -17,6 +18,7 @@ PERSON_ACTED = "A person has already acted on this, so it cannot be undone here.
 NOT_WAITING = "This proposal is no longer waiting."
 DOCTOR_ONLY = "Only the doctor approves an answer to the patient."
 NOT_APPROVABLE = "This proposal cannot be approved here."
+COUNT_NOT_CLOSED = "A swab count was started and is not closed."
 DOCTOR_PREFIX = "Dr. "
 
 
@@ -30,7 +32,7 @@ class OpsError(Exception):
 
 
 def _provenance(item, action: Action, level: str) -> dict:
-    return {"level": level, "by": AI_BY, "reason": item.reason, "model": action.model, "inputs": list(item.inputs)}
+    return {"level": level, "by": AI_BY, "reason": action.reason or item.reason, "model": action.model, "inputs": list(item.inputs)}
 
 
 def _assign(store, episode_id, action, level, item, at_ms) -> None:
@@ -46,12 +48,9 @@ def _route(store, episode_id, action, level, item, at_ms) -> None:
 
 
 def _file_read(store, episode_id, action, level, item, at_ms) -> None:
+    """Monitor reads only (ruling F-I3): a swab closing count is always saved by a person."""
     a = action.args
-    if a["source"] == "monitor":
-        tasks.complete_task(store, episode_id, a["task_id"], AI_BY, at_ms, values=a["values"], proof_id=a["photo_id"])
-        return
-    payload = states.closing_payload(store.events(episode_id), a["count"], AI_BY, evidence_id=a["evidence_id"])
-    store.append(episode_id, "count.closing", payload, ts_ms=at_ms)
+    tasks.complete_task(store, episode_id, a["task_id"], AI_BY, at_ms, values=a["values"], proof_id=a["photo_id"])
 
 
 def _ack(store, episode_id, action, level, item, at_ms) -> None:
@@ -69,11 +68,22 @@ _DO = {"ack_order": _ack, "assign_task": _assign, "route_question": _route, "fil
 EXECUTABLE = frozenset(_DO)  # kinds the gate can carry out; the rest are only ever proposed
 
 
+def ours(event: dict, order_id: str | None) -> bool:
+    """True for an event the AI's own action wrote: AI-authored, or a task the acknowledged order created (no `by`).
+
+    A person's write that lands between the before and after reads is never ours, so undo never supersedes it (F-I1)."""
+    p = event["payload"]
+    if by_ai(p):
+        return True
+    return bool(order_id) and event["event_type"] == "task.created" and p.get("order_id") == order_id
+
+
 def execute(store, episode_id: str, action: Action, level: str, item, at_ms: int) -> list[str]:
     """Run the action's writer and return the ids it appended (R7). A TaskError passes through to the caller."""
     before = {e["id"] for e in store.events(episode_id)}
     _DO[action.kind](store, episode_id, action, level, item, at_ms)
-    return [e["id"] for e in store.events(episode_id) if e["id"] not in before]
+    order_id = action.args.get("order_id")
+    return [e["id"] for e in store.events(episode_id) if e["id"] not in before and ours(e, order_id)]
 
 
 def drop(store, episode_id: str, work_id: str, code: str, reason: str, by: str = AI_BY, at_ms: int = 0) -> dict:
@@ -114,19 +124,27 @@ def _row(events: list[dict], work_id: str) -> dict:
 
 
 def _person_acted(events: list[dict], wrote: list[str]) -> bool:
-    """True when a visible non-AI event points at something the action wrote."""
+    """True when a visible non-AI event points at, or supersedes, something the action wrote (R7, M7)."""
     ids = set(wrote)
     for e in visible_events(events):
         p = e["payload"]
         if by_ai(p) or e["event_type"].startswith(("work.", "nudge.")):
             continue
-        if ids & {p.get("task_id"), p.get("order_id"), p.get("question_id")}:
+        if e.get("supersedes_id") in ids or ids & {p.get("task_id"), p.get("order_id"), p.get("question_id")}:
             return True
     return False
 
 
+def _order_of(row: dict) -> str | None:
+    return row["inputs"][0] if row["kind"] == "ack_order" and row["inputs"] else None
+
+
 def _revert(store, episode_id: str, row: dict, by: str, at_ms: int) -> None:
-    wrote = list((row["done"] or {}).get("wrote") or [])[::-1]  # newest first
+    """Supersede what the action wrote, newest first. An id that is not the AI's own is never touched (F-I1)."""
+    by_id = {e["id"]: e for e in store.events(episode_id)}
+    order_id = _order_of(row)
+    wrote = [i for i in list((row["done"] or {}).get("wrote") or [])[::-1]
+             if i in by_id and ours(by_id[i], order_id)]
     for event_id in wrote:
         store.append(episode_id, "work.reverted", {"work_id": row["id"], "event_id": event_id},
                      ts_ms=at_ms, supersedes_id=event_id)
@@ -146,7 +164,9 @@ def undo(store, episode_id: str, work_id: str, by: str, at_ms: int) -> None:
     if _person_acted(events, wrote):
         raise OpsError(409, PERSON_ACTED)
     # One level of cascade: AI work that took these ids as input (the assignment of an undone ack).
+    # A row a person approved is that person's write, so it is never cascaded (M8).
     follow = [r for r in work_items(events) if r["id"] != work_id and r["status"] == "done"
+              and not r["done"].get("approved_by")
               and set(r["done"].get("inputs") or r["inputs"]) & set(wrote)]
     for other in follow:
         _revert(store, episode_id, other, by, at_ms)
@@ -165,6 +185,12 @@ def _proposed(events: list[dict], work_id: str) -> dict:
 
 
 def _approve_move(store, episode_id: str, events: list[dict], by: str, at_ms: int) -> list[str]:
+    """The person's move, re-checked by the same rule that proposed it (I2): a started count must be closed."""
+    refusal = states.check_move(events, "ward", {"by": by})
+    if refusal:
+        raise OpsError(409, refusal)
+    if watch.count_unclosed(events):
+        raise OpsError(409, COUNT_NOT_CLOSED)
     try:
         payload = states.move_payload(events, "ward", {"by": by})
     except states.MoveRefused as exc:

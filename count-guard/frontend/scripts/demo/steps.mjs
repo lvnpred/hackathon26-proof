@@ -16,7 +16,7 @@ export const STEPS = {
     await H.role("Doctor");
   },
   async ai(H) {
-    await H.dockLink("AI at work");
+    await H.tab("AI activity");
     await H.click("Try sample", "SAM 3.1");
   },
   async "das-rx"(H) {

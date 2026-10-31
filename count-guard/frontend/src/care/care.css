@@ -171,7 +171,7 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
   .ev-modal-body { height: 100vh; max-height: 100vh; border-radius: 0; align-content: start }
 }
 
-/* AI at work */
+/* AI activity */
 .demo-dock .dock-body a { color: var(--surface); text-decoration: underline; min-height: 44px; display: inline-flex; align-items: center; }
 .model-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px }
 .model-card { min-width: 0; display: grid; gap: 6px; align-content: start; }
@@ -181,8 +181,10 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .pipelines li > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0 }
 .step-chip { padding: 2px 8px; border: 1px solid var(--line-control); border-radius: 999px; background: var(--surface-sunk); overflow-wrap: anywhere }
 .step-arrow { color: var(--ink-muted) }
-.recent-ai { list-style: none; padding: 0; display: grid; gap: 8px; }
-.recent-ai button.linklike { min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+.activity-list { list-style: none; padding: 0; display: grid; gap: 10px; }
+.activity-list li { display: grid; gap: 2px; min-width: 0 }
+.pipelines button[aria-pressed="true"] { outline: 2px solid var(--sun); border-radius: 12px }
+.pipelines button.linklike { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 2px; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; text-align: left }
 .plan-grid { display: grid; gap: 8px }
 .plan-row { border-top: 1px solid var(--line); padding-top: 6px }
 .plan-list { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px }

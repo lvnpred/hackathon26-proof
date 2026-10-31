@@ -13,8 +13,8 @@ import { findPatient } from "./Patients";
 import { useWard } from "./ward";
 
 const STAFF_TABS = {
-  doctor: [["/patients", "My patients"]],
-  nurse: [["/queue", "My queue"], ["/patients", "Patients"]],
+  doctor: [["/patients", "My patients"], ["/ai", "AI activity"]],
+  nurse: [["/queue", "My queue"], ["/patients", "Patients"], ["/ai", "AI activity"]],
 };
 const PATIENT_TABS = [["/today", "Today"], ["/my-care", "My care"], ["/ask", "Ask"]];
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { EMPTY_MODELS, PIPELINES, STAFF_ONLY, canSeeAi, cardLine, callsText, modelsPill, isSummary, isTry, latencyText, modeLabel, recentText } from "./ai.js";
+import { EMPTY_MODELS, PIPELINES, PIPELINE_KIND, STAFF_ONLY, activityRows, emptyLine, storyCounts, storyLine, canSeeAi, cardLine, callsText, modelsPill, isSummary, isTry, latencyText, modeLabel, recentText } from "./ai.js";
 import { chipText } from "./evidence.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -20,7 +20,7 @@ test("the three pipelines", () => {
 });
 
 test("dashboard copy has no advice words", () => {
-  for (const s of [...PIPELINES.flat(), "AI at work", "Try sample", "Recent AI events", "Which Muse models run this ward, and what they just did.", "No model results yet. Run a flow and they appear here.", "Models: live", "Models: prepared (no key)", STAFF_ONLY]) assert.doesNotMatch(s, ADVICE);
+  for (const s of [...PIPELINES.flat(), "AI activity", "Try sample", "Nothing here for this filter.", emptyLine("R. Kumar"), storyLine({ transcribed: 3, photos: 4, videos: 2, flags: 3, decided: 3 }), "Models: live", "Models: prepared (no key)", STAFF_ONLY]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("shape guards refuse a page that is not the answer", () => {
@@ -68,16 +68,51 @@ test("the models pill reads live or prepared (no key)", () => {
   assert.equal(modelsPill(false), "Models: prepared (no key)");
 });
 
-test("AI at work is a staff view: the patient sees a note, no data and no dock link", () => {
+test("AI activity is a staff view: the patient sees a note, no data and no dock link or tab", () => {
   assert.equal(canSeeAi("doctor"), true);
   assert.equal(canSeeAi("nurse"), true);
   assert.equal(canSeeAi("patient"), false);
-  assert.equal(STAFF_ONLY, "AI at work is a staff view. Switch to Doctor or Nurse.");
+  assert.equal(STAFF_ONLY, "AI activity is a staff view. Switch to Doctor or Nurse.");
+  assert.doesNotMatch(STAFF_ONLY, ADVICE);
   const page = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
   assert.match(page, /canSeeAi\(ward\.role\)/);
   assert.match(page, /STAFF_ONLY/);
+  assert.ok(page.indexOf("<ActivityList") > -1 && page.indexOf("<ActivityList") < page.indexOf("<ModelCards"));
   const dock = fs.readFileSync(new URL("./DemoDock.jsx", import.meta.url), "utf8");
-  assert.match(dock, /canSeeAi\(ward\.role\) && <Link to="\/ai">/);
+  assert.doesNotMatch(dock, /to="\/ai"/);
+  const shell = fs.readFileSync(new URL("./CareShell.jsx", import.meta.url), "utf8");
+  assert.ok(shell.includes('["/ai", "AI activity"]'));
+});
+
+const m = (id, kind, at_ms, status = "matches") => ({ id, kind, at_ms, status });
+const ward = [
+  { id: "e1", name: "R. Kumar, 54 (synthetic)", view: { ai_moments: [m("a", "voice", 5), m("b", "record", 9), m("c", "rule", 1, "recorded")] } },
+  { id: "e2", name: "S. Iyer, 61", view: { ai_moments: [m("d", "visual", 7), m("e", "photo_read", 3), m("f", "rule", 2, "flagged")] } },
+  { id: "e3", name: "No view" },
+];
+
+test("activityRows is newest first, drops record rows and names the patient", () => {
+  const rows = activityRows(ward);
+  assert.deepEqual(rows.map((r) => r.moment.id), ["d", "a", "e", "f", "c"]);
+  assert.deepEqual(rows[0], { episodeId: "e2", patient: "S. Iyer", moment: ward[1].view.ai_moments[0] });
+  assert.equal(rows[1].patient, "R. Kumar");
+});
+
+test("storyCounts counts by kind and decided flags", () => {
+  assert.deepEqual(storyCounts(activityRows(ward)), { transcribed: 1, photos: 1, videos: 1, flags: 2, decided: 1 });
+});
+
+test("storyLine words the day in one sentence", () => {
+  assert.equal(storyLine({ transcribed: 3, photos: 4, videos: 2, flags: 3, decided: 3 }), "Today the AI transcribed 3 notes, read 4 photos, counted 2 videos and raised 3 flags; staff decided all 3.");
+  assert.equal(storyLine({ transcribed: 1, photos: 0, videos: 1, flags: 1, decided: 1 }), "Today the AI transcribed 1 note, counted 1 video and raised 1 flag; staff decided it.");
+  assert.equal(storyLine({ transcribed: 0, photos: 2, videos: 0, flags: 2, decided: 1 }), "Today the AI read 2 photos and raised 2 flags; staff decided 1 of 2.");
+  assert.equal(storyLine({ transcribed: 2, photos: 0, videos: 0, flags: 0, decided: 0 }), "Today the AI transcribed 2 notes.");
+  assert.equal(storyLine({ transcribed: 0, photos: 0, videos: 0, flags: 0, decided: 0 }), "");
+});
+
+test("pipeline buttons filter by the first word; the empty line names the patient", () => {
+  assert.deepEqual(PIPELINES.map((p) => PIPELINE_KIND[p[0]]), ["voice", "photo_read", "visual"]);
+  assert.equal(emptyLine("R. Kumar"), "Nothing yet today. Open R. Kumar to follow the demo.");
 });
 
 test("the pipelines are chips with arrows and fit 390 px", () => {

@@ -41,9 +41,9 @@ export const BEATS = [
   },
   {
     id: "ai", path: "intro", role: "none", seconds: 20, film: true,
-    say: "The AI at work page lists the four Muse models on this ward; a sample tray photo shows SAM 3.1 boxes, the counts and a plain explanation.",
-    clicks: ['Link "AI at work" in the demo dock', 'Button "Try sample" in "SAM 3.1"'],
-    expect: ["AI at work", "Muse Voice", "Muse Spark 1.3", "SAM 3.1", "Muse Spark Open", "Saw 2 of 3 needle holders.", "1 missing"],
+    say: "The AI activity page shows what the AI did on this ward and the four Muse models; a sample tray photo shows SAM 3.1 boxes, the counts and a plain explanation.",
+    clicks: ['Tab "AI activity"', 'Button "Try sample" in "SAM 3.1"'],
+    expect: ["AI activity", "Muse Voice", "Muse Spark 1.3", "SAM 3.1", "Muse Spark Open", "Saw 2 of 3 needle holders.", "1 missing"],
     keyed: "Try sample makes live calls with a key: SAM 3.1 runs one image call per tray concept (7). The chip reads live in place of Sample or prepared.",
   },
   {

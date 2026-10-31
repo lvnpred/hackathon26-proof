@@ -8,7 +8,7 @@ The film is three paths and an opening in 3:20. Offline is the safe default and 
 - Path 2, Kumar: hernia repair. Dictated orders, admission, theatre, tray check, swab count, paracetamol by voice, discharge, healing photo, doctor answer.
 - Path 3, Iyer: low blood pressure. Voice reading flagged, saline orders, set-up video check, a typed reading back above the limit with the flag answered, discharge, medicine photo.
 
-Totals: doctor 58 s, nurse 58 s, patient 58 s, intro, AI at work and close 26 s, film 3:20.
+Totals: doctor 58 s, nurse 58 s, patient 58 s, intro, AI activity and close 26 s, film 3:20.
 
 How to check it: run `make demo-check` from `count-guard/`. It makes the media, runs the unit tests, starts its own servers on ports 8200 and 5273 with no model key, walks all 32 beats in a headless browser, and saves one screenshot per beat in `count-guard/demo-shots/`. It takes about 25 seconds (measured: 23 s, twice). The machine needs: Playwright's cached Chromium or `CG_CHROME` pointing at a Chrome, macOS `say`, `ffmpeg`, and Pillow in `.venv`.
 
@@ -39,11 +39,11 @@ On screen: `Synthetic data · models: offline (prepared)` · `Research demo. Not
 
 
 #### `ai` · 0:03 · none · 20 s
-Clicks: 1) Link "AI at work" in the demo dock; 2) Button "Try sample" in "SAM 3.1"
+Clicks: 1) Tab "AI activity"; 2) Button "Try sample" in "SAM 3.1"
 
-On screen: `AI at work` · `Muse Voice` · `Muse Spark 1.3` · `SAM 3.1` · `Muse Spark Open` · `Saw 2 of 3 needle holders.` · `1 missing`
+On screen: `AI activity` · `Muse Voice` · `Muse Spark 1.3` · `SAM 3.1` · `Muse Spark Open` · `Saw 2 of 3 needle holders.` · `1 missing`
 
-> The AI at work page lists the four Muse models on this ward; a sample tray photo shows SAM 3.1 boxes, the counts and a plain explanation.
+> The AI activity page shows what the AI did on this ward and the four Muse models; a sample tray photo shows SAM 3.1 boxes, the counts and a plain explanation.
 
 ### Path 1: Mr. Das, outpatient (patient and doctor)
 

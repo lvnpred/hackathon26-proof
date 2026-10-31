@@ -54,6 +54,9 @@ _DO = {"ack_order": _ack, "assign_task": _assign, "route_question": _route, "fil
        "nudge_obs_overdue": _nudge}
 
 
+EXECUTABLE = frozenset(_DO)  # kinds the gate can carry out; the rest are only ever proposed
+
+
 def execute(store, episode_id: str, action: Action, level: str, item, at_ms: int) -> list[str]:
     """Run the action's writer and return the ids it appended (R7). A TaskError passes through to the caller."""
     before = {e["id"] for e in store.events(episode_id)}
@@ -75,7 +78,7 @@ def apply(store, episode_id: str, work_id: str, item, action: Action, at_ms: int
                      f"The AI never does this: {words}. A person does it from the chart.", at_ms=at_ms)]
     if level == "L0":
         return []  # observe only: the item stays open
-    if level == "L1" or action.kind not in _DO:
+    if level == "L1" or action.kind not in EXECUTABLE:
         sentence = action.sentence or action.summary
         proposed = {"work_id": work_id, **_provenance(item, action, "L1"), "sentence": sentence, "draft": action.draft,
                     "cited": list(action.cited), "action": {"kind": action.kind, "args": action.args},

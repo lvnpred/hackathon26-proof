@@ -253,3 +253,72 @@ def test_new_copy_has_no_advice_words():
                     ("work.undone", {"by": DR}), ("task.assigned", {"by": AI_BY, "to": ASHA}),
                     ("question.routed", {"by": AI_BY, "to": DR})):
         assert not advice.search(plain({"event_type": kind, "payload": p, "ts_ms": 0}))
+
+
+def test_agent_error_never_fails_the_write(tmp_path, monkeypatch):
+    client = _ops_client(tmp_path)
+    eid = _kumar_in_clinic(client)
+
+    def boom(*a, **k):
+        raise RuntimeError("planner down")
+
+    monkeypatch.setattr(ops_run, "plan", boom)
+    r = _admit(client, eid)
+    assert r.status_code == 200
+    assert _of(client, eid, "patient.state")[-1]["payload"]["to"] == "admitting"
+
+
+def test_refused_helper_is_dropped_with_detail(tmp_path, monkeypatch):
+    from app.ops import gate
+    from app.journey import tasks
+
+    client = _ops_client(tmp_path)
+    eid = _kumar_in_clinic(client)
+
+    def refuse(*a, **k):
+        raise tasks.TaskError(409, "Not allowed now.")
+
+    monkeypatch.setattr(gate, "execute", refuse)
+    _admit(client, eid)
+    drops = _of(client, eid, "work.dropped")
+    assert drops and drops[0]["payload"]["code"] == "refused" and drops[0]["payload"]["reason"] == "Not allowed now."
+    assert not _of(client, eid, "order.acknowledged")
+
+
+def test_no_longer_needed_reason_is_truthful(tmp_path, monkeypatch):
+    client = _ops_client(tmp_path)
+    eid = _kumar_in_clinic(client)
+    monkeypatch.setattr(ops_run, "plan", lambda *a, **k: None)
+    _admit(client, eid)
+    drop = _of(client, eid, "work.dropped")[0]["payload"]
+    assert drop["code"] == "done_by_person" and drop["reason"] == "No longer needed."
+
+
+def test_patient_lens_hides_ai_authored_helper_events(tmp_path):
+    client = _ops_client(tmp_path)
+    eid = _kumar_in_clinic(client)
+    view = _admit(client, eid).json()
+    acked = [t for t in view["timeline"] if t["type"] == "order.acknowledged"]
+    assert acked and all(t["patient"] == "" for t in acked)
+    assert "acknowledged" not in view["now_next"]["you_now"]
+    from app.journey.stories import AI_PREFIX
+    assert AI_BY.startswith(AI_PREFIX)
+
+
+def test_monitor_read_is_filed_after_five_minutes(tmp_path):
+    client = _ops_client(tmp_path)
+    eid = _kumar_in_clinic(client)
+    _admit(client, eid, 1000)
+    task = next(t for t in client.get(_url(eid, "")[:-1]).json()["tasks"] if t["kind"] == "obs")
+    store = _store(client)
+    photo = store.append(eid, "photo.added", {"purpose": "proof", "by": ASHA, "task_id": task["id"]}, ts_ms=2000)
+    values = {"sbp": 118, "dbp": 76, "hr": 80}
+    store.append(eid, "proof.checked", {"photo_id": photo["id"], "task_id": task["id"], "values_read": values,
+                                        "match": "ok", "why": "w", "source": "prepared"}, ts_ms=2000)
+    client.post(_url(eid, "tick"), json={"at_ms": 2000 + 4 * M})
+    assert not _of(client, eid, "task.done")
+    client.post(_url(eid, "tick"), json={"at_ms": 2000 + 5 * M})
+    done = _of(client, eid, "task.done")[0]["payload"]
+    assert done["by"] == AI_BY and done["values"] == values and done["proof_id"] == photo["id"]
+    work = [e for e in _of(client, eid, "work.done") if e["payload"]["summary"].startswith("Filed the monitor read")][0]
+    assert work["payload"]["undo_until_ms"] == 2000 + 5 * M + 600_000

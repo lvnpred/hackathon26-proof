@@ -203,6 +203,14 @@ PATIENT_STATE = {"admitting": "You were admitted.", "theatre": "You went to thea
                  "discharging": "You are getting ready to go home.", "home": "You went home."}
 
 
+AI_PREFIX = "AI (on behalf of"  # the start of ops.policy.AI_BY; ops imports this module, so it cannot be imported here
+
+
+def by_ai(payload: dict) -> bool:
+    """True when the AI wrote the event (its `by` is the AI label)."""
+    return str(payload.get("by") or "").startswith(AI_PREFIX)
+
+
 STAFF_ONLY = ("order.drafted", "discharge.drafted")
 HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted")  # bookkeeping; the visible record is work.done and the rest
 
@@ -214,10 +222,11 @@ def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> s
     both read "" and the timeline hides an empty line from the patient."""
     kind = event["event_type"]
     p = event.get("payload") or {}
-    if kind in STAFF_ONLY or kind.startswith("work.") or kind == "task.assigned" or (kind == "discharge.card" and signed):
-        return ""
-    if kind == "question.routed":
+    if kind == "question.routed":  # the one AI line the patient sees
         return f"Your question went to {short_name(p.get('to'))}."
+    if kind in STAFF_ONLY or kind.startswith("work.") or kind == "task.assigned" or by_ai(p) \
+            or (kind == "discharge.card" and signed):
+        return ""
     if kind == "patient.state":
         to, frm = p.get("to"), p.get("from")
         if frm is None:

@@ -11,7 +11,7 @@ from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name,
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient, in_theatre
 from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
-from app.journey.stories import clock
+from app.journey.stories import by_ai, clock
 from app.journey.video import checks_view, tray_state
 from app.morning.discharge import visible_events
 
@@ -186,6 +186,8 @@ def _latest_happening(events: list[dict], you: bool = False) -> str | None:
     best = None
     for index, e in enumerate(rows):
         p, kind, at = e["payload"], e["event_type"], clock(e["ts_ms"])
+        if you and by_ai(p):
+            continue  # the patient never reads AI bookkeeping
         who = short_name(p.get("by")) if you else p.get("by")
         if kind == "patient.state":
             if p.get("from") is None:  # any real event at the same time wins

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
@@ -149,8 +151,11 @@ def settle(request: Request, episode_id: str, ts: int) -> None:
     """After every write: raise nudges, then let the ops agent act, inside the same request (R5)."""
     store = _store(request)
     raise_nudges(store, episode_id, ts)
-    ops_run.run(store, episode_id, ts, settings=request.app.state.settings,
-                write=getattr(request.app.state, "ops_write", None))
+    try:
+        ops_run.run(store, episode_id, ts, settings=request.app.state.settings,
+                    write=getattr(request.app.state, "ops_write", None))
+    except Exception:  # the agent must never fail the person's write
+        logging.getLogger(__name__).exception("ops agent failed for episode %s", episode_id)
 
 
 def _latest(events: list[dict], kind: str) -> dict | None:

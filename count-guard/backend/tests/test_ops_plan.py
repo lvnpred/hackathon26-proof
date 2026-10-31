@@ -191,10 +191,7 @@ def test_plan_none_when_done():
 
 
 def test_plan_handles_every_watched_kind():
-    for kind in LEVELS:
-        if kind in ("ack_order", "assign_task", "nudge_obs_overdue", "route_question", "file_read",
-                    "draft_answer", "propose_move"):
-            assert kind in planner._PLANNERS
+    assert set(watch.WATCHED_KINDS) == set(planner._PLANNERS)
 
 
 def test_templates_pass_both_regexes():
@@ -206,5 +203,34 @@ def test_templates_pass_both_regexes():
         texts += [act.summary, act.sentence, act.draft]
     move = planner.plan(_item("propose_move", "s1"), _theatre())
     texts += [move.summary, move.sentence]
+    for kind in ("obs_overdue", "dose_overdue"):
+        nudge = _ev("nudge.raised", {"kind": kind, "key": kind, "says": "Observations are ordered every 4 h."}, "n1", 500)
+        texts.append(planner.plan(_item("nudge_obs_overdue", "n1"), evs + [nudge]).summary)
+    read = _ev("proof.checked", {"photo_id": "p1", "task_id": "t1", "values_read": MONITOR}, "c1", 1000)
+    texts.append(planner.plan(_item("file_read", "c1"), evs + [read]).summary)
+    camera = _ev("swabs.counted", {"count": 9, "opened": 10, "evidence_id": "ev1"}, "k5", 100)
+    stay = [_state("theatre", "s1", 10, "ward"), _ev("count.pack_opened", {"quantity": 10}, "k1", 13), camera]
+    texts.append(planner.plan(_item("file_read", "k5", "k1"), stay).summary)
     texts += list(planner.TEMPLATES.values())
     _clean(*[t for t in texts if t])
+
+
+def test_swabs_only_newest_camera_count_after_a_pack():
+    pack = _ev("count.pack_opened", {"quantity": 10}, "k1", 13)
+    old = _ev("swabs.counted", {"count": 8, "opened": 10, "evidence_id": "ev1"}, "k5", 100)
+    new = _ev("swabs.counted", {"count": 9, "opened": 10, "evidence_id": "ev2"}, "k6", 200)
+    stay = [_state("theatre", "s1", 10, "ward"), pack, old, new]
+    assert planner.plan(_item("file_read", "k5", "k1"), stay) is None
+    assert planner.plan(_item("file_read", "k6", "k1"), stay).args["evidence_id"] == "ev2"
+    no_pack = [_state("theatre", "s1", 10, "ward"), new]
+    assert planner.plan(_item("file_read", "k6"), no_pack) is None
+
+
+def test_draft_answer_none_when_card_has_no_signs():
+    card = _ev("discharge.card", {"warning_signs": [], "wound_care": "Dry."}, "d1", 40)
+    assert planner.plan(_item("draft_answer", "q1", "d1"), _ward() + [card, _ask()]) is None
+
+
+def test_nudge_prefers_staff_wording():
+    nudge = _ev("nudge.raised", {"kind": "obs_overdue", "key": "k", "says": "A", "says_staff": "B"}, "n1", 500)
+    assert planner.plan(_item("nudge_obs_overdue", "n1"), _ward() + [nudge]).summary == "Nudged Nurse Meena: B"

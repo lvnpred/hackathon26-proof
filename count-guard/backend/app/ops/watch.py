@@ -9,6 +9,8 @@ from app.morning.discharge import visible_events
 from app.ops.items import WorkItem, assignees, routes, work_items
 from app.ops.policy import FILE_AFTER_MS
 
+WATCHED_KINDS = ("ack_order", "assign_task", "nudge_obs_overdue", "route_question", "draft_answer",
+                "file_read", "propose_move")
 RULES = ("orders_unacknowledged", "task_unassigned", "obs_overdue", "question_waiting",
          "read_unfiled", "move_ready")
 _MONITOR_KEYS = ("sbp", "dbp", "hr")
@@ -80,7 +82,7 @@ def question_waiting(events: list[dict], at_ms: int, opened: set[str]) -> list[W
     return out
 
 
-def _monitor_reads(events: list[dict]) -> list[dict]:
+def monitor_reads(events: list[dict]) -> list[dict]:
     shown = visible_events(events)
     saved = {e["payload"].get("proof_id") for e in _of(shown, "task.done")}
     live = {t["id"]: t for t in tasks.task_list(events)}
@@ -99,7 +101,7 @@ def _monitor_reads(events: list[dict]) -> list[dict]:
 def read_unfiled(events: list[dict], at_ms: int, opened: set[str]) -> list[WorkItem]:
     reason = f"The read was not saved within {FILE_AFTER_MS // 60_000} minutes."
     out = [_item("file_read", "read_unfiled", reason, (e["id"],), "nurse", e["id"])
-           for e in _monitor_reads(events) if at_ms - e["ts_ms"] >= FILE_AFTER_MS]
+           for e in monitor_reads(events) if at_ms - e["ts_ms"] >= FILE_AFTER_MS]
     if states.current_state(events) == "theatre":
         stay = states.stay_events(events)
         camera, pack = states.stay_latest(events, "swabs.counted"), states.stay_latest(events, "count.pack_opened")

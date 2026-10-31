@@ -109,7 +109,7 @@ def _nudge(item, events, board, at_ms):
     given = assignees(events)
     nurse = next((given[t["id"]] for t in tasks.task_list(events)
                   if t["kind"] == kind and t["status"] in _OPEN and t["id"] in given), NURSES[0])
-    says = nudge["payload"].get("says", "")
+    says = nudge["payload"].get("says_staff") or nudge["payload"].get("says", "")
     return Action("nudge_obs_overdue", {"nudge_id": nudge["id"], "nurse": nurse},
                   TEMPLATES["nudge_obs_overdue"].format(nurse=short_name(nurse), says=says))
 
@@ -125,7 +125,7 @@ def _route(item, events, board, at_ms):
 
 
 def _file_read(item, events, board, at_ms):
-    read = next((e for e in watch._monitor_reads(events) if e["id"] == item.inputs[0]), None)
+    read = next((e for e in watch.monitor_reads(events) if e["id"] == item.inputs[0]), None)
     if read is not None:
         p = read["payload"]
         values = {k: p["values_read"][k] for k in _OBS_FIELDS if p["values_read"].get(k) is not None}
@@ -137,14 +137,15 @@ def _file_read(item, events, board, at_ms):
         return None
     stay = states.stay_events(events)
     closing = states.stay_latest(events, "count.closing")
+    pack = states.stay_latest(events, "count.pack_opened")
     p = camera["payload"]
-    if camera not in stay or (closing and stay.index(closing) > stay.index(camera)) \
-            or p.get("count") is None or not p.get("evidence_id"):
+    if (pack is None or camera is not states.stay_latest(events, "swabs.counted")
+            or (closing and stay.index(closing) > stay.index(camera))
+            or p.get("count") is None or not p.get("evidence_id")):
         return None
     opened = p.get("opened")
     if opened is None:
-        pack = states.stay_latest(events, "count.pack_opened")
-        opened = pack["payload"]["quantity"] if pack else 0
+        opened = pack["payload"]["quantity"]
     return Action("file_read", {"source": "swabs", "count": p["count"], "evidence_id": p["evidence_id"]},
                   TEMPLATES["file_swabs"].format(n=p["count"], opened=opened))
 
@@ -152,7 +153,8 @@ def _file_read(item, events, board, at_ms):
 def _draft_answer(item, events, board, at_ms):
     question = _find(events, item.inputs[0], "question.asked")
     rows = cited_card(events)
-    if question is None or _answered(events, question["id"]) or not rows:
+    card_signs = (_latest(events, "discharge.card") or {"payload": {}})["payload"].get("warning_signs")
+    if question is None or _answered(events, question["id"]) or not rows or not card_signs:
         return None
     card = _latest(events, "discharge.card")["payload"]
     draft = TEMPLATES["draft"].format(signs="; ".join(card.get("warning_signs") or []),

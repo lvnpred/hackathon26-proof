@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL, lastDoneLine, rowSession } from "./drafts.js";
+import { doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, newestPhoto, proposalChoices, sectionsToSummary, lastDoneLine, rowSession } from "./drafts.js";
 import { orderRowsToItems } from "./orders.js";
 
 // The Task 2 Kumar draft, in the shape orderRowsToItems emits (P2-R9).
@@ -56,8 +56,6 @@ test("newestPhoto is the last match, any purpose when taskId is null", () => {
 
 test("labels are the specified strings", () => {
   assert.equal(MATCH_LABEL.ok, "Photo matches the task");
-  assert.equal(SOURCE_LABEL["muse-spark-1.3"], "Muse Spark");
-  assert.equal(SOURCE_LABEL["muse-voice-transcribe"], "Muse Voice");
 });
 
 test("draftChanged is true only when a draft with a new id appears", () => {
@@ -67,13 +65,6 @@ test("draftChanged is true only when a draft with a new id appears", () => {
   assert.equal(draftChanged("a", { id: "a" }), false);
   assert.equal(draftChanged("a", { id: "b" }), true);
   assert.equal(draftChanged("a", null), false);
-});
-
-test("sourceLabel falls back to the raw source, never a blank", () => {
-  assert.equal(sourceLabel("typed"), "Typed");
-  assert.equal(sourceLabel("none"), "Not read");
-  assert.equal(sourceLabel("odd-model"), "odd-model");
-  assert.equal(sourceLabel(undefined), "Not read");
 });
 
 const OBS = { kind: "obs", mode: "tick" };
@@ -127,13 +118,6 @@ test("proofOf finds the photo, the voice flag and the mismatch flag", () => {
   assert.deepEqual([b.voice, b.photo, b.flagged], [false, null, false]);
   assert.equal(proofOf({ via: "text", proof_id: null, match: null }, photos).typed, true);
   assert.equal(proofOf({ via: "tap", proof_id: "gone", match: "ok" }, photos).photo, null);
-});
-
-test("sourceLabel names a failed or fallback read", () => {
-  assert.equal(sourceLabel("failed"), "Not read (the model call failed)");
-  assert.equal(sourceLabel("prepared (live call failed)"), "Prepared demo result (the live call failed)");
-  assert.equal(sourceLabel("none"), "Not read");
-  assert.equal(sourceLabel("muse-spark-1.3"), "Muse Spark");
 });
 
 test("lastDoneLine names time, who and how, with the photo match", () => {

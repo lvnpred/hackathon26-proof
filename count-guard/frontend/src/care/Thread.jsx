@@ -1,7 +1,6 @@
 import { ASK_DOCTOR, NOT_FOUND, answerByLine, medicineLine } from "./askText.js";
 import { patientMarkLine } from "./brownbag.js";
 import { Evidence } from "./Evidence.jsx";
-import { sourceLabel } from "./drafts";
 import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
 import { threadItems, threadStatus } from "./thread.js";
@@ -44,7 +43,7 @@ function Answer({ item, onAskDoctor, episodeId, version, moment }) {
         <ul className="task-list">
           {raw.rows.map((row, i) => <li key={i}><span className={row.flag ? "pill sun" : ""}>{medicineLine(row)}</span></li>)}
         </ul>
-        <p className="small">{raw.why} <span className="muted">({sourceLabel(raw.source)})</span></p>
+        <p className="small">{raw.why}</p>
         {raw.evidence_id && <Evidence episodeId={episodeId} evidenceId={raw.evidence_id} linkLines={false} version={version} rows={raw.rows} />}
         {(raw.marks || []).map((mark) => <p className="small" key={mark.row}><span className="pill info">{patientMarkLine(mark, raw.rows[mark.row])}</span></p>)}
       </>

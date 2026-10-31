@@ -9,25 +9,6 @@ export const MATCH_LABEL = {
   none: "Photo kept, not checked",
 };
 
-export const SOURCE_LABEL = {
-  "muse-spark-1.3": "Muse Spark",
-  rules: "Rules (no model)",
-  "rules (model reply not usable)": "Rules (model reply not usable)",
-  prepared: "Prepared demo result",
-  "prepared (live call failed)": "Prepared demo result (the live call failed)",
-  failed: "Not read (the model call failed)",
-  unreadable: "Clip could not be read",
-  "sam-3.1": "SAM 3.1",
-  typed: "Typed",
-  "muse-voice-transcribe": "Muse Voice",
-};
-
-// A source of "none" (a photo kept without a read) has no entry in SOURCE_LABEL.
-export function sourceLabel(source) {
-  if (!source || source === "none") return "Not read";
-  return SOURCE_LABEL[source] || source;
-}
-
 // True when a draft with an id we have not loaded yet has appeared (drives the prefill effects).
 export function draftChanged(prevId, draft) {
   return Boolean(draft?.id) && draft.id !== prevId;

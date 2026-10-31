@@ -6,6 +6,7 @@ import { DEMO, useCareWard } from "./CareShell";
 import Fault from "./Fault";
 import LoadError from "./LoadError";
 import { NUDGE_SCOPES } from "./faults";
+import { nudgeText } from "./alerts";
 import { queueRows } from "./derive";
 import { opensOnKey, opensRow } from "./rows";
 
@@ -34,7 +35,7 @@ function QueueRow({ row, ward, open, toggle }) {
       {open && nudge && (
         <tr>
           <td colSpan={5}>
-            <Nudge nudge={nudge} busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} />
+            <Nudge nudge={{ ...nudge, says: nudgeText(nudge, ward.role) }} busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} />
             <Fault fault={ward.fault} episodeId={row.episodeId} only={NUDGE_SCOPES} />
           </td>
         </tr>

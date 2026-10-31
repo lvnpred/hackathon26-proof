@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { audioName, micStatus, pickMime } from "./recorder.js";
-import { MATCH_LABEL, SOURCE_LABEL } from "./drafts.js";
+import { MATCH_LABEL } from "./drafts.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const UNAVAILABLE = "Recording is not available in this browser. Choose an audio file or type what was said.";
@@ -29,6 +29,6 @@ test("micStatus reports unsupported and denied, plainly", () => {
 });
 
 test("no label or message reads as advice", () => {
-  const texts = [UNAVAILABLE, DENIED, ...Object.values(MATCH_LABEL), ...Object.values(SOURCE_LABEL)];
+  const texts = [UNAVAILABLE, DENIED, ...Object.values(MATCH_LABEL)];
   texts.forEach((t) => assert.equal(ADVICE.test(t), false, t));
 });

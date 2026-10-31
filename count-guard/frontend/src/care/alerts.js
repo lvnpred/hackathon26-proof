@@ -1,6 +1,5 @@
 // Open alerts: which ones are safety alerts, who may answer, and how the strip and header name them.
 export const SAFETY = ["obs_past_limit", "count_open"];
-const WHO = { nurse: "the nurse", doctor: "the doctor", patient: "the patient" };
 
 // "R. Kumar, 58 M (synthetic)" -> "Kumar"
 export function surname(name) {
@@ -29,17 +28,9 @@ export function stripPills(pills, episodeId, role) {
 // A nudge reads in the patient's words for the patient and in staff words for staff; an older nudge has one wording.
 export const nudgeText = (nudge, role) => (role === "patient" ? nudge.says : nudge.says_staff || nudge.says);
 
-// The newest open safety nudge, as the NOW line. Staff screens read the staff wording; the patient keeps `says`.
-export function alertNow(view, role) {
-  const safety = (view?.nudges || []).filter((n) => SAFETY.includes(n.kind));
-  if (!safety.length) return null;
-  const latest = safety.reduce((a, b) => (b.at_ms >= a.at_ms ? b : a));
-  return `Waiting for ${WHO[latest.to] || latest.to}'s answer: ${nudgeText(latest, role)}`;
-}
-
-// Every open nudge, safety first. The nurse, the addressee and the deep-linked line may answer.
+// Every open nudge, safety first. The nurse, the addressee and the deep-linked line may answer. The patient sees only nudges addressed to the patient (R16).
 export function bannerAlerts(view, role, line) {
-  const items = (view?.nudges || []).map((nudge) => ({
+  const items = (view?.nudges || []).filter((nudge) => role !== "patient" || nudge.to === "patient").map((nudge) => ({
     nudge,
     safety: SAFETY.includes(nudge.kind),
     canAnswer: role === "nurse" || nudge.to === role || nudge.id === line,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { showTrayFlag } from "./derive.js";
-import { SAFETY, alertNow, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
+import { SAFETY, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
 
 const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "Day 0 10:00" });
 const pill = (episodeId, name, who, what, role = "nurse") => ({ key: `${episodeId}:${what}`, episodeId, name, who, what, role });
@@ -16,11 +16,6 @@ test("stripPills on a chart keeps that patient's pills only", () => {
   const pills = [pill("e9", "A. Das", "Patient", "x"), pill("e4", "R. Kumar", "Nurse", "y")];
   assert.deepEqual(stripPills(pills, "e4", "nurse").mine.map((p) => p.text), ["Nurse → y"]);
   assert.deepEqual(stripPills(pills, "e7", "nurse").mine, []);
-});
-test("alertNow picks the newest safety nudge", () => {
-  const view = { nudges: [n("a", "obs_past_limit", "nurse", 1, "BP low."), n("b", "count_open", "nurse", 2, "Count open."), n("c", "obs_overdue", "nurse", 3)] };
-  assert.equal(alertNow(view), "Waiting for the nurse's answer: Count open.");
-  assert.equal(alertNow({ nudges: [n("c", "obs_overdue", "nurse", 3)] }), null);
 });
 test("bannerAlerts gives the form to the nurse, to the addressee and to the deep link", () => {
   const view = { nudges: [n("o", "obs_overdue", "nurse", 1), n("a", "obs_past_limit", "nurse", 2)] };
@@ -85,9 +80,8 @@ test("nudgeText gives staff the staff wording and the patient the patient wordin
   assert.equal(nudgeText({ says: "a", says_staff: "b" }, "patient"), "a");
   for (const role of ["doctor", "nurse", "patient"]) assert.equal(nudgeText({ says: "a" }, role), "a");
 });
-test("alertNow words a strip nudge for staff and keeps the patient's wording for the patient", () => {
-  const strip = { ...n("s", "count_open", "patient", 5, "This strip reads amlodipine 10 mg."), says_staff: "Strip reads amlodipine 10 mg; prescription says 5 mg." };
-  assert.equal(alertNow({ nudges: [strip] }, "nurse"), "Waiting for the patient's answer: Strip reads amlodipine 10 mg; prescription says 5 mg.");
-  assert.equal(alertNow({ nudges: [strip] }, "patient"), "Waiting for the patient's answer: This strip reads amlodipine 10 mg.");
-  assert.equal(alertNow({ nudges: [n("a", "count_open", "nurse", 1, "Old wording.")] }, "doctor"), "Waiting for the nurse's answer: Old wording.");
+test("bannerAlerts shows the patient only nudges addressed to the patient", () => {
+  const view = { nudges: [n("a", "obs_overdue", "nurse", 1), n("p", "strip_strength_differs", "patient", 2)] };
+  assert.deepEqual(bannerAlerts(view, "patient", null).map((x) => x.nudge.id), ["p"]);
+  assert.deepEqual(bannerAlerts(view, "nurse", null).map((x) => x.nudge.id), ["a", "p"]);
 });

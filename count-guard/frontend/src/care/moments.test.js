@@ -155,6 +155,8 @@ test("capabilities in the flow: sources use the new components", () => {
   assert.match(read("AlertBanner.jsx"), /<AiMoment /);
   assert.match(read("MedicinesFromHome.jsx"), /<AiMoment /);
   assert.match(read("AskInbox.jsx"), /Answered by record bot/);
+  assert.match(read("Queue.jsx"), /nudgeText\(nudge, ward\.role\)/);
+  assert.doesNotMatch(read("drafts.js"), /Rules \(no model\)|Prepared demo result/);
   const handover = read("HandoverCard.jsx");
   for (const text of ["Shift handover", "Ask Muse Spark 1.3 to word it", "Draft handover", "Accept as {taker}"]) assert.ok(handover.includes(text), text);
   assert.match(handover, /\/handover\/\$\{handover\.id\}\/accept/);

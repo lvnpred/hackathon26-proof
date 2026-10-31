@@ -87,7 +87,6 @@ test("answerHow: voice only for unchanged heard text", async () => {
   assert.equal(questionText("nurse", { text: "Can I take two?" }), "Question from the patient");
 });
 
-import { sourceLabel } from "./drafts.js";
 import { NOTE_HIDDEN, answerSourceLine, noteText, nudgeLabel, NUDGE_LABEL } from "./askText.js";
 import { readFileSync } from "node:fs";
 
@@ -95,7 +94,9 @@ test("answerSourceLine names the voice source for a doctor answer and never the 
   assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "prepared" }), "Muse Voice · prepared");
   assert.equal(answerSourceLine({ source: "doctor", via: "text", heard_by: "" }), "");
   assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "" }), "");
-  assert.equal(answerSourceLine({ source: "record" }), sourceLabel("record"));
+  assert.equal(answerSourceLine({ source: "rules" }), "Rules");
+  assert.equal(answerSourceLine({ source: "muse-spark-1.3" }), "Muse Spark 1.3 · live");
+  assert.equal(answerSourceLine({ source: "record" }), "");
 });
 
 test("noteText shows the patient's note to the doctor only", () => {

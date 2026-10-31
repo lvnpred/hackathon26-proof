@@ -3,6 +3,7 @@ import { patientMarkLine } from "./brownbag.js";
 import { Evidence } from "./Evidence.jsx";
 import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
+import { displayName } from "./names.js";
 import { routedLine, threadItems, threadStatus } from "./thread.js";
 
 const THUMB = { objectFit: "cover", borderRadius: 6 };
@@ -32,7 +33,7 @@ function Answer({ item, onAskDoctor, episodeId, version, moment }) {
     return (
       <>
         <img src={raw.photo.url} alt="Your healing photo" width={96} height={96} style={THUMB} />
-        {answer && <p>{answer.label}{answer.note && <> · {answer.note}</>} <span className="small muted">{answer.by}</span></p>}
+        {answer && <p>{answer.label}{answer.note && <> · {answer.note}</>} <span className="small muted">{displayName(answer.by)}</span></p>}
       </>
     );
   }

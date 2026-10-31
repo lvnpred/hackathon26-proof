@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { whenText } from "./when.js";
+import { displayName } from "./names.js";
 import { MATCH_LABEL, proofOf } from "./drafts";
-import { chipFor, momentFor } from "./moments.js";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
@@ -26,7 +26,7 @@ export default function MyCare() {
         {(view.order_list || []).length === 0 && <p className="empty small">No orders yet.</p>}
         {(view.order_list || []).map((order) => (
           <div key={order.id}>
-            <p className="small">Ordered by {order.by} · {orderStatus(order, view.state, true)}</p>
+            <p className="small">{[`Ordered by ${displayName(order.by)}`, orderStatus(order, view.state, true)].filter(Boolean).join(" · ")}</p>
             <ul className="task-list">
               {orderLines(order, view.tasks || []).map(({ key, text, task }) => {
                 if (!task) return <li key={key}><span>{text}</span></li>;
@@ -37,12 +37,11 @@ export default function MyCare() {
                     {task.video && <p className="small muted">{taskCheckLine(view, task)}</p>}
                     {(task.done || []).map((d, index) => {
                       const proof = proofOf(d, view.photos);
-                      const moment = momentFor(view, proof.photo?.check?.evidence_id);
                       return (
                         <p className="small muted" key={`${task.id}:${index}`}>
-                          Done by {d.by} at {whenText(d.at_ms, ward.nowMs)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
+                          Done by {displayName(d.by)} at {whenText(d.at_ms, ward.nowMs)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
                           {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
-                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span> {moment && <span className="chip">{chipFor(moment)}</span>}</>}
+                          {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span></>}
                         </p>
                       );
                     })}

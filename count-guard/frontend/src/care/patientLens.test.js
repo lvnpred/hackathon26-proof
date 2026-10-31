@@ -31,3 +31,12 @@ test("patient lens: AiHandling renders nothing and ProposalCard stays out of pat
 test("StatePanel gives the patient no strip", () => {
   assert.match(src("StatePanel.jsx"), /default:\s*\n\s*return <p className="note"/);
 });
+
+test("patient lens: no chip beside a photo match, none in AiMoment, names go through displayName", () => {
+  assert.doesNotMatch(src("MyCare.jsx"), /chipFor\(/);
+  assert.match(src("MyCare.jsx"), /Done by \{displayName\(d\.by\)\}/);
+  assert.match(src("MyCare.jsx"), /Ordered by \$\{displayName\(order\.by\)\}/);
+  assert.match(src("AiMoment.jsx"), /lens !== "patient" && <span className="chip">/);
+  assert.doesNotMatch(src("AiMoment.jsx"), /AiMark/);
+  assert.match(src("Thread.jsx"), /displayName\(answer\.by\)/);
+});

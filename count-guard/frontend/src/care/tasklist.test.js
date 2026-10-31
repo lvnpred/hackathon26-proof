@@ -100,6 +100,13 @@ test("orderStatus says what happens to a clinic order", () => {
   assert.equal(orderStatus({ acknowledged_by: "Nurse Meena" }, "clinic_done"), "Acknowledged by Nurse Meena");
 });
 
+test("orderStatus for the patient never mentions acknowledgement, the nurse or the AI", () => {
+  const o = { acknowledged_by: "AI (on behalf of Ward 4)", by: "Dr. A. Rao (synthetic)" };
+  for (const state of ["ward", "theatre", "clinic", "clinic_done"]) assert.doesNotMatch(orderStatus(o, state, true), /\bAI\b|Acknowledged|nurse/i);
+  assert.equal(orderStatus(o, "ward", true), "");
+  assert.equal(orderStatus(o, "clinic_done", true), "Not started: the visit was closed");
+});
+
 test("markDone: due work is primary, later work is early", () => {
   assert.deepEqual(markDone("overdue"), { label: "Mark done", primary: true });
   assert.deepEqual(markDone("due"), { label: "Mark done", primary: true });

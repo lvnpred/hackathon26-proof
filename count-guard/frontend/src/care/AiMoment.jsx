@@ -10,7 +10,7 @@ export default function AiMoment({ moment, role, lens = "staff", episodeId, thum
   return (
     <div className="ai-moment" data-moment={moment.id}>
       {thumb}
-      <span className="chip">{chipFor(moment)}</span>
+      {lens !== "patient" && <span className="chip">{chipFor(moment)}</span>}
       {!quiet && finding && <span className="ai-moment-text">{finding}</span>}
       <StatusPill {...findingPill(moment, role)} />
       {canInspect(moment, lens) && (

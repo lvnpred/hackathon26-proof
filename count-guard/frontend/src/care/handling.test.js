@@ -112,6 +112,13 @@ test("myPatientsStrip", () => {
   assert.deepEqual(myPatientsStrip(patients, "patient"), { rows: [], proposals: [] });
 });
 
+test("myPatientsStrip keeps the newest live row per patient", () => {
+  const two = { handling: [row("a", { at_ms: 1 * 60 * MIN }), row("b", { at_ms: 9 * 60 * MIN, summary: "Newest" }), row("c", { at_ms: 12 * 60 * MIN, status: "undone" })], proposals: [] };
+  const patients = [{ id: "ep1", name: "A", view: { ops: two } }, { id: "ep2", name: "B", view: { ops: { handling: [row("z")] } } }];
+  const s = myPatientsStrip(patients, "nurse");
+  assert.deepEqual(s.rows.map((r) => [r.episodeId, r.text]), [["ep1", "Newest"], ["ep2", "Reminded Nurse Meena"]]);
+});
+
 test("dock chip, pause label, routed line, constants", () => {
   assert.equal(aiChip(null), "");
   assert.equal(aiChip(false), "AI: running");

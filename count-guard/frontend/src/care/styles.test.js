@@ -94,3 +94,10 @@ test("care.css styles the AI moment, chips, tone pills and the Inspector drawer"
   assert.match(css, /\.inspector \{[^}]*width:\s*480px/);
   assert.match(css, /@media \(max-width: 600px\) \{\s*\.inspector \{[^}]*width:\s*100%/);
 });
+
+test("care.css styles the AI handling strip and the proposal card with 44 px targets", () => {
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.ai-handling/);
+  assert.match(css, /\.proposal-card/);
+  assert.match(css, /\.ai-handling button[^{]*\{[^}]*min-height:\s*44px/);
+});

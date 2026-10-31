@@ -6,6 +6,8 @@ import LoadError from "./LoadError";
 import Patients from "./Patients";
 import Queue from "./Queue";
 import { STATUS } from "./faults";
+import ProposalCard from "./ProposalCard.jsx";
+import { OPS_SCOPE, myPatientsStrip, needsTitle, stripTitle } from "./handling.js";
 import { patientGroups, statusWord } from "./patientGroups";
 import { STATUS_CHOICES } from "./status";
 
@@ -27,6 +29,30 @@ function PatientList({ rows, kind }) {
   );
 }
 
+// Under the status menu: one live row per patient, then this doctor's proposals. Each acts on its own episode.
+function AiStrip({ ward }) {
+  const { rows, proposals } = myPatientsStrip(ward.patients, ward.role);
+  if (!rows.length && !proposals.length) return null;
+  return (
+    <section className="ai-handling" aria-label="AI is handling">
+      <p className="label">{stripTitle(rows.length)}</p>
+      <ul className="ai-handling-list">
+        {rows.map((r) => (
+          <li key={r.episodeId}><Link to={`/chart/${r.episodeId}`}>{r.name} · {r.text}</Link></li>
+        ))}
+      </ul>
+      {proposals.length > 0 && <p className="label">{needsTitle(proposals.length)}</p>}
+      {proposals.map(({ episodeId, name, p }) => (
+        <div key={p.work_id}>
+          <p className="small muted">{name}</p>
+          <ProposalCard p={p} role={ward.role} busy={ward.busy} episodeId={episodeId} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
+          <Fault fault={ward.fault} episodeId={episodeId} only={[OPS_SCOPE]} />
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export default function MyPatients() {
   const ward = useCareWard();
   const { waiting, quiet } = patientGroups(ward.patients, ward.nowMs);
@@ -43,6 +69,7 @@ export default function MyPatients() {
         </div>
         <Fault fault={ward.fault} episodeId={null} only={[STATUS]} />
       </details>
+      <AiStrip ward={ward} />
       <h2>Waiting on you · {waiting.length}</h2>
       <PatientList rows={waiting} kind="waiting" />
       <h2>Nothing for you now · {quiet.length}</h2>

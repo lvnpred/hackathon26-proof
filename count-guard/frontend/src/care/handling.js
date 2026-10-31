@@ -65,7 +65,9 @@ export function myPatientsStrip(patients, role) {
   for (const patient of patients || []) {
     const name = displayName(patient.name);
     const ops = patient.view?.ops;
-    for (const r of handlingRows(ops, 0)) if (!r.undone) rows.push({ episodeId: patient.id, name, text: r.text });
+    const live = (ops?.handling || []).filter((r) => r.status !== "undone");
+    const newest = live.reduce((best, r) => (best == null || r.at_ms > best.at_ms ? r : best), null);
+    if (newest) rows.push({ episodeId: patient.id, name, text: toRow(newest, 0).text });
     for (const p of proposalsFor(ops, role)) proposals.push({ episodeId: patient.id, name, p });
   }
   return { rows, proposals };

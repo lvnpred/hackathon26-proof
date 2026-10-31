@@ -5,9 +5,11 @@ import { TABS, correctionLine, inspectEpisode, modelRows, readInspect, recordLin
 import { findPatient } from "./Patients";
 import { VoiceFound, VoiceInput } from "./InspectVoice.jsx";
 import { AnswerFound, AnswerInput, DraftFound, DraftInput, RuleFound, RuleInput } from "./InspectText.jsx";
+import { AgentFound, AgentInput } from "./InspectAgent.jsx";
+import { agentMoments } from "./handling.js";
 import { PhotoFound, RawOutput, VisualFound, VisualInput } from "./InspectVisual.jsx";
 
-// Registration point: Tasks 3-5 fill each kind with { Input, Found }; the ops agent adds `agent`.
+// Registration point: Tasks 3-5 fill each kind with { Input, Found }; the ops agent registers `agent`.
 // Both components take { moment, episodeId, view, role, lens, focus, setFocus }.
 // An unregistered kind renders the finding only.
 export const KIND_VIEWS = {
@@ -17,6 +19,7 @@ export const KIND_VIEWS = {
   answer: { Input: AnswerInput, Found: AnswerFound },
   rule: { Input: RuleInput, Found: RuleFound },
   draft: { Input: DraftInput, Found: DraftFound },
+  agent: { Input: AgentInput, Found: AgentFound },
 };
 
 const CLEAR = ["inspect", "episode", "focus"];
@@ -77,10 +80,10 @@ function RecordTab({ moment, episodeId, lens }) {
   );
 }
 
-function Body({ moment, tab, episodeId, view, role, lens, initialFocus }) {
+function Body({ moment, tab, episodeId, view, role, lens, initialFocus, act, nowMs, busy }) {
   const [focus, setFocus] = useState(initialFocus);
   const views = KIND_VIEWS[moment.kind];
-  const props = { moment, episodeId, view, role, lens, focus, setFocus };
+  const props = { moment, episodeId, view, role, lens, focus, setFocus, act, nowMs, busy };
   const finding = <p>{findingFor(moment, lens)}</p>;
   if (tab === "record") return <RecordTab moment={moment} episodeId={episodeId} lens={lens} />;
   if (tab === "model") return <ModelTab moment={moment} episodeId={episodeId} />;
@@ -105,7 +108,7 @@ export default function Inspector({ ward }) {
   const own = ward.role === "patient" ? findPatient(ward.patients, ward.patientBed)?.id : null;
   const episodeId = inspectEpisode({ lens, param: paramEpisode, chartId, own });
   const patient = (ward.patients || []).find((p) => p.id === episodeId);
-  const moment = resolveMoment(patient?.view?.ai_moments, momentId, lens);
+  const moment = resolveMoment([...(patient?.view?.ai_moments || []), ...agentMoments(patient?.view?.ops, episodeId)], momentId, lens);
   const status = moment && statusLabel(moment, ward.role);
   const tabs = tabsFor(lens);
 
@@ -129,7 +132,7 @@ export default function Inspector({ ward }) {
             ))}
           </div>
           <div role="tabpanel" className="inspector-panel">
-            <Body key={moment.id} initialFocus={urlFocus} moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} />
+            <Body key={moment.id} initialFocus={urlFocus} moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} nowMs={ward.nowMs} busy={ward.busy} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
           </div>
         </>
       )}

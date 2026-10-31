@@ -3,7 +3,7 @@ import { patientMarkLine } from "./brownbag.js";
 import { Evidence } from "./Evidence.jsx";
 import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
-import { threadItems, threadStatus } from "./thread.js";
+import { routedLine, threadItems, threadStatus } from "./thread.js";
 
 const THUMB = { objectFit: "cover", borderRadius: 6 };
 
@@ -66,6 +66,7 @@ export default function Thread({ view, nowMs, onAskDoctor }) {
             <li className="thread-row" data-line={item.id} key={item.id}>
               <p className="small"><b>{item.title}</b> <span className="pill">{threadStatus(item, nowMs)}</span></p>
               {item.said && <p className="quote">{"“"}{item.said}{"”"}</p>}
+              {item.kind === "doctor" && !item.answer && routedLine(view, item.id) && <p className="small">{routedLine(view, item.id)}</p>}
               <Answer item={item} onAskDoctor={onAskDoctor} episodeId={view.episode?.id} version={view.timeline?.length} moment={item.kind === "record" ? momentFor(view, item.id) : null} />
             </li>
           ))}

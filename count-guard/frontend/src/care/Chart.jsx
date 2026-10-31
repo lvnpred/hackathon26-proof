@@ -8,6 +8,7 @@ import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import History from "./History";
 import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
+import { OPS_SCOPE } from "./handling.js";
 import MedicinesFromHome from "./MedicinesFromHome.jsx";
 import RecordEvidence from "./RecordEvidence.jsx";
 import StateHeader from "./StateHeader";
@@ -76,8 +77,8 @@ export default function Chart() {
 
       <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} name={patient.name} nowMs={ward.nowMs} busy={ward.busy} act={act} ask={ask} fault={ward.fault} episodeId={episodeId} />
 
-      <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} />
-      <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES]} />
+      <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} fault={ward.fault} />
+      <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES, OPS_SCOPE]} />
 
       <MedicinesFromHome view={view} role={ward.role} act={act} busy={ward.busy} />
 

@@ -32,7 +32,7 @@ function Orders({ orders, by, busy, act }) {
 }
 
 // The nurse's actions for the patient's current state: the card holds the step, the ward tasks follow.
-export default function NurseActions({ state, card, view, act, upload, ask, busy, nowMs, episodeId, replaced }) {
+export default function NurseActions({ state, card, view, act, upload, ask, busy, nowMs, episodeId, replaced, footer }) {
   const by = state === "theatre" ? THEATRE_NURSE : WARD_NURSE;
   const move = (to, checklist) => act("/state", { to, by, reason: "", checklist });
   const primary = {
@@ -53,7 +53,7 @@ export default function NurseActions({ state, card, view, act, upload, ask, busy
   };
   return (
     <>
-      <NextCard card={card}>{card.actions.map((key) => primary[key])}</NextCard>
+      <NextCard card={card} footer={footer}>{card.actions.map((key) => primary[key])}</NextCard>
       {state === "ward" && <HandoverCard view={view} busy={busy} act={act} />}
       {(state === "ward" || state === "theatre") && <NurseTasks view={view} nowMs={nowMs} state={state} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
       {!["admitting", "ward", "theatre", "discharging"].includes(state) && <p className="empty small">Nothing for the nurse to do from this state.</p>}

@@ -223,3 +223,14 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .rule-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 600px) { .rule-cards { grid-template-columns: 1fr; } }
 .inspector-found .plan-item.lit { background: var(--sun-soft); color: var(--ink); outline: 2px solid var(--sun-text); border-radius: 6px; }
+
+/* AI handling strip and proposal cards (ops agent) */
+.ai-handling { display: grid; gap: 8px; min-width: 0; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line) }
+.ai-handling-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px }
+.ai-handling-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0 }
+.ai-handling-text { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere }
+.ai-handling button, .ai-handling a, .proposal-card button { min-height: 44px }
+.ai-handling a { display: inline-flex; align-items: center; color: var(--action) }
+.ai-handling button.linklike, .proposal-card button.linklike { padding: 0 8px; border: 0; background: transparent; color: var(--action); text-decoration: underline; font: inherit; cursor: pointer }
+.proposal-card { display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--sun); border-radius: 12px; background: var(--sun-soft); color: var(--ink) }
+.proposal-card .next-text { font-size: 1.05rem }

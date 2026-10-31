@@ -58,7 +58,7 @@ export function agentMoment(row, episodeId) {
   const workId = row.work_id;
   const spark = row.model === "spark";
   return {
-    id: workId, kind: "agent", capability: "ops",
+    id: workId, kind: "agent", capability: "ops", at_ms: row.at_ms,
     title: displayName(proposal ? row.sentence : row.summary),
     finding: reason, patient_finding: null,
     status: proposal ? "open" : row.status === "undone" ? "undone" : "recorded",

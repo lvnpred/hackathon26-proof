@@ -1,17 +1,18 @@
-import { canInspect, chipFor, findingFor, statusLabel } from "./moments.js";
+import { canInspect, chipFor, findingFor } from "./moments.js";
+import { findingPill } from "./finding.js";
+import StatusPill from "./StatusPill.jsx";
 import { useInspector } from "./Inspector.jsx";
 
 // One AI result as one line: chip, finding, status, Inspect (C6).
 export default function AiMoment({ moment, role, lens = "staff", episodeId, thumb = null, quiet = false }) {
   const { openInspector } = useInspector();
-  const status = statusLabel(moment, role);
-  const finding = findingFor(moment, lens);
+    const finding = findingFor(moment, lens);
   return (
     <div className="ai-moment" data-moment={moment.id}>
       {thumb}
       <span className="chip">{chipFor(moment)}</span>
       {!quiet && finding && <span className="ai-moment-text">{finding}</span>}
-      <span className={`pill tone-${status.tone}`}>{status.text}</span>
+      <StatusPill {...findingPill(moment, role)} />
       {canInspect(moment, lens) && (
         <button type="button" className="quiet" onClick={() => openInspector(moment.id, { episodeId })}>
           Inspect <span aria-hidden="true">›</span>

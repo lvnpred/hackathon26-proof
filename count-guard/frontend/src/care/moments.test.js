@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { canInspect, chipFor, draftChip, FILTERS, filterMoments, findingFor, heardChip, lastSigned, momentFor, statusLabel, stripMoments, botMoment, dayPlanMoment } from "./moments.js";
+import { canInspect, chipFor, draftChip, FILTERS, filterMoments, findingFor, heardChip, lastSigned, momentFor, stripMoments, botMoment, dayPlanMoment } from "./moments.js";
+import { findingPill } from "./finding.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const call = (model, source) => ({ model, source });
@@ -27,14 +28,13 @@ test("heardChip and draftChip", () => {
   assert.equal(draftChip("", "rules (model reply not usable)"), "Muse Spark 1.3 · failed");
 });
 
-test("status labels follow the viewer", () => {
-  assert.deepEqual(statusLabel({ status: "flagged", owner: "doctor" }, "doctor"), { text: "Needs you", tone: "blue" });
-  assert.deepEqual(statusLabel({ status: "flagged", owner: "doctor" }, "nurse"), { text: "Flagged", tone: "amber" });
-  assert.deepEqual(statusLabel({ status: "open", owner: "nurse" }, "doctor"), { text: "Waiting for the nurse", tone: "grey" });
-  assert.deepEqual(statusLabel({ status: "open", owner: "nurse" }, "nurse"), { text: "Needs you", tone: "blue" });
-  assert.deepEqual(statusLabel({ status: "matches", owner: null }, "nurse"), { text: "Matches", tone: "green" });
-  assert.deepEqual(statusLabel({ status: "recorded", owner: null }, "nurse"), { text: "Recorded", tone: "green" });
-  assert.deepEqual(statusLabel({ status: "failed", owner: null }, "nurse"), { text: "Failed", tone: "grey" });
+test("the pill follows the viewer and names the finding", () => {
+  const pill = (over) => ({ owner: null, ...over });
+  assert.deepEqual(findingPill(pill({ status: "open", owner: "nurse", finding_role: "wait", finding_text: "Waiting for the nurse" }), "doctor"), { role: "wait", text: "Waiting for the nurse" });
+  assert.deepEqual(findingPill(pill({ status: "open", owner: "nurse", finding_role: "wait", finding_text: "Waiting for the nurse" }), "nurse"), { role: "wait", text: "Needs you" });
+  assert.deepEqual(findingPill(pill({ status: "flagged", owner: "doctor", finding_role: "check", finding_text: "Surgeon to decide" }), "doctor"), { role: "check", text: "Surgeon to decide" });
+  assert.deepEqual(findingPill(pill({ status: "matches", finding_role: "fine", finding_text: "Matches" }), "nurse"), { role: "fine", text: "Matches" });
+  assert.deepEqual(findingPill(pill({ status: "recorded", finding_role: "done", finding_text: "Saved 09:05" }), "nurse"), { role: "done", text: "Saved 09:05" });
 });
 
 test("momentFor matches id, photo_id, evidence_id and written id", () => {

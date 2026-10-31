@@ -7,6 +7,7 @@ record fields (`moment_text`), never of model text.
 from __future__ import annotations
 
 from app.journey import moment_text as text
+from app.journey.finding import classify
 from app.journey import nudges
 from app.journey.medicines import day_plan
 from app.journey.stories import clock, count_of, plain
@@ -91,15 +92,18 @@ def _written(ix: _Index, anchor: dict, extra: list[dict]) -> list[dict]:
 
 def _moment(ix: _Index, anchor: dict, cap: str, finding: str, status: str, refs: dict, *, patient_finding: str | None = None,
             extra: list[dict] | None = None, calls: list | None = None, source: str = "", owner: str | None = None,
-            photo_id: str | None = None, moment_id: str | None = None, title: str | None = None) -> dict:
+            photo_id: str | None = None, moment_id: str | None = None, title: str | None = None,
+            resolver: dict | None = None) -> dict:
     p = anchor["payload"]
-    return {
+    moment = {
         "id": moment_id or anchor["id"], "kind": text.KIND[cap], "capability": cap, "title": title or text.TITLE[cap],
         "at_ms": anchor["ts_ms"], "calls": calls if calls is not None else (p.get("calls") or []), "source": source,
         "handmade": bool(p.get("handmade", False)), "finding": finding, "patient_finding": patient_finding,
         "status": status, "owner": owner if owner is not None else text.OWNER.get(cap), "filter": text.FILTER[cap],
         "evidence_id": p.get("evidence_id"), "photo_id": photo_id, "refs": refs, "written": _written(ix, anchor, extra or []),
     }
+    moment["finding_role"], moment["finding_text"] = classify(cap, status, moment, ix, resolver)
+    return moment
 
 
 def _check_status(p: dict) -> str:
@@ -110,13 +114,14 @@ def _check_status(p: dict) -> str:
     return "failed" if p.get("source") in FAILED_SOURCES else "recorded"
 
 
-def _resolved(ix: _Index, e: dict) -> bool:
-    """A flagged camera check stops needing anyone once the record answers it (I-1)."""
+def _resolved(ix: _Index, e: dict) -> dict | None:
+    """The record event that answers a flagged camera check (I-1), or None while it still needs someone."""
     later = [x for x in ix.shown if ix.order[x["id"]] > ix.order[e["id"]]]
     if e["event_type"] == "swabs.counted":  # a closing count saved equal to the pack opened
-        return any(x["event_type"] == "count.closing" and (x["payload"].get("unaccounted") or 0) == 0 for x in later)
-    if any(x["event_type"] == e["event_type"] and x["payload"].get("match") == "ok" for x in later):
-        return True  # a later check of the same kind matched
+        return next((x for x in later if x["event_type"] == "count.closing" and (x["payload"].get("unaccounted") or 0) == 0), None)
+    same = next((x for x in later if x["event_type"] == e["event_type"] and x["payload"].get("match") == "ok"), None)
+    if same:
+        return same  # a later check of the same kind matched
     before = [x for x in ix.shown if ix.order[x["id"]] < ix.order[e["id"]] and x["event_type"] == "patient.state"]
     in_theatre = bool(before) and before[-1]["payload"].get("to") == "theatre"
     for x in later:  # the patient has left theatre
@@ -124,23 +129,23 @@ def _resolved(ix: _Index, e: dict) -> bool:
             if x["payload"].get("to") == "theatre":
                 in_theatre = True
             elif in_theatre:
-                return True
-    return False
+                return x
+    return None
 
 
 def _visual(ix: _Index, e: dict) -> dict:
     p, cap = e["payload"], VISUAL[e["event_type"]]
     status = _check_status(p)
-    resolved = status == "flagged" and _resolved(ix, e)
-    if resolved:
+    resolver = _resolved(ix, e) if status == "flagged" else None
+    if resolver:
         status = "recorded"
     check = {"check": cap, "rows": p.get("rows") or [], "missing": p.get("missing"), "match": p.get("match"),
              "why": p.get("why"), "media": p.get("media", "video"), "unchecked": p.get("unchecked") or []}
     frames = p.get("frame_ids") or []
     moment = _moment(ix, e, cap, visual_finding(check["rows"]), status,
                      {"check": check}, patient_finding=text.PATIENT_TEXT[cap], source=p.get("source", ""),
-                     photo_id=frames[0] if frames else None)
-    if resolved:
+                     photo_id=frames[0] if frames else None, resolver=resolver)
+    if resolver:
         moment["owner"] = None  # nobody is waiting on it any more
     return moment
 

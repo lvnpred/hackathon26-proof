@@ -8,7 +8,8 @@ import {
 import { aiChip, pauseLabel } from "./dock.js";
 import { routedLine } from "./thread.js";
 import { resolveMoment } from "./inspect.js";
-import { chipFor, statusLabel } from "./moments.js";
+import { chipFor } from "./moments.js";
+import { findingPill } from "./finding.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const MIN = 60_000;
@@ -86,10 +87,10 @@ test("agentMoments resolve for staff, never for the patient, and work with chip 
   assert.equal(resolveMoment(list, "w1", "patient"), null);
   assert.equal(resolveMoment(list, "w1", "staff").id, "w1");
   assert.equal(chipFor(list[0]), "Rules");
-  assert.equal(statusLabel(list[1], "nurse").text, "Undone");
-  assert.equal(statusLabel(list[0], "nurse").text, "Recorded");
-  assert.equal(statusLabel(list[2], "doctor").text, "Needs you");
-  assert.equal(statusLabel(list[2], "nurse").text, "Waiting for the doctor");
+  assert.equal(findingPill(list[1], "nurse").text, "Undone");
+  assert.equal(findingPill(list[0], "nurse").text, "Saved 17:00");
+  assert.equal(findingPill(list[2], "doctor").text, "Needs you");
+  assert.equal(findingPill(list[2], "nurse").text, "Waiting for the doctor");
   assert.deepEqual(agentMoments(null, "ep1"), []);
 });
 

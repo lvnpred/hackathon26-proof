@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useMatch, useSearchParams } from "react-router-dom";
-import { chipFor, findingFor, statusLabel } from "./moments.js";
+import { chipFor, findingFor } from "./moments.js";
+import { findingPill } from "./finding.js";
+import StatusPill from "./StatusPill.jsx";
 import { TABS, correctionLine, inspectEpisode, modelRows, readInspect, recordLine, resolveMoment, tabsFor } from "./inspect.js";
 import { findPatient } from "./Patients";
 import { VoiceFound, VoiceInput } from "./InspectVoice.jsx";
@@ -109,7 +111,6 @@ export default function Inspector({ ward }) {
   const episodeId = inspectEpisode({ lens, param: paramEpisode, chartId, own });
   const patient = (ward.patients || []).find((p) => p.id === episodeId);
   const moment = resolveMoment([...(patient?.view?.ai_moments || []), ...agentMoments(patient?.view?.ops, episodeId)], momentId, lens);
-  const status = moment && statusLabel(moment, ward.role);
   const tabs = tabsFor(lens);
 
   return (
@@ -119,7 +120,7 @@ export default function Inspector({ ward }) {
           <>
             <h2>{moment.title}</h2>
             <span className="chip">{chipFor(moment)}</span>
-            <span className={`pill tone-${status.tone}`}>{status.text}</span>
+            <StatusPill {...findingPill(moment, ward.role)} />
           </>
         ) : <p>Nothing to inspect with that id.</p>}
         <button type="button" className="quiet" onClick={closeInspector}>Close</button>

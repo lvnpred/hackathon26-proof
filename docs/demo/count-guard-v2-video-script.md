@@ -88,7 +88,7 @@ On screen: `Clinic visit closed`
 #### `kumar-orders` · 0:54 · doctor · 8 s
 Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) Button "Dictate orders"; 5) File eval/p2/kumar-orders.wav into "Dictate orders"; 6) Button "Draft orders"
 
-On screen: `Draft from dictation · Rules (no model)` · `Heard by: Prepared demo result` · `Paracetamol`
+On screen: `Draft from dictation` · `Muse Voice → Rules · prepared` · `2 orders drafted from 25 words.` · `Paracetamol`
 
 > Dr. Rao dictates admission orders for Mr. Kumar, and a draft appears with its source named.
 
@@ -153,7 +153,7 @@ On screen: `On the ward` · `Dr. A. Rao: Available`
 #### `kumar-paracetamol` · 1:42 · nurse · 7 s
 Clicks: 1) Button "Say it: Paracetamol…" on the Paracetamol row; 2) File eval/p2/kumar-paracetamol.wav into that row; 3) Button "Use this"; 4) File eval/p2/strip-paracetamol.png into "Confirm task"; 5) Button "Confirm"
 
-On screen: `Paracetamol 1 g given to bed 4.` · `Heard by: Prepared demo result` · `Photo matches the task` · `by voice`
+On screen: `Paracetamol 1 g given to bed 4.` · `Muse Voice → Rules · prepared` · `Photo matches the task` · `by voice`
 
 > Nurse Meena records the paracetamol round by voice, adds the strip photo, and confirms.
 
@@ -167,7 +167,7 @@ On screen: `, by voice` · `Photo matches the task`
 #### `kumar-discharge` · 1:56 · doctor · 8 s
 Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Sign discharge"
 
-On screen: `Reference` · `15 of 15` · `Heard by: Prepared demo result` · `Being discharged`
+On screen: `Reference` · `Being discharged` (the AI moment `Muse Voice → Rules · prepared` · `5 sections drafted from 40 words.` is on screen before Sign discharge)
 
 > Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.
 
@@ -188,7 +188,7 @@ On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.`
 #### `kumar-review` · 2:19 · doctor · 9 s
 Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
 
-On screen: `Healing photo` · `Reference` · `Heard by: Prepared demo result` (before Send to R. Kumar) · `by voice · Prepared demo result` · `No visit needed`
+On screen: `Healing photo` · `Reference` · `Muse Voice · prepared` (before Send to R. Kumar) · `by voice · Muse Voice · prepared` · `No visit needed`
 
 > Dr. Rao opens the healing photo beside the reference photo and answers by voice.
 
@@ -279,12 +279,12 @@ Offline labels read `Rules (no model)` and `Prepared demo result`. Keyed labels 
 | `intro` | No model call. Say instead: "Count Guard is a research demo on a synthetic ward, running with live models." The dock reads models: live, not offline, when a key is set. |
 | `ai` | Try sample makes live calls with a key: SAM 3.1 runs one image call per tray concept (7). The chip reads live in place of Sample or prepared. |
 | `das-ask` | No model call: a medicine question is answered by quoting the prescription row. The label reads Rules (no model) with or without a key. |
-| `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
+| `kumar-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box. |
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
 | `kumar-count` | SAM 3.1 video call for the swab camera count. The label reads SAM 3.1. Switch: SWABS_LIVE. |
-| `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. No switch. |
-| `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark; Heard by reads Muse Voice. Live speech can be replaced by typing in the box. |
-| `kumar-review` | 1 Voice call (hear). Heard by reads Muse Voice. No switch. |
+| `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. No switch. |
+| `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box. |
+| `kumar-review` | 1 Voice call (hear). The chip reads Muse Voice · live. No switch. |
 | `iyer-bp` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. No switch. |
 | `iyer-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by typing in the box. |
 | `iyer-recheck` | 1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch. |

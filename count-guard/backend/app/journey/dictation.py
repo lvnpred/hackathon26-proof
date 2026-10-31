@@ -140,6 +140,59 @@ def parse_order_text(text: str) -> dict:
     return {"reason": reason[:300], "items": items[:20]}
 
 
+_PROOF_WORD = re.compile(r"\b(photo|picture|video)\b", re.I)
+
+
+def _limit_span(rule: re.Pattern, window: str, value: int) -> tuple[int, int] | None:
+    found = rule.search(window)
+    if not found:
+        return None
+    if found.group(1) == str(value):
+        return found.span(1)
+    after = re.search(rf"\b{value}\b", window[found.start():])
+    return (found.start() + after.start(), found.start() + after.end()) if after else None
+
+
+def order_spans(transcript: str, items: list[dict]) -> dict:
+    """Where each order field was said (R9). Offsets index digits(transcript), returned as `text`.
+
+    Per item, a window is the item's own clause (or the whole text for a paraphrase); a field not found gets no mark,
+    and a mark that overlaps an earlier one is dropped.
+    """
+    text = digits(transcript)
+    marks: list[dict] = []
+    for index, item in enumerate(items):
+        own = (item.get("text") or "").strip()
+        at = text.lower().find(own.lower()) if own else -1
+        lo, hi = (at, at + len(own)) if at >= 0 else (0, len(text))
+        window = text[lo:hi]
+        found: list[tuple[str, tuple[int, int] | None]] = []
+        name = (item.get("name") or "").strip()
+        if name:
+            hit = re.search(rf"\b{re.escape(name)}\b", window, re.I)
+            found.append(("name", hit.span() if hit else None))
+        if item.get("amount"):
+            hit = _AMOUNT.search(window)
+            found.append(("amount", hit.span() if hit else None))
+        if item.get("every_h"):
+            hit = _EVERY.search(window)
+            found.append(("every_h", hit.span() if hit else None))
+        for key, rule in (("sbp_min", _SBP_MIN), ("sbp_max", _SBP_MAX)):
+            value = (item.get("limits") or {}).get(key)
+            if value is not None:
+                found.append((f"limits.{key}", _limit_span(rule, window, value)))
+        if item.get("proof") and item["proof"] != "none":
+            hit = _PROOF_WORD.search(window)
+            found.append(("proof", hit.span() if hit else None))
+        marks += [{"start": lo + span[0], "end": lo + span[1], "item": index, "field": field} for field, span in found if span]
+    marks.sort(key=lambda m: m["start"])
+    kept: list[dict] = []
+    for mark in marks:
+        if not kept or mark["start"] >= kept[-1]["end"]:
+            kept.append(mark)
+    return {"text": text, "marks": kept}
+
+
 def discharge_sections(text: str) -> list[dict]:
     found: dict[str, list[str]] = {}
     for sentence in _clauses(text):

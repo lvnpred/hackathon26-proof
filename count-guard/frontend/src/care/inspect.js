@@ -4,6 +4,7 @@ import { INSPECT_ID } from "./moments.js";
 import { displayName } from "./names.js";
 import { explainRegions, plural, regionLabel } from "./evidence.js";
 import { stripLabel } from "./brownbag.js";
+import { sentenceText } from "./orders.js";
 
 export const TABS = [["input", "Input"], ["found", "What the AI found"], ["record", "Record"], ["model", "Model"]];
 
@@ -85,4 +86,63 @@ export function whyRegions(reader, regions) {
   const out = [`Read ${read} ${plural("strip", read)} from ${boxed} ${plural("region", boxed)}.`];
   if (boxed > read) out.push(boxed - read === 1 ? "1 region had no strip read." : `${boxed - read} regions had no strip read.`);
   return out;
+}
+
+// Order field names -> the label on the form (Voice tab).
+export const FIELD_LABEL = {
+  name: "Medicine",
+  amount: "Amount",
+  every_h: "Every",
+  proof: "Proof",
+  text: "Order",
+  "limits.sbp_min": "Systolic min",
+  "limits.sbp_max": "Systolic max",
+};
+
+// The text cut into [{ text, mark }]; a mark out of range or overlapping an earlier one is dropped, so the pieces always rejoin to `text`.
+export function segments(text, marks) {
+  const source = String(text ?? "");
+  const out = [];
+  let at = 0;
+  const sorted = [...(marks || [])].sort((a, b) => a.start - b.start);
+  for (const mark of sorted) {
+    if (!(mark.start >= at && mark.end > mark.start && mark.end <= source.length)) continue;
+    if (mark.start > at) out.push({ text: source.slice(at, mark.start), mark: null });
+    out.push({ text: source.slice(mark.start, mark.end), mark });
+    at = mark.end;
+  }
+  if (at < source.length) out.push({ text: source.slice(at), mark: null });
+  return out;
+}
+
+const NONE = "none";
+const fieldValue = (item, field) => {
+  const value = field.startsWith("limits.") ? item.limits?.[field.slice(7)] : field === "proof" ? (item.proof ?? NONE) : item[field];
+  return value == null || value === "" ? NONE : String(value);
+};
+const DIFF_FIELDS = ["text", "name", "amount", "every_h", "proof", "limits.sbp_min", "limits.sbp_max"];
+
+// R10: compare by index. A field that differs is one entry; a row in one list only is `added` or `removed`.
+export function fieldDiffs(drafted, signed) {
+  const a = drafted || [];
+  const b = signed || [];
+  const out = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+    if (i >= a.length) out.push({ item: i, field: "added", drafted: null, signed: sentenceText(b[i]) });
+    else if (i >= b.length) out.push({ item: i, field: "removed", drafted: sentenceText(a[i]), signed: null });
+    else {
+      for (const field of DIFF_FIELDS) {
+        const was = fieldValue(a[i], field);
+        const now = fieldValue(b[i], field);
+        if (was !== now) out.push({ item: i, field, drafted: was, signed: now });
+      }
+    }
+  }
+  return out;
+}
+
+export function diffLine(d) {
+  if (d.field === "added") return `Added at signing: ${d.signed}`;
+  if (d.field === "removed") return `Removed at signing: ${d.drafted}`;
+  return `${FIELD_LABEL[d.field]}: ${d.drafted} → ${d.signed}`;
 }

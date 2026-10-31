@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { heardLine, photoPurposeLabel, doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL, lastDoneLine, rowSession } from "./drafts.js";
+import { photoPurposeLabel, doneBody, proofOf, draftChanged, itemsToRows, MATCH_LABEL, photoCheckLabel, sourceLabel, newestPhoto, proposalChoices, sectionsToSummary, SOURCE_LABEL, lastDoneLine, rowSession } from "./drafts.js";
 import { orderRowsToItems } from "./orders.js";
 
 // The Task 2 Kumar draft, in the shape orderRowsToItems emits (P2-R9).
@@ -149,14 +149,6 @@ test("photoPurposeLabel names each purpose, and unknown ones plainly", () => {
   assert.equal(photoPurposeLabel("healing"), "Healing photo");
   assert.equal(photoPurposeLabel("medicines"), "Medicines photo");
   assert.equal(photoPurposeLabel("other"), "Photo");
-});
-
-test("heardLine: a typed draft says Typed with no Heard by; a heard draft names who heard it", () => {
-  assert.equal(heardLine({ transcript: "bp every 4 h", heard_by: "typed" }), "Typed: \u201cbp every 4 h\u201d");
-  assert.equal(heardLine({ transcript: "bp every 4 h" }), "Typed: \u201cbp every 4 h\u201d");
-  assert.equal(heardLine({ transcript: "bp every 4 h", heard_by: "muse-voice-transcribe" }), "Heard: \u201cbp every 4 h\u201d \u00b7 Heard by: Muse Voice");
-  assert.equal(heardLine({ heard_by: "typed" }), "");
-  assert.doesNotMatch(heardLine({ transcript: "x", heard_by: "typed" }), /Heard by/);
 });
 
 test("lastDoneLine names time, who and how, with the photo match", () => {

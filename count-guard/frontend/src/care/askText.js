@@ -2,6 +2,7 @@ import { label } from "./clock.js";
 import { waitedText } from "./derive.js";
 import { displayName, shortName } from "./names.js";
 import { sourceLabel } from "./drafts.js";
+import { heardChip } from "./moments.js";
 
 // Same copy as the server's not-found answer.
 export const NOT_FOUND = "I can't find that in your record.";
@@ -87,7 +88,7 @@ export const questionText = (role, question) => (role === "doctor" ? question.te
 
 // The source line under a doctor's answer: only a voice answer was heard by a model.
 export function answerSourceLine(answer) {
-  if (answer.source === "doctor") return answer.via === "voice" && answer.heard_by ? sourceLabel(answer.heard_by) : "";
+  if (answer.source === "doctor") return answer.via === "voice" && answer.heard_by ? heardChip(answer.heard_by) : "";
   return answer.source ? sourceLabel(answer.source) : "";
 }
 

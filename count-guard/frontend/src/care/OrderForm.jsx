@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { draftChanged, heardLine, itemsToRows, sourceLabel } from "./drafts";
+import AiMoment from "./AiMoment.jsx";
+import { draftChanged, itemsToRows } from "./drafts";
 import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 
 // Rows of orders; Sign orders posts the filled rows through onSign(items, draftId), which resolves to the new view or null.
 // A dictated draft fills the rows once per draft id; draftId is sent only while the rows still came from that draft.
-export default function OrderForm({ busy, onSign, draft }) {
+export default function OrderForm({ busy, onSign, draft, moment = null, episodeId }) {
   const [rows, setRows] = useState([]);
   const [draftId, setDraftId] = useState(null);
   if (draftChanged(draftId, draft)) {
@@ -26,10 +27,10 @@ export default function OrderForm({ busy, onSign, draft }) {
     <section className="card" aria-label="Orders">
       <p className="label">Orders</p>
       {draftId && (
-        <p className="note small" role="status">
-          Draft from dictation · {sourceLabel(draft?.source)}. Check each row, then sign.
-          {draft?.transcript && <> {heardLine(draft)}</>}
-        </p>
+        <>
+          {moment && <AiMoment moment={moment} role="doctor" episodeId={episodeId} />}
+          <p className="note small" role="status">Draft from dictation. Check each row, then sign.</p>
+        </>
       )}
       <div className="row">
         <button type="button" onClick={() => setRows([...rows, PREFILL.dose()])}>Add dose</button>

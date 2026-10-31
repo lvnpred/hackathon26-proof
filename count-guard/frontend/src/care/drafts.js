@@ -28,13 +28,6 @@ export function sourceLabel(source) {
   return SOURCE_LABEL[source] || source;
 }
 
-// What a dictated draft says about its words: only a heard draft names who heard it.
-export function heardLine(draft) {
-  if (!draft?.transcript) return "";
-  if (!draft.heard_by || draft.heard_by === "typed") return `Typed: \u201c${draft.transcript}\u201d`;
-  return `Heard: \u201c${draft.transcript}\u201d \u00b7 Heard by: ${sourceLabel(draft.heard_by)}`;
-}
-
 // The plain line for a photo's proof check; an unknown match reads as "kept, not checked".
 export function photoCheckLabel(check) {
   if (!check) return "";

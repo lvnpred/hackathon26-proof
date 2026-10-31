@@ -2,8 +2,8 @@ import { useState } from "react";
 import { EvidenceThumb } from "./Evidence.jsx";
 import ObsForm from "./ObsForm";
 import { prefillObs } from "./capture";
-import { doneBody, MATCH_LABEL, newestPhoto, sourceLabel } from "./drafts";
-import { chipFor, momentFor } from "./moments.js";
+import { doneBody, MATCH_LABEL, newestPhoto } from "./drafts";
+import { chipFor, draftChip, momentFor } from "./moments.js";
 import { obsValues } from "./tasklist";
 
 const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v)]));
@@ -50,8 +50,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       <p className="small">{task.title}</p>
       {session.transcript && (
         <p className="small">
-          “{session.transcript}” <span className="muted">· {sourceLabel(session.source)}</span>
-          {session.heardBy && session.via === "voice" && <span className="muted"> · Heard by: {sourceLabel(session.heardBy)}</span>}
+          “{session.transcript}” <span className="chip">{draftChip(session.via === "voice" ? session.heardBy : "", session.source)}</span>
         </p>
       )}
       {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}

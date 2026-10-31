@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { REGION_FIELD, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
+import { FIELD_LABEL, REGION_FIELD, diffLine, fieldDiffs, segments, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
 
 const src = (f) => fs.readFileSync(new URL(f, import.meta.url), "utf8");
 
@@ -106,4 +106,41 @@ test("whyRegions counts values for a monitor and labels for strips", () => {
   const meds = [{ label: "A", value: null }, { label: "B", value: null }, { label: null, value: null }];
   assert.deepEqual(whyRegions("medicines", meds), ["Read 2 strips from 3 regions.", "1 region had no strip read."]);
   for (const line of [...whyRegions("strip", strip), ...whyRegions("medicines", meds)]) assert.doesNotMatch(line, /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i);
+});
+
+test("segments reassemble the text, including overlap and out-of-range marks", () => {
+  const t = "Paracetamol 1 g every 6 hours";
+  const cases = [
+    [{ start: 0, end: 11, item: 0, field: "name" }, { start: 12, end: 15, item: 0, field: "amount" }],
+    [{ start: 0, end: 11 }, { start: 5, end: 14 }, { start: 12, end: 15 }],
+    [{ start: -3, end: 4 }, { start: 20, end: 99 }, { start: 9, end: 9 }],
+    [],
+  ];
+  for (const marks of cases) assert.equal(segments(t, marks).map((s) => s.text).join(""), t);
+  assert.deepEqual(segments(t, cases[1]).filter((s) => s.mark).map((s) => s.text), ["Paracetamol", "1 g"]);
+  assert.equal(segments(t, cases[2]).every((s) => !s.mark), true);
+});
+
+test("fieldDiffs: an amount edit, an added row, a removed row", () => {
+  const dose = { kind: "dose", text: "Paracetamol 1 g", name: "paracetamol", amount: "1 g", every_h: 6, proof: "photo" };
+  const obs = { kind: "obs", text: "BP", every_h: 1, proof: "none", limits: { sbp_min: 90 } };
+  assert.deepEqual(fieldDiffs([dose], [dose]), []);
+  const edit = fieldDiffs([dose], [{ ...dose, amount: "500 mg" }]);
+  assert.deepEqual(edit, [{ item: 0, field: "amount", drafted: "1 g", signed: "500 mg" }]);
+  assert.equal(diffLine(edit[0]), "Amount: 1 g → 500 mg");
+  const added = fieldDiffs([dose], [dose, obs]);
+  assert.equal(diffLine(added[0]), "Added at signing: BP · every 1 h · alert if systolic < 90");
+  const removed = fieldDiffs([dose, obs], [dose]);
+  assert.equal(diffLine(removed[0]), "Removed at signing: BP · every 1 h · alert if systolic < 90");
+  const limit = fieldDiffs([obs], [{ ...obs, limits: {} }]);
+  assert.equal(diffLine(limit[0]), "Systolic min: 90 → none");
+  assert.equal(FIELD_LABEL.every_h, "Every");
+});
+
+test("voice kind is registered and its copy passes ADVICE", () => {
+  assert.match(src("./Inspector.jsx"), /voice: \{ Input: VoiceInput, Found: VoiceFound \}/);
+  const jsx = src("./InspectVoice.jsx");
+  assert.match(jsx, /No word links for this draft\./);
+  assert.match(jsx, /className=\{`mark/);
+  assert.doesNotMatch(jsx, /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i);
 });

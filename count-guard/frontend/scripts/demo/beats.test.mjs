@@ -73,8 +73,10 @@ test("missingMedia names the first missing file and its generator", () => {
 
 test("expected strings follow the accepted rulings", () => {
   const by = Object.fromEntries(BEATS.map((b) => [b.id, b]));
-  assert.ok(by["kumar-orders"].expect.includes("Draft from dictation · Rules (no model)"));
-  assert.ok(by["kumar-orders"].expect.includes("Heard by: Prepared demo result"));
+  assert.ok(by["kumar-orders"].expect.includes("Draft from dictation"));
+  assert.ok(by["kumar-orders"].expect.includes("Muse Voice → Rules · prepared"));
+  assert.ok(by["kumar-orders"].expect.includes("2 orders drafted from 25 words."));
+  assert.deepEqual(by["kumar-review"].before, ["Muse Voice · prepared"]);
   assert.equal(BEATS[1].id, "ai");
   assert.ok(by.ai.expect.includes("Saw 2 of 3 needle holders."));
   assert.ok(by["iyer-meds"].expect.includes("Pantoprazole 40 mg:"));
@@ -83,8 +85,9 @@ test("expected strings follow the accepted rulings", () => {
   assert.ok(by["iyer-end"].expect.includes(`finished ${title} at`));
   assert.ok(by["kumar-count"].before.includes("Closing count: 14 of 15 back, 1 unaccounted."));
   const NEXT_ADMIT = "Acknowledge the new orders from Dr. A. Rao, then complete the admission.";
-  // kumar-review: the "Heard by" line goes once the answer is sent, so it is checked before and not in expect.
+  // kumar-review: the Dictate chip goes once the answer is sent, so it is checked before and not in expect.
+  // kumar-discharge: the draft moment unmounts once the discharge is signed, so it is checked before only.
   // kumar-admission: the NEXT card sentence goes once the orders are acknowledged.
   // kumar-count: the swab viewer goes once the count is corrected, because the count step folds.
-  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-admission" && s === NEXT_ADMIT) || (b.id === "kumar-count" && s === "Saw 14 of 15 gauze swabs."), `${b.id} ${s}`);
+  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || b.id === "kumar-discharge" || (b.id === "kumar-admission" && s === NEXT_ADMIT) || (b.id === "kumar-count" && s === "Saw 14 of 15 gauze swabs."), `${b.id} ${s}`);
 });

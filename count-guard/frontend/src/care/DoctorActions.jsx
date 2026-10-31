@@ -7,7 +7,9 @@ import { panelOpen, toggled } from "./actions";
 import { doctorBlocks, quietActions } from "./journey";
 import NextCard from "./NextCard";
 import Dictate from "./Dictate";
-import { draftChanged, heardLine, sectionsToSummary, sourceLabel } from "./drafts";
+import AiMoment from "./AiMoment.jsx";
+import { draftChanged, sectionsToSummary } from "./drafts";
+import { momentFor } from "./moments";
 import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
@@ -58,7 +60,7 @@ function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   return (
     <>
       <Dictate label="Dictate orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />
-      <OrderForm busy={busy} onSign={signOrders} draft={view.drafts?.order} />
+      <OrderForm busy={busy} onSign={signOrders} draft={view.drafts?.order} moment={momentFor(view, view.drafts?.order?.id)} episodeId={view.episode?.id} />
     </>
   );
 }
@@ -127,10 +129,10 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
           <div>
             <p className="label">Discharge</p>
             {summaryDraftId && (
-              <p className="note small" role="status">
-                Draft from dictation · {sourceLabel(draft?.source)}. Check the summary, then sign.
-                {draft?.transcript && <> {heardLine(draft)}</>}
-              </p>
+              <>
+                {momentFor(view, draft?.id) && <AiMoment moment={momentFor(view, draft.id)} role="doctor" episodeId={view.episode?.id} />}
+                <p className="note small" role="status">Draft from dictation. Check the summary, then sign.</p>
+              </>
             )}
             <label className="field">
               Summary

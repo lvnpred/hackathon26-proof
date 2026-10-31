@@ -212,3 +212,7 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 @media (max-width: 600px) {
   .inspector { width: 100%; border-left: 0 }
 }
+
+/* Voice inspector: a heard word and the order chip it became light together. */
+.inspector-found .mark { background: #fff3c4; border: 0; border-radius: 3px; padding: 0 2px; font: inherit; cursor: pointer; }
+.inspector-found .mark.lit, .inspector-found button.chip.lit { background: #ffd54a; outline: 2px solid #b8860b; }

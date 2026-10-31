@@ -46,3 +46,42 @@ export function orderRowsToItems(rows) {
   });
   return { items, errors };
 }
+
+// The proof word an order sentence shows: a dose photo is a strip photo, an observation photo a monitor photo.
+export const PROOF_WORD = {
+  dose: { photo: "strip photo", video: "video" },
+  obs: { photo: "monitor photo", video: "video" },
+};
+const proofWord = (item) => PROOF_WORD[item.kind]?.[item.proof] || (item.proof === "video" ? "video" : "photo");
+
+// An observation's text without its interval: "BP and pulse every 1 h" -> "BP and pulse".
+export const obsLabel = (text) => String(text ?? "").split(/,|\s+every\b/i)[0].trim();
+
+const capital = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+// One order as chips: [{ field, text }]. The field names are the ones the word marks use (backend order_spans).
+export function orderSentence(item) {
+  const chips = [];
+  const add = (field, text) => chips.push({ field, text });
+  const every = () => item.every_h != null && item.every_h !== "" && add("every_h", `every ${item.every_h} h`);
+  if (item.kind === "dose") {
+    if (item.name) add("name", capital(item.name));
+    if (item.amount) add("amount", item.amount);
+    every();
+  } else if (item.kind === "obs") {
+    add("text", obsLabel(item.text));
+    every();
+    const { sbp_min: min, sbp_max: max } = item.limits || {};
+    if (min != null) add("limits.sbp_min", `alert if systolic < ${min}`);
+    if (max != null) add("limits.sbp_max", `alert if systolic > ${max}`);
+  } else {
+    add("text", item.text);
+  }
+  if (item.proof && item.proof !== "none") add("proof", `proof: ${proofWord(item)}`);
+  return chips;
+}
+
+export const sentenceText = (item) => orderSentence(item).map((c) => c.text).join(" · ");
+
+// A form row as the item it would sign; a row with no text still names its kind.
+export const rowItem = (row) => orderRowsToItems([row]).items[0] ?? { kind: row.kind, text: row.text };

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blankRow, orderRowsToItems, PREFILL } from "./orders.js";
+import { blankRow, obsLabel, orderRowsToItems, orderSentence, PREFILL, rowItem, sentenceText } from "./orders.js";
 
 test("empty rows are dropped", () => {
   assert.deepEqual(orderRowsToItems([blankRow("other"), { ...blankRow("dose"), text: "  " }]).items, []);
@@ -57,4 +57,29 @@ test("a dose row needs a medicine name", () => {
 test("a video proof survives the round trip", () => {
   const { items } = orderRowsToItems([{ ...blankRow("procedure"), text: "Saline 1 L over 2 h", mode: "start_end", proof: "video" }]);
   assert.equal(items[0].proof, "video");
+});
+
+const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
+const DOSE = { kind: "dose", text: "Paracetamol 1 g every 6 hours, strip photo as proof", name: "paracetamol", amount: "1 g", every_h: 6, proof: "photo", mode: "tick" };
+const OBS = { kind: "obs", text: "BP and pulse every 1 hour, lower systolic limit 90", every_h: 1, proof: "none", limits: { sbp_min: 90 }, mode: "tick" };
+
+test("sentenceText renders the demo orders as sentences", () => {
+  assert.equal(sentenceText(DOSE), "Paracetamol · 1 g · every 6 h · proof: strip photo");
+  assert.equal(sentenceText(OBS), "BP and pulse · every 1 h · alert if systolic < 90");
+});
+
+test("orderSentence names the fields, skips absent ones and words each proof", () => {
+  assert.deepEqual(orderSentence(DOSE).map((c) => c.field), ["name", "amount", "every_h", "proof"]);
+  assert.deepEqual(orderSentence(OBS).map((c) => c.field), ["text", "every_h", "limits.sbp_min"]);
+  assert.equal(sentenceText({ kind: "obs", text: "BP", proof: "photo", limits: { sbp_min: 90, sbp_max: 160 } }), "BP · alert if systolic < 90 · alert if systolic > 160 · proof: monitor photo");
+  assert.equal(sentenceText({ kind: "dose", name: "x", proof: "video" }), "X · proof: video");
+  assert.equal(sentenceText({ kind: "procedure", text: "Saline 1 L over 2 h", proof: "none" }), "Saline 1 L over 2 h");
+  assert.doesNotMatch(sentenceText(DOSE) + sentenceText(OBS), ADVICE);
+});
+
+test("obsLabel cuts before a comma or every; rowItem falls back for an empty row", () => {
+  assert.equal(obsLabel("BP and pulse every 1 hour, lower"), "BP and pulse");
+  assert.equal(obsLabel("BP, pulse"), "BP");
+  assert.deepEqual(rowItem(blankRow("dose")), { kind: "dose", text: "" });
+  assert.equal(rowItem({ ...blankRow("other"), text: "Wound check" }).text, "Wound check");
 });

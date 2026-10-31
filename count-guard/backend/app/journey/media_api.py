@@ -106,7 +106,8 @@ def dictate_orders(
         file, text, dictation.ORDER_PROMPT, dictation.items_from_reply, dictation.parse_order_text,
         "orders", lambda r: not r["items"] and not r["reason"], heard_by,
     )
-    return _act(request, episode_id, "order.drafted", {**meta, **result, "by": by}, at_ms)
+    spans = dictation.order_spans(meta["transcript"], result["items"])
+    return _act(request, episode_id, "order.drafted", {**meta, **result, "spans": spans, "by": by}, at_ms)
 
 
 @media_router.post("/dictate/discharge")

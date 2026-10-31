@@ -85,7 +85,7 @@ export const BEATS = [
     id: "kumar-orders", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao dictates admission orders for Mr. Kumar, and a draft appears with its source named.",
     clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'Button "Dictate orders"', 'File eval/p2/kumar-orders.wav into "Dictate orders"', 'Button "Draft orders"'],
-    expect: ["Draft from dictation", HEARD, "2 orders drafted from 25 words.", "Paracetamol"],
+    expect: ["Draft from dictation", HEARD, "2 orders drafted from 25 words.", "Paracetamol · 1 g · every 6 h · proof: strip photo"],
     files: ["kumar-orders.wav"],
     keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box.",
   },

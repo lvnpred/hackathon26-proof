@@ -85,3 +85,18 @@ export const sentenceText = (item) => orderSentence(item).map((c) => c.text).joi
 
 // A form row as the item it would sign; a row with no text still names its kind.
 export const rowItem = (row) => orderRowsToItems([row]).items[0] ?? { kind: row.kind, text: row.text };
+
+// Chip fields edited as text unless listed here.
+export const CHIP_INPUT = { proof: "select" };
+
+const NUMERIC_CHIP = new Set(["every_h", "limits.sbp_min", "limits.sbp_max"]);
+const ROW_FIELD = { "limits.sbp_min": "sbp_min", "limits.sbp_max": "sbp_max" };
+
+// The form row's value behind a chip, as the string an input shows.
+export const chipValue = (row, field) => row[ROW_FIELD[field] ?? field] ?? "";
+
+// A chip edit is valid unless a numeric field holds something that is not a number.
+export const chipValid = (field, value) => !NUMERIC_CHIP.has(field) || blank(value) || Number.isFinite(Number(value));
+
+// The row with one chip's field replaced; the value is stored as typed, as the form does.
+export const chipEdit = (row, field, value) => ({ ...row, [ROW_FIELD[field] ?? field]: value });

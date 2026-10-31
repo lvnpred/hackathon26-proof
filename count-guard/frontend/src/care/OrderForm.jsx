@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AiMoment from "./AiMoment.jsx";
 import { draftChanged, itemsToRows } from "./drafts";
+import OrderSentence from "./OrderSentence.jsx";
 import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 
 // Rows of orders; Sign orders posts the filled rows through onSign(items, draftId), which resolves to the new view or null.
@@ -8,11 +9,12 @@ import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 export default function OrderForm({ busy, onSign, draft, moment = null, episodeId }) {
   const [rows, setRows] = useState([]);
   const [draftId, setDraftId] = useState(null);
+  const [all, setAll] = useState(false);
   if (draftChanged(draftId, draft)) {
     setDraftId(draft.id);
     setRows(itemsToRows(draft.items || []));
   }
-  const set = (index, patch) => setRows((all) => all.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  const set = (index, patch) => setRows((list) => list.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   const { items, errors } = orderRowsToItems(rows);
   const invalid = Object.keys(errors).length > 0;
 
@@ -39,7 +41,18 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
         <button type="button" onClick={() => setRows([...rows, blankRow("other")])}>Add other</button>
       </div>
       {rows.length === 0 && <p className="empty small">No rows yet. Add a dose, observation or procedure.</p>}
-      {rows.map((row, index) => (
+      {rows.length > 0 && (
+        <button type="button" aria-expanded={all} onClick={() => setAll(!all)}>Edit all fields</button>
+      )}
+      {rows.map((row, index) => !all ? (
+        <div className="stack" key={index}>
+          <div className="row">
+            <OrderSentence row={row} index={index} onChange={(next) => setRows((list) => list.map((r, i) => (i === index ? next : r)))} />
+            <button type="button" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Remove row</button>
+          </div>
+          {errors[index] && <p className="error small" role="alert">{errors[index]}</p>}
+        </div>
+      ) : (
         <div className="stack" key={index}>
           <div className="row">
             <label className="field">Kind

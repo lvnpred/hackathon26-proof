@@ -88,7 +88,7 @@ On screen: `Clinic visit closed`
 #### `kumar-orders` · 0:54 · doctor · 8 s
 Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Use the demo prescription"; 4) Button "Dictate orders"; 5) File eval/p2/kumar-orders.wav into "Dictate orders"; 6) Button "Draft orders"
 
-On screen: `Draft from dictation` · `Muse Voice → Rules · prepared` · `2 orders drafted from 25 words.` · `Paracetamol`
+On screen: `Draft from dictation` · `Muse Voice → Rules · prepared` · `2 orders drafted from 25 words.` · `Paracetamol · 1 g · every 6 h · proof: strip photo`
 
 > Dr. Rao dictates admission orders for Mr. Kumar, and a draft appears with its source named.
 

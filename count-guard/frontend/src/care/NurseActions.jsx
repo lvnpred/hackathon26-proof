@@ -1,3 +1,4 @@
+import { sentenceText } from "./orders.js";
 import Checklist from "./Checklist";
 import NextCard from "./NextCard";
 import NurseTasks from "./NurseTasks";
@@ -23,7 +24,7 @@ function Orders({ orders, by, busy, act }) {
   return fresh.map((order) => (
     <div key={order.id}>
       <p className="label">New orders from {order.by}</p>
-      <ul>{(order.items || []).map((item, i) => <li key={i}>{item.text}</li>)}</ul>
+      <ul>{(order.items || []).map((item, i) => <li key={i}>{sentenceText(item)}</li>)}</ul>
       <button type="button" className="primary" disabled={busy} onClick={() => act(`/orders/${order.id}/ack`, { by })}>Acknowledge</button>
     </div>
   ));

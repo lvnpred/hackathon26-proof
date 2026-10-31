@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blankRow, obsLabel, orderRowsToItems, orderSentence, PREFILL, rowItem, sentenceText } from "./orders.js";
+import { readFileSync } from "node:fs";
+import { blankRow, chipEdit, chipValid, CHIP_INPUT, obsLabel, orderRowsToItems, orderSentence, PREFILL, rowItem, sentenceText } from "./orders.js";
 
 test("empty rows are dropped", () => {
   assert.deepEqual(orderRowsToItems([blankRow("other"), { ...blankRow("dose"), text: "  " }]).items, []);
@@ -82,4 +83,31 @@ test("obsLabel cuts before a comma or every; rowItem falls back for an empty row
   assert.equal(obsLabel("BP, pulse"), "BP");
   assert.deepEqual(rowItem(blankRow("dose")), { kind: "dose", text: "" });
   assert.equal(rowItem({ ...blankRow("other"), text: "Wound check" }).text, "Wound check");
+});
+
+test("chipEdit sets one field and limits map to the row", () => {
+  const dose = PREFILL.dose();
+  assert.equal(chipEdit(dose, "amount", "2 g").amount, "2 g");
+  assert.equal(chipEdit(dose, "every_h", "8").every_h, "8");
+  const obs = chipEdit(PREFILL.obs(), "limits.sbp_min", "100");
+  assert.equal(obs.sbp_min, "100");
+  assert.equal(chipEdit(obs, "limits.sbp_max", "160").sbp_max, "160");
+  assert.equal(dose.amount, "1 g");
+  assert.deepEqual(CHIP_INPUT, { proof: "select" });
+});
+
+test("chipValid rejects a non-number in a numeric chip", () => {
+  assert.equal(chipValid("every_h", "abc"), false);
+  assert.equal(chipValid("limits.sbp_min", "9x"), false);
+  assert.equal(chipValid("every_h", "6"), true);
+  assert.equal(chipValid("amount", "a lot"), true);
+});
+
+test("a prefilled dose reads as a sentence", () => {
+  assert.equal(sentenceText(rowItem(PREFILL.dose())), "Paracetamol · 1 g · every 6 h");
+});
+
+test("the form has Edit all fields and the nurse list uses sentenceText", () => {
+  assert.match(readFileSync(new URL("./OrderForm.jsx", import.meta.url), "utf8"), /Edit all fields/);
+  assert.match(readFileSync(new URL("./NurseActions.jsx", import.meta.url), "utf8"), /sentenceText\(/);
 });

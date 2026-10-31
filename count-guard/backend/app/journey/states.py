@@ -92,13 +92,24 @@ def count_open(events: list[dict]) -> bool:
     return any(n["kind"] == "count_open" for n in count_and_patient(visible_events(events)))
 
 
-def count_reconciled(events: list[dict]) -> bool:
-    """True when this stay's closing count that still stands adds up or carries a reason (spec 5.3)."""
+def count_gate(events: list[dict]) -> str:
+    """Where this stay's swab count stands for ending surgery: "none", "unreconciled" or "ok" (spec 5.3).
+
+    Only a closing a person saved counts (a `by` that is not the AI). It must add up, recomputed here from
+    opened and returned, or carry a reason."""
     closing = _latest(stay_events(events), "count.closing")
     if closing is None:
-        return False
+        return "none"
     payload = closing["payload"]
-    return payload.get("unaccounted") == 0 or bool((payload.get("detail") or "").strip())
+    if not str(payload.get("by") or "").strip() or by_ai(payload):
+        return "none"
+    opened, returned = payload.get("opened"), payload.get("returned")
+    adds_up = isinstance(opened, int) and isinstance(returned, int) and opened - returned == 0
+    return "ok" if adds_up or bool((payload.get("detail") or "").strip()) else "unreconciled"
+
+
+def count_reconciled(events: list[dict]) -> bool:
+    return count_gate(events) == "ok"
 
 
 def surgery_status(events: list[dict]) -> str:
@@ -371,7 +382,7 @@ def closing_payload(events: list[dict], returned: int, by: str, *, evidence_id: 
     With an `evidence_id` that names this stay's camera count it adds via/evidence_id, and read/saved when the
     saved figure differs from the camera's. A caller that already holds the camera event may pass it as `camera`.
     Raises ValueError when no pack was opened."""
-    opened = _latest(visible_events(events), "count.pack_opened")
+    opened = stay_latest(events, "count.pack_opened")  # this theatre stay's pack, not an earlier stay's
     if opened is None:
         raise ValueError("Record the pack opened first.")
     start = opened["payload"]["quantity"]

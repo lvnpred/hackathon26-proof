@@ -186,6 +186,8 @@ def correct_event(episode_id: str, event_id: str, body: CorrectIn, request: Requ
     old = store.get_event(event_id)
     if old is None or old["episode_id"] != episode_id:
         raise HTTPException(status_code=404, detail="Event not found")
+    if old["event_type"].startswith("count."):
+        raise HTTPException(status_code=409, detail="A swab count is corrected on the count form, not here.")
     store.append(
         episode_id,
         old["event_type"],

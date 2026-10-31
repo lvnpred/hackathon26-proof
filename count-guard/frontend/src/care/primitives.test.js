@@ -13,13 +13,14 @@ test("StatusPill maps each role to class s-{role}; only done has no icon", () =>
   assert.match(src, /check: IconClock/);
   assert.match(src, /danger: IconWarn/);
   assert.match(src, /done: null/);
-  assert.match(src, /aria-hidden="true"/);
+  assert.match(src, /\{Icon && <Icon \/>\}/);
 });
 
 test("AiMark is a span.ai-mark reading AI with a plain title", () => {
   const src = read("./AiMark.jsx");
   assert.match(src, /className="ai-mark"/);
   assert.match(src, /title="Done by the AI"/);
+  assert.match(src, /aria-label="Done by the AI"/);
   assert.match(src, />AI</);
 });
 
@@ -29,6 +30,7 @@ test("Fold sets aria-expanded and renders children only when open", () => {
   assert.match(src, /\{open && /);
   assert.match(src, /open \? "Hide" : "Show"/);
   assert.match(src, /button className="quiet"/);
+  assert.match(src, /aria-label=\{`\$\{open \? "Hide" : "Show"\} \$\{label\}`\}/);
 });
 
 test("icons.jsx exports the eight icons as hidden currentColor strokes", () => {

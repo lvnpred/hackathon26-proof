@@ -22,9 +22,6 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .timeline { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .timeline li { padding: 6px 8px; border-radius: 8px; }
 .timeline li.line-hit, .alert-banner .line-hit { background: var(--sun-soft); outline: 2px solid var(--sun); }
-@media (max-width: 800px) {
-  }
-
 .task-list { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .alert-banner { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 2px solid var(--record); border-radius: 12px; background: var(--record-soft); }
 .alert-banner .card { margin: 0; }
@@ -236,7 +233,7 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .status-pill.s-check { background: var(--status-check-soft); color: var(--status-check); }
 .status-pill.s-danger { background: var(--status-danger-soft); color: var(--status-danger); }
 .status-pill.s-done { background: var(--status-done-soft); color: var(--status-done); }
-.ai-mark { display: inline-flex; align-items: center; min-height: 18px; padding: 0 6px; border: 1px solid var(--line-control); border-radius: 6px; color: var(--ink-muted); font-size: 11px; line-height: 16px; font-weight: 800; letter-spacing: 0.04em; }
+.ai-mark { display: inline-flex; align-items: center; min-height: 18px; padding: 0 6px; border: 1px solid var(--line-control); border-radius: 6px; color: var(--ink-muted); font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; }
 .fold-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .t-display { font-size: 40px; line-height: 44px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .t-heading { font-size: 19px; line-height: 26px; font-weight: 800; }

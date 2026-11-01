@@ -220,12 +220,17 @@ test("historyLine reads as a plain audit trail", () => {
   const bare = { type: "tray.checked", event_id: "e3", when: "Yesterday 09:30", by: "Nurse Asha (synthetic)", plain: "Tray check by photos: all seen." };
   assert.equal(historyLine(ai), "09:20 · AI: Assigned 2 tasks to Nurse Asha.");
   assert.equal(historyLine(nurse), "09:25 · Nurse Asha logged BP 88/60.");
-  assert.equal(historyLine(bare), "09:30 · Nurse Asha Tray check by photos: all seen.");
+  assert.equal(historyLine(bare), "09:30 · Nurse Asha · Tray check by photos: all seen.");
   for (const w of [ai, nurse, bare]) {
     const line = historyLine(w);
     assert.doesNotMatch(line, /task\.assigned|work\.done|\b[a-z]+\.[a-z_]+\b/);
     assert.equal(line.split(AI_BY).length - 1, 0);
   }
+  const rx = { type: "rx.ordered", event_id: "e4", when: "09:10", by: "Dr. A. Rao (synthetic)", plain: "Prescription from Dr. A. Rao (synthetic): 2 medicines (voice)." };
+  assert.equal(historyLine(rx), "09:10 · Prescription from Dr. A. Rao: 2 medicines (voice).");
+  const nudge = { type: "nudge.raised", event_id: "e5", when: "09:40", by: "Nurse Meena (synthetic)", plain: "Nudge to Nurse Meena: Obs are overdue." };
+  assert.equal(historyLine(nudge), "09:40 · Nudge to Nurse Meena: Obs are overdue.");
+  assert.equal(historyLine({ ...nudge, by: "Ward system" }), "09:40 · Ward system · Nudge to Nurse Meena: Obs are overdue.");
   assert.equal(AI_NOTE, "AI = AI admin acting for Ward 4");
   assert.equal(eventIdLines([ai, nurse]), "work.done:e1\nobs.recorded:e2");
 });

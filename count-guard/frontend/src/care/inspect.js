@@ -40,12 +40,12 @@ export const AI_BY = "AI (on behalf of Ward 4)";
 export const AI_NOTE = "AI = AI admin acting for Ward 4";
 export const isAiBy = (by) => String(by || "").startsWith("AI (on behalf of");
 
-// "09:20 · Nurse Asha logged BP 88/60.": no event name, and the AI label appears once.
+// "09:20 · Nurse Asha logged BP 88/60.": no event name, the AI label once; who is added (with " · ") only when plain does not name them.
 export function historyLine(w) {
   const hhmm = String(w.when || "").slice(-5);
   const who = isAiBy(w.by) ? "AI" : displayName(w.by);
-  const plain = String(w.plain || "").replaceAll(AI_BY, "AI");
-  return `${hhmm} · ${!who || plain.startsWith(who) ? plain : `${who} ${plain}`}`;
+  const plain = displayName(String(w.plain || "").replaceAll(AI_BY, "AI"));
+  return `${hhmm} · ${!who || plain.includes(who) ? plain : `${who} · ${plain}`}`;
 }
 
 // One line per written event, as "type:event_id", for a support note.

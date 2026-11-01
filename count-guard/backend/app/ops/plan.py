@@ -28,9 +28,9 @@ OPS_PROMPT = ("Reword these record lines as one short plain sentence for a docto
 # How each kind of work is decided, in words a person can read; shown as "How it chose" in the Inspector.
 HOW = {
     "ack_order": "A fixed rule: an unacknowledged signed order is acknowledged.",
-    "assign_task": "the nurse on shift with the fewest open tasks",
+    "assign_task": "The nurse on shift with the fewest open tasks.",
     "nudge_obs_overdue": "A fixed rule: the nurse who holds the overdue task is told.",
-    "route_question": "the first doctor who is available",
+    "route_question": "The first doctor who is available.",
     "file_read": "A fixed rule: a monitor read is filed as it was read.",
     "draft_answer": "A fixed rule: the answer is drafted from the discharge card.",
     "propose_move": "A fixed rule: a patient who is ready is proposed for the ward.",

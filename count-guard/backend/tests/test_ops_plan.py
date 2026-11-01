@@ -297,7 +297,7 @@ def test_handover_prompt_default_unchanged(tmp_path):
 def test_every_planned_action_says_how_it_chose():
     evs = _ward() + [_task("t1")]
     act = planner.plan(_item("assign_task", "t1"), evs)
-    assert act.how == "the nurse on shift with the fewest open tasks"
+    assert act.how == "The nurse on shift with the fewest open tasks."
     assert set(planner.HOW) == set(planner._PLANNERS)
     for how in planner.HOW.values():
-        assert not SNAKE.search(how)
+        assert not SNAKE.search(how) and how[0].isupper()

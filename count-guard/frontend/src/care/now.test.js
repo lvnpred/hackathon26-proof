@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { H, M } from "./clock.js";
-import { nextUp, pickNow, pickNowAcross } from "./now.js";
+import { movedAlertId, nextUp, pickNow, pickNowAcross } from "./now.js";
 
 const NURSE = { role: "nurse", name: "Nurse Meena" };
 const DOCTOR = { role: "doctor", name: "Dr. A. Rao" };
@@ -94,10 +94,24 @@ test("across patients the nurse gets BP-below-limit first, then the oldest", () 
 
 test("NextUp: one of three lines for the patient", () => {
   assert.equal(nextUp(view({ now_next: { next_role: "patient", you_next: "Complete your check-in." } })).text, "You need to: complete your check-in.");
+  const fresh = { next_role: "nurse", you_next: "The nurse acknowledges the new orders from Dr. A. Rao." };
+  assert.equal(nextUp(view({ state: "ward", now_next: fresh })).text, "The nurse will acknowledge the new orders from Dr. A. Rao.");
+  assert.equal(nextUp(view({ state: "ward", now_next: { next_role: "doctor", you_next: "The doctor sends you to theatre or signs your discharge." } })).text, "The doctor will send you to theatre or sign your discharge.");
   assert.equal(nextUp(view({ state: "admitting", now_next: { next_role: "nurse", you_next: "The nurse completes your admission." } })).text, "The nurse will complete your admission.");
   assert.equal(nextUp(view({ state: "home", now_next: { next_role: "doctor", you_next: "The doctor reviews your healing photo." } })).text, "The doctor will review your healing photo.");
   assert.equal(nextUp(view({ state: "home", now_next: { next_role: null, you_next: "You are home. No further steps." } })).text, "You don't need to do anything now.");
   for (const state of ["clinic", "admitting", "ward", "theatre", "discharging"]) {
     assert.doesNotMatch(nextUp(view({ state, now_next: { next_role: "nurse", you_next: "x" } })).text, /late|task/i);
   }
+});
+
+test("Now holds the winner's action: an alert is moved out of the list, a task or ask gets a focus action", () => {
+  const v = view({ nudges: [nudge("n1", "obs_past_limit", NOW - M)] });
+  assert.equal(movedAlertId(pickNow(v, NURSE, NOW), "nurse"), "n1");
+  assert.equal(movedAlertId(pickNow(v, NURSE, NOW), "patient"), null);
+  assert.equal(pickNow(view({ tasks: [task("t1", NOW - 2 * H)] }), NURSE, NOW).now.action.kind, "task");
+  const ask = view({ now_next: { next_role: "nurse" }, ask: { questions: [{ to: "doctor", at_ms: NOW - H, answer: null }] } });
+  assert.equal(pickNow(ask, DOCTOR, NOW).now.action.kind, "focus");
+  const other = view({ nudges: [nudge("n2", "obs_past_limit", NOW - M, "nurse")] });
+  assert.equal(pickNow(other, DOCTOR, NOW).now.action, null);
 });

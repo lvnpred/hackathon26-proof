@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { H, M } from "./clock.js";
-import { greeting, nextWords, todayFolds, whereWords } from "./today.js";
+import { greeting, todayFolds, whereWords } from "./today.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const home = (extra = {}) => ({ state: "home", schedule: [{}], card: { review: "Wound check in the surgical clinic on day 7 (synthetic)" }, ask: { questions: [] },
@@ -13,11 +13,6 @@ test("greeting and where", () => {
   assert.equal(whereWords("home", 5 * M), "You are home");
   assert.equal(whereWords("theatre", 0), "You are in theatre");
   assert.equal(whereWords("discharging", 0), "You are getting ready to go home");
-});
-
-test("next item: the review when nothing else is next", () => {
-  assert.equal(nextWords(home()), "Next: wound check in the surgical clinic on day 7");
-  assert.equal(nextWords(home({ now_next: { you_next: "The doctor reviews your healing photo." } })), "Next: the doctor reviews your healing photo.");
 });
 
 test("folds: an empty My medicines never comes first, and the answered count shows", () => {

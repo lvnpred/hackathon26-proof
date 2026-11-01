@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { H, M } from "./clock.js";
+import { pickNowAcross } from "./now.js";
 import { queueRows, todos, waitingPills, taskDue, dueLabel, STATE_LABEL } from "./derive.js";
 
 const nudge = (id, to, at_ms, says = "Observations are overdue.") => ({
@@ -255,4 +256,17 @@ test("queue order follows the Now rule: danger, blocked, late, then due", () => 
   const p = patient("e1", "Bed 1", view({ order_list: [order("o1", 29 * H)], tasks, nudges: [n("a", "obs_past_limit")] }));
   assert.deepEqual(queueRows([p], "nurse", 30 * H).map((r) => r.kind), ["nudge", "order", "task", "task"]);
   assert.deepEqual(queueRows([p], "nurse", 30 * H).map((r) => r.says).slice(2), ["Late task · due", "Due task · due"]);
+});
+
+test("the queue's first row is the Now card's winner (one rank table)", () => {
+  const handover = { to_nurse: "Nurse Joseph", accepted_by: null };
+  const n = { ...nudge("a", "nurse", 29 * H), kind: "obs_past_limit" };
+  const cases = [
+    [patient("e1", "Bed 1", view({ handover, tasks: [task({ id: "t", title: "BP check", due_ms: 20 * H })] })), patient("e2", "Bed 2", view({ nudges: [n] }))],
+    [patient("e1", "Bed 1", view({ handover })), patient("e2", "Bed 2", view({ tasks: [task({ id: "t", title: "BP check", due_ms: 20 * H })] }))],
+  ];
+  for (const patients of cases) {
+    const first = queueRows(patients, "nurse", 30 * H)[0];
+    assert.equal(pickNowAcross(patients, { role: "nurse" }, 30 * H).now.patient.episodeId, first.episodeId);
+  }
 });

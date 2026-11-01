@@ -74,13 +74,13 @@ function TodayBody({ ward, patient }) {
         <h1>{greeting(patient.name)}</h1>
         <DoctorChip status={ward.doctorStatus} />
       </div>
+      <NextUp view={view} />
       <section className="card" aria-label="Your status">
         <p className="next-text">{whereWords(view.state, ward.nowMs)}</p>
         <p>{displayName(view.now_next?.you_now)}</p>
         {unread && <p className="note">{unread}</p>}
         {sent && <p className="note" role="status">{sent}</p>}
       </section>
-      <NextUp view={view} />
       <Nudges {...common} />
       {home ? (
         <>

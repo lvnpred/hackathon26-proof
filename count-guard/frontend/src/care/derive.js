@@ -1,5 +1,6 @@
 import { SAFETY } from "./alerts.js";
 import { H, M } from "./clock.js";
+import { RANK } from "./rank.js";
 
 const OVERDUE = ["dose_overdue", "obs_overdue"];
 
@@ -46,9 +47,6 @@ export function taskDue(task, nowMs, state) {
 // The word on a task pill. Only "paused" reads differently from its key.
 export const dueLabel = (due) => (due === "paused" ? "paused (in theatre)" : due);
 
-// The Now rule's ranks (now.js RANK): 1 danger, 2 blocked, 3 late, 4 due now. Running and to-do rows come after.
-// Lower rank sorts first; rows of equal rank sort by longest waited.
-const RANK = { danger: 1, order: 2, state: 2, overdue: 3, nudge: 4, ask: 4, due: 4, running: 5, todo: 6 };
 
 // waitedMs -1 means the view carries no time for the row.
 function row(patient, key, kind, says, extra) {
@@ -63,7 +61,7 @@ function row(patient, key, kind, says, extra) {
     stage: null,
     state: patient.view.state,
     waitedMs: -1,
-    rank: RANK.todo,
+    rank: RANK.due,
     ...extra,
   };
 }
@@ -90,7 +88,7 @@ function nudgeRows(patient, nowMs) {
       owner: ROLE_NAME[nudge.to] || nudge.to,
       role: nudge.to,
       nudgeKind: nudge.kind,
-      rank: SAFETY.includes(nudge.kind) ? RANK.danger : OVERDUE.includes(nudge.kind) ? RANK.overdue : RANK.nudge,
+      rank: SAFETY.includes(nudge.kind) ? RANK.danger : OVERDUE.includes(nudge.kind) ? RANK.late : RANK.due,
     }),
   );
 }
@@ -98,9 +96,9 @@ function nudgeRows(patient, nowMs) {
 function doctorRows(patient, nowMs) {
   const { state, order_list: orders = [] } = patient.view;
   const rows = [];
-  if (state === "clinic") rows.push(row(patient, "clinic", "state", "See in clinic", { owner: DOCTOR, role: "doctor", rank: RANK.state }));
+  if (state === "clinic") rows.push(row(patient, "clinic", "state", "See in clinic", { owner: DOCTOR, role: "doctor", rank: RANK.blocked }));
   if (state === "ward" && !orders.length) {
-    rows.push(row(patient, "no-orders", "state", "No orders signed", { owner: DOCTOR, role: "doctor", rank: RANK.state }));
+    rows.push(row(patient, "no-orders", "state", "No orders signed", { owner: DOCTOR, role: "doctor", rank: RANK.blocked }));
   }
   const pastLimit = nudgeRows(patient, nowMs)
     .filter((r) => r.nudgeKind === "obs_past_limit")
@@ -112,7 +110,7 @@ function doctorRows(patient, nowMs) {
 function askRows(patient, nowMs) {
   const { questions = [], reviews = [] } = patient.view.ask || {};
   const open = (key, id, at_ms, says) =>
-    row(patient, `${key}:${id}`, "ask", says, { ...timed(nowMs, at_ms), lineId: id, owner: DOCTOR, role: "doctor", rank: RANK.ask });
+    row(patient, `${key}:${id}`, "ask", says, { ...timed(nowMs, at_ms), lineId: id, owner: DOCTOR, role: "doctor", rank: RANK.due });
   return [
     ...questions.filter((q) => q.to === "doctor" && !q.answer).map((q) => open("question", q.id, q.at_ms, "Question from the patient")),
     ...reviews.filter((r) => !r.answer).map((r) => open("review", r.id, r.at_ms, "Healing photo to review")),
@@ -126,7 +124,7 @@ function nurseRows(patient, nowMs) {
   const ackable = ["admitting", "ward"].includes(state) ? orders : [];
   for (const order of ackable.filter((o) => !o.acknowledged_by)) {
     rows.push(row(patient, `order:${order.id}`, "order", `New orders from ${order.by}`, {
-      ...timed(nowMs, order.at_ms), owner: "Nurse", role: "nurse", rank: RANK.order,
+      ...timed(nowMs, order.at_ms), owner: "Nurse", role: "nurse", rank: RANK.blocked,
     }));
   }
   // Recurring tasks belong to the ward stay: none appear once the patient is discharging, home or in theatre.
@@ -135,7 +133,7 @@ function nurseRows(patient, nowMs) {
     const due = taskDue(task, nowMs);
     if (due === "overdue" || due === "due") {
       rows.push(row(patient, `task:${task.id}`, "task", `${task.title} \u00b7 due`, {
-        ...timed(nowMs, task.due_ms), owner: "Nurse", role: "nurse", rank: RANK[due],
+        ...timed(nowMs, task.due_ms), owner: "Nurse", role: "nurse", rank: due === "overdue" ? RANK.late : RANK.due,
       }));
     } else if (due === "running") {
       rows.push(row(patient, `task:${task.id}`, "task", `${task.title} \u00b7 running`, {
@@ -143,8 +141,8 @@ function nurseRows(patient, nowMs) {
       }));
     }
   }
-  if (state === "admitting") rows.push(row(patient, "admitting", "state", "Complete admission", { owner: "Nurse", role: "nurse", rank: RANK.state }));
-  if (state === "discharging") rows.push(row(patient, "discharging", "state", "Complete discharge", { owner: "Nurse", role: "nurse", rank: RANK.state }));
+  if (state === "admitting") rows.push(row(patient, "admitting", "state", "Complete admission", { owner: "Nurse", role: "nurse", rank: RANK.blocked }));
+  if (state === "discharging") rows.push(row(patient, "discharging", "state", "Complete discharge", { owner: "Nurse", role: "nurse", rank: RANK.blocked }));
   return rows;
 }
 

@@ -1,5 +1,5 @@
 // Words and fold order for the patient's Today page. Pure, so node can test them.
-import { displayName, shortName } from "./names.js";
+import { shortName } from "./names.js";
 import { doctorQuestions } from "./askText.js";
 import { H } from "./clock.js";
 
@@ -21,16 +21,6 @@ export function whereWords(state, nowMs) {
   if (state !== "home") return WHERE[state] || "";
   const day = Math.floor(nowMs / DAY);
   return day >= 1 ? `You are home · day ${day}` : "You are home";
-}
-
-const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
-
-// R19: the discharge review is next when the server has no further step.
-export function nextWords(view) {
-  const next = view?.now_next?.you_next || "";
-  const review = view?.card?.review;
-  const text = next.includes("No further steps.") && review ? review : next;
-  return `Next: ${lowerFirst(displayName(text))}`;
 }
 
 // R17: an empty My medicines goes last.

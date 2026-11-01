@@ -13,6 +13,8 @@ import MedicinesFromHome from "./MedicinesFromHome.jsx";
 import RecordEvidence from "./RecordEvidence.jsx";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
+import { movedAlertId, pickNow } from "./now.js";
+import { SIGNED_IN } from "./people.js";
 import { unseenCheckins } from "./thread.js";
 
 const WARD_NURSE = "Nurse Meena (synthetic)"; // the ward nurse, as in NurseActions.jsx
@@ -63,6 +65,7 @@ export default function Chart() {
     return <p className="empty">No patient with that id. <Link to="/patients">Back to patients</Link></p>;
   }
 
+  const pick = pickNow(view, { role: ward.role, name: SIGNED_IN[ward.role]?.name }, ward.nowMs);
   const act = (path, body, scope) => ward.act(episodeId, path, body, scope);
   const upload = (path, file, fields, scope) => ward.upload(episodeId, path, file, fields, scope);
   const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);
@@ -72,12 +75,12 @@ export default function Chart() {
     <>
       <StateHeader patient={patient} view={view} />
 
-      <AlertBanner view={view} role={ward.role} line={line} busy={ward.busy} act={act} nowMs={ward.nowMs} patientName={patient.name} />
+      <AlertBanner moved={movedAlertId(pick, ward.role)} view={view} role={ward.role} line={line} busy={ward.busy} act={act} nowMs={ward.nowMs} patientName={patient.name} />
       <Fault fault={ward.fault} episodeId={episodeId} only={NUDGE_SCOPES} />
 
       <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} name={patient.name} nowMs={ward.nowMs} busy={ward.busy} act={act} ask={ask} fault={ward.fault} episodeId={episodeId} />
 
-      <StatePanel key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} fault={ward.fault} />
+      <StatePanel pick={pick} key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} fault={ward.fault} />
       <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES, OPS_SCOPE]} />
 
       <MedicinesFromHome view={view} role={ward.role} nowMs={ward.nowMs} act={act} busy={ward.busy} />

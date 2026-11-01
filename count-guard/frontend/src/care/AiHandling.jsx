@@ -4,10 +4,10 @@ import { OPS_SCOPE, PAUSED_TITLE, handlingRows, liveCount, needsTitle, pausedRow
 import { useInspector } from "./Inspector.jsx";
 
 // What the AI is handling on this chart, and what it hands to the role. Staff only: the patient sees one routed line in Messages.
-export default function AiHandling({ view, role, nowMs, act, episodeId, busy, fault }) {
+export default function AiHandling({ view, role, nowMs, act, episodeId, busy, fault, movedWork = null }) {
   const { openInspector } = useInspector();
   if (role === "patient" || !view?.ops) return null;
-  const rows = handlingRows(view.ops, nowMs);
+  const rows = handlingRows(view.ops, nowMs).filter((r) => r.workId !== movedWork);
   const proposals = proposalsFor(view.ops, role);
   const paused = pausedRows(view.ops, role);
   const undo = (id) => act(`/ops/work/${id}/undo`, { by: staffBy(role, view) }, `${OPS_SCOPE}undo`);

@@ -27,7 +27,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
   };
 
   return (
-    <li className="task-row">
+    <li className="task-row" data-task={task.id}>
       <div className="row between">
         <span>{task.title}</span>
         <span className={`pill ${due === "overdue" ? "sun" : "info"}`}>{status}</span>

@@ -81,7 +81,7 @@ export function agentMoment(row, episodeId) {
     // The reword names the same model and mode modelChip reads elsewhere: "Spark 1.3 · live".
     calls: spark ? [{ model: "spark", source: "muse-spark-1.3" }] : [], handmade: false,
     written: row.written || [], source: spark ? "spark" : "rules",
-    refs: { workId, episodeId, reason, inputs, level, undoUntilMs },
+    refs: { workId, episodeId, reason, inputs, level, undoUntilMs, how: row.how || "" },
     workId, episodeId, reason, inputs, level, undoUntilMs,
   };
 }

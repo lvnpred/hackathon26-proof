@@ -32,7 +32,8 @@ class OpsError(Exception):
 
 
 def _provenance(item, action: Action, level: str) -> dict:
-    return {"level": level, "by": AI_BY, "reason": action.reason or item.reason, "model": action.model, "inputs": list(item.inputs)}
+    return {"level": level, "by": AI_BY, "reason": action.reason or item.reason, "model": action.model, "how": action.how,
+            "inputs": list(item.inputs)}
 
 
 def _assign(store, episode_id, action, level, item, at_ms) -> None:
@@ -226,7 +227,7 @@ def approve(store, episode_id: str, work_id: str, by: str, text: str | None, at_
     p = row["proposed"]
     store.append(episode_id, "work.done",
                  {"work_id": work_id, "level": "L1", "by": by, "approved_by": by, "reason": p.get("reason") or row["reason"],
-                  "model": p.get("model", "rules"), "inputs": p.get("inputs") or row["inputs"],
+                  "model": p.get("model", "rules"), "how": p.get("how", ""), "inputs": p.get("inputs") or row["inputs"],
                   "summary": p.get("sentence", ""), "wrote": wrote}, ts_ms=at_ms)
 
 

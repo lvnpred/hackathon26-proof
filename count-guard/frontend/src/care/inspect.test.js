@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { NOT_RECORDED, draftSources, ruleCards, FIELD_LABEL, REGION_FIELD, diffLine, fieldDiffs, segments, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
+import { AI_BY, AI_NOTE, eventIdLines, historyLine, NOT_RECORDED, draftSources, ruleCards, FIELD_LABEL, REGION_FIELD, diffLine, fieldDiffs, segments, TABS, focusRegion, inspectEpisode, modelRows, regionFieldLine, whyRegions, readInspect, recordLine, resolveMoment, stepFrame, tabsFor } from "./inspect.js";
 import { canInspect } from "./moments.js";
 
 const src = (f) => fs.readFileSync(new URL(f, import.meta.url), "utf8");
@@ -14,8 +14,9 @@ test("readInspect rejects bad ids", () => {
 });
 
 test("a patient sees two tabs", () => {
-  assert.deepEqual(tabsFor("patient"), ["input", "found"]);
-  assert.deepEqual(tabsFor("staff"), ["input", "found", "record", "model"]);
+  assert.deepEqual(tabsFor("patient"), ["why", "evidence"]);
+  assert.deepEqual(tabsFor("staff"), ["why", "evidence", "history", "model"]);
+  assert.deepEqual(TABS.map(([, label]) => label), ["Why", "Evidence", "History", "Model"]);
   assert.equal(TABS.length, 4);
 });
 
@@ -157,7 +158,7 @@ const line = (id, type) => ({ id, type, when: "09:20", by: "Dr. A. Rao (syntheti
 
 test("ruleCards: both sides, a missing fact, and a patient lens with no event code", () => {
   const both = ruleCards({ intent: line("a", "rx.ordered"), fact: line("b", "dose.logged") }, "staff");
-  assert.deepEqual(both.map((c) => c.heading), ["Ordered / prescribed", "Recorded / read"]);
+  assert.deepEqual(both.map((c) => c.heading), ["Ordered / prescribed", "What was read"]);
   assert.match(both[0].line, /^rx\.ordered · 09:20 · /);
   const none = ruleCards({ intent: line("a", "rx.ordered"), fact: null }, "staff");
   assert.equal(none[1].line, NOT_RECORDED);
@@ -211,4 +212,31 @@ test("lit marks and chips use theme tokens and an explicit text colour", () => {
     assert.doesNotMatch(block, /#[0-9a-f]{3,8}\b/i);
     assert.match(block, /color: var\(--(ink|on-sun)\)/);
   }
+});
+
+test("historyLine reads as a plain audit trail", () => {
+  const ai = { type: "work.done", event_id: "e1", when: "09:20", by: AI_BY, plain: `${AI_BY}: Assigned 2 tasks to Nurse Asha.` };
+  const nurse = { type: "obs.recorded", event_id: "e2", when: "09:25", by: "Nurse Asha (synthetic)", plain: "Nurse Asha logged BP 88/60." };
+  const bare = { type: "tray.checked", event_id: "e3", when: "Yesterday 09:30", by: "Nurse Asha (synthetic)", plain: "Tray check by photos: all seen." };
+  assert.equal(historyLine(ai), "09:20 · AI: Assigned 2 tasks to Nurse Asha.");
+  assert.equal(historyLine(nurse), "09:25 · Nurse Asha logged BP 88/60.");
+  assert.equal(historyLine(bare), "09:30 · Nurse Asha Tray check by photos: all seen.");
+  for (const w of [ai, nurse, bare]) {
+    const line = historyLine(w);
+    assert.doesNotMatch(line, /task\.assigned|work\.done|\b[a-z]+\.[a-z_]+\b/);
+    assert.equal(line.split(AI_BY).length - 1, 0);
+  }
+  assert.equal(AI_NOTE, "AI = AI admin acting for Ward 4");
+  assert.equal(eventIdLines([ai, nurse]), "work.done:e1\nobs.recorded:e2");
+});
+
+test("the Inspector opens on Why, keeps Undo in the header and handles a failed copy", () => {
+  const s = src("./Inspector.jsx");
+  assert.match(s, /useState\("why"\)/);
+  assert.match(s, /<AgentUndo moment=\{moment\}/);
+  assert.match(s, /Copy event IDs/);
+  assert.match(s, /Could not copy/);
+  assert.doesNotMatch(s, /<span className="chip">\{modelChip\(moment\)\}<\/span>\s*<StatusPill/);
+  assert.match(src("./InspectAgent.jsx"), /"How it chose"/);
+  assert.match(src("./InspectAgent.jsx"), /A fixed rule, not a model/);
 });

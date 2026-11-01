@@ -47,7 +47,7 @@ test("findingFor and canInspect", () => {
 });
 
 test("all C7 copy passes the advice rule", () => {
-  for (const s of ["Input", "What the AI found", "Record", "Model", "Inspect", "Close", "Nothing to inspect with that id.", "No model call.", "No raw output is kept for this result.", "Record & evidence", "All", "Needs you", "Photos", "Video", "Voice", "Answers", "Alerts", "Nothing here for this filter.", "AI activity", "Waiting for the doctor", "Flagged", "Matches", "Recorded", "Failed"]) assert.doesNotMatch(s, ADVICE);
+  for (const s of ["Why", "Evidence", "History", "Model", "What it did", "Because", "How it chose", "Made by", "A fixed rule, not a model", "Copy event IDs", "Copied", "Could not copy", "Inspect", "Close", "Nothing to inspect with that id.", "No model call.", "No raw output is kept for this result.", "Record & evidence", "All", "Needs you", "Photos", "Video", "Voice", "Answers", "Alerts", "Nothing here for this filter.", "AI activity", "Waiting for the doctor", "Flagged", "Matches", "Recorded", "Failed"]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("AiMoment hides the arrow from the accessible name", () => {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 from app.agent import verifier
 from app.journey import doctor_status, handover, tasks
@@ -24,6 +25,16 @@ TEMPLATES = {
 }
 OPS_PROMPT = ("Reword these record lines as one short plain sentence for a doctor to approve. "
               "Add no number, medicine or instruction that is not in the lines.\n\n")
+# How each kind of work is decided, in words a person can read; shown as "How it chose" in the Inspector.
+HOW = {
+    "ack_order": "A fixed rule: an unacknowledged signed order is acknowledged.",
+    "assign_task": "the nurse on shift with the fewest open tasks",
+    "nudge_obs_overdue": "A fixed rule: the nurse who holds the overdue task is told.",
+    "route_question": "the first doctor who is available",
+    "file_read": "A fixed rule: a monitor read is filed as it was read.",
+    "draft_answer": "A fixed rule: the answer is drafted from the discharge card.",
+    "propose_move": "A fixed rule: a patient who is ready is proposed for the ward.",
+}
 _OPEN = ("open", "running")
 _OVERDUE_WHAT = {"obs": "observations are", "dose": "a dose is"}
 _OBS_FIELDS = tasks.OBS_FIELDS
@@ -196,5 +207,7 @@ def plan(item: WorkItem, events: list[dict], *, board=(), at_ms: int = 0, settin
     `settings` and `write` are for the reword. `patient` is the episode's short name for the move sentence."""
     planner = _PLANNERS[item.kind]
     if planner is _draft_answer:  # only the L1 draft is reworded; propose_move has no cited rows, so it stays a template
-        return planner(item, events, board, at_ms, patient, settings, write)
-    return planner(item, events, board, at_ms, patient)
+        action = planner(item, events, board, at_ms, patient, settings, write)
+    else:
+        action = planner(item, events, board, at_ms, patient)
+    return replace(action, how=HOW[item.kind]) if action else None

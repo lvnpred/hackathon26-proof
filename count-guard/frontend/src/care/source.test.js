@@ -26,7 +26,7 @@ test("source words are never a model name or the banned status word", () => {
 
 test("only the Inspector, the model cards and the AI page import modelChip", () => {
   const dir = new URL("./", import.meta.url);
-  const allowed = new Set(["Inspector.jsx", "ModelCards.jsx", "AiDashboard.jsx"]);
+  const allowed = new Set(["Inspector.jsx", "InspectAgent.jsx", "ModelCards.jsx", "AiDashboard.jsx"]);
   for (const name of fs.readdirSync(dir)) {
     if (!name.endsWith(".jsx") || allowed.has(name)) continue;
     assert.doesNotMatch(fs.readFileSync(new URL(name, dir), "utf8"), /modelChip|chipFor|heardChip|draftChip/, name);

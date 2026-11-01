@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useMatch, useSearchParams } from "react-router-dom";
+import Fault from "./Fault";
 import { modelChip, findingFor } from "./moments.js";
 import { findingPill } from "./finding.js";
 import StatusPill from "./StatusPill.jsx";
-import { TABS, correctionLine, inspectEpisode, modelRows, readInspect, recordLine, resolveMoment, tabsFor } from "./inspect.js";
+import { AI_NOTE, TABS, correctionLine, eventIdLines, historyLine, inspectEpisode, isAiBy, modelRows, readInspect, resolveMoment, tabsFor } from "./inspect.js";
 import { findPatient } from "./Patients";
 import { VoiceFound, VoiceInput } from "./InspectVoice.jsx";
 import { AnswerFound, AnswerInput, DraftFound, DraftInput, RuleFound, RuleInput } from "./InspectText.jsx";
-import { AgentFound, AgentInput } from "./InspectAgent.jsx";
-import { agentMoments } from "./handling.js";
+import { AgentFound, AgentInput, AgentUndo } from "./InspectAgent.jsx";
+import { OPS_SCOPE, agentMoments } from "./handling.js";
 import { PhotoFound, RawOutput, VisualFound, VisualInput } from "./InspectVisual.jsx";
 
 // Registration point: Tasks 3-5 fill each kind with { Input, Found }; the ops agent registers `agent`.
@@ -53,6 +54,7 @@ function ModelTab({ moment, episodeId }) {
   const rows = modelRows(moment.calls, moment.handmade);
   return (
     <div className="inspector-model">
+      {modelChip(moment) && <p><span className="chip">{modelChip(moment)}</span></p>}
       {rows.length ? (
         <table>
           <thead><tr><th>Model</th><th>Id</th><th>Mode</th><th>Time</th></tr></thead>
@@ -65,20 +67,32 @@ function ModelTab({ moment, episodeId }) {
   );
 }
 
-function RecordTab({ moment, episodeId, lens }) {
+// A plain audit trail: "09:20 · Nurse Asha logged BP 88/60." with no event names; a line links to the chart only when it can.
+function HistoryTab({ moment, episodeId }) {
+  const [copied, setCopied] = useState("");
+  const written = moment.written || [];
+  const copy = () => {
+    const text = eventIdLines(written);
+    Promise.resolve().then(() => navigator.clipboard.writeText(text)).then(() => setCopied("Copied"), () => setCopied("Could not copy"));
+  };
   return (
-    <ul className="inspector-record">
-      {(moment.written || []).map((w) => {
-        const text = recordLine(w, lens);
-        const fix = lens === "patient" ? "" : correctionLine(w.read, w.saved, w.by);
-        return (
-          <li key={w.event_id}>
-            {lens === "patient" || !episodeId ? text : <Link to={`/chart/${episodeId}?line=${w.event_id}`}>{text}</Link>}
-            {fix && <span className="muted"> · {fix}</span>}
-          </li>
-        );
-      })}
-    </ul>
+    <div className="inspector-history">
+      {written.some((w) => isAiBy(w.by)) && <p className="small muted">{AI_NOTE}</p>}
+      <ul className="inspector-record">
+        {written.map((w) => {
+          const text = historyLine(w);
+          const fix = correctionLine(w.read, w.saved, w.by);
+          return (
+            <li key={w.event_id}>
+              {episodeId ? <Link className="history-line" to={`/chart/${episodeId}?line=${w.event_id}`}>{text}</Link> : text}
+              {fix && <span className="muted"> · {fix}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      {written.length > 0 && <button type="button" className="quiet" onClick={copy}>Copy event IDs</button>}
+      {copied && <span className="small muted" role="status"> {copied}</span>}
+    </div>
   );
 }
 
@@ -87,17 +101,17 @@ function Body({ moment, tab, episodeId, view, role, lens, initialFocus, act, now
   const views = KIND_VIEWS[moment.kind];
   const props = { moment, episodeId, view, role, lens, focus, setFocus, act, nowMs, busy, fault };
   const finding = <p>{findingFor(moment, lens)}</p>;
-  if (tab === "record") return <RecordTab moment={moment} episodeId={episodeId} lens={lens} />;
+  if (tab === "history") return <HistoryTab moment={moment} episodeId={episodeId} />;
   if (tab === "model") return <ModelTab moment={moment} episodeId={episodeId} />;
-  const View = views?.[tab === "input" ? "Input" : "Found"];
+  const View = views?.[tab === "evidence" ? "Input" : "Found"];
   return View ? <View {...props} /> : finding;
 }
 
 export default function Inspector({ ward }) {
   const { momentId, episodeId: paramEpisode, focus: urlFocus, closeInspector } = useInspector();
-  const [tab, setTab] = useState("found");
+  const [tab, setTab] = useState("why");
   const chartId = useMatch("/chart/:episodeId")?.params.episodeId;
-  useEffect(() => { setTab("found"); }, [momentId]);
+  useEffect(() => { setTab("why"); }, [momentId]);
   useEffect(() => {
     if (!momentId) return undefined;
     const onKey = (e) => { if (e.key === "Escape") closeInspector(); };
@@ -119,12 +133,13 @@ export default function Inspector({ ward }) {
         {moment ? (
           <>
             <h2>{moment.title}</h2>
-            <span className="chip">{modelChip(moment)}</span>
             <StatusPill {...findingPill(moment, ward.role)} />
+            {lens !== "patient" && moment.kind === "agent" && <AgentUndo moment={moment} role={ward.role} nowMs={ward.nowMs} busy={ward.busy} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />}
           </>
         ) : <p>Nothing to inspect with that id.</p>}
         <button type="button" className="quiet" onClick={closeInspector}>Close</button>
       </header>
+      {moment?.kind === "agent" && lens !== "patient" && <Fault fault={ward.fault} episodeId={episodeId} only={[OPS_SCOPE]} />}
       {moment && (
         <>
           <div role="tablist" className="inspector-tabs">

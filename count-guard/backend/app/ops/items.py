@@ -49,6 +49,7 @@ class Action:
     draft: str = ""
     cited: tuple[dict, ...] = ()
     model: str = "rules"
+    how: str = ""  # the fixed rule that picked who or what; the Inspector shows it as "How it chose"
     reason: str = ""  # overrides the item's reason on what the gate writes, when the planner knows more
 
 
@@ -134,7 +135,7 @@ def handling_row(row: dict, by_id: dict[str, dict], now_ms: int | None = None) -
         "work_id": row["id"], "kind": row["kind"], "level": d.get("level") or row["level"],
         "summary": d.get("summary", ""), "at_ms": d["at_ms"],
         "undo_until_ms": d.get("undo_until_ms") if row["status"] == "done" else None,
-        "reason": d.get("reason") or row["reason"],
+        "reason": d.get("reason") or row["reason"], "how": d.get("how", ""),
         "inputs": _inputs(d.get("inputs") or row["inputs"], by_id, now_ms), "status": row["status"],
         "model": d.get("model") or "rules", "written": _written(d, by_id, now_ms),
     }
@@ -175,7 +176,7 @@ def ops_view(events: list[dict], paused: bool = False, now_ms: int | None = None
             "work_id": row["id"], "kind": row["kind"], "owner_role": row["owner_role"], "level": "L1",
             "model": p.get("model") or "rules", "sentence": p.get("sentence", ""), "draft": p.get("draft", ""),
             "cited": p.get("cited") or [], "at_ms": p["at_ms"], "editable": bool(p.get("editable")),
-            "reason": p.get("reason") or row["reason"],
+            "reason": p.get("reason") or row["reason"], "how": p.get("how", ""),
             "inputs": _inputs(p.get("inputs") or row["inputs"], by_id, now_ms),
         })
     return {

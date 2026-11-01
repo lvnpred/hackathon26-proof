@@ -292,3 +292,12 @@ def test_handover_prompt_default_unchanged(tmp_path):
     seen = []
     handover.reword([{"text": "A fact.", "evidence": []}], _no_key(tmp_path), write=lambda p: seen.append(p) or "ok")
     assert seen[0].startswith(handover.PROMPT) and not seen[0].startswith(planner.OPS_PROMPT)
+
+
+def test_every_planned_action_says_how_it_chose():
+    evs = _ward() + [_task("t1")]
+    act = planner.plan(_item("assign_task", "t1"), evs)
+    assert act.how == "the nurse on shift with the fewest open tasks"
+    assert set(planner.HOW) == set(planner._PLANNERS)
+    for how in planner.HOW.values():
+        assert not SNAKE.search(how)

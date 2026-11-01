@@ -218,6 +218,10 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .inspector-tabs button { min-height: 44px }
 .inspector-tabs button[aria-selected="true"] { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action) }
 .inspector-panel { display: grid; gap: 8px; min-width: 0 }
+.why-lines { margin: 0; display: grid; gap: 8px }
+.why-lines dd { margin: 0 }
+.inspector-history { display: grid; gap: 8px }
+.history-line { color: inherit; text-decoration: none }
 .inspector-record { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px }
 @media (max-width: 600px) {
   .inspector { width: 100%; border-left: 0 }

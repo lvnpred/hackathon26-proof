@@ -75,7 +75,7 @@ test("agentMoment is a full moment (PF-3)", () => {
   assert.equal(m.episodeId, "ep1");
   assert.equal(m.level, "L2");
   assert.equal(m.undoUntilMs, 10 * MIN);
-  assert.deepEqual(m.refs, { workId: "w1", episodeId: "ep1", reason: "Obs were overdue", inputs: m.inputs, level: "L2", undoUntilMs: 10 * MIN });
+  assert.deepEqual(m.refs, { workId: "w1", episodeId: "ep1", reason: "Obs were overdue", inputs: m.inputs, level: "L2", undoUntilMs: 10 * MIN, how: "" });
   assert.equal(agentMoment(row("w2", { status: "undone" }), "ep1").status, "undone");
   const p = agentMoment(prop("p1"), "ep1");
   assert.deepEqual([p.status, p.owner, p.title], ["open", "doctor", "Ready to move to the ward"]);

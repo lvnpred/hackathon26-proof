@@ -6,9 +6,9 @@ import { explainRegions, plural, regionLabel } from "./evidence.js";
 import { stripLabel } from "./brownbag.js";
 import { sentenceText } from "./orders.js";
 
-export const TABS = [["input", "Input"], ["found", "What the AI found"], ["record", "Record"], ["model", "Model"]];
+export const TABS = [["why", "Why"], ["evidence", "Evidence"], ["history", "History"], ["model", "Model"]];
 
-export const tabsFor = (lens) => (lens === "patient" ? ["input", "found"] : TABS.map(([key]) => key));
+export const tabsFor = (lens) => (lens === "patient" ? ["why", "evidence"] : TABS.map(([key]) => key));
 
 // The ?inspect= parameter is untrusted: only a plain id passes.
 export function readInspect(params) {
@@ -34,6 +34,22 @@ export const recordLine = (w, lens) => {
   const hhmm = String(w.when || "").slice(-5);
   return lens === "patient" ? `${hhmm} · ${w.plain}` : `${w.type} · ${hhmm} · ${displayName(w.by)} · ${w.plain}`;
 };
+
+// The ward's AI admin signs its writes with this label (backend ops/policy.py AI_BY); the History tab shows it as "AI".
+export const AI_BY = "AI (on behalf of Ward 4)";
+export const AI_NOTE = "AI = AI admin acting for Ward 4";
+export const isAiBy = (by) => String(by || "").startsWith("AI (on behalf of");
+
+// "09:20 · Nurse Asha logged BP 88/60.": no event name, and the AI label appears once.
+export function historyLine(w) {
+  const hhmm = String(w.when || "").slice(-5);
+  const who = isAiBy(w.by) ? "AI" : displayName(w.by);
+  const plain = String(w.plain || "").replaceAll(AI_BY, "AI");
+  return `${hhmm} · ${!who || plain.startsWith(who) ? plain : `${who} ${plain}`}`;
+}
+
+// One line per written event, as "type:event_id", for a support note.
+export const eventIdLines = (written) => (written || []).map((w) => `${w.type}:${w.event_id}`).join("\n");
 
 export { correctionLine };
 
@@ -157,7 +173,7 @@ export function ruleCards(refs, lens) {
     line: line ? recordLine(line, lens) : NOT_RECORDED,
     id: line?.id ?? null,
   });
-  return [card("Ordered / prescribed", refs?.intent), card("Recorded / read", refs?.fact)];
+  return [card("Ordered / prescribed", refs?.intent), card("What was read", refs?.fact)];
 }
 
 // The distinct record lines a draft was written from, in first-cited order.

@@ -132,7 +132,7 @@ export const BEATS = [
     id: "kumar-tray", path: "kumar", role: "nurse", seconds: 6, film: true,
     say: "Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Inspect shows what SAM 3.1 saw.",
     clicks: ["Role Nurse", "Chart R. Kumar", 'File eval/p3/tray-hernia.mp4 into "Tray check"', 'Button "Inspect" in "Theatre steps"'],
-    expect: ["Flagged: not everything planned was seen. The surgeon decides.", "Needle holder", "1 missing", "Saw 2 of 3 needle holders.", "What the AI found"],
+    expect: ["Flagged: not everything planned was seen. The surgeon decides.", "Needle holder", "1 missing", "Saw 2 of 3 needle holders.", "Why"],
     files: ["tray-hernia.mp4"],
     keyed: "SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill.",
   },

@@ -59,11 +59,11 @@ def _tray_refusal(events: list[dict]) -> str | None:
 
 
 def _swabs_refusal(events: list[dict]) -> tuple[int | None, str]:
-    """(opened, refusal) for a swab camera count: the pack opened in this theatre stay, else why not."""
+    """(opened, refusal) for a swab camera count: the swabs opened in this theatre stay (every pack), else why not."""
     if states.current_state(events) != "theatre":
         return None, PACK_FIRST
-    opened = states.stay_latest(events, "count.pack_opened")
-    return (opened["payload"]["quantity"], "") if opened else (None, PACK_FIRST)
+    opened = states.stay_opened(events)
+    return (opened, "") if opened is not None else (None, PACK_FIRST)
 
 
 def _setup_refusal(events: list[dict], task_id: str) -> tuple[str | None, int, str]:

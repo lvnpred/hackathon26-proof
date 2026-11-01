@@ -260,6 +260,8 @@ button.moment-row:hover { background: var(--surface-sunk) }
 .ai-handling-text { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere }
 .ai-handling button, .ai-handling a, .proposal-card button { min-height: 44px }
 .ai-handling a { display: inline-flex; align-items: center; color: var(--action) }
+/* Undo and Why always appear together, Undo first, same size (spec 5.9): the quiet Why keeps the button box. */
+.undo-why button.quiet { padding: 0 18px; align-self: auto; }
 .ai-handling button.linklike, .proposal-card button.linklike { padding: 0 8px; border: 0; background: transparent; color: var(--action); text-decoration: underline; font: inherit; cursor: pointer }
 .proposal-card { display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--sun); border-radius: 12px; background: var(--sun-soft); color: var(--ink) }
 .proposal-card .next-text { font-size: 1.05rem }

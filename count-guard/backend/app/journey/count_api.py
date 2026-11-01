@@ -13,6 +13,7 @@ from app.journey.api import At, _act, _require, _store
 count_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 NEEDS_REASON = "Say what the team did: the count does not match."
 NOT_THIS_STAY = "That camera count is not from this patient's theatre stay."
+ONLY_UP = "The pack count can only go up once surgery has begun. Record an extra pack instead."
 
 
 class CountIn(At):
@@ -24,6 +25,7 @@ class CountIn(At):
     supersedes_id: str | None = None
     evidence_id: str | None = Field(None, pattern=r"^[0-9a-f]{32}$")  # the camera count this closing starts from
     via: Literal["typed", "camera"] = "typed"
+    extra: bool = False  # an extra pack opened: adds to the count instead of naming the new total
 
     @model_validator(mode="after")
     def _step_fields(self):
@@ -32,6 +34,8 @@ class CountIn(At):
                 raise ValueError("quantity is required when the pack is opened")
             if self.supersedes_id:
                 raise ValueError("an opened pack cannot replace a line")
+        elif self.extra:
+            raise ValueError("extra is only for an opened pack")
         elif self.returned is None:
             raise ValueError("returned is required for the closing count")
         return self
@@ -45,6 +49,17 @@ def _camera_count(events: list[dict], evidence_id: str) -> dict:
     return held[-1]
 
 
+def _pack_quantity(events: list[dict], body: CountIn) -> int:
+    """The swabs this pack adds. Before surgery began a pack replaces the last one. Once it began the count can only
+    go up: an extra pack adds its quantity; a new total adds the difference, and a total that is not higher is a 422."""
+    if states.surgery_status(events) == "none" or body.extra:
+        return body.quantity
+    current = states.stay_opened(events) or 0
+    if body.quantity <= current:
+        raise HTTPException(status_code=422, detail=ONLY_UP)
+    return body.quantity - current
+
+
 @count_router.post("/count")
 def count(episode_id: str, body: CountIn, request: Request) -> dict:
     """The theatre nurse's swab count at the demo time. A corrected closing replaces the one it names."""
@@ -55,10 +70,10 @@ def count(episode_id: str, body: CountIn, request: Request) -> dict:
         old = store.get_event(body.supersedes_id)
         if old is None or old["episode_id"] != episode_id or old["event_type"] != "count.closing":
             raise HTTPException(status_code=404, detail="Closing count not found")
-    if body.step == "opened":
-        payload = {"item_type": "swab", "quantity": body.quantity, "source": "typed", "by": body.by}
-        return _act(request, episode_id, "count.pack_opened", payload, body.at_ms, body.supersedes_id)
     events = store.events(episode_id)
+    if body.step == "opened":
+        payload = {"item_type": "swab", "quantity": _pack_quantity(events, body), "source": "typed", "by": body.by}
+        return _act(request, episode_id, "count.pack_opened", payload, body.at_ms, body.supersedes_id)
     # A correction keeps the camera count its closing came from, so the record shows what was read and what was saved.
     evidence_id = body.evidence_id or (old["payload"].get("evidence_id") if old else None)
     camera = _camera_count(events, evidence_id) if evidence_id else None  # a 422 when not from this stay

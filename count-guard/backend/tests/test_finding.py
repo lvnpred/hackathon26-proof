@@ -137,3 +137,11 @@ def test_answered_count_nudge_is_not_count_complete_while_swabs_are_missing():
     seen = _ev("n2", "nudge.seen", 4, nudge_id="n1", by=ASHA, note="found later")
     rows = moments([_swab_flag(), _closing("c1", 2, 14), _count_nudge(), seen])
     assert _pill(rows, "nudge") == ("danger", "1 swab unaccounted")
+
+
+def test_count_nudge_reads_its_own_stay_closing_not_a_later_stay():
+    """M7: a second theatre visit's closing must not turn the first stay's count nudge green."""
+    state = lambda eid, ts, to: _ev(eid, "patient.state", ts, to=to)  # noqa: E731
+    rows = moments([state("s1", 1, "theatre"), _closing("c1", 2, 14), _count_nudge(), state("s2", 5, "ward"),
+                    state("s3", 6, "theatre"), _closing("c2", 7, 15)])
+    assert _pill(rows, "nudge") == ("danger", "1 swab unaccounted")

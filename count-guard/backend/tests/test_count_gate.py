@@ -138,3 +138,80 @@ def test_second_stay_without_a_pack_cannot_close_or_end(tmp_path):
     r = _count(client, eid, "closing", returned=20)
     assert r.status_code == 409 and r.json()["detail"] == "Record the pack opened first."
     assert _surgery(client, eid, "ended").status_code == 409
+
+
+ONLY_UP = "The pack count can only go up once surgery has begun. Record an extra pack instead."
+
+
+def test_repacking_to_the_returned_number_cannot_close_the_gap(tmp_path):
+    """C1: pack 20, began, Back 19 needs a reason; re-recording the pack as 19 is refused, so ending stays blocked."""
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    assert _count(client, eid, "opened", quantity=20).status_code == 200
+    assert _surgery(client, eid, "began").status_code == 200
+    assert _count(client, eid, "closing", returned=19).status_code == 422
+    r = _count(client, eid, "opened", quantity=19)
+    assert r.status_code == 422 and r.json()["detail"] == ONLY_UP
+    assert _count(client, eid, "opened", quantity=20).json()["detail"] == ONLY_UP  # the same total is not an extra pack
+    assert _count(client, eid, "closing", returned=19).status_code == 422
+    r = _surgery(client, eid, "ended")
+    assert r.status_code == 409 and r.json()["detail"] == SAVE_FIRST
+
+
+def test_an_extra_pack_adds_to_the_opened_count(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    _count(client, eid, "opened", quantity=20)
+    assert _surgery(client, eid, "began").status_code == 200
+    assert _count(client, eid, "opened", quantity=5, extra=True).status_code == 200
+    r = _count(client, eid, "closing", returned=25)
+    assert r.status_code == 200 and r.json()["count"]["opened"] == 25 and r.json()["count"]["missing"] == 0
+    assert _surgery(client, eid, "ended").status_code == 200
+
+
+def test_a_higher_total_after_began_records_the_difference(tmp_path):
+    from app.journey import states
+    client, eid = _begun(tmp_path)
+    _count(client, eid, "opened", quantity=20)
+    assert _count(client, eid, "opened", quantity=25).status_code == 200
+    packs = states.stay_packs(_store(client).events(eid))
+    assert [p["payload"]["quantity"] for p in packs] == [20, 5]
+    assert _count(client, eid, "closing", returned=20).status_code == 422  # 5 unaccounted needs a reason
+
+
+def test_before_surgery_began_a_pack_may_be_replaced(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    _count(client, eid, "opened", quantity=20)
+    assert _count(client, eid, "opened", quantity=15).status_code == 200
+    assert _surgery(client, eid, "began").status_code == 200
+    assert _count(client, eid, "closing", returned=15).status_code == 200
+    assert _surgery(client, eid, "ended").status_code == 200
+
+
+def test_an_extra_pack_after_the_closing_reopens_the_gate(tmp_path):
+    client, eid = _begun(tmp_path)
+    _count(client, eid, "opened", quantity=20)
+    _count(client, eid, "closing", returned=20)
+    _count(client, eid, "opened", quantity=5, extra=True)
+    r = _surgery(client, eid, "ended")
+    assert r.status_code == 409 and r.json()["detail"] == NOT_ADDING_UP
+
+
+def test_extra_is_only_for_an_opened_pack(tmp_path):
+    client, eid = _begun(tmp_path)
+    _count(client, eid, "opened", quantity=20)
+    assert _count(client, eid, "closing", returned=20, extra=True).status_code == 422
+
+
+def test_closing_before_surgery_began_does_not_count(tmp_path):
+    """I1: a closing taken before incision proves nothing."""
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    _count(client, eid, "opened", quantity=20)
+    assert _count(client, eid, "closing", returned=20).status_code == 200
+    assert _surgery(client, eid, "began").status_code == 200
+    r = _surgery(client, eid, "ended")
+    assert r.status_code == 409 and r.json()["detail"] == SAVE_FIRST
+    assert _count(client, eid, "closing", returned=20).status_code == 200
+    assert _surgery(client, eid, "ended").status_code == 200

@@ -157,7 +157,7 @@ def test_pack_opened_through_the_route_drops_the_proposal(tmp_path):
     client = _ops_client(tmp_path)
     eid = _propose_move(client)
     wi = _proposal(client, eid, "propose_move")
-    client.post(_url(eid, "count"), json={"step": "opened", "quantity": 15, "by": ASHA, "at_ms": 45})
+    client.post(_url(eid, "count"), json={"step": "opened", "quantity": 5, "extra": True, "by": ASHA, "at_ms": 45})
     drop = next(e for e in _of(client, eid, "work.dropped") if e["payload"]["work_id"] == wi)["payload"]
     assert drop["code"] == "no_longer_allowed"
     r = client.post(_url(eid, f"ops/work/{wi}/approve"), json={"by": MEENA, "at_ms": 50})

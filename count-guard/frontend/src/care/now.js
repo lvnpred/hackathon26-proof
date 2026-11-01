@@ -57,7 +57,7 @@ function blockedItems(view, { role }) {
     items.push(item(RANK.blocked, "count", {
       title: saved ? "Swab count does not add up" : "Swab count not saved",
       detail: saved ? "Add the reason or correct the count." : `${count.opened} swabs opened. Save the closing count.`,
-      since: count.opened_at_ms ?? null, pill: { role: "check", text: "Count open" }, action: { kind: "step", keys: ["theatre"] },
+      since: count.opened_at_ms ?? null, pill: { role: "check", text: "Count not saved" }, action: { kind: "step", keys: ["theatre"] },
     }));
   }
   const fresh = WARD_STAY.includes(view.state) ? (view.order_list || []).filter((o) => !o.acknowledged_by) : [];

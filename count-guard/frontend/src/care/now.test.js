@@ -48,7 +48,8 @@ test("an unsaved swab count blocks the nurse in theatre", () => {
   const v = view({ state: "theatre", count: { opened: 14, opened_at_ms: NOW - H }, now_next: { ...view().now_next, next_role: "doctor" } });
   const pick = pickNow(v, NURSE, NOW);
   assert.deepEqual([pick.now.rank, pick.now.kind, pick.now.title], [2, "count", "Swab count not saved"]);
-  const saved = { opened: 14, closed_opened: 14, returned: 14, closed_by: "Nurse Asha (synthetic)" };
+  assert.deepEqual(pick.now.pill, { role: "check", text: "Count not saved" }, "spec 5.1 pill words");
+  const saved = { opened: 14, closed_opened: 14, returned: 14, closed_by: "Nurse Asha (synthetic)", closed_after_began: true };
   assert.equal(pickNow({ ...v, count: saved }, NURSE, NOW).now.kind, "nothing");
 });
 
@@ -125,4 +126,15 @@ test("the doctor's clinic step names the patient and the ward; other steps keep 
   assert.doesNotMatch(nurse.now.title, /Ward 4/);
   const ward = view();
   assert.doesNotMatch(withAdmitHeading(pickNow(ward, DOCTOR, NOW), ward, "doctor", "A. Das").now.title, /Ward 4/);
+});
+
+test("the Now Undo is secondary and Why is quiet, the same size (spec 5.9)", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("./NowAction.jsx", import.meta.url), "utf8");
+  const review = src.slice(src.indexOf('action.kind === "review"'), src.indexOf('action.kind === "task"'));
+  assert.match(review, /className="row undo-why"/);
+  assert.doesNotMatch(review, /className="primary"/);
+  assert.match(review, /className="quiet".*>Why</);
+  const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
+  assert.match(css, /\.undo-why button\.quiet \{ padding: 0 18px; align-self: auto; \}/);
 });

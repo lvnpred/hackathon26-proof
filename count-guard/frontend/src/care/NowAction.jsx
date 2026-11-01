@@ -28,9 +28,9 @@ export default function NowAction({ item, view, role, busy, act, nowMs, episodeI
     const row = handlingRows(view.ops, nowMs).find((r) => r.workId === action.workId);
     if (!row) return null;
     return (
-      <div className="row">
-        {row.undo && <button type="button" className="primary" disabled={busy} onClick={() => act(`/ops/work/${row.workId}/undo`, { by: staffBy(role, view) }, `${OPS_SCOPE}undo`)}>{row.undo}</button>}
-        <button type="button" className="linklike" onClick={() => openInspector(row.workId, { episodeId })}>Why</button>
+      <div className="row undo-why">
+        {row.undo && <button type="button" disabled={busy} onClick={() => act(`/ops/work/${row.workId}/undo`, { by: staffBy(role, view) }, `${OPS_SCOPE}undo`)}>{row.undo}</button>}
+        <button type="button" className="quiet" onClick={() => openInspector(row.workId, { episodeId })}>Why</button>
       </div>
     );
   }

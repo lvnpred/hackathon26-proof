@@ -110,9 +110,9 @@ def test_open_count_needs_reason(tmp_path):
     _to_theatre(client, eid)
     base = f"/journey/episodes/{eid}"
     by = {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    _surgery(client, eid, "began")  # a closing counts only after surgery began
     client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
     client.post(f"{base}/count", json={"step": "closing", "returned": 19, "detail": "Searching the room.", **by})
-    _surgery(client, eid, "began")
     _surgery(client, eid, "ended")
     r = _move(client, eid, "ward", reason="")
     assert r.status_code == 409
@@ -127,9 +127,9 @@ def test_closed_count_needs_no_reason(tmp_path):
     _to_theatre(client, eid)
     base = f"/journey/episodes/{eid}"
     by = {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    _surgery(client, eid, "began")  # a closing counts only after surgery began
     client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
     client.post(f"{base}/count", json={"step": "closing", "returned": 20, **by})
-    _surgery(client, eid, "began")
     _surgery(client, eid, "ended")
     assert _move(client, eid, "ward").status_code == 200
 
@@ -194,9 +194,9 @@ def _open_count_in_theatre(client, eid):
     _to_theatre(client, eid)
     base = f"/journey/episodes/{eid}"
     by = {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    _surgery(client, eid, "began")  # a closing counts only after surgery began
     client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
     client.post(f"{base}/count", json={"step": "closing", "returned": 19, "detail": "Searching the room.", **by})
-    _surgery(client, eid, "began")
     _surgery(client, eid, "ended")
 
 
@@ -218,9 +218,9 @@ def test_closed_count_leaves_the_theatre_exit_to_the_nurse(tmp_path):
     _to_theatre(client, eid)
     base = f"/journey/episodes/{eid}"
     by = {"by": "Nurse Asha (synthetic)", "at_ms": 0}
+    _surgery(client, eid, "began")  # a closing counts only after surgery began
     client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
     client.post(f"{base}/count", json={"step": "closing", "returned": 20, **by})
-    _surgery(client, eid, "began")
     _surgery(client, eid, "ended")
     move = _back_to_ward(_view(client, eid))
     assert move["role"] == "nurse"
@@ -389,8 +389,9 @@ def test_count_is_per_theatre_stay(tmp_path):
     base, by = f"/journey/episodes/{eid}", {"by": "Nurse Asha (synthetic)", "at_ms": 0}
     empty = {"opened": None, "opened_by": None, "opened_at_ms": None, "returned": None, "missing": None,
              "read": None, "saved": None, "closed_by": None, "closed_opened": None, "closed_detail": None,
-             "closed_via": None, "closed_at_ms": None, "camera": None}
+             "closed_via": None, "closed_at_ms": None, "closed_after_began": False, "camera": None}
     assert _view(client, eid)["count"] == empty
+    _surgery(client, eid, "began")
     client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
     closing = client.post(f"{base}/count", json={"step": "closing", "returned": 19, "detail": "Searching.", **by}).json()
     count = _view(client, eid)["count"]
@@ -398,8 +399,7 @@ def test_count_is_per_theatre_stay(tmp_path):
     fix_id = [t for t in closing["timeline"] if t["type"] == "count.closing"][-1]["id"]
     client.post(f"{base}/count", json={"step": "closing", "returned": 20, "supersedes_id": fix_id, **by})
     assert _view(client, eid)["count"]["missing"] == 0
-    _surgery(client, eid, "began")
-    _surgery(client, eid, "ended")
+    assert _surgery(client, eid, "ended").status_code == 200
     _move(client, eid, "ward", checklist={})
     assert _view(client, eid)["count"]["opened"] is None
 

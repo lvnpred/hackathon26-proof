@@ -73,8 +73,14 @@ def _unaccounted_text(n: int) -> str:
 
 
 def _open_count(moment: dict, ix) -> int:
-    """Unaccounted swabs of the latest closing count not superseded; the nudge's own fact when none is shown."""
-    closings = [e for e in ix.shown if e["event_type"] == "count.closing"]
+    """Unaccounted swabs of this stay's latest closing count not superseded; the nudge's own fact when none is shown.
+
+    The stay is the nudge's: between the patient's last move before it and the next move after it."""
+    at = ix.order.get(moment["id"], 0)
+    moves = [ix.order[e["id"]] for e in ix.shown if e["event_type"] == "patient.state"]
+    start = max((i for i in moves if i < at), default=-1)
+    end = min((i for i in moves if i > at), default=len(ix.order))
+    closings = [e for e in ix.shown if e["event_type"] == "count.closing" and start < ix.order[e["id"]] < end]
     fact = closings[-1] if closings else ix.by_id.get((moment["refs"].get("fact") or {}).get("id"))
     return (fact["payload"].get("unaccounted") or 0) if fact else 0
 

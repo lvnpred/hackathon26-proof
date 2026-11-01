@@ -2,7 +2,7 @@ import { useState } from "react";
 import { closingBody } from "./capture";
 import AiMark from "./AiMark.jsx";
 import { displayName } from "./names";
-import { countReconciled, packLine, reasonNeeded, savedLine, swabFigures } from "./theatre";
+import { countReconciled, packLine, reasonNeeded, savedLine, swabFigures, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
 import { momentFor } from "./moments.js";
 import { latestCheck, swabTotal } from "./video";
@@ -14,7 +14,7 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
   const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
   const [detail, setDetail] = useState("");
-  const [changing, setChanging] = useState(false);
+  const [changing, setChanging] = useState(false); // replacing the pack (before surgery began) or adding one (after)
   const by = NURSE; // the tagged value goes to the server; the screen shows the plain name
 
   const count = view.count;
@@ -35,6 +35,9 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
   const thisStay = swabCheck && (count?.opened_at_ms == null || swabCheck.at_ms >= count.opened_at_ms) ? swabCheck : null;
   const complete = countReconciled(view);
   const askPack = !packed || changing;
+  // Once surgery began the opened count can only go up: the pack is not replaced, an extra pack adds to it.
+  const began = theatreSteps(view).find((step) => step.key === "began")?.done;
+  const extra = packed && began;
 
   async function post(body) {
     onNote("");
@@ -64,24 +67,33 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
         ))}
       </div>
       {complete && <p className="note" role="status">Count complete</p>}
-      {packed && <p className="small">{packLine(count)} {!changing && <button type="button" className="quiet" onClick={() => setChanging(true)}>change</button>}</p>}
+      {packed && (
+        <p className="small">
+          {packLine(count)}{" "}
+          {!changing && (
+            <button type="button" className="quiet" onClick={() => { setChanging(true); if (extra) setQuantity(""); }}>
+              {extra ? "Add pack" : "change"}
+            </button>
+          )}
+        </p>
+      )}
       {askPack && (
         <div className="row">
           <label className="field" style={{ flex: "1 1 120px" }}>
-            Pack opened
+            {extra ? "Extra pack" : "Pack opened"}
             <input inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
           </label>
           <p className="small muted" style={{ flex: "1 1 160px" }}>By {displayName(by)}</p>
           <button
             disabled={!ready || !Number.isInteger(opened) || opened < 1}
             onClick={async () => {
-              if (await post({ step: "opened", quantity: opened })) {
+              if (await post(extra ? { step: "opened", quantity: opened, extra: true } : { step: "opened", quantity: opened })) {
                 setChanging(false);
-                onNote("Pack opened recorded.");
+                onNote(extra ? "Extra pack recorded." : "Pack opened recorded.");
               }
             }}
           >
-            Record pack opened
+            {extra ? "Record extra pack" : "Record pack opened"}
           </button>
         </div>
       )}

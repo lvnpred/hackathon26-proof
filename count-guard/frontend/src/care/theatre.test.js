@@ -84,13 +84,14 @@ test("checklist copy has no advice words", () => {
 test("controls follow the backend rules, not the list order", () => {
   assert.equal(canRecord(base, "began"), true, "began without a tray check");
   assert.equal(canRecord(base, "tray"), true);
-  assert.equal(canRecord(base, "count"), true, "pack opened before surgery began");
+  assert.equal(canRecord(base, "count"), false, "the count is taken once surgery began");
   assert.equal(canRecord(base, "ended"), false, "ended waits for began");
   const began = { ...base, timeline: [IN_THEATRE, line("surgery.began", "09:24")] };
   assert.equal(canRecord(began, "began"), false);
   assert.equal(canRecord(began, "tray"), false, "tray upload is hidden once surgery began");
+  assert.equal(canRecord(began, "count"), true, "the count opens once surgery began");
   assert.equal(canRecord(began, "ended"), false, "ended waits for a saved, reconciled count");
-  const saved = { ...began, count: { opened: 15, returned: 15, missing: 0, closed_opened: 15, closed_by: "Nurse Asha (synthetic)" } };
+  const saved = { ...began, count: { opened: 15, returned: 15, missing: 0, closed_opened: 15, closed_by: "Nurse Asha (synthetic)", closed_after_began: true } };
   assert.equal(canRecord(saved, "ended"), true);
   assert.equal(canRecord(saved, "ward"), false, "ward waits for surgery ended");
   const checked = { ...base, tray: { planned: [{}], latest: { check: "tray", match: "mismatch", at_ms: 22 * M } } };
@@ -103,14 +104,16 @@ test("controls follow the backend rules, not the list order", () => {
 
 test("countReconciled mirrors the server rule", () => {
   const ASHA = "Nurse Asha (synthetic)";
-  const v = (count) => ({ count });
+  const v = (count) => ({ count: { closed_after_began: true, ...count } });
   assert.equal(countReconciled(v({})), false, "no closing");
-  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 15 })), true, "adds up");
-  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 14 })), false, "1 unaccounted, no reason");
-  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 14, closed_detail: " " })), false, "blank reason");
-  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 14, closed_detail: "Found under the drape" })), true);
-  assert.equal(countReconciled(v({ closed_by: "AI (on behalf of Nurse Asha)", closed_opened: 15, returned: 15 })), false, "an AI closing never counts");
-  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 15, missing: 3 })), true, "recomputed, not the stored figure");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 15, returned: 15 })), true, "adds up");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 15, returned: 14 })), false, "1 unaccounted, no reason");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 15, returned: 14, closed_detail: " " })), false, "blank reason");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 15, returned: 14, closed_detail: "Found under the drape" })), true);
+  assert.equal(countReconciled(v({ closed_by: "AI (on behalf of Nurse Asha)", opened: 15, returned: 15 })), false, "an AI closing never counts");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 15, returned: 15, missing: 3 })), true, "recomputed, not the stored figure");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 20, closed_opened: 15, returned: 15 })), false, "an extra pack since the closing: the stay's sum, not the closing's figure");
+  assert.equal(countReconciled(v({ closed_by: ASHA, opened: 15, returned: 15, closed_after_began: false })), false, "a closing before surgery began proves nothing");
 });
 
 test("the count panel keeps the nurse's own number and says what is worked out", async () => {
@@ -122,6 +125,14 @@ test("the count panel keeps the nurse's own number and says what is worked out",
   assert.match(src, /Save count as \{displayName\(by\)\}/);
   const list = fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8");
   assert.match(list, /Surgery ended unlocks when the count is saved\./);
+});
+
+test("after surgery began the pack is not replaced: Add pack records an extra pack", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("./CountPanel.jsx", import.meta.url), "utf8");
+  assert.match(src, /const extra = packed && began;/);
+  assert.match(src, /\{extra \? "Add pack" : "change"\}/);
+  assert.match(src, /step: "opened", quantity: opened, extra: true/);
 });
 
 import { readFileSync } from "node:fs";

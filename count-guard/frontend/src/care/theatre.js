@@ -91,24 +91,25 @@ export function savedLine(count) {
 }
 
 // The server's swab-count rule (states.count_gate), read from this stay's count in the view: a closing a person
-// saved (not the AI), with opened - returned recomputed to 0 or a non-empty reason. The server stays the authority.
+// saved (not the AI) after surgery began, with the stay's opened sum - returned recomputed to 0 or a non-empty
+// reason. The server stays the authority.
 export function countReconciled(view) {
   const count = view?.count;
   const by = String(count?.closed_by || "").trim();
-  if (!by || by.startsWith("AI (on behalf of")) return false;
-  const { closed_opened: opened, returned } = count;
+  if (!by || by.startsWith("AI (on behalf of") || count.closed_after_began !== true) return false;
+  const { opened, returned } = count;
   const addsUp = Number.isInteger(opened) && Number.isInteger(returned) && opened - returned === 0;
   return addsUp || Boolean(String(count.closed_detail || "").trim());
 }
 
 // Which controls a step offers, by the backend's rules and not by list order: the tray can be
-// (re)checked until surgery begins, surgery ends once it began, the count needs nothing before it.
+// (re)checked until surgery begins, surgery ends once it began, the count is taken once surgery began.
 export function canRecord(view, key) {
   const done = Object.fromEntries(checklistState(theatreSteps(view)).map((step) => [step.key, step]));
   switch (key) {
     case "tray": return Boolean(view.tray?.planned) && !done.began.done;
     case "began": return !done.began.done;
-    case "count": return !done.count.done || done.count.open;
+    case "count": return done.began.done && (!done.count.done || done.count.open);
     case "ended": return done.began.done && !done.ended.done && countReconciled(view);
     case "ward": return done.ended.done;
     default: return false;

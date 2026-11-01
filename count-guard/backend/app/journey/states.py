@@ -95,15 +95,16 @@ def count_open(events: list[dict]) -> bool:
 def count_gate(events: list[dict]) -> str:
     """Where this stay's swab count stands for ending surgery: "none", "unreconciled" or "ok" (spec 5.3).
 
-    Only a closing a person saved counts (a `by` that is not the AI). It must add up, recomputed here from
-    opened and returned, or carry a reason."""
-    closing = _latest(stay_events(events), "count.closing")
-    if closing is None:
-        return "none"
+    Only a closing a person saved after this stay's surgery began counts (a `by` that is not the AI). It must add
+    up, recomputed here from the stay's opened sum and returned, or carry a reason."""
+    stay = stay_events(events)
+    closing, began = _latest(stay, "count.closing"), _latest(stay, "surgery.began")
+    if closing is None or began is None or stay.index(closing) < stay.index(began):
+        return "none"  # a closing taken before incision proves nothing
     payload = closing["payload"]
     if not str(payload.get("by") or "").strip() or by_ai(payload):
         return "none"
-    opened, returned = payload.get("opened"), payload.get("returned")
+    opened, returned = stay_opened(events), payload.get("returned")
     adds_up = isinstance(opened, int) and isinstance(returned, int) and opened - returned == 0
     return "ok" if adds_up or bool((payload.get("detail") or "").strip()) else "unreconciled"
 
@@ -354,19 +355,38 @@ def stay_latest(events: list[dict], kind: str) -> dict | None:
     return _latest(stay_events(events), kind)
 
 
-def theatre_count(events: list[dict]) -> dict:
-    """This theatre stay's swab count: the latest pack opened, the closing that still stands and the camera count."""
+def stay_packs(events: list[dict]) -> list[dict]:
+    """The packs that make up this theatre stay's opened count: the last pack recorded before surgery began, then
+    every pack since (an extra pack adds; once surgery began the count can only go up). Before surgery began the
+    latest pack replaces any other."""
     stay = stay_events(events)
-    opened, closing = _latest(stay, "count.pack_opened"), _latest(stay, "count.closing")
-    camera = _latest(stay, "swabs.counted")
+    began = _latest(stay, "surgery.began")
+    cut = stay.index(began) if began else len(stay)
+    before = [e for e in stay[:cut] if e["event_type"] == "count.pack_opened"]
+    return before[-1:] + [e for e in stay[cut:] if e["event_type"] == "count.pack_opened"]
+
+
+def stay_opened(events: list[dict]) -> int | None:
+    """Swabs opened this theatre stay (the sum of `stay_packs`), None before any pack."""
+    packs = stay_packs(events)
+    return sum(e["payload"]["quantity"] for e in packs) if packs else None
+
+
+def theatre_count(events: list[dict]) -> dict:
+    """This theatre stay's swab count: the packs opened (summed), the closing that still stands and the camera count."""
+    stay = stay_events(events)
+    packs, closing = stay_packs(events), _latest(stay, "count.closing")
+    opened = packs[0] if packs else None  # the first pack counted: when and by whom the count started
+    camera, began = _latest(stay, "swabs.counted"), _latest(stay, "surgery.began")
     newer = camera is not None and camera["payload"].get("count") is not None and (
         closing is None or stay.index(camera) > stay.index(closing))
+    total = sum(e["payload"]["quantity"] for e in packs) if packs else None
     return {
-        "opened": opened["payload"]["quantity"] if opened else None,
+        "opened": total,
         "opened_by": opened["payload"].get("by") if opened else None,
         "opened_at_ms": opened["ts_ms"] if opened else None,
         "returned": closing["payload"]["returned"] if closing else None,
-        "missing": closing["payload"]["unaccounted"] if closing else None,
+        "missing": total - closing["payload"]["returned"] if closing and total is not None else None,
         "read": closing["payload"].get("read") if closing else None,
         "saved": closing["payload"].get("saved") if closing else None,
         "closed_by": closing["payload"].get("by") if closing else None,
@@ -374,6 +394,7 @@ def theatre_count(events: list[dict]) -> dict:
         "closed_detail": closing["payload"].get("detail") if closing else None,
         "closed_via": closing["payload"].get("via") if closing else None,
         "closed_at_ms": closing["ts_ms"] if closing else None,
+        "closed_after_began": closing is not None and began is not None and stay.index(closing) > stay.index(began),
         "camera": {"count": camera["payload"]["count"], "evidence_id": camera["payload"].get("evidence_id"),
                    "at_ms": camera["ts_ms"]} if newer else None,
     }
@@ -386,10 +407,9 @@ def closing_payload(events: list[dict], returned: int, by: str, *, evidence_id: 
     With an `evidence_id` that names this stay's camera count it adds via/evidence_id, and read/saved when the
     saved figure differs from the camera's. A caller that already holds the camera event may pass it as `camera`.
     Raises ValueError when no pack was opened."""
-    opened = stay_latest(events, "count.pack_opened")  # this theatre stay's pack, not an earlier stay's
-    if opened is None:
+    start = stay_opened(events)  # this theatre stay's packs, not an earlier stay's
+    if start is None:
         raise ValueError("Record the pack opened first.")
-    start = opened["payload"]["quantity"]
     payload = {"opened": start, "returned": returned, "unaccounted": start - returned, "detail": detail, "by": by}
     camera = camera or next((e for e in reversed(stay_events(events)) if e["event_type"] == "swabs.counted"
                              and evidence_id and e["payload"].get("evidence_id") == evidence_id), None)

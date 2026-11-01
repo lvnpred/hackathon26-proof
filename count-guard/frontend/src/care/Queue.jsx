@@ -6,7 +6,6 @@ import Fault from "./Fault";
 import LoadError from "./LoadError";
 import { NUDGE_SCOPES } from "./faults";
 import AlertCard from "./AlertCard.jsx";
-import { SAFETY } from "./alerts";
 import { queueRows } from "./derive";
 import { opensOnKey, opensRow } from "./rows";
 
@@ -35,7 +34,7 @@ function QueueRow({ row, ward, open, toggle }) {
       {open && nudge && (
         <tr>
           <td colSpan={5}>
-            <AlertCard view={patient.view} role={ward.role} nudge={nudge} safety={SAFETY.includes(nudge.kind)} primary busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} nowMs={ward.nowMs} episodeId={row.episodeId} />
+            <AlertCard view={patient.view} role={ward.role} nudge={nudge} primary busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} nowMs={ward.nowMs} episodeId={row.episodeId} />
             <Fault fault={ward.fault} episodeId={row.episodeId} only={NUDGE_SCOPES} />
           </td>
         </tr>

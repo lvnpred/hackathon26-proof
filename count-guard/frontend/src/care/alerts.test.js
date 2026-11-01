@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 import { showTrayFlag } from "./derive.js";
-import { SAFETY, alertParts, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
+import { SAFETY, alertParts, alertPill, assignedText, responder, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
 
 const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "10:00" });
 const pill = (episodeId, name, who, what, role = "nurse") => ({ key: `${episodeId}:${what}`, episodeId, name, who, what, role });
@@ -100,8 +100,30 @@ test("AlertCard asks 'What did you do?', saves a response and names the assignee
   assert.ok(src.includes("Save response"));
   assert.ok(!src.includes("Answer"));
   assert.ok(src.includes("What did you do?"));
-  assert.ok(src.includes("Details") && src.includes("Take observations now") && src.includes("Assigned to"));
+  assert.ok(src.includes("Details") && src.includes("Take observations now") && src.includes("assignedText("));
   assert.ok(src.includes("aria-label={`Alert: ${headline}`}"));
   assert.ok(!src.includes('placeholder="Called the patient back"'));
   assert.ok(src.includes("/seen"));
+});
+
+test("alertPill follows the nudge kind, not the safety flag", () => {
+  const k = (kind, says = "x") => ({ kind, says });
+  assert.deepEqual(alertPill(k("strip_strength_differs"), null, "patient"), { role: "check", text: "Check this" });
+  assert.deepEqual(alertPill(k("count_open"), null, "nurse"), { role: "danger", text: "Swab unaccounted" });
+  assert.deepEqual(alertPill(k("obs_past_limit", "Systolic BP 82 is below the limit of 90 set by Dr. A. Rao."), null, "nurse"), { role: "danger", text: "Below limit" });
+  assert.deepEqual(alertPill(k("obs_overdue"), null, "nurse"), { role: "check", text: "Late" });
+  const moment = { status: "open", owner: "nurse", finding_role: "danger", finding_text: "1 swab unaccounted" };
+  assert.deepEqual(alertPill(k("count_open"), moment, "nurse"), { role: "danger", text: "1 swab unaccounted" });
+});
+test("a response is signed by the viewer, within the 80 characters the server takes", () => {
+  assert.equal(responder("nurse"), "Nurse Meena (synthetic)");
+  assert.equal(responder("doctor"), "Dr. A. Rao (synthetic)");
+  assert.equal(responder("patient", "S. Iyer, 41 F (synthetic)"), "S. Iyer, 41 F (synthetic)");
+  assert.equal(responder("patient", "x".repeat(200)).length, 80);
+  assert.equal(responder("patient"), "Patient");
+});
+test("the footer says who the alert is for, in plain words for the patient", () => {
+  assert.equal(assignedText({ to: "patient" }, "patient"), "For you");
+  assert.equal(assignedText({ to: "nurse" }, "nurse"), "Assigned to Nurse Meena");
+  assert.equal(assignedText({ to: "patient" }, "nurse"), "Assigned to the patient");
 });

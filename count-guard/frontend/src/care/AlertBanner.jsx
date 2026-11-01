@@ -6,7 +6,7 @@ import { momentFor } from "./moments.js";
 import { trayFlag } from "./video";
 
 // Every open alert at the top of the chart, answered here and nowhere else.
-export default function AlertBanner({ view, role, line, busy, act, nowMs }) {
+export default function AlertBanner({ view, role, line, busy, act, nowMs, patientName }) {
   const alerts = bannerAlerts(view, role, line);
   const first = alerts.find((a) => a.canAnswer);
   const flag = showTrayFlag(role, view.state) ? trayFlag(view) : null;
@@ -19,7 +19,7 @@ export default function AlertBanner({ view, role, line, busy, act, nowMs }) {
         return (
           <div key={nudge.id} data-line={nudge.id} className={`alert-item${safety ? " alert-safety" : ""}${nudge.id === line ? " line-hit" : ""}`}>
             {canAnswer ? (
-              <AlertCard view={view} role={role} nudge={nudge} safety={safety} primary={first?.nudge.id === nudge.id} busy={busy} act={act} nowMs={nowMs} episodeId={view.episode?.id} />
+              <AlertCard view={view} role={role} nudge={nudge} primary={first?.nudge.id === nudge.id} busy={busy} act={act} nowMs={nowMs} episodeId={view.episode?.id} patientName={patientName} />
             ) : moment ? (
               <AiMoment moment={moment} role={role} lens={lens} episodeId={view.episode?.id} />
             ) : (

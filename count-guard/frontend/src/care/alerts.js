@@ -1,3 +1,5 @@
+import { findingPill } from "./finding.js";
+import { SIGNED_IN } from "./people.js";
 // Open alerts: which ones are safety alerts, who may answer, and how the strip and header name them.
 export const SAFETY = ["obs_past_limit", "count_open"];
 
@@ -50,3 +52,32 @@ export function alertParts(text) {
 
 // The banner frame is red only while a safety alert is open; otherwise a neutral card.
 export const bannerClass = (alerts) => `alert-banner${alerts.some((a) => a.safety) ? "" : " alert-calm"}`;
+
+const OVERDUE = ["dose_overdue", "obs_overdue"];
+
+// The pill of one alert, from its kind (spec 5.2): past a limit and swab missing are danger, overdue is "Late",
+// anything else (a strip that differs, a sign ticked) is a check. The AI moment's own finding wins when the backend built one.
+export function alertPill(nudge, moment, role) {
+  if (moment) {
+    const pill = findingPill(moment, role);
+    if (pill.role === "danger" || pill.role === "check") return pill;
+  }
+  if (nudge.kind === "obs_past_limit") return { role: "danger", text: /\bbelow\b/.test(nudge.says_staff || nudge.says) ? "Below limit" : "Above limit" };
+  if (nudge.kind === "count_open") return { role: "danger", text: "Swab unaccounted" };
+  if (OVERDUE.includes(nudge.kind)) return { role: "check", text: "Late" };
+  return { role: "check", text: "Check this" };
+}
+
+// Who signs a response: the viewer's signed-in person. The patient signs with their own name.
+// The server takes any text of 1 to 80 characters here (SeenIn.by).
+export function responder(role, patientName) {
+  if (role === "patient") return (patientName || "Patient").slice(0, 80);
+  const person = SIGNED_IN[role] || SIGNED_IN.nurse;
+  return `${person.name} (synthetic)`;
+}
+
+// The footer line: staff see who it is assigned to; the patient sees plain words.
+export function assignedText(nudge, role) {
+  if (role === "patient") return nudge.to === "patient" ? "For you" : "With your care team";
+  return `Assigned to ${SIGNED_IN[nudge.to]?.name || (nudge.to === "patient" ? "the patient" : nudge.to)}`;
+}

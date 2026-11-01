@@ -113,7 +113,7 @@ export const STEPS = {
     await H.role("Doctor");
     await H.chart(KUMAR);
     await H.open("Wound photo");
-    await H.file("Add reference photo", "eval/p4/wound-day0.png");
+    await H.file("Wound photo", "eval/p4/wound-day0.png");
     await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
     await H.click("Draft discharge");

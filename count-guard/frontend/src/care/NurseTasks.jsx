@@ -67,14 +67,14 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
         />
       )}
       {live && task.kind === "obs" && <button type="button" className="quiet" disabled={busy} onClick={() => onProof(task)}>Read from monitor photo</button>}
-      {live && task.kind === "obs" && <ObsForm busy={busy} due={due} label={mark.label} primary={mark.primary} onSave={(values) => done({ values })} />}
+      {live && task.kind === "obs" && <ObsForm busy={busy} due={due} label={mark.label} onSave={(values) => done({ values })} />}
       {live && task.kind !== "obs" && task.mode === "start_end" && (
         task.status === "running"
-          ? <button type="button" className="primary" disabled={busy} onClick={() => done()}>End</button>
+          ? <button type="button" disabled={busy} onClick={() => done()}>End</button>
           : <button type="button" disabled={busy} onClick={() => act(`/tasks/${task.id}/begin`, { by })}>Begin</button>
       )}
       {live && task.kind !== "obs" && task.mode !== "start_end" && (
-        <button type="button" className={mark.primary ? "primary" : undefined} disabled={busy} onClick={() => done()}>{mark.label}</button>
+        <button type="button" disabled={busy} onClick={() => done()}>{mark.label}</button>
       )}
     </li>
   );

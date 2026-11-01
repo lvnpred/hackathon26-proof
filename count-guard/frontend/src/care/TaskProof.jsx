@@ -1,3 +1,4 @@
+import PhotoInput from "./PhotoInput.jsx";
 import { useState } from "react";
 import { EvidenceThumb } from "./Evidence.jsx";
 import ObsForm from "./ObsForm";
@@ -19,10 +20,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
   const [filled, setFilled] = useState(0); // bumps when a photo fills the form, so ObsForm shows it
   const [error, setError] = useState("");
 
-  async function addPhoto(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  async function addPhoto([file]) {
     const stated = task.kind === "obs" ? obsValues(form).values || {} : {};
     const next = await upload("/photos", file, { purpose: "proof", task_id: task.id, by, sbp: stated.sbp, dbp: stated.dbp, hr: stated.hr });
     if (!next) return;
@@ -56,10 +54,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
         </p>
       )}
       {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}
-      <label className="field">
-        Add photo
-        <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={addPhoto} />
-      </label>
+      <PhotoInput disabled={busy} onFiles={addPhoto} />
       {photo && (
         <p className="small">
           <span className={`pill ${photo.check?.match === "mismatch" ? "sun" : "info"}`}>{MATCH_LABEL[photo.check?.match] || MATCH_LABEL.none}</span>{" "}
@@ -70,7 +65,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} version={view.timeline?.length} fallback={<img src={photo.url} alt="Proof photo" width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />} />}
       {error && <p className="error small" role="alert">{error}</p>}
       <div className="row">
-        <button type="button" className="primary" disabled={busy} onClick={confirm}>Confirm</button>
+        <button type="button" disabled={busy} onClick={confirm}>Confirm</button>
         <button type="button" disabled={busy} onClick={onClear}>Cancel</button>
       </div>
     </section>

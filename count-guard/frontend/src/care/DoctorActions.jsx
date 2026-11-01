@@ -13,6 +13,7 @@ import { lastSigned, momentFor } from "./moments";
 import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
+import PhotoInput from "./PhotoInput.jsx";
 import StripPhoto from "./StripPhoto.jsx";
 import { TrayPreview } from "./VideoCheck";
 
@@ -24,18 +25,10 @@ const drafting = (upload, path) => ({ text, heard }) =>
   upload(path, undefined, { text, by: DOCTOR, heard_by: answerHow(heard?.text, text, heard?.by).heard_by });
 
 function PhotoCard({ title, busy, upload }) {
-  async function pick(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (file) await upload("/photos", file, { purpose: "reference", by: DOCTOR });
-  }
   return (
     <section className="card" aria-label={title}>
       <p className="label">{title}</p>
-      <label className="field">
-        Add reference photo
-        <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={pick} />
-      </label>
+      <PhotoInput disabled={busy} onFiles={([file]) => upload("/photos", file, { purpose: "reference", by: DOCTOR })} />
     </section>
   );
 }
@@ -61,8 +54,8 @@ function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   );
 }
 
-// Primary action for the clinic card: admit the patient or close the visit.
-function Admit({ view, busy, act }) {
+// Action for the clinic card: admit the patient (primary while it is Now) or close the visit.
+function Admit({ view, busy, act, primary }) {
   const [reason, setReason] = useState("");
   const [reasonDraftId, setReasonDraftId] = useState(null);
   const draft = view.drafts?.order;
@@ -77,7 +70,7 @@ function Admit({ view, busy, act }) {
         <input value={reason} onChange={(e) => setReason(e.target.value)} />
       </label>
       <div className="row">
-        <button type="button" className="primary" disabled={busy || !reason.trim()} onClick={() => act("/state", { to: "admitting", by: DOCTOR, reason: reason.trim() })}>Admit</button>
+        <button type="button" className={primary ? "primary" : undefined} disabled={busy || !reason.trim()} onClick={() => act("/state", { to: "admitting", by: DOCTOR, reason: reason.trim() })}>Admit</button>
         <button type="button" disabled={busy} onClick={() => act("/state", { to: "clinic_done", by: DOCTOR })}>Close visit</button>
       </div>
     </>
@@ -99,7 +92,7 @@ function Clinic({ view, busy, act, upload }) {
 }
 
 // Primary action for the ward card: dictate the discharge, then sign it. The form keeps its text while closed.
-function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
+function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   const [summary, setSummary] = useState("");
   const [summaryDraftId, setSummaryDraftId] = useState(null);
   const [template, setTemplate] = useState("hernia-repair");
@@ -141,7 +134,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
                 {templates.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
               </select>
             </label>
-            <button type="button" className="primary" disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
+            <button type="button" className={primary ? "primary" : undefined} disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
           </div>
         </>
       )}
@@ -150,7 +143,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
 }
 
 // Primary action for the ward card: pick the procedure and send the patient to theatre.
-function SendToTheatre({ view, busy, act }) {
+function SendToTheatre({ view, busy, act, primary }) {
   const [procedure, setProcedure] = useState("");
   const procedures = Object.entries(view.procedures || {});
   return (
@@ -163,7 +156,7 @@ function SendToTheatre({ view, busy, act }) {
         </select>
       </label>
       <TrayPreview plan={view.tray_templates?.[procedure]} />
-      <button type="button" className="primary" disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
+      <button type="button" className={primary ? "primary" : undefined} disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
     </div>
   );
 }
@@ -186,7 +179,6 @@ function Theatre({ view, busy, act, upload }) {
           )}
           <button
             type="button"
-            className="primary"
             disabled={busy || !ended || !reason.trim()}
             onClick={() => act("/state", { to: "ward", by: DOCTOR, reason: reason.trim(), checklist: {} })}
           >
@@ -206,22 +198,23 @@ export default function DoctorActions({ state, card, pick, control, view, act, u
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
   const toggle = (id) => setChosen((current) => toggled(current, id));
-  const primary = {
-    admit: <Admit key="admit" view={view} busy={busy} act={act} />,
-    theatre: <SendToTheatre key="theatre" view={view} busy={busy} act={act} />,
-    discharge: <Discharge key="discharge" view={view} busy={busy} act={act} upload={upload} ask={ask} open={open("discharge")} onToggle={() => toggle("discharge")} />,
-  };
+  // A block is primary only inside the Now card while the step is Now; otherwise it is a secondary button.
+  const blocks = (primary) => ({
+    admit: <Admit key="admit" view={view} busy={busy} act={act} primary={primary} />,
+    theatre: <SendToTheatre key="theatre" view={view} busy={busy} act={act} primary={primary} />,
+    discharge: <Discharge key="discharge" view={view} busy={busy} act={act} upload={upload} ask={ask} open={open("discharge")} onToggle={() => toggle("discharge")} primary={primary} />,
+  });
   const { inside, below } = doctorBlocks(state, card);
   return (
     <>
       <NowCard pick={pick} card={card} control={control} lead={open("orders") && view.drafts?.order ? <OrderDraft view={view} busy={busy} signOrders={signOrders} /> : null}>
-        {inside.map((key) => primary[key])}
+        {inside.map((key) => blocks(pick.now.action?.kind === "step")[key])}
         <ActionBar actions={quietActions(state, "doctor")} isOpen={open} onToggle={toggle} />
       </NowCard>
       {afterNow}
       {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
-      {below.map((key) => primary[key])}
+      {below.map((key) => blocks(false)[key])}
       {state === "clinic" && <Clinic view={view} busy={busy} act={act} upload={upload} />}
       {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} />}
     </>

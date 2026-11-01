@@ -87,7 +87,7 @@ function TodayBody({ ward, patient }) {
           {checkingIn ? (
             <CheckIn card={view.card} {...common} onDone={() => setCheckingIn(false)} />
           ) : (
-            <button className="primary" onClick={() => setCheckingIn(true)}>Open check-in</button>
+            <button onClick={() => setCheckingIn(true)}>Open check-in</button>
           )}
           {todayFolds(view).map(({ key, title }) => (
             <details className="card fold" key={key}>
@@ -97,7 +97,7 @@ function TodayBody({ ward, patient }) {
           ))}
           <div className="help-bar" role="region" aria-label="Need help">
             <span>Feeling worse?</span>
-            <button className="primary" aria-expanded={helpOpen} onClick={() => setHelpOpen(!helpOpen)}>Need help now</button>
+            <button aria-expanded={helpOpen} onClick={() => setHelpOpen(!helpOpen)}>Need help now</button>
           </div>
           {helpOpen && (
             <section className="card help-sheet" aria-label="Need help sheet">

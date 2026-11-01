@@ -37,7 +37,7 @@ export default function HandoverCard({ view, busy, act }) {
       </div>
       {moment && <AiMoment moment={moment} role="nurse" episodeId={view.episode?.id} />}
       {handover && !handover.accepted_by && (
-        <button type="button" className="primary" disabled={busy || !taker} onClick={() => act(`/handover/${handover.id}/accept`, { by: taker })}>
+        <button type="button" disabled={busy || !taker} onClick={() => act(`/handover/${handover.id}/accept`, { by: taker })}>
           Accept as {taker}
         </button>
       )}

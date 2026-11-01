@@ -165,7 +165,7 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:56 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) Button "Add reference photo" <- eval/p4/wound-day0.png; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Inspect" on the discharge draft line; 9) Button "Close" in "Inspector"; 10) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Inspect" on the discharge draft line; 9) Button "Close" in "Inspector"; 10) Button "Sign discharge"
 
 On screen: `Reference` · `Being discharged` (the AI moment `Drafted from voice` · `5 sections drafted from 40 words.` is on screen before Sign discharge, and the Inspector shows `swab count closed 15 of 15`)
 
@@ -217,7 +217,7 @@ On screen: `Draft from dictation` · `Acknowledged Dr. A. Rao's orders`
 > Dr. Rao sees the flagged reading in her queue, dictates saline orders, and signs them; the AI acknowledges them at once.
 
 #### `iyer-setup` · 2:47 · nurse · 8 s
-Clicks: 1) Role Nurse; 2) File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"; 3) Button "Begin"
+Clicks: 1) Role Nurse; 2) File eval/p3/saline-setup.mp4 into the input labelled "Add video or photos"; 3) Button "Begin"
 
 On screen: `Set-up matches the list` · `Saline 1 litre over 2 hours, video check of the set-up running`
 

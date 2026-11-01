@@ -106,7 +106,7 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
           {errors[index] && <p className="error small" role="alert">{errors[index]}</p>}
         </div>
       ))}
-      <button type="button" className="primary" disabled={busy || invalid || items.length === 0} onClick={sign}>Sign orders</button>
+      <button type="button" disabled={busy || invalid || items.length === 0} onClick={sign}>Sign orders</button>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import CountPanel from "./CountPanel";
 import { canRecord, checklistState, countReconciled, savedLine, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
@@ -6,6 +6,7 @@ import StatusPill from "./StatusPill.jsx";
 import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
 import { pickedUpload } from "./video";
+import PhotoInput from "./PhotoInput.jsx";
 
 const NURSE = "Nurse Asha (synthetic)";
 const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -18,19 +19,14 @@ function Line({ step }) {
 // A compact way to film the tray again while the tray can still be recorded (R18).
 function TrayAgain({ busy, onFile }) {
   const [problem, setProblem] = useState("");
-  const input = useRef(null);
-  async function pick(event) {
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
-    if (!files.length) return;
+  async function pick(files) {
     const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
     if (upload) await onFile(upload);
   }
   return (
     <>
-      <button type="button" disabled={busy} onClick={() => input.current?.click()}>Check the tray again</button>
-      <input ref={input} type="file" hidden accept="video/*,image/*" multiple disabled={busy} onChange={pick} aria-label="Tray photo or clip" />
+      <PhotoInput label="Check the tray again" accept="video/*,image/*" capture={false} multiple disabled={busy} onFiles={pick} />
       {problem && <p className="note" role="alert">{problem}</p>}
     </>
   );

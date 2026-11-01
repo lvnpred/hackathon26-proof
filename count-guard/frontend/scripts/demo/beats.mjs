@@ -171,7 +171,7 @@ export const BEATS = [
   {
     id: "kumar-discharge", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'Button "Add reference photo" <- eval/p4/wound-day0.png', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Button "Inspect" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'File eval/p4/wound-day0.png into "Wound photo"', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Button "Inspect" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
     expect: ["Reference", "Being discharged"],
     before: [HEARD, "5 sections drafted from 40 words.", "swab count closed 15 of 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
@@ -228,7 +228,7 @@ export const BEATS = [
   {
     id: "iyer-setup", path: "iyer", role: "nurse", seconds: 8, film: true,
     say: "The nurse films the saline set-up, and the check matches the list before she begins.",
-    clicks: ["Role Nurse", 'File eval/p3/saline-setup.mp4 into the input labelled "Add video or photo check"', 'Button "Begin"'],
+    clicks: ["Role Nurse", 'File eval/p3/saline-setup.mp4 into the input labelled "Add video or photos"', 'Button "Begin"'],
     expect: ["Set-up matches the list", `${SALINE} running`],
     files: ["saline-setup.mp4"],
     keyed: "SAM 3.1 video call. The label reads SAM 3.1. Switch: SETUP_LIVE.",

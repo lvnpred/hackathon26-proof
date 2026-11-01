@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PHOTO_CLOSED, photoAskOpen, questionProblem } from "./askText.js";
 import Fault from "./Fault";
+import PhotoInput from "./PhotoInput.jsx";
 
 function QuestionForm({ title, button, busy, text, setText, onSend, hint }) {
   const problem = text ? questionProblem(text) : "";
@@ -13,7 +14,7 @@ function QuestionForm({ title, button, busy, text, setText, onSend, hint }) {
         <textarea rows={2} value={text} maxLength={400} onChange={(e) => setText(e.target.value)} />
       </label>
       {problem && <p className="note" role="alert">{problem}</p>}
-      <button className="primary" disabled={busy || questionProblem(text) !== ""} onClick={onSend}>{button}</button>
+      <button disabled={busy || questionProblem(text) !== ""} onClick={onSend}>{button}</button>
     </>
   );
 }
@@ -51,16 +52,7 @@ export function DoctorCard({ busy, act, fill, fault, episodeId }) {
   );
 }
 
-function PhotoInput({ title, busy, onFile, children }) {
-  return (
-    <label className="field">
-      <span className="small">{title}</span>
-      <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
-        onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) onFile(file); }} />
-      {children}
-    </label>
-  );
-}
+const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 
 export function ReviewCard({ view, busy, upload, fault, episodeId }) {
   const [note, setNote] = useState("");
@@ -74,7 +66,7 @@ export function ReviewCard({ view, busy, upload, fault, episodeId }) {
             <span className="small">Note for the doctor (optional)</span>
             <input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} />
           </label>
-          <PhotoInput title="Send a healing photo" busy={busy} onFile={async (file) => {
+          <PhotoInput label="Take photo" accept={PHOTO_TYPES} disabled={busy} onFiles={async ([file]) => {
             const next = await upload("/ask/review", file, { note: note.trim() });
             if (next) setNote("");
           }} />
@@ -90,7 +82,7 @@ export function MedicinesCard({ view, busy, upload, fault, episodeId }) {
       <p className="label">Medicines photo</p>
       <Fault fault={fault} episodeId={episodeId} only={["/ask/medicines"]} />
       {photoAskOpen(view.state)
-        ? <PhotoInput title="Photograph your medicines" busy={busy} onFile={(file) => upload("/ask/medicines", file)} />
+        ? <PhotoInput label="Take photo" accept={PHOTO_TYPES} disabled={busy} onFiles={([file]) => upload("/ask/medicines", file)} />
         : <p className="empty small">{PHOTO_CLOSED}</p>}
     </section>
   );

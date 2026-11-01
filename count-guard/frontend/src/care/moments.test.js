@@ -137,7 +137,7 @@ test("capabilities in the flow: sources use the new components", () => {
   assert.match(strip, /aria-label="Photo of strips"/);
   assert.match(strip, /Type instead/);
   assert.match(strip, /aria-expanded=\{typing\}/);
-  assert.match(strip, /accept="image\/\*" capture="environment"/);
+  assert.match(strip, /<PhotoInput /);
   assert.match(strip, /upload\("\/strips\/photo", file, \{ by: DOCTOR \}\)/);
   assert.match(strip, /Check these strips/);
   const doctor = read("DoctorActions.jsx");

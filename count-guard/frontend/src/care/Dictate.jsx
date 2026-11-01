@@ -90,7 +90,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
           <textarea id={boxId} rows={3} maxLength={maxLength} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} />
           <button
             type="button"
-            className={`dictate-mic${recording ? " primary" : ""}`}
+            className={`dictate-mic${recording ? " recording" : ""}`}
             aria-label={recording ? "Finish recording" : "Record"}
             disabled={busy && !recording}
             onClick={recording ? finish : start}
@@ -105,7 +105,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
         Upload audio
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />
       </label>
-      <button type="button" className="primary" disabled={busy || recording || !text.trim()} onClick={send}>{verb}</button>
+      <button type="button" disabled={busy || recording || !text.trim()} onClick={send}>{verb}</button>
     </Wrap>
   );
 }

@@ -37,7 +37,7 @@ function QueueRow({ row, ward, open, toggle }) {
       {open && nudge && (
         <tr>
           <td colSpan={5}>
-            <AlertCard view={patient.view} role={ward.role} nudge={nudge} primary busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} nowMs={ward.nowMs} episodeId={row.episodeId} />
+            <AlertCard view={patient.view} role={ward.role} nudge={nudge} busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} nowMs={ward.nowMs} episodeId={row.episodeId} />
             <Fault fault={ward.fault} episodeId={row.episodeId} only={NUDGE_SCOPES} />
           </td>
         </tr>

@@ -11,7 +11,7 @@ const NURSE = "Nurse Asha (synthetic)";
 const DOCTOR = "Dr. A. Rao (synthetic)";
 
 function Line({ step }) {
-  const parts = [step.title, step.at, step.says, step.correction].filter(Boolean);
+  const parts = [step.title, step.at, step.says].filter(Boolean);
   return <p className="step-line">✓ {parts.join(" · ")}</p>;
 }
 

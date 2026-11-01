@@ -1,4 +1,3 @@
-import { correctionLine } from "./capture.js";
 import { hhmm } from "./clock.js";
 import { displayName } from "./names.js";
 import { checkLabel } from "./video.js";
@@ -28,8 +27,6 @@ export function theatreSteps(view) {
       done: Boolean(closing),
       says: closing ? closing.plain : opened ? "Pack opened; closing count not recorded yet" : "Not started",
       at: clock(closing),
-      // "Read 14, saved 15 by Nurse Asha": stays on the folded line so the corrected camera count is still visible.
-      correction: closing ? correctionLine(view.count?.read, view.count?.saved, view.count?.closed_by) : "",
       open: (view.count?.missing ?? 0) > 0,
     },
     { key: "ended", title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${ended.when}` : "Not yet", at: clock(ended), open: false },
@@ -71,10 +68,18 @@ export function packLine(count) {
 }
 
 // What the camera read, before or after the save: the live camera count, else the figure the saved closing read.
-function cameraRead(count) {
+export function cameraRead(count) {
   if (count?.camera) return count.camera.count;
   if (count?.read?.returned != null) return count.read.returned;
   return count?.closed_via === "camera" ? count.returned : null;
+}
+
+// The server's reason rule at save: unaccounted is not 0, or Back is not the camera read. A correction has no live
+// camera, but the server still checks against the superseded closing's read, so this uses cameraRead too.
+export function reasonNeeded(count, back) {
+  const camera = count?.camera?.count ?? cameraRead(count);
+  const unaccounted = count?.opened != null ? count.opened - back : null;
+  return (unaccounted !== null && unaccounted !== 0) || (camera != null && back !== camera);
 }
 
 // The saved line: who saved the count, when, what the camera read and what the team did.

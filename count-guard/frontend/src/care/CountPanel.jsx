@@ -2,7 +2,7 @@ import { useState } from "react";
 import { closingBody } from "./capture";
 import AiMark from "./AiMark.jsx";
 import { displayName } from "./names";
-import { countReconciled, packLine, savedLine, swabFigures } from "./theatre";
+import { countReconciled, packLine, reasonNeeded, savedLine, swabFigures } from "./theatre";
 import VideoCheck from "./VideoCheck";
 import { momentFor } from "./moments.js";
 import { latestCheck, swabTotal } from "./video";
@@ -24,11 +24,11 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
   const opened = Number(quantity);
   const back = Number(returned);
   const validBack = returned !== "" && Number.isInteger(back) && back >= 0;
-  const camera = count?.camera ? count.camera.count : null;
+  const camera = count?.camera ? count.camera.count : null; // the live read shown beside Back
   const packed = count?.opened != null;
   const unaccounted = packed && validBack ? count.opened - back : null;
-  // The server asks for a reason when the numbers do not add up; the panel also asks when the nurse's number is not the camera's.
-  const needsReason = (unaccounted !== null && unaccounted !== 0) || (validBack && camera != null && back !== camera);
+  // Same rule as the server's /count: the numbers do not add up, or Back is not the camera's read (also on a correction).
+  const needsReason = validBack && reasonNeeded(count, back);
   const missing = unaccounted ?? count?.missing ?? null;
   const figures = swabFigures({ opened: count?.opened, returned: validBack ? back : count?.returned, missing });
   const swabCheck = latestCheck(view, "swabs");

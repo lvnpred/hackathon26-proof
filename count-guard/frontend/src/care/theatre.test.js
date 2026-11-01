@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { theatreSteps, checklistState, swabFigures, packLine, canRecord, countReconciled } from "./theatre.js";
+import { theatreSteps, checklistState, swabFigures, packLine, canRecord, countReconciled, cameraRead, reasonNeeded } from "./theatre.js";
 import { M } from "./clock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -124,22 +124,28 @@ test("the count panel keeps the nurse's own number and says what is worked out",
   assert.match(list, /Surgery ended unlocks when the count is saved\./);
 });
 
-test("a corrected camera count stays on the folded count line", () => {
+import { readFileSync } from "node:fs";
+function require_src(f) { return readFileSync(new URL("./" + f, import.meta.url), "utf8"); }
+
+test("the folded count line does not repeat the saved line", async () => {
+  const fs = await import("node:fs");
   const view = {
-    tray: { planned: [{}], latest: { check: "tray", match: "ok" } },
     count: { missing: 0, read: { returned: 14 }, saved: { returned: 15 }, closed_by: "Nurse Asha (synthetic)" },
     timeline: [IN_THEATRE, line("surgery.began", "09:20"), line("count.pack_opened", "09:22", "Opened 15 swab."), line("count.closing", "09:25", "Closing count: opened 15, back 15, unaccounted 0.")],
   };
-  const count = theatreSteps(view)[2];
-  assert.equal(count.correction, "Read 14, saved 15 by Nurse Asha");
-  assert.doesNotMatch(count.correction, ADVICE);
-  assert.equal(theatreSteps({ ...view, count: { missing: 0 } })[2].correction, "");
-  assert.equal(theatreSteps({ ...view, timeline: [IN_THEATRE] })[2].correction, "");
+  assert.equal(theatreSteps(view)[2].correction, undefined);
+  assert.doesNotMatch(fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8"), /step\.correction/);
 });
 
-test("the folded count line renders the correction", async () => {
-  const fs = await import("node:fs");
-  assert.match(fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8"), /step\.says, step\.correction/);
+test("correcting a camera-linked closing still needs a reason when Back differs from the old camera read", () => {
+  // camera read 14 of 15, saved 14 with a reason; the live camera is gone, the saved closing carries the read
+  const count = { opened: 15, camera: null, read: { returned: 14 }, closed_via: "camera", returned: 14, closed_by: "Nurse Asha (synthetic)" };
+  assert.equal(cameraRead(count), 14);
+  assert.equal(reasonNeeded(count, 15), true);
+  assert.equal(reasonNeeded(count, 14), true); // unaccounted 1
+  assert.equal(reasonNeeded({ opened: 15, camera: { count: 15 } }, 15), false);
+  assert.equal(reasonNeeded({ opened: 15 }, 15), false);
+  assert.match(require_src("CountPanel.jsx"), /reasonNeeded\(count, back\)/);
 });
 
 test("a done tray step folds to its AI moment and offers Check the tray again", async () => {

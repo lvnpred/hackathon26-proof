@@ -91,17 +91,17 @@ test("taskDue boundaries", () => {
   assert.equal(taskDue(task({ due_ms: null }), T), "later");
 });
 
-test("nurse rows: new order and overdue task, overdue first", () => {
+test("nurse rows: a new order (blocked) comes before an overdue task (late)", () => {
   const p = patient("e1", "Bed 1", view({
     order_list: [order("o1", T - 10 * M)],
     tasks: [task({ title: "BP check", due_ms: T - H })],
   }));
   const rows = queueRows([p], "nurse", T);
-  assert.deepEqual(rows.map((r) => r.says), ["BP check \u00b7 due", "New orders from Dr. A. Rao"]);
-  assert.equal(rows[1].waited, "10 min");
-  assert.equal(rows[0].waited, "1 h");
-  assert.equal(rows[0].kind, "task");
-  assert.equal(rows[0].state, "ward");
+  assert.deepEqual(rows.map((r) => r.says), ["New orders from Dr. A. Rao", "BP check \u00b7 due"]);
+  assert.equal(rows[0].waited, "10 min");
+  assert.equal(rows[1].waited, "1 h");
+  assert.equal(rows[1].kind, "task");
+  assert.equal(rows[1].state, "ward");
 });
 
 test("nurse rows: due, running, admitting, discharging; later and done tasks are quiet", () => {
@@ -147,11 +147,11 @@ test("nurse sees an unaccepted handover as a to-do after the nudges", () => {
   assert.equal(queueRows([p], "patient", 30 * H).length, 0);
 });
 
-test("to-dos have no waited text, are never late and sort after nudges", () => {
+test("a step the doctor owns (blocked) sorts before a nurse nudge; its row has no waited text", () => {
   const p = patient("e1", "Bed 1", view({ state: "clinic", nudges: [nudge("n1", "nurse", 29 * H)] }));
   assert.equal(queueRows([p], "doctor", 40 * H)[0].waited, "");
   const pills = waitingPills([p], 40 * H);
-  assert.deepEqual(pills.map((x) => [x.who, x.waited === "", x.late]), [["Nurse", false, true], ["Dr. A. Rao", true, false]]);
+  assert.deepEqual(pills.map((x) => [x.who, x.waited === "", x.late]), [["Dr. A. Rao", true, false], ["Nurse", false, true]]);
 });
 
 test("pills and rows carry the stage to open; nudges carry none", () => {
@@ -247,4 +247,12 @@ test("pills and queue rows read a nudge's staff wording; the patient's pills kee
   assert.equal(waitingPills(patients, 30 * H, "patient")[0].what, "This strip reads amlodipine 10 mg.");
   const old = [patient("e1", "Bed 1", view({ nudges: [nudge("n2", "patient", 28 * H, "Old wording.")] }))];
   assert.equal(waitingPills(old, 30 * H, "nurse")[0].what, "Old wording.");
+});
+
+test("queue order follows the Now rule: danger, blocked, late, then due", () => {
+  const n = (id, kind, to = "nurse") => ({ ...nudge(id, to, 29 * H), kind });
+  const tasks = [task({ id: "late", title: "Late task", due_ms: 20 * H }), task({ id: "due", title: "Due task", due_ms: 29 * H + 45 * M })];
+  const p = patient("e1", "Bed 1", view({ order_list: [order("o1", 29 * H)], tasks, nudges: [n("a", "obs_past_limit")] }));
+  assert.deepEqual(queueRows([p], "nurse", 30 * H).map((r) => r.kind), ["nudge", "order", "task", "task"]);
+  assert.deepEqual(queueRows([p], "nurse", 30 * H).map((r) => r.says).slice(2), ["Late task · due", "Due task · due"]);
 });

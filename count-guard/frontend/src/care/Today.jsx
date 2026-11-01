@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { DoctorChip, useCareWard } from "./CareShell";
 import { findPatient } from "./Patients";
 import { answerByLine, doctorQuestions } from "./askText";
-import { greeting, nextWords, todayFolds, whereWords } from "./today.js";
+import { greeting, todayFolds, whereWords } from "./today.js";
+import NextUp from "./NextUp.jsx";
 import { displayName } from "./names";
 import { checkinStatusLine, readOpened, unreadLine } from "./thread.js";
 import { CheckIn, MyCard, NeedHelp } from "../screens/PatientCard";
@@ -76,10 +77,10 @@ function TodayBody({ ward, patient }) {
       <section className="card" aria-label="Your status">
         <p className="next-text">{whereWords(view.state, ward.nowMs)}</p>
         <p>{displayName(view.now_next?.you_now)}</p>
-        <p className="small">{nextWords(view)}</p>
         {unread && <p className="note">{unread}</p>}
         {sent && <p className="note" role="status">{sent}</p>}
       </section>
+      <NextUp view={view} />
       <Nudges {...common} />
       {home ? (
         <>

@@ -20,25 +20,19 @@ test("home without theatre: Theatre is skipped, not done", () => {
 const view = (state, next_role, extra = {}) => ({ state, order_list: [], now_next: { now: "N.", next: "X.", you_now: "YN.", you_next: "YX.", next_role }, ...extra });
 test("my step: eyebrow for you, actions from the state", () => {
   const c = nextCard(view("ward", "doctor"), "doctor");
-  assert.equal(c.eyebrow, "Next · for you");
+  assert.equal(c.eyebrow, "Now · for you");
   assert.deepEqual(c.actions, ["theatre", "discharge"]);
-  assert.equal(c.waiting, "");
   assert.equal(c.last, "Last: N.");
 });
-test("someone else's step: no buttons, says who is waiting", () => {
+test("someone else's step: no buttons, the eyebrow names the owner", () => {
   const c = nextCard(view("ward", "doctor"), "nurse");
-  assert.equal(c.eyebrow, "Next · for the doctor");
+  assert.equal(c.eyebrow, "Now · Doctor");
   assert.deepEqual(c.actions, []);
-  assert.equal(c.waiting, "Waiting for the doctor.");
 });
 test("no owner: plain eyebrow, nothing waiting", () => {
   const c = nextCard(view("clinic_done", null), "doctor");
-  assert.equal(c.eyebrow, "Next");
-  assert.deepEqual([c.actions, c.waiting], [[], ""]);
-});
-test("patient pages use you wording and never actions", () => {
-  const c = nextCard(view("ward", "doctor"), "patient", { you: true });
-  assert.deepEqual([c.text, c.last, c.actions], ["YX.", "Last: YN.", []]);
+  assert.equal(c.eyebrow, "Now");
+  assert.deepEqual(c.actions, []);
 });
 test("nurse acknowledges fresh orders first", () => {
   const fresh = { order_list: [{ acknowledged_by: null }] };
@@ -67,7 +61,7 @@ test("lensLines filters by lens, keeps a nudge for the role", () => {
   assert.deepEqual(lensLines(lines, [{ id: "3", to: "nurse" }], "nurse", "nurse", null).map((l) => l.id), ["1", "3"]);
 });
 test("new copy has no advice words", () => {
-  for (const s of ["Next · for you", "Next · for the nurse", "Waiting for the doctor.", "Visit closed", "Show full history (5)"]) assert.doesNotMatch(s, ADVICE);
+  for (const s of ["Now · for you", "Now · Nurse", "Visit closed", "Show full history (5)"]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("doctorBlocks keeps the ward actions reachable when the nurse owns the step", () => {
@@ -78,12 +72,11 @@ test("doctorBlocks keeps the ward actions reachable when the nurse owns the step
   assert.deepEqual(doctorBlocks("clinic", theirs), { inside: [], below: [] });
 });
 
-test("the owner reads the second-person sentence, others the staff one", () => {
+test("the owner reads the owner's sentence, others the staff one", () => {
   const v = view("ward", "doctor");
   v.now_next.next_mine = "Send the patient to theatre or sign the discharge.";
   assert.equal(nextCard(v, "doctor").text, "Send the patient to theatre or sign the discharge.");
   assert.equal(nextCard(v, "nurse").text, "X.");
-  assert.equal(nextCard(v, "patient", { you: true }).text, "YX.");
 });
 test("the current step skips a detail that repeats its label", () => {
   const home = journeySteps("home", ["clinic", "home"]).find((s) => s.status === "current");

@@ -181,7 +181,7 @@ On screen: `Home`
 #### `kumar-ask` · 2:07 · patient · 12 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Day 3; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
 
-On screen: `Waiting for Dr. Rao` · `The doctor reviews your healing photo.` · `Your question went to Dr. A. Rao`
+On screen: `Waiting for Dr. Rao` · `The doctor will review your healing photo.` · `Your question went to Dr. A. Rao`
 
 > At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says where the question went and who is waiting.
 

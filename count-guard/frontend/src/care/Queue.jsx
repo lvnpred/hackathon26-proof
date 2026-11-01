@@ -7,6 +7,9 @@ import LoadError from "./LoadError";
 import { NUDGE_SCOPES } from "./faults";
 import AlertCard from "./AlertCard.jsx";
 import { queueRows } from "./derive";
+import NowCard from "./NowCard.jsx";
+import { pickNowAcross } from "./now.js";
+import { SIGNED_IN } from "./people.js";
 import { opensOnKey, opensRow } from "./rows";
 
 function QueueRow({ row, ward, open, toggle }) {
@@ -48,11 +51,18 @@ export default function Queue() {
   const { patients, nowMs, role } = ward;
   const [openKey, setOpenKey] = useState(null);
   const rows = queueRows(patients, role, nowMs);
+  const pick = pickNowAcross(patients, { role, name: SIGNED_IN[role]?.name }, nowMs);
+  const at = pick.now.patient;
   const handovers = role === "nurse" ? patients.filter((p) => p.view.handover) : [];
   return (
     <>
       <PageLead kicker="Ward" title="My queue" body="What is waiting on you, longest wait first." />
       <LoadError patients={patients} error={ward.loadError} />
+      {role !== "patient" && (
+        <NowCard pick={pick}>
+          {at && <Link to={`/chart/${at.episodeId}`}>Open chart: Bed {at.bed}, {at.name} →</Link>}
+        </NowCard>
+      )}
       {rows.length ? (
         <div className="card table-box">
           <table>

@@ -75,7 +75,15 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .journey li.current { background: var(--sun-soft); border: 1px solid var(--sun); }
 .journey li.later, .journey li.skipped { color: var(--ink-muted); }
 .journey li.skipped { text-decoration: line-through; }
-.next-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 12px 0; }
+.now-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 12px 0; }
+.now-card h2 { margin: 0; }
+.now-detail { margin: 0; }
+.now-rows { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.now-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.now-quiet button.primary { background: transparent; border-color: var(--line); color: var(--ink); }
+.now-quiet button.primary:hover { background: var(--surface-sunk); }
+.next-up { display: grid; gap: 4px; margin: 12px 0; }
+.next-up .t-heading { margin: 0; }
 .next-text { margin: 0; font-size: 1.25rem; font-weight: 700; }
 .quiet-row { margin: 4px 0 12px; }
 @media (max-width: 640px) {

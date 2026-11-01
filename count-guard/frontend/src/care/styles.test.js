@@ -74,7 +74,7 @@ test("the evidence viewer stage is positioned and the thumb is 48 px", () => {
 
 test("the next card, the evidence viewer and the theatre checklist cannot grow wider than a 390 px screen", () => {
   const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
-  for (const rule of [/\n\.next-card \{[^}]*\}/, /\n\.evidence \{[^}]*\}/, /\n\.checklist \{[^}]*\}/, /\n\.checklist \.step \{[^}]*\}/]) {
+  for (const rule of [/\n\.now-card \{[^}]*\}/, /\n\.evidence \{[^}]*\}/, /\n\.checklist \{[^}]*\}/, /\n\.checklist \.step \{[^}]*\}/]) {
     assert.match(css.match(rule)[0], /grid-template-columns:\s*minmax\(0, 1fr\)/);
   }
 });

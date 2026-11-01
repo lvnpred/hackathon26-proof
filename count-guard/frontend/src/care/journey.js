@@ -66,18 +66,20 @@ const QUIET = {
 // Secondary doctor actions that sit in a quiet bar, never on the card.
 export const quietActions = (state, role) => (role === "doctor" ? QUIET[state] || [] : []);
 
-export function nextCard(view, role, { you = false } = {}) {
+const titled = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+
+// The step the backend names as next, for one staff role: who owns it and the buttons that do it.
+export function nextCard(view, role) {
   const nn = view.now_next || {};
   const owner = nn.next_role ?? null;
   const mine = owner !== null && owner === role;
   return {
     owner,
     mine,
-    eyebrow: mine ? "Next · for you" : owner ? `Next · for the ${owner}` : "Next",
-    text: (you ? nn.you_next || nn.next : mine ? nn.next_mine || nn.next : nn.next) || "Nothing queued",
-    waiting: !owner || mine ? "" : `Waiting for the ${owner}.`,
-    last: `Last: ${(you ? nn.you_now : nn.now) || "Nothing recorded"}`,
-    actions: mine && !you ? cardActions(view.state, role, view) : [],
+    eyebrow: mine ? "Now · for you" : owner ? `Now · ${titled(owner)}` : "Now",
+    text: (mine ? nn.next_mine || nn.next : nn.next) || "Nothing queued",
+    last: `Last: ${nn.now || "Nothing recorded"}`,
+    actions: mine ? cardActions(view.state, role, view) : [],
   };
 }
 

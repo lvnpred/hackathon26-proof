@@ -1,4 +1,4 @@
-import { hhmm } from "./clock.js";
+import { whenText } from "./when.js";
 import { displayName } from "./names.js";
 
 // Words and shapes for the AI handling strip, proposals and feed. Pure, so node can test them.
@@ -9,11 +9,14 @@ export const OPS_SCOPE = "/ops/";
 // Who acts for the role on this chart: the nurse in theatre is Nurse Asha, as in NurseActions; else the role's name.
 export const staffBy = (role, view) => (role === "nurse" && view?.state === "theatre" ? THEATRE_NURSE : STAFF_BY[role]);
 
-export const PAUSED_TITLE = "AI is paused";
+// The human action for a paused task, from its kind; the reason sentence is the fallback.
+const PAUSED_ACTIONS = { ack_order: "Acknowledge order" };
+const pausedText = (r) => PAUSED_ACTIONS[r.kind] || `${displayName(r.reason)} · ${r.paused_note}`;
+export const PAUSED_TITLE = "Waiting for a person";
 // While the agent is paused: what it would have done, each as "{reason} · Paused · not done". Staff only.
 export const pausedRows = (ops, role) =>
   role === "patient" ? [] : (ops?.open || []).filter((r) => r.paused_note)
-    .map((r) => ({ workId: r.work_id, text: `${displayName(r.reason)} · ${r.paused_note}` }));
+    .map((r) => ({ workId: r.work_id, text: pausedText(r) }));
 
 export const stripTitle = (n) => `AI is handling · ${n}`;
 const LEVELS = {
@@ -25,17 +28,29 @@ export const levelWords = (level) => LEVELS[level] || "The AI handled this by it
 // Undone rows stay listed but do not count as live.
 export const liveCount = (ops) => (ops?.handling || []).filter((r) => r.status !== "undone").length;
 
+export const adminTitle = (n) => `AI admin for this patient · ${n}`;
+export const foldTitle = (done) => `AI did ${done.length} admin task${done.length === 1 ? "" : "s"} · Review`;
+
+// Rows with a live Undo stay open; once every window has closed they fold. A row moved into the Now card is left out.
+export function handlingState(ops, nowMs, role, movedWork = null) {
+  const rows = handlingRows(ops, nowMs).filter((r) => r.workId !== movedWork);
+  return {
+    open: rows.filter((r) => r.undo), done: rows.filter((r) => !r.undo),
+    paused: pausedRows(ops, role), proposals: proposalsFor(ops, role),
+  };
+}
+
 export const needsTitle = (n) => `Needs you · ${n}`;
 
 export function undoLabel(untilMs, nowMs) {
   if (untilMs == null || nowMs >= untilMs) return "";
-  return `Undo (${Math.ceil((untilMs - nowMs) / 60000)} min)`;
+  return `Undo · ${Math.ceil((untilMs - nowMs) / 60000)} min`;
 }
 
 const toRow = (r, nowMs) => {
   const undone = r.status === "undone";
   return {
-    workId: r.work_id, text: displayName(r.summary), when: hhmm(r.at_ms), level: r.level, undone,
+    workId: r.work_id, text: displayName(r.summary), when: whenText(r.at_ms, nowMs), level: r.level, undone,
     undo: undone ? "" : undoLabel(r.undo_until_ms, nowMs),
   };
 };

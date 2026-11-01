@@ -31,7 +31,7 @@ export default function ProposalCard({ p, act, busy, role, view, episodeId }) {
         {p.editable && !editing && <button type="button" disabled={busy} onClick={() => setEditing(true)}>Edit</button>}
         {editing && <button type="button" disabled={busy} onClick={cancel}>Cancel</button>}
         <button type="button" disabled={busy} onClick={reject}>Reject</button>
-        <button type="button" className="linklike" onClick={() => openInspector(p.work_id, { episodeId })}>Why</button>
+        <button type="button" className="quiet" onClick={() => openInspector(p.work_id, { episodeId })}>Why</button>
       </div>
     </article>
   );

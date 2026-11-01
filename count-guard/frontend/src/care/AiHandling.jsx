@@ -1,29 +1,47 @@
+import { useState } from "react";
+import AiMark from "./AiMark.jsx";
 import Fault from "./Fault";
+import Fold from "./Fold.jsx";
 import ProposalCard from "./ProposalCard.jsx";
-import { OPS_SCOPE, PAUSED_TITLE, handlingRows, liveCount, needsTitle, pausedRows, proposalsFor, staffBy, stripTitle } from "./handling.js";
+import { OPS_SCOPE, PAUSED_TITLE, adminTitle, foldTitle, handlingState, needsTitle, staffBy } from "./handling.js";
 import { useInspector } from "./Inspector.jsx";
 
-// What the AI is handling on this chart, and what it hands to the role. Staff only: the patient sees one routed line in Messages.
+// The AI's admin on this chart. Rows with a live Undo stay open; once every window has closed they fold into one line.
+// Staff only: the patient sees one routed line in Messages.
 export default function AiHandling({ view, role, nowMs, act, episodeId, busy, fault, movedWork = null }) {
   const { openInspector } = useInspector();
+  const [reviewing, setReviewing] = useState(false);
   if (role === "patient" || !view?.ops) return null;
-  const rows = handlingRows(view.ops, nowMs).filter((r) => r.workId !== movedWork);
-  const proposals = proposalsFor(view.ops, role);
-  const paused = pausedRows(view.ops, role);
+  const { open, done, paused, proposals } = handlingState(view.ops, nowMs, role, movedWork);
   const undo = (id) => act(`/ops/work/${id}/undo`, { by: staffBy(role, view) }, `${OPS_SCOPE}undo`);
+  const why = (r) => <button type="button" className="quiet" onClick={() => openInspector(r.workId, { episodeId })}>Why</button>;
+  const line = (r) => <span className="ai-handling-text"><AiMark /> {r.text} · {r.when}</span>;
+  const total = open.length + done.length;
   return (
-    <section className="ai-handling" aria-label="AI is handling">
-      <p className="label">{stripTitle(liveCount(view.ops))}</p>
-      {rows.length === 0 ? <p className="empty small">Nothing handled yet.</p> : (
+    <section className="ai-handling" aria-label="AI admin">
+      <p className="label">{adminTitle(total)}</p>
+      {total === 0 && <p className="empty small">Nothing handled yet.</p>}
+      {open.length > 0 && (
         <ul className="ai-handling-list">
-          {rows.map((r) => (
+          {open.map((r) => (
             <li key={r.workId}>
-              <span className="ai-handling-text">{r.text} · {r.when}</span>
-              {r.undone && <span className="pill tone-grey">Undone</span>}
-              {r.undo && <button type="button" disabled={busy} onClick={() => undo(r.workId)}>{r.undo}</button>}
-              <button type="button" className="linklike" onClick={() => openInspector(r.workId, { episodeId })}>Why</button>
+              {line(r)}
+              <button type="button" disabled={busy} onClick={() => undo(r.workId)}>{r.undo}</button>
+              {why(r)}
             </li>
           ))}
+        </ul>
+      )}
+      {done.length > 0 && open.length === 0 && (
+        <Fold label={foldTitle(done)} open={reviewing} onToggle={() => setReviewing(!reviewing)}>
+          <ul className="ai-handling-list">
+            {done.map((r) => <li key={r.workId}>{line(r)}{r.undone && <span className="pill tone-grey">Undone</span>}{why(r)}</li>)}
+          </ul>
+        </Fold>
+      )}
+      {done.length > 0 && open.length > 0 && (
+        <ul className="ai-handling-list">
+          {done.map((r) => <li key={r.workId}>{line(r)}{r.undone && <span className="pill tone-grey">Undone</span>}{why(r)}</li>)}
         </ul>
       )}
       {paused.length > 0 && (

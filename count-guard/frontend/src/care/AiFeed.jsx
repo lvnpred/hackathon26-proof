@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { call } from "../journey";
+import AiMark from "./AiMark.jsx";
 import Fault from "./Fault";
 import { BAD_ANSWER } from "./ai.js";
 import { OPS_SCOPE, STAFF_BY, feedRows, isFeed } from "./handling.js";
@@ -35,10 +36,10 @@ export default function AiFeed({ ids, nowMs, ward }) {
         <ul className="ai-handling-list">
           {rows.map((r) => (
             <li key={r.workId}>
-              <span className="ai-handling-text">{r.patient} · {r.text} · {r.when}</span>
+              <span className="ai-handling-text"><AiMark /> {r.patient} · {r.text} · {r.when}</span>
               {r.undone && <span className="pill tone-grey">Undone</span>}
               {r.undo && <button type="button" disabled={ward.busy} onClick={() => undo(r)}>{r.undo}</button>}
-              <button type="button" className="linklike" onClick={() => openInspector(r.workId, { episodeId: r.episodeId })}>Why</button>
+              <button type="button" className="quiet" onClick={() => openInspector(r.workId, { episodeId: r.episodeId })}>Why</button>
             </li>
           ))}
         </ul>

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  OPS_SCOPE, STAFF_BY, agentMoment, agentMoments, citedLine, feedRows, handlingRows, isFeed,
+  OPS_SCOPE, STAFF_BY, adminTitle, foldTitle, handlingState, agentMoment, agentMoments, citedLine, feedRows, handlingRows, isFeed,
   levelWords, liveCount, myPatientsStrip, needsTitle, proposalsFor, stripTitle, undoLabel,
   PAUSED_TITLE, THEATRE_NURSE, pausedRows, staffBy,
 } from "./handling.js";
@@ -30,11 +30,11 @@ test("titles", () => {
 });
 
 test("undoLabel", () => {
-  assert.equal(undoLabel(600_000, 120_000), "Undo (8 min)");
+  assert.equal(undoLabel(600_000, 120_000), "Undo · 8 min");
   assert.equal(undoLabel(600_000, 600_000), "");
   assert.equal(undoLabel(null, 0), "");
-  assert.equal(undoLabel(600_000, 570_000), "Undo (1 min)");
-  assert.equal(undoLabel(600_000, 510_000), "Undo (2 min)");
+  assert.equal(undoLabel(600_000, 570_000), "Undo · 1 min");
+  assert.equal(undoLabel(600_000, 510_000), "Undo · 2 min");
   assert.equal(undoLabel(600_000, 700_000), "");
 });
 
@@ -43,7 +43,7 @@ test("handlingRows keeps order, strips synthetic and marks undone", () => {
   assert.deepEqual(rows.map((r) => r.workId), ["w1", "w2"]);
   assert.equal(rows[0].text, "Reminded Nurse Meena");
   assert.match(rows[0].when, /^\d\d:\d\d$/);
-  assert.equal(rows[0].undo, "Undo (8 min)");
+  assert.equal(rows[0].undo, "Undo · 8 min");
   assert.equal(rows[0].undone, false);
   assert.equal(rows[1].undone, true);
   assert.equal(rows[1].undo, "");
@@ -100,7 +100,7 @@ test("feedRows and isFeed", () => {
   assert.equal(isFeed({ paused: false }), false);
   assert.equal(isFeed(null), false);
   const [r] = feedRows(feed, 2 * MIN);
-  assert.deepEqual([r.workId, r.episodeId, r.patient, r.undo], ["w1", "ep1", "Asha K", "Undo (8 min)"]);
+  assert.deepEqual([r.workId, r.episodeId, r.patient, r.undo], ["w1", "ep1", "Asha K", "Undo · 8 min"]);
   assert.deepEqual(feedRows(null, 0), []);
 });
 
@@ -170,12 +170,12 @@ test("pausedRows show what the paused agent has not done, staff only (I4)", () =
   const open = [{ work_id: "o1", kind: "ack_order", reason: "Dr. A. Rao signed orders at 09:02; not acknowledged yet.", paused_note: "Paused · not done" },
     { work_id: "o2", kind: "propose_move", reason: "r" }];
   const rows = pausedRows({ open }, "nurse");
-  assert.deepEqual(rows, [{ workId: "o1", text: "Dr. A. Rao signed orders at 09:02; not acknowledged yet. · Paused · not done" }]);
+  assert.deepEqual(rows, [{ workId: "o1", text: "Acknowledge order" }]);
   assert.deepEqual(pausedRows({ open }, "patient"), []);
   assert.deepEqual(pausedRows({ open: [open[1]] }, "doctor"), []);  // running: no note, no row
   assert.deepEqual(pausedRows(null, "nurse"), []);
   for (const t of [PAUSED_TITLE, rows[0].text]) assert.doesNotMatch(t, ADVICE, t);
-  assert.equal(PAUSED_TITLE, "AI is paused");
+  assert.equal(PAUSED_TITLE, "Waiting for a person");
 });
 
 test("staffBy names the theatre nurse in theatre, as NurseActions does (M10)", () => {
@@ -190,4 +190,23 @@ test("myPatientsStrip hands each proposal its patient's view", () => {
   const view = { ops, state: "theatre" };
   const s = myPatientsStrip([{ id: "ep1", name: "A", view }], "doctor");
   assert.equal(s.proposals[0].view, view);
+});
+
+test("handlingState folds only when no Undo is live; paused never hides a live Undo", () => {
+  const live = handlingState(ops, 2 * MIN, "doctor");
+  assert.deepEqual([live.open.map((r) => r.workId), live.done.map((r) => r.workId)], [["w1"], ["w2"]]);
+  assert.equal(live.proposals.length, 1);
+  const closed = handlingState(ops, 11 * MIN, "doctor");
+  assert.deepEqual([closed.open.length, closed.done.length], [0, 2]);
+  const open = [{ work_id: "o1", kind: "ack_order", reason: "r", paused_note: "Paused · not done" }];
+  const both = handlingState({ ...ops, open }, 2 * MIN, "nurse");
+  assert.deepEqual([both.open.length, both.paused.map((r) => r.text), both.proposals], [1, ["Acknowledge order"], []]);
+  assert.deepEqual(handlingState(ops, 2 * MIN, "doctor", "w1").open, []);
+  assert.deepEqual(handlingState(null, 0, "nurse"), { open: [], done: [], paused: [], proposals: [] });
+});
+
+test("admin titles", () => {
+  assert.equal(adminTitle(3), "AI admin for this patient · 3");
+  assert.equal(foldTitle([1]), "AI did 1 admin task · Review");
+  assert.equal(foldTitle([1, 2]), "AI did 2 admin tasks · Review");
 });

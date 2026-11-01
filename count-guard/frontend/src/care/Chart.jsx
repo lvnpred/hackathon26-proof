@@ -13,6 +13,7 @@ import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
 import { OPS_SCOPE } from "./handling.js";
 import MedicinesFromHome from "./MedicinesFromHome.jsx";
 import RecordEvidence from "./RecordEvidence.jsx";
+import { filterMoments } from "./moments.js";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
 import { movedAlertId, pickNow } from "./now.js";
@@ -96,7 +97,7 @@ export default function Chart() {
 
       <MedicinesFromHome view={view} role={ward.role} nowMs={ward.nowMs} act={act} busy={ward.busy} />
 
-      <Fold label="Orders and evidence" open={recordOpen} onToggle={() => setRecordOpen(!recordOpen)}>
+      <Fold label="Orders and evidence" count={filterMoments(view.ai_moments, "all", ward.role, ward.role === "patient" ? "patient" : "staff").length} open={recordOpen} onToggle={() => setRecordOpen(!recordOpen)}>
         <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} />
       </Fold>
 

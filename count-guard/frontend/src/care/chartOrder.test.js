@@ -29,7 +29,7 @@ test("Now card comes before the attention items in each role panel", () => {
 });
 
 test("the folded record and history keep their region names inside a closed Fold", () => {
-  assert.match(read("History.jsx"), /<Fold label="History" open=\{open\}/);
+  assert.match(read("History.jsx"), /<Fold label="History" count=\{view\.timeline\.length\} open=\{open\}/);
   assert.match(read("History.jsx"), /useState\(\(\) => Boolean\(line\)\)/);
   assert.match(read("RecordEvidence.jsx"), /aria-label="Record and evidence"/);
 });

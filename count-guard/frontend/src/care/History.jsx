@@ -18,7 +18,7 @@ export default function History({ view, role, line, rows, rowsError, replaced })
   const kept = lensLines(view.timeline, view.nudges, shownLens, role, line);
   const { lines } = foldLines(kept, open);
   return (
-    <Fold label="History" open={open} onToggle={() => setOpen(!open)}>
+    <Fold label="History" count={view.timeline.length} open={open} onToggle={() => setOpen(!open)}>
       <section aria-label="History">
         <div className="row" role="group" aria-label="Lens">
           {LENS_CHIPS.map(([id, name]) => (

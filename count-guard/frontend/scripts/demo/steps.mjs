@@ -188,9 +188,9 @@ export const STEPS = {
     await H.sayText("BP and pulse every 1 h", "BP 112 over 70, pulse 84, bed 7.");
     await H.click("Use this");
     await H.click("Confirm");
-    const flag = H.page.locator(".card.sunk").filter({ hasText: "is below the limit of 90" }).first();
-    await flag.getByLabel("What you did or saw").fill("Reading checked again at the bedside");
-    await flag.getByRole("button", { name: "Answer", exact: true }).click();
+    const flag = H.page.locator('article[aria-label^="Alert: Systolic BP 82"]').first();
+    await flag.getByLabel("What did you do?").fill("Reading checked again at the bedside");
+    await flag.getByRole("button", { name: "Save response", exact: true }).click();
   },
   async "iyer-discharge"(H) {
     await H.role("Doctor");

@@ -28,14 +28,24 @@ export function stripPills(pills, episodeId, role) {
 // A nudge reads in the patient's words for the patient and in staff words for staff; an older nudge has one wording.
 export const nudgeText = (nudge, role) => (role === "patient" ? nudge.says : nudge.says_staff || nudge.says);
 
-// Every open nudge, safety first. The nurse, the addressee and the deep-linked line may answer. The patient sees only nudges addressed to the patient (R16).
+// Every open nudge: danger (safety kinds) before late, oldest first within each. The nurse, the addressee and the deep-linked line may answer. The patient sees only nudges addressed to the patient (R16).
 export function bannerAlerts(view, role, line) {
   const items = (view?.nudges || []).filter((nudge) => role !== "patient" || nudge.to === "patient").map((nudge) => ({
     nudge,
     safety: SAFETY.includes(nudge.kind),
     canAnswer: role === "nurse" || nudge.to === role || nudge.id === line,
   }));
-  return [...items.filter((i) => i.safety), ...items.filter((i) => !i.safety)];
+  const oldest = (a, b) => (a.nudge.at_ms ?? 0) - (b.nudge.at_ms ?? 0);
+  return [...items.filter((i) => i.safety).sort(oldest), ...items.filter((i) => !i.safety).sort(oldest)];
+}
+
+const LIMIT_SENTENCE = /^(.+?) is (?:below|above) the limit of (\S+) set by (.+?)\.?$/;
+
+// "Systolic BP 82 is below the limit of 90 set by Dr. A. Rao." -> headline "Systolic BP 82", limit "90", by "Dr. A. Rao".
+// A nudge with another wording keeps its whole sentence as the headline and has no limit.
+export function alertParts(text) {
+  const m = LIMIT_SENTENCE.exec(text || "");
+  return m ? { headline: m[1], limit: m[2], by: m[3] } : { headline: text || "", limit: null, by: null };
 }
 
 // The banner frame is red only while a safety alert is open; otherwise a neutral card.

@@ -212,7 +212,7 @@ export const BEATS = [
     id: "iyer-bp", path: "iyer", role: "nurse", seconds: 6, film: true,
     say: "Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.",
     clicks: ["Role Nurse", "Chart S. Iyer", 'Button "Say it: BP and pulse…" on the BP and pulse row', 'File eval/p2/iyer-bp.wav into that row', 'Button "Use this"', 'Button "Confirm"'],
-    expect: ["BP 82 over 54, pulse 112, bed 7.", "is below the limit of 90"],
+    expect: ["BP 82 over 54, pulse 112, bed 7.", "Systolic BP 82", "Limit 90, set by Dr. A. Rao"],
     before: ["BP 82 over 54, pulse 112, bed 7."],
     files: ["iyer-bp.wav"],
     keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. No switch.",
@@ -243,7 +243,7 @@ export const BEATS = [
   {
     id: "iyer-recheck", path: "iyer", role: "nurse", seconds: 5, film: true,
     say: "Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.",
-    clicks: ["Role Nurse", 'Button "Say it: BP and pulse every 1 h"', 'Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Button "Confirm"', 'Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside', 'Button "Answer" in that flag'],
+    clicks: ["Role Nurse", 'Button "Say it: BP and pulse every 1 h"', 'Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Button "Confirm"', 'Field "What did you do?" in the Systolic BP 82 alert <- Reading checked again at the bedside', 'Button "Save response" in that alert'],
     expect: ["logged BP 112/70, HR 84"],
     absent: "→ Systolic BP 82 is below the limit of 90",
     keyed: "1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch.",

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageLead } from "../App";
-import { Nudge } from "../screens/WardPanel";
 import { DEMO, useCareWard } from "./CareShell";
 import Fault from "./Fault";
 import LoadError from "./LoadError";
 import { NUDGE_SCOPES } from "./faults";
-import { nudgeText } from "./alerts";
+import AlertCard from "./AlertCard.jsx";
+import { SAFETY } from "./alerts";
 import { queueRows } from "./derive";
 import { opensOnKey, opensRow } from "./rows";
 
@@ -35,7 +35,7 @@ function QueueRow({ row, ward, open, toggle }) {
       {open && nudge && (
         <tr>
           <td colSpan={5}>
-            <Nudge nudge={{ ...nudge, says: nudgeText(nudge, ward.role) }} busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} />
+            <AlertCard view={patient.view} role={ward.role} nudge={nudge} safety={SAFETY.includes(nudge.kind)} primary busy={ward.busy} act={(path, body) => ward.act(row.episodeId, path, body)} nowMs={ward.nowMs} episodeId={row.episodeId} />
             <Fault fault={ward.fault} episodeId={row.episodeId} only={NUDGE_SCOPES} />
           </td>
         </tr>

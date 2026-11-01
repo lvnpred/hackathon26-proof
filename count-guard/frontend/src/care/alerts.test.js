@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import { showTrayFlag } from "./derive.js";
-import { SAFETY, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
+import { SAFETY, alertParts, bannerAlerts, bannerClass, nudgeText, stripPills, surname } from "./alerts.js";
 
 const n = (id, kind, to, at_ms, says = `says ${id}`) => ({ id, kind, to, at_ms, says, when: "10:00" });
 const pill = (episodeId, name, who, what, role = "nurse") => ({ key: `${episodeId}:${what}`, episodeId, name, who, what, role });
@@ -84,4 +85,23 @@ test("bannerAlerts shows the patient only nudges addressed to the patient", () =
   const view = { nudges: [n("a", "obs_overdue", "nurse", 1), n("p", "strip_strength_differs", "patient", 2)] };
   assert.deepEqual(bannerAlerts(view, "patient", null).map((x) => x.nudge.id), ["p"]);
   assert.deepEqual(bannerAlerts(view, "nurse", null).map((x) => x.nudge.id), ["a", "p"]);
+});
+
+test("bannerAlerts sorts danger before late, then oldest first", () => {
+  const view = { nudges: [n("l1", "obs_overdue", "nurse", 5), n("d2", "obs_past_limit", "nurse", 9), n("l0", "dose_overdue", "nurse", 1), n("d1", "count_open", "nurse", 3)] };
+  assert.deepEqual(bannerAlerts(view, "nurse", null).map((x) => x.nudge.id), ["d1", "d2", "l0", "l1"]);
+});
+test("alertParts splits the reading from the limit and who set it", () => {
+  assert.deepEqual(alertParts("Systolic BP 82 is below the limit of 90 set by Dr. A. Rao."), { headline: "Systolic BP 82", limit: "90", by: "Dr. A. Rao" });
+  assert.deepEqual(alertParts("Closing count: 14 of 15 back."), { headline: "Closing count: 14 of 15 back.", limit: null, by: null });
+});
+test("AlertCard asks 'What did you do?', saves a response and names the assignee", () => {
+  const src = fs.readFileSync(new URL("./AlertCard.jsx", import.meta.url), "utf8");
+  assert.ok(src.includes("Save response"));
+  assert.ok(!src.includes("Answer"));
+  assert.ok(src.includes("What did you do?"));
+  assert.ok(src.includes("Details") && src.includes("Take observations now") && src.includes("Assigned to"));
+  assert.ok(src.includes("aria-label={`Alert: ${headline}`}"));
+  assert.ok(!src.includes('placeholder="Called the patient back"'));
+  assert.ok(src.includes("/seen"));
 });

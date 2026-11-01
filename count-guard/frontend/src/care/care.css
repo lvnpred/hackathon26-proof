@@ -246,3 +246,9 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .t-display { font-size: 40px; line-height: 44px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .t-heading { font-size: 19px; line-height: 26px; font-weight: 800; }
 .t-caption { font-size: 12px; line-height: 16px; font-weight: 700; }
+.alert-card { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-left: 4px solid var(--status-check); border-radius: 12px; background: var(--surface); }
+.alert-card.s-danger { border-left-color: var(--status-danger); background: var(--status-danger-soft); }
+.alert-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.alert-card-head h3 { margin: 0; }
+.alert-card p { margin: 0; }
+.alert-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

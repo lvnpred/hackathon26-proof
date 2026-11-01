@@ -205,7 +205,7 @@ On screen: `The wound looks as expected for day 3.` · `No visit needed`
 #### `iyer-bp` · 2:34 · nurse · 6 s
 Clicks: 1) Role Nurse; 2) Chart S. Iyer; 3) Button "Say it: BP and pulse…" on the BP and pulse row; 4) File eval/p2/iyer-bp.wav into that row; 5) Button "Use this"; 6) Button "Confirm"
 
-On screen: `BP 82 over 54, pulse 112, bed 7.` · `is below the limit of 90`
+On screen: `BP 82 over 54, pulse 112, bed 7.` · `Systolic BP 82` · `Limit 90, set by Dr. A. Rao`
 
 > Nurse Meena records Ms. Iyer's blood pressure by voice; it falls under the doctor's limit and is flagged.
 
@@ -231,7 +231,7 @@ On screen: `finished Saline 1 litre over 2 hours, video check of the set-up at`
 > The clock moves two hours and the nurse ends the saline task.
 
 #### `iyer-recheck` · 2:57 · nurse · 5 s
-Clicks: 1) Role Nurse; 2) Button "Say it: BP and pulse every 1 h"; 3) Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.; 4) Button "Use this"; 5) Button "Confirm"; 6) Field "What you did or saw" in the below-the-limit flag <- Reading checked again at the bedside; 7) Button "Answer" in that flag
+Clicks: 1) Role Nurse; 2) Button "Say it: BP and pulse every 1 h"; 3) Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.; 4) Button "Use this"; 5) Button "Confirm"; 6) Field "What did you do?" in the Systolic BP 82 alert <- Reading checked again at the bedside; 7) Button "Save response" in that alert
 
 On screen: `logged BP 112/70, HR 84` · the waiting strip no longer shows `→ Systolic BP 82 is below the limit of 90`
 

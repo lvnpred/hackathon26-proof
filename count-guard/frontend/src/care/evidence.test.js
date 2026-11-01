@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  isFocusRegion, PALETTE, boxLabel, drawItems, hasIgnored, ignoredFrameNames, isDense, isFocus, labelKind, sawCount, sawRows, boxGroups, boxesAt, capturedLine, chipText, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
+  isFocusRegion, PALETTE, boxLabel, drawItems, hasIgnored, ignoredFrameNames, isDense, isFocus, labelKind, sawCount, sawRows, boxGroups, boxesAt, capturedLine, chipText, thumbLabel, colourFor, countSeries, evidenceView, explain, explainRegions, modeWord, plural,
   regionLabel, seenCell, startImage, itemName, nudgeLabels,
 } from "./evidence.js";
 
@@ -253,4 +253,22 @@ test("visual Found falls back without a sidecar", () => {
 
 test("the twin of backend visual_finding", () => {
   assert.equal(explain([{ concept: "needle holder", planned: 3, seen: 2 }], null, 0.45, "photos")[0], "Saw 2 of 3 needle holders.");
+});
+
+test("the thumbnail label names no model unless a card asked", () => {
+  assert.equal(thumbLabel(""), "Evidence photo");
+  assert.equal(thumbLabel("SAM 3.1 · live"), "Evidence SAM 3.1 · live");
+});
+
+test("only the Inspector, the model cards and the AI page pass model to Evidence", async () => {
+  const fs = await import("node:fs");
+  const dir = new URL("./", import.meta.url);
+  const allowed = new Set(["Inspector.jsx", "InspectVisual.jsx", "InspectText.jsx", "ModelCards.jsx", "AiDashboard.jsx", "Evidence.jsx"]);
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".jsx") || allowed.has(name)) continue;
+    const src = fs.readFileSync(new URL(name, dir), "utf8");
+    for (const tag of src.match(/<Evidence(?:Thumb)?\b[^>]*>/g) || []) assert.doesNotMatch(tag, /\bmodel=/, name);
+  }
+  const ev = fs.readFileSync(new URL("Evidence.jsx", dir), "utf8");
+  assert.doesNotMatch(ev, /view\.chip/);
 });

@@ -25,11 +25,6 @@ export default function AiDashboard() {
       <PageLead kicker="Staff" title="AI activity" body={story || "What the AI did on this ward, by patient and pipeline."} />
       <section aria-label="What the AI did today">
         <h2>What the AI did today</h2>
-        <ActivityList rows={shown} role={ward.role} empty={rows.length === 0 ? empty : "Nothing here for this filter."} />
-        <AiFeed ids={ids} nowMs={ward.nowMs} ward={ward} />
-      </section>
-      <section aria-label="How it works">
-        <h2>How it works</h2>
         <ol className="pipelines small" aria-label="Pipelines">
           {PIPELINES.map((steps) => {
             const kind = PIPELINE_KIND[steps[0]];
@@ -42,6 +37,11 @@ export default function AiDashboard() {
             );
           })}
         </ol>
+        <ActivityList rows={shown} role={ward.role} empty={rows.length === 0 ? empty : "Nothing here for this filter."} />
+        <AiFeed ids={ids} nowMs={ward.nowMs} ward={ward} />
+      </section>
+      <section aria-label="How it works">
+        <h2>How it works</h2>
         <ModelCards ids={ids} />
       </section>
     </>

@@ -30,6 +30,9 @@ export function modeWord(source, handmade) {
 
 // `model` names the card the chip sits under (T7-1); without it the chip names SAM, else the first call.
 // `paired` (a photo read with regions) names both models when no card is asked for: SAM boxes, Spark reads.
+// The accessible name of an evidence thumbnail: a model name only when a card asked for one.
+export const thumbLabel = (chip) => (chip ? `Evidence ${chip}` : "Evidence photo");
+
 export function chipText(calls, handmade, model, paired = false) {
   const list = calls || [];
   const c = (model && list.find((x) => x.model === model)) || list.find((x) => x.model === "sam") || list[0];

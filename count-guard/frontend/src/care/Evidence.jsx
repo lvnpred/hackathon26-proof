@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { call } from "../journey";
 import { stripLabel } from "./brownbag.js";
-import { boxesAt, capturedLine, chipText, colourFor, correctionLine, countSeries, evidenceView, ignoredFrameNames, itemName, regionLabel, sawCount, sawRows, seenCell, startImage } from "./evidence.js";
+import { boxesAt, capturedLine, chipText, thumbLabel, colourFor, correctionLine, countSeries, evidenceView, ignoredFrameNames, itemName, regionLabel, sawCount, sawRows, seenCell, startImage } from "./evidence.js";
 import { EvidenceExpand } from "./EvidenceExpand.jsx";
 import { Stage } from "./EvidenceStage.jsx";
 
@@ -94,7 +94,7 @@ export function Evidence({ episodeId, evidenceId, check, sample, linkLines = tru
   const regionLines = view.regions && view.regions.map((r) => (rows ? stripLabel(r, rows) : regionLabel(r)));
   const ignoredNames = ignoredFrameNames(frames, view.images);
   const keptTimes = view.images.map((i) => i.t ?? i.index);
-  const chip = model ? chipText(data.calls, data.handmade, model) : view.chip;
+  const chip = model ? chipText(data.calls, data.handmade, model) : "";
   return (
     <section className="evidence" aria-label="Evidence">
       <p className="label">{view.title}{chip && ` · ${chip}`}</p>
@@ -171,13 +171,13 @@ export function EvidenceThumb({ episodeId, evidenceId, check, linkLines = true, 
   const [open, setOpen] = useState(false);
   if (!data) return fallback;
   const image = (data.images || [])[0];
-  const chip = chipText(data.calls, data.handmade, model);
+  const chip = model ? chipText(data.calls, data.handmade, model) : "";
   return (
     <div>
-      <button type="button" className="ev-thumb" title={chip} aria-expanded={open} aria-label={`Evidence ${chip}`.trim()} onClick={() => setOpen(!open)}>
+      <button type="button" className="ev-thumb" title={chip || undefined} aria-expanded={open} aria-label={thumbLabel(chip)} onClick={() => setOpen(!open)}>
         {image && <Stage className="ev-thumb-stage" image={image} boxes={boxesAt(data.frames, image.t ?? image.index, false)} regions={null} labels={false} />}
       </button>
-      <span className="small muted">{chip}</span>
+      {chip && <span className="small muted">{chip}</span>}
       {open && <Evidence episodeId={episodeId} evidenceId={evidenceId} check={check} linkLines={linkLines} version={version} model={model} />}
     </div>
   );

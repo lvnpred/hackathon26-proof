@@ -11,7 +11,7 @@ from app.journey.ask import PHOTO_STATES, ask_view, open_for_doctor, short_name,
 from app.journey.dictation import open_drafts
 from app.journey.nudges import count_and_patient, in_theatre
 from app.journey.procedures import PROCEDURE_TEMPLATES, tray_plan
-from app.journey.clocktext import latest_ms, when_text
+from app.journey.clocktext import at_text, latest_ms
 from app.journey.stories import by_ai
 from app.journey.video import checks_view, tray_state
 from app.morning.discharge import visible_events
@@ -207,7 +207,7 @@ def _latest_happening(events: list[dict], you: bool = False, now_ms: int | None 
     made = {e["id"]: e["payload"] for e in rows if e["event_type"] == "task.created"}
     best = None
     for index, e in enumerate(rows):
-        p, kind, at = e["payload"], e["event_type"], when_text(e["ts_ms"], now_ms)
+        p, kind, at = e["payload"], e["event_type"], at_text(e["ts_ms"], now_ms)
         if you and by_ai(p):
             continue  # the patient never reads AI bookkeeping
         who = short_name(p.get("by")) if you else p.get("by")
@@ -216,32 +216,32 @@ def _latest_happening(events: list[dict], you: bool = False, now_ms: int | None 
                 text = "You were admitted to the ward the day before." if you else f"{p['by']} admitted the patient to the ward the day before."
                 rank = -1
             else:
-                text = f"{who} {YOU_DID[p['to']]} at {at}." if you else f"{p['by']} {DID[p['to']]} at {at}."
+                text = f"{who} {YOU_DID[p['to']]} {at}." if you else f"{p['by']} {DID[p['to']]} {at}."
                 rank = 0
         elif kind == "order.signed":
-            text, rank = (f"{who} signed new orders for you at {at}." if you else f"{who} signed new orders at {at}."), 0
+            text, rank = (f"{who} signed new orders for you {at}." if you else f"{who} signed new orders {at}."), 0
         elif kind == "order.acknowledged":
-            text, rank = (f"{who} acknowledged your orders at {at}." if you else f"{who} acknowledged the orders at {at}."), 0
+            text, rank = (f"{who} acknowledged your orders {at}." if you else f"{who} acknowledged the orders {at}."), 0
         elif kind in ("task.began", "task.done"):
             task = made.get(p["task_id"], {})
             title = task.get("title", "a task")
             if you and kind == "task.done" and task.get("kind") == "dose":
                 given = " ".join(part for part in (task.get("name") or title, task.get("amount")) if part)
-                text = f"{who} gave {given} at {at}."
+                text = f"{who} gave {given} {at}."
             else:
                 verb = "began" if kind == "task.began" else "finished"
-                text = f"{who} {verb} {title} at {at}."
+                text = f"{who} {verb} {title} {at}."
             rank = 0
         elif kind == "question.asked" and p["to"] == "doctor":
-            text = f"You sent a question to the doctor at {at}." if you else f"{short_name(p['by'])} sent a question to the doctor at {at}."
+            text = f"You sent a question to the doctor {at}." if you else f"{short_name(p['by'])} sent a question to the doctor {at}."
             rank = 0
         elif kind == "question.answered" and p.get("source") == "doctor":
-            text, rank = (f"{who} answered your question at {at}." if you else f"{who} answered the question at {at}."), 0
+            text, rank = (f"{who} answered your question {at}." if you else f"{who} answered the question {at}."), 0
         elif kind == "review.requested":
-            text = f"You sent a healing photo at {at}." if you else f"{short_name(p['by'])} sent a healing photo at {at}."
+            text = f"You sent a healing photo {at}." if you else f"{short_name(p['by'])} sent a healing photo {at}."
             rank = 0
         elif kind == "review.answered":
-            text = f"{who} reviewed {'your' if you else 'the'} healing photo at {at}: {p['label']}."
+            text = f"{who} reviewed {'your' if you else 'the'} healing photo {at}: {p['label']}."
             rank = 0
         else:
             continue

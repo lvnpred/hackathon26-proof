@@ -31,6 +31,12 @@ def when_text(ts_ms: int, now_ms: int | None) -> str:
     return f"{d:%a} {d.day} {d:%b}, {hhmm}"
 
 
+def at_text(ts_ms: int, now_ms: int | None) -> str:
+    """The clock text for a sentence: "at 09:14", but "Yesterday 09:14" and "Wed 4 Nov, 09:14" take no "at"."""
+    text = when_text(ts_ms, now_ms)
+    return f"at {text}" if text[0].isdigit() else text
+
+
 def latest_ms(events: list[dict]) -> int:
     """The newest recorded time: the record's own 'now' when a builder has no request clock."""
     return max((e["ts_ms"] for e in events), default=0)

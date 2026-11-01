@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { whenText } from "./when.js";
+import { atText } from "./when.js";
 import { displayName } from "./names.js";
 import { MATCH_LABEL, proofOf } from "./drafts";
 import { PageLead } from "../App";
@@ -39,7 +39,7 @@ export default function MyCare() {
                       const proof = proofOf(d, view.photos);
                       return (
                         <p className="small muted" key={`${task.id}:${index}`}>
-                          Done by {displayName(d.by)} at {whenText(d.at_ms, ward.nowMs)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
+                          Done by {displayName(d.by)} {atText(d.at_ms, ward.nowMs)}{proof.voice && ", by voice"}{proof.typed && ", typed"}
                           {proof.photo && <> · <a href={proof.photo.url} target="_blank" rel="noreferrer">Photo</a></>}
                           {d.match && <> · <span className={`pill ${proof.flagged ? "sun" : "info"}`}>{MATCH_LABEL[d.match] || MATCH_LABEL.none}</span></>}
                         </p>

@@ -179,7 +179,7 @@ On screen: `Home`
 > The nurse completes the discharge checks and he goes home.
 
 #### `kumar-ask` · 2:07 · patient · 12 s
-Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Day 3; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
+Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask; 4) Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?; 5) Button "Send to Dr. Rao"; 6) Text input in "Healing photo" <- Healing photo after surgery; 7) File input in "Healing photo" <- eval/p4/wound-day3.png
 
 On screen: `Waiting for Dr. Rao` · `The doctor will review your healing photo.` · `Your question went to Dr. A. Rao`
 
@@ -195,7 +195,7 @@ On screen: `Healing photo` · `Reference` · `From voice` (before Send to R. Kum
 #### `kumar-answers` · 2:28 · patient · 6 s
 Clicks: 1) Role Patient; 2) Pick R. Kumar; 3) Tab Ask
 
-On screen: `The wound looks as expected for day 3.` · `No visit needed`
+On screen: `The wound looks as expected.` · `No visit needed`
 
 > Mr. Kumar sees the doctor's answer and the decision on his Ask page.
 

@@ -31,3 +31,9 @@ export function whenText(tsMs, nowMs) {
   const date = new Date(DAY0_UTC + day * DAY);
   return `${WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}, ${time}`;
 }
+
+// For a sentence: "at 09:14", but "Yesterday 09:14" and "Wed 4 Nov, 09:14" take no "at".
+export function atText(tsMs, nowMs) {
+  const text = whenText(tsMs, nowMs);
+  return /^\d/.test(text) ? `at ${text}` : text;
+}

@@ -56,8 +56,8 @@ export default function NurseActions({ state, card, pick, control, view, act, up
     <>
       <NowCard pick={pick} card={card} control={control}>{card.actions.map((key) => primary[key])}</NowCard>
       {afterNow}
-      {state === "ward" && <HandoverCard view={view} busy={busy} act={act} />}
       {(state === "ward" || state === "theatre") && <NurseTasks view={view} nowMs={nowMs} state={state} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
+      {state === "ward" && <HandoverCard view={view} busy={busy} act={act} />}
       {!["admitting", "ward", "theatre", "discharging"].includes(state) && <p className="empty small">Nothing for the nurse to do from this state.</p>}
     </>
   );

@@ -164,3 +164,12 @@ test("capabilities in the flow: sources use the new components", () => {
 test("new copy has no advice words", () => {
   for (const s of ["Photo of strips", "Type instead", "Check these strips", "Shift handover", "Ask Muse Spark 1.3 to word it", "Draft handover", "Accept as Nurse Kavya (synthetic)", "Answered by record bot", "Inspect"]) assert.doesNotMatch(s, ADVICE);
 });
+
+test("the nurse sees tasks before the handover card, and no copy says 'at Yesterday'", () => {
+  const read = (name) => fs.readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
+  const src = read("NurseActions.jsx");
+  assert.ok(src.indexOf("<NurseTasks ") < src.indexOf("<HandoverCard "));
+  for (const f of ["MyCare.jsx", "AskInbox.jsx", "dock.js"]) assert.doesNotMatch(read(f), /\bat \$?\{(whenText|atText)/);
+  assert.match(read("DayPlan.jsx"), />Details</);
+  assert.doesNotMatch(read("DayPlan.jsx"), /Inspect </);
+});

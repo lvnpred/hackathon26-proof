@@ -12,7 +12,7 @@ from app.journey.dictation import ADVICE, _DRUG, _STOP, _WORD, _json_of, digits,
 from app.journey.rx import key_of
 from app.journey.schedule import build, schedule_text
 from app.journey.states import DID
-from app.journey.clocktext import latest_ms, when_text
+from app.journey.clocktext import at_text, latest_ms
 from app.morning.discharge import visible_events
 
 NOT_FOUND = "I can't find that in your record."
@@ -31,17 +31,17 @@ WRAPPERS = {
     "prescription": "Prescription from {by}: {medicine} — {schedule}.",
     "advice": "Note on the prescription from {by}: {item}",
     "review": "Follow-up on the prescription: {review}",
-    "order": "Order signed by {by} at {clock}: {text}",
-    "task": "{title}: done by {by} at {clock}.",
+    "order": "Order signed by {by} {clock}: {text}",
+    "task": "{title}: done by {by} {clock}.",
     "discharge": "Discharge summary from {by}: {sentence}",
     "wound": "Wound care on your discharge card: {wound_care}",
     "sign": "Warning sign on your discharge card: {sign}",
     "card_review": "Review on your discharge card: {review}",
     "help": "Help line on your discharge card: {help_line}",
-    "moved": "{by} {did} at {clock}.",
+    "moved": "{by} {did} {clock}.",
     "admitted": "You were admitted to the ward the day before.",
     "answer": "{by} answered your question: {answer}",
-    "photo_review": "{by} reviewed your healing photo at {clock}: {label}.",
+    "photo_review": "{by} reviewed your healing photo {clock}: {label}.",
 }
 
 ASK_STOP = _STOP | {
@@ -74,7 +74,7 @@ def _sentences(text: str) -> list[str]:
 def _event_lines(event: dict, ctx: dict, now_ms: int | None = None) -> list[tuple]:
     """(kind, text) pairs for one event; a prescription row adds its key. The wrapper is fixed; the content is the record's own."""
     kind, p = event["event_type"], event.get("payload") or {}
-    when = when_text(event["ts_ms"], now_ms)
+    when = at_text(event["ts_ms"], now_ms)
     if kind == "rx.ordered" and event["id"] in ctx["rx"]:
         by = p.get("by")
         rows = [

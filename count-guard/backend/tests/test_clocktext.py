@@ -59,3 +59,11 @@ def test_view_has_no_day_n_text(tmp_path):
     for view in views:
         bad = [text for text in _strings(view) if DAY_N_TIME.search(text)]
         assert bad == []
+
+
+def test_at_text_takes_no_at_before_a_day_word():
+    from app.journey.clocktext import at_text
+
+    assert at_text(ms(0, 9, 14), ms(0, 10, 0)) == "at 09:14"
+    assert at_text(ms(0, 22, 10), ms(1, 9, 0)) == "Yesterday 22:10"
+    assert at_text(ms(day=2, h=9, m=14), ms(day=5, h=9)) == "Wed 4 Nov, 09:14"

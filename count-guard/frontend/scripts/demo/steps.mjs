@@ -135,7 +135,7 @@ export const STEPS = {
     await H.tab("Ask");
     await H.fill("Your question", "Is the swelling normal on day 3?", "Ask Dr. Rao");
     await H.click("Send to Dr. Rao");
-    await H.fill("Note for the doctor (optional)", "Day 3", "Healing photo");
+    await H.fill("Note for the doctor (optional)", "Healing photo after surgery", "Healing photo");
     await H.file("Healing photo", "eval/p4/wound-day3.png");
   },
   async "kumar-review"(H) {

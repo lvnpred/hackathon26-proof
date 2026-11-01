@@ -3,14 +3,14 @@ import { Mark } from "../App";
 import { IconBell } from "./icons.jsx";
 import { aiChip, alertsLabel, pauseLabel, pausedText } from "./dock";
 import { SIGNED_IN, initials } from "./people";
-import { whenText } from "./when";
+import { atText } from "./when";
 
 // Ward-wide, staff only. The Resume button is the same switch as the header's.
 export function PausedBanner({ ops, nowMs }) {
   if (!ops.paused) return null;
   return (
     <div className="paused-banner" role="status">
-      <span>{pausedText(ops.by, ops.atMs == null ? "" : whenText(ops.atMs, nowMs))}</span>
+      <span>{pausedText(ops.by, ops.atMs == null ? "" : atText(ops.atMs, nowMs))}</span>
       <button type="button" disabled={ops.busy} onClick={ops.toggle}>Resume</button>
     </div>
   );

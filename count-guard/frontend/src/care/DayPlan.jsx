@@ -8,7 +8,7 @@ function Item({ item, bbox, photoUrl, onInspect }) {
     <li className="plan-item">
       {bbox && photoUrl && <span className="crop" style={cropStyle(bbox, photoUrl)} aria-hidden="true" />}
       <span><b>{item.medicine}</b><br /><span className="small">{item.text}</span></span>
-      {onInspect && <button type="button" className="quiet" onClick={onInspect}>Inspect <span aria-hidden="true">›</span></button>}
+      {onInspect && <button type="button" className="quiet" onClick={onInspect}>Details</button>}
     </li>
   );
 }

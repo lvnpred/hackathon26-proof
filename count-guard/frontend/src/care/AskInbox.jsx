@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { whenText } from "./when.js";
+import { atText, whenText } from "./when.js";
 import AiMoment from "./AiMoment.jsx";
 import Dictate from "./Dictate";
 import { DOCTOR } from "./DoctorActions";
@@ -34,7 +34,7 @@ function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
       <p className="quote">{"\u201c"}{questionText(role, q)}{"\u201d"}</p>
       {q.answer && <Answered answer={q.answer} text={q.answer.text} nowMs={nowMs} />}
       {!q.answer && role === "doctor" && (
-        <section aria-label={`Your answer to ${q.by} at ${whenText(q.at_ms, nowMs)}`}>
+        <section aria-label={`Your answer to ${q.by} ${atText(q.at_ms, nowMs)}`}>
           <Dictate bare capability="answer_voice" label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} onHear={hear} onSend={send} />
         </section>
       )}

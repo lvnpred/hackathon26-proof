@@ -21,6 +21,6 @@ export const pauseLabel = (paused) => (paused ? "Resume" : "Pause");
 export const WARD_NAME = "Ward 4";
 
 // The ward-wide banner. A missing time or name leaves that part out.
-export function pausedText(by, atText) {
-  return `AI admin is paused for ${WARD_NAME}. Paused by ${by || "a person"}${atText ? ` at ${atText}` : ""}. New orders and tasks wait for a person.`;
+export function pausedText(by, atPhrase) {
+  return `AI admin is paused for ${WARD_NAME}. Paused by ${by || "a person"}${atPhrase ? ` ${atPhrase}` : ""}. New orders and tasks wait for a person.`;
 }

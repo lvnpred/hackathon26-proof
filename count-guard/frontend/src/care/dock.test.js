@@ -72,10 +72,10 @@ test("the paused banner names who paused and when, for staff only", async () => 
   const fs = await import("node:fs");
   const header = fs.readFileSync(new URL("./ProductHeader.jsx", import.meta.url), "utf8");
   assert.match(header, /className="paused-banner" role="status"/);
-  assert.match(header, /whenText\(ops\.atMs, nowMs\)/);
-  assert.equal(pausedText("Dr. A. Rao", "09:14"), "AI admin is paused for Ward 4. Paused by Dr. A. Rao at 09:14. New orders and tasks wait for a person.");
+  assert.match(header, /atText\(ops\.atMs, nowMs\)/);
+  assert.equal(pausedText("Dr. A. Rao", "at 09:14"), "AI admin is paused for Ward 4. Paused by Dr. A. Rao at 09:14. New orders and tasks wait for a person.");
   assert.equal(pausedText("Nurse Meena", ""), "AI admin is paused for Ward 4. Paused by Nurse Meena. New orders and tasks wait for a person.");
-  assert.equal(pausedText(null, "09:14"), "AI admin is paused for Ward 4. Paused by a person at 09:14. New orders and tasks wait for a person.");
+  assert.equal(pausedText(null, "at 09:14"), "AI admin is paused for Ward 4. Paused by a person at 09:14. New orders and tasks wait for a person.");
   assert.match(fs.readFileSync(new URL("./useOpsPaused.js", import.meta.url), "utf8"), /atMs: o\.at_ms/);
   const shell = fs.readFileSync(new URL("./CareShell.jsx", import.meta.url), "utf8");
   assert.match(shell, /ward\.role !== "patient" && <PausedBanner/);

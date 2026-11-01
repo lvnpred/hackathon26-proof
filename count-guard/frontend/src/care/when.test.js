@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { H, M } from "./clock.js";
-import { whenText, DAY0 } from "./when.js";
+import { atText, whenText, DAY0 } from "./when.js";
 
 const ms = (day, h = 9, m = 0) => day * 24 * H + (h - 9) * H + m * M;
 
@@ -26,4 +26,10 @@ test("only the demo dock prints Day N: no other care file imports label from clo
     .filter((f) => /\.(js|jsx)$/.test(f) && !f.endsWith(".test.js") && f !== "clock.js")
     .filter((f) => /import\s*\{[^}]*\blabel\b[^}]*\}\s*from\s*"\.\/clock/.test(readFileSync(new URL(f, import.meta.url), "utf8")));
   assert.deepEqual(users, ["DemoDock.jsx"]);
+});
+
+test("atText adds 'at' only before a clock time", () => {
+  assert.equal(atText(ms(0, 9, 14), ms(0, 10, 0)), "at 09:14");
+  assert.equal(atText(ms(0, 22, 10), ms(1, 9, 0)), "Yesterday 22:10");
+  assert.equal(atText(ms(2, 9, 14), ms(5, 9)), "Wed 4 Nov, 09:14");
 });

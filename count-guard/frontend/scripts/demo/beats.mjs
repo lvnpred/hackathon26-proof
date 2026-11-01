@@ -187,7 +187,7 @@ export const BEATS = [
   {
     id: "kumar-ask", path: "kumar", role: "patient", seconds: 12, film: true,
     say: "At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says where the question went and who is waiting.",
-    clicks: ["Role Patient", "Pick R. Kumar", "Tab Ask", 'Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?', 'Button "Send to Dr. Rao"', 'Text input in "Healing photo" <- Day 3', 'File input in "Healing photo" <- eval/p4/wound-day3.png'],
+    clicks: ["Role Patient", "Pick R. Kumar", "Tab Ask", 'Textarea in "Ask Dr. Rao" <- Is the swelling normal on day 3?', 'Button "Send to Dr. Rao"', 'Text input in "Healing photo" <- Healing photo after surgery', 'File input in "Healing photo" <- eval/p4/wound-day3.png'],
     expect: ["Waiting for Dr. Rao", "The doctor will review your healing photo.", "Your question went to Dr. A. Rao"],
     files: ["wound-day3.png"],
     keyed: "No model call.",
@@ -205,7 +205,7 @@ export const BEATS = [
     id: "kumar-answers", path: "kumar", role: "patient", seconds: 6, film: true,
     say: "Mr. Kumar sees the doctor's answer and the decision on his Ask page.",
     clicks: ["Role Patient", "Pick R. Kumar", "Tab Ask"],
-    expect: ["The wound looks as expected for day 3.", "No visit needed"],
+    expect: ["The wound looks as expected.", "No visit needed"],
     keyed: "No model call.",
   },
   {

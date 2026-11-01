@@ -50,7 +50,7 @@ function OrderDraft({ view, busy, signOrders }) {
 function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   const draft = view.drafts?.order;
   const signed = draft ? null : lastSigned(view.ai_moments, "orders");
-  const dictate = <Dictate label="Dictate orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />;
+  const dictate = <Dictate label="Dictate orders" capability="orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />;
   if (draft) return <details className="fold"><summary>Dictate again</summary>{dictate}</details>;
   return (
     <>
@@ -121,7 +121,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
       <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
       {open && (
         <>
-          <Dictate label="Dictate discharge" verb="Draft discharge" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />
+          <Dictate label="Dictate discharge" capability="discharge" verb="Draft discharge" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />
           <div>
             <p className="label">Discharge</p>
             {summaryDraftId && (

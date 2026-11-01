@@ -74,9 +74,10 @@ test("missingMedia names the first missing file and its generator", () => {
 test("expected strings follow the accepted rulings", () => {
   const by = Object.fromEntries(BEATS.map((b) => [b.id, b]));
   assert.ok(by["kumar-orders"].expect.includes("Draft from dictation"));
-  assert.ok(by["kumar-orders"].expect.includes("Muse Voice → Rules · prepared"));
+  assert.ok(by["kumar-orders"].expect.includes("Drafted from voice"));
   assert.ok(by["kumar-orders"].expect.includes("2 orders drafted from 25 words."));
-  assert.deepEqual(by["kumar-review"].before, ["Muse Voice · prepared"]);
+  assert.deepEqual(by["kumar-review"].before, ["From voice"]);
+  assert.ok(by["kumar-review"].expect.includes("From voice"));
   assert.equal(BEATS[1].id, "ai");
   assert.ok(by.ai.expect.includes("Saw 2 of 3 needle holders."));
   assert.ok(by["iyer-meds"].expect.includes("Pantoprazole 40 mg:"));
@@ -91,7 +92,7 @@ test("expected strings follow the accepted rulings", () => {
   assert.ok(by["iyer-setup"].expect.includes(`${title} running`));
   assert.ok(by["iyer-end"].expect.includes(`finished ${title} at`));
   assert.ok(by["kumar-count"].before.includes("Saw 14 of 15 gauze swabs."));
-  const GONE_AFTER_SIGN = ["Muse Voice → Rules · prepared", "5 sections drafted from 40 words.", "swab count closed 15 of 15"];
+  const GONE_AFTER_SIGN = ["Drafted from voice", "5 sections drafted from 40 words.", "swab count closed 15 of 15"];
   // kumar-review: the Dictate chip goes once the answer is sent, so it is checked before and not in expect.
   // kumar-discharge: the chip, the finding and the Inspector's swab count are gone once the discharge is signed, so they are checked before only.
   // kumar-count: the swab viewer goes once the count is saved, because the count step folds.

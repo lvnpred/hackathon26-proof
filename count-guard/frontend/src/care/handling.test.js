@@ -8,7 +8,7 @@ import {
 import { aiChip, pauseLabel } from "./dock.js";
 import { routedLine } from "./thread.js";
 import { resolveMoment } from "./inspect.js";
-import { chipFor } from "./moments.js";
+import { modelChip } from "./moments.js";
 import { findingPill } from "./finding.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -86,7 +86,7 @@ test("agentMoments resolve for staff, never for the patient, and work with chip 
   assert.deepEqual(list.map((m) => m.id), ["w1", "w2", "p1"]);
   assert.equal(resolveMoment(list, "w1", "patient"), null);
   assert.equal(resolveMoment(list, "w1", "staff").id, "w1");
-  assert.equal(chipFor(list[0]), "Rules");
+  assert.equal(modelChip(list[0]), "Rules");
   assert.equal(findingPill(list[1], "nurse").text, "Undone");
   assert.equal(findingPill(list[0], "nurse").text, "Saved 17:00");
   assert.equal(findingPill(list[2], "doctor").text, "Needs you");
@@ -158,11 +158,11 @@ test("agentMoment carries what the action wrote and the model that worded it (M1
   const m = agentMoment(row("w1", { written, model: "rules" }), "ep1");
   assert.deepEqual(m.written, written);
   assert.deepEqual([m.source, m.calls], ["rules", []]);
-  assert.equal(chipFor(m), "Rules");
+  assert.equal(modelChip(m), "Rules");
   const s = agentMoment({ ...prop("p1"), model: "spark" }, "ep1");
   assert.equal(s.source, "spark");
   assert.deepEqual(s.calls, [{ model: "spark", source: "muse-spark-1.3" }]);
-  assert.equal(chipFor(s), "Muse Spark 1.3 · live");
+  assert.equal(modelChip(s), "Muse Spark 1.3 · live");
   assert.deepEqual(agentMoment(row("w3"), "ep1").written, []);
 });
 

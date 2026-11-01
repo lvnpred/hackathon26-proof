@@ -23,21 +23,27 @@ export default function AiDashboard() {
   return (
     <>
       <PageLead kicker="Staff" title="AI activity" body={story || "What the AI did on this ward, by patient and pipeline."} />
-      <ol className="pipelines small" aria-label="Pipelines">
-        {PIPELINES.map((steps) => {
-          const kind = PIPELINE_KIND[steps[0]];
-          return (
-            <li key={steps[0]}>
-              <button type="button" className="linklike" aria-label={steps.join(", ")} aria-pressed={filter === kind} onClick={() => setFilter(filter === kind ? null : kind)}>
-                {steps.map((step, i) => <span key={step}>{i > 0 && <span className="step-arrow" aria-hidden="true">→</span>}<span className="step-chip">{step}</span></span>)}
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-      <ActivityList rows={shown} role={ward.role} empty={rows.length === 0 ? empty : "Nothing here for this filter."} />
-      <ModelCards ids={ids} />
-      <AiFeed ids={ids} nowMs={ward.nowMs} ward={ward} />
+      <section aria-label="What the AI did today">
+        <h2>What the AI did today</h2>
+        <ActivityList rows={shown} role={ward.role} empty={rows.length === 0 ? empty : "Nothing here for this filter."} />
+        <AiFeed ids={ids} nowMs={ward.nowMs} ward={ward} />
+      </section>
+      <section aria-label="How it works">
+        <h2>How it works</h2>
+        <ol className="pipelines small" aria-label="Pipelines">
+          {PIPELINES.map((steps) => {
+            const kind = PIPELINE_KIND[steps[0]];
+            return (
+              <li key={steps[0]}>
+                <button type="button" className="linklike" aria-label={steps.join(", ")} aria-pressed={filter === kind} onClick={() => setFilter(filter === kind ? null : kind)}>
+                  {steps.map((step, i) => <span key={step}>{i > 0 && <span className="step-arrow" aria-hidden="true">→</span>}<span className="step-chip">{step}</span></span>)}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <ModelCards ids={ids} />
+      </section>
     </>
   );
 }

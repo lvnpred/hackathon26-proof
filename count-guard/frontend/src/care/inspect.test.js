@@ -99,7 +99,7 @@ test("the Model tab shows raw output through RawOutput", () => {
   assert.match(src("Inspector.jsx"), /visual: \{ Input: VisualInput, Found: VisualFound \}/);
 });
 
-test("VideoCheck shows the moment chip, not the source label", () => {
+test("VideoCheck shows source words, not the source label", () => {
   assert.doesNotMatch(src("VideoCheck.jsx"), /sourceLabel\(/);
   assert.doesNotMatch(src("TaskProof.jsx"), /sourceLabel\(photo/);
   assert.doesNotMatch(src("MyCare.jsx"), /sourceLabel\(/);

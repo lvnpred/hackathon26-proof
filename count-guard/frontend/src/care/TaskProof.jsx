@@ -3,7 +3,9 @@ import { EvidenceThumb } from "./Evidence.jsx";
 import ObsForm from "./ObsForm";
 import { prefillObs } from "./capture";
 import { doneBody, MATCH_LABEL, newestPhoto } from "./drafts";
-import { chipFor, draftChip, momentFor } from "./moments.js";
+import { momentFor } from "./moments.js";
+import { FROM_VOICE, sourceWords } from "./source.js";
+import Source from "./Source.jsx";
 import { obsValues } from "./tasklist";
 
 const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v)]));
@@ -50,7 +52,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       <p className="small">{task.title}</p>
       {session.transcript && (
         <p className="small">
-          “{session.transcript}” <span className="chip">{draftChip(session.via === "voice" ? session.heardBy : "", session.source)}</span>
+          “{session.transcript}” <Source words={session.via === "voice" ? FROM_VOICE : null} />
         </p>
       )}
       {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}
@@ -61,7 +63,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       {photo && (
         <p className="small">
           <span className={`pill ${photo.check?.match === "mismatch" ? "sun" : "info"}`}>{MATCH_LABEL[photo.check?.match] || MATCH_LABEL.none}</span>{" "}
-          {photoMoment && <><span className="chip">{chipFor(photoMoment)}</span>{" "}</>}
+          <Source words={sourceWords(photoMoment)} />{" "}
           {photo.check?.why}
         </p>
       )}

@@ -33,10 +33,10 @@ test("StatePanel gives the patient no strip", () => {
 });
 
 test("patient lens: no chip beside a photo match, none in AiMoment, names go through displayName", () => {
-  assert.doesNotMatch(src("MyCare.jsx"), /chipFor\(/);
+  assert.doesNotMatch(src("MyCare.jsx"), /modelChip\(|sourceWords\(/);
   assert.match(src("MyCare.jsx"), /Done by \{displayName\(d\.by\)\}/);
   assert.match(src("MyCare.jsx"), /Ordered by \$\{displayName\(order\.by\)\}/);
-  assert.match(src("AiMoment.jsx"), /lens !== "patient" && <span className="chip">/);
+  assert.match(src("AiMoment.jsx"), /lens !== "patient" \? sourceWords\(moment\) : null/);
   assert.doesNotMatch(src("AiMoment.jsx"), /AiMark/);
   assert.match(src("Thread.jsx"), /displayName\(answer\.by\)/);
 });

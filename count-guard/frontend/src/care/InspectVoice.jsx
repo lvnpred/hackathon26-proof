@@ -1,5 +1,6 @@
 import { diffLine, fieldDiffs, segments } from "./inspect.js";
-import { heardChip } from "./moments.js";
+import { sourceWords } from "./source.js";
+import Source from "./Source.jsx";
 import { orderSentence } from "./orders.js";
 
 const NO_LINKS = "No word links for this draft.";
@@ -13,7 +14,7 @@ export function VoiceInput({ moment }) {
   return (
     <div className="inspector-input">
       <p className="quote">{"“"}{transcript || ""}{"”"}</p>
-      <p className="small"><span className="chip">{typed ? "Typed" : heardChip(by)}</span> <span className="muted">{wordsIn(transcript)} words</span></p>
+      <p className="small">{typed ? <span className="source">Typed</span> : <Source words={sourceWords(moment)} />} <span className="muted">{wordsIn(transcript)} words</span></p>
     </div>
   );
 }

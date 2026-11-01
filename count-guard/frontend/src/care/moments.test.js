@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { canInspect, chipFor, draftChip, FILTERS, filterMoments, findingFor, heardChip, lastSigned, momentFor, stripMoments, botMoment, dayPlanMoment } from "./moments.js";
+import { canInspect, modelChip, FILTERS, filterMoments, findingFor, lastSigned, momentFor, stripMoments, botMoment, dayPlanMoment } from "./moments.js";
 import { findingPill } from "./finding.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -15,17 +15,10 @@ const CHIP_VECTORS = [
   [{ calls: [call("spark", "failed")], handmade: false, source: "failed" }, "Muse Spark 1.3 · failed"],
 ];
 
-test("chip vectors", () => { for (const [input, want] of CHIP_VECTORS) assert.equal(chipFor(input), want); });
+test("chip vectors", () => { for (const [input, want] of CHIP_VECTORS) assert.equal(modelChip(input), want); });
 
 test("worst mode wins", () => {
-  assert.equal(chipFor({ calls: [call("voice", "muse-voice-transcribe"), call("spark", "prepared")] }), "Muse Voice → Muse Spark 1.3 · prepared");
-});
-
-test("heardChip and draftChip", () => {
-  assert.equal(heardChip("prepared"), "Muse Voice · prepared");
-  assert.equal(draftChip("typed", "rules"), "Rules");
-  assert.equal(draftChip("muse-voice-transcribe", "muse-spark-1.3"), "Muse Voice → Muse Spark 1.3 · live");
-  assert.equal(draftChip("", "rules (model reply not usable)"), "Muse Spark 1.3 · failed");
+  assert.equal(modelChip({ calls: [call("voice", "muse-voice-transcribe"), call("spark", "prepared")] }), "Muse Voice → Muse Spark 1.3 · prepared");
 });
 
 test("the pill follows the viewer and names the finding", () => {

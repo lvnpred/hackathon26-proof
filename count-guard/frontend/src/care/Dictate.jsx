@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { heardChip } from "./moments";
+import { sourceWords } from "./source.js";
+import Source from "./Source.jsx";
 import { audioName, micStatus, pickMime } from "./recorder";
 
 const MIC = (
@@ -11,7 +12,7 @@ const MIC = (
 
 // One voice-first box: record with the mic, upload audio, or type. A recording is heard first and its text
 // fills the box to check. bare: no card or region of its own (the caller supplies them). onHear(file) -> { text, heard_by } | null. onSend({ text, heard }) -> truthy when done.
-export default function Dictate({ label, field = "What was said", verb, placeholder, busy, maxLength = 2000, bare = false, onHear, onSend }) {
+export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, onHear, onSend }) {
   const boxId = useId();
   const [recording, setRecording] = useState(false);
   const [text, setText] = useState("");
@@ -99,7 +100,7 @@ export default function Dictate({ label, field = "What was said", verb, placehol
         </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
-      {heard && heard.text === text && <p className="small"><span className="chip">{heardChip(heard.by)}</span></p>}
+      {heard && heard.text === text && <p className="small"><Source words={sourceWords({ kind: "voice", capability })} /></p>}
       <label className={`dictate-upload${busy || recording ? " disabled" : ""}`}>
         Upload audio
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />

@@ -90,7 +90,7 @@ test("the AI feed reads the ops feed, checks it and reloads after Undo", async (
   assert.match(feed, /ward\.act\(r\.episodeId[\s\S]*await load\(\)/);
   assert.match(feed, /\{r\.undo &&/);
   const dash = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
-  assert.ok(dash.indexOf("<ModelCards") < dash.indexOf("<AiFeed"));
+  assert.ok(dash.indexOf("<AiFeed") < dash.indexOf("<ModelCards"));
 });
 
 test("a failed pause shows an alert, the button waits, and the feed follows the ward", async () => {

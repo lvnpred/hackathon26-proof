@@ -5,8 +5,8 @@ export const INSPECT_ID = /^[A-Za-z0-9:_-]{1,80}$/;
 
 const WORST = ["failed", "prepared", "live"];
 
-// C4: model names in call order, ` → Rules` when rules built it without Spark, then the worst mode.
-export function chipFor({ calls, handmade, source } = {}) {
+// C4 (Inspector Model tab and the AI page only): model names in call order, ` → Rules` when rules built it without Spark, then the worst mode.
+export function modelChip({ calls, handmade, source } = {}) {
   const list = calls || [];
   const names = list.map((c) => MODEL_NAME[c.model] || c.model);
   if (String(source || "").startsWith("rules") && !list.some((c) => c.model === "spark")) names.push("Rules");
@@ -18,16 +18,6 @@ export function chipFor({ calls, handmade, source } = {}) {
     mode = WORST.find((m) => modes.includes(m)) || "";
   }
   return mode ? `${names.join(" → ")} · ${mode}` : names.join(" → ");
-}
-
-// A voice result that has no event yet.
-export const heardChip = (heardBy) => chipFor({ calls: [{ model: "voice", source: heardBy }] });
-
-export function draftChip(heardBy, source) {
-  const calls = [];
-  if (heardBy && heardBy !== "typed") calls.push({ model: "voice", source: heardBy });
-  if (source === "muse-spark-1.3" || source === "rules (model reply not usable)") calls.push({ model: "spark", source });
-  return chipFor({ calls, source });
 }
 
 export function momentFor(view, id) {

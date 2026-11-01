@@ -204,6 +204,7 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 /* AI moment line and Inspector drawer */
 .ai-moment { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0 }
 .ai-moment-text { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere }
+.source { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-muted) }
 .chip { display: inline-block; padding: 2px 8px; border: 1px solid var(--line-control); border-radius: 999px; background: var(--surface-sunk); font-size: 0.85em; overflow-wrap: anywhere }
 .pill.tone-blue { background: var(--sky-soft); color: var(--sky) }
 .pill.tone-amber { background: var(--sun-soft); color: var(--sun-text) }

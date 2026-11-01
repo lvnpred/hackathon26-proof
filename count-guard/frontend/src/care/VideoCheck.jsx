@@ -1,4 +1,5 @@
-import { chipFor } from "./moments.js";
+import { sourceWords } from "./source.js";
+import Source from "./Source.jsx";
 import { checkLabel, pickedUpload } from "./video";
 import { useState } from "react";
 import { Evidence } from "./Evidence.jsx";
@@ -36,7 +37,7 @@ function CheckResult({ check, episodeId, version, moment }) {
     <div>
       <p className="small">
         <span className={`pill ${check.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span>{" "}
-        {moment && <><span className="chip">{chipFor(moment)}</span>{" "}</>}{check.why}
+        <Source words={sourceWords(moment)} />{" "}{check.why}
       </p>
       {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} version={version} />}
       {!proved && (check.rows || []).length > 0 && (

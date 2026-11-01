@@ -77,7 +77,9 @@ test("AI activity is a staff view: the patient sees a note, no data and no dock 
   const page = fs.readFileSync(new URL("./AiDashboard.jsx", import.meta.url), "utf8");
   assert.match(page, /canSeeAi\(ward\.role\)/);
   assert.match(page, /STAFF_ONLY/);
-  assert.ok(page.indexOf("<ActivityList") > -1 && page.indexOf("<ActivityList") < page.indexOf("<ModelCards"));
+  const order = ["<ActivityList", "<AiFeed", 'aria-label="Pipelines"', "<ModelCards"].map((s) => page.indexOf(s));
+  assert.ok(order[0] > -1 && order.every((at, i) => i === 0 || at > order[i - 1]), "ActivityList, AiFeed, pipelines, ModelCards");
+  assert.ok(page.indexOf("<h2>What the AI did today</h2>") < page.indexOf("<h2>How it works</h2>"));
   const dock = fs.readFileSync(new URL("./DemoDock.jsx", import.meta.url), "utf8");
   assert.doesNotMatch(dock, /to="\/ai"/);
   const shell = fs.readFileSync(new URL("./CareShell.jsx", import.meta.url), "utf8");

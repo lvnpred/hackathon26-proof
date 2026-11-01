@@ -52,7 +52,7 @@ export default function ModelCards({ ids }) {
   };
   return (
     <section aria-label="Models">
-      <h2>Models {data && <span className="pill">{modelsPill(data.live)}</span>}</h2>
+      <h3>Models {data && <span className="pill">{modelsPill(data.live)}</span>}</h3>
       {error && <p className="error small" role="alert">{error}</p>}
       <div className="model-cards">
         {(data?.models || EMPTY_MODELS).map((m) => <ModelCard key={m.key} model={m} busy={busy} text={texts[m.key]} onTry={() => tryIt(m.key)} />)}

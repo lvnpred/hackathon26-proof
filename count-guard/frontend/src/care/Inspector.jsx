@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useMatch, useSearchParams } from "react-router-dom";
-import { chipFor, findingFor } from "./moments.js";
+import { modelChip, findingFor } from "./moments.js";
 import { findingPill } from "./finding.js";
 import StatusPill from "./StatusPill.jsx";
 import { TABS, correctionLine, inspectEpisode, modelRows, readInspect, recordLine, resolveMoment, tabsFor } from "./inspect.js";
@@ -119,7 +119,7 @@ export default function Inspector({ ward }) {
         {moment ? (
           <>
             <h2>{moment.title}</h2>
-            <span className="chip">{chipFor(moment)}</span>
+            <span className="chip">{modelChip(moment)}</span>
             <StatusPill {...findingPill(moment, ward.role)} />
           </>
         ) : <p>Nothing to inspect with that id.</p>}

@@ -6,6 +6,7 @@ import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
 import { INBOX_SCOPES } from "./faults";
 import { botMoment } from "./moments.js";
+import Source from "./Source.jsx";
 import { answerHow, answerSourceLine, checkinLine, inboxGroups, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
 
 // The three fixed review decisions, as the server names them.
@@ -15,10 +16,10 @@ const Waited = ({ item }) => (item.open ? <span className="pill">{item.waited}</
 
 function Answered({ answer, text, nowMs }) {
   const source = answerSourceLine(answer);
-  const how = answer.via === "voice" ? "by voice" : answer.via === "text" ? "typed" : "";
+  const how = answer.via === "text" ? "typed" : "";
   return (
     <p className="small">
-      {text} <span className="muted">{answer.by} · {whenText(answer.at_ms, nowMs)}{how ? ` · ${how}` : ""}{source ? ` · ${source}` : ""}</span>
+      {text} <span className="muted">{answer.by} · {whenText(answer.at_ms, nowMs)}{how ? ` · ${how}` : ""}</span>{source && <> <Source words={source} /></>}
     </p>
   );
 }
@@ -34,7 +35,7 @@ function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
       {q.answer && <Answered answer={q.answer} text={q.answer.text} nowMs={nowMs} />}
       {!q.answer && role === "doctor" && (
         <section aria-label={`Your answer to ${q.by} at ${whenText(q.at_ms, nowMs)}`}>
-          <Dictate bare label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} onHear={hear} onSend={send} />
+          <Dictate bare capability="answer_voice" label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} onHear={hear} onSend={send} />
         </section>
       )}
     </article>

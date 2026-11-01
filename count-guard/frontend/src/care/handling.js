@@ -78,7 +78,7 @@ export function agentMoment(row, episodeId) {
     finding: reason, patient_finding: null,
     status: proposal ? "open" : row.status === "undone" ? "undone" : "recorded",
     owner: proposal ? row.owner_role : null,
-    // The reword names the same model and mode chipFor reads elsewhere: "Spark 1.3 · live".
+    // The reword names the same model and mode modelChip reads elsewhere: "Spark 1.3 · live".
     calls: spark ? [{ model: "spark", source: "muse-spark-1.3" }] : [], handmade: false,
     written: row.written || [], source: spark ? "spark" : "rules",
     refs: { workId, episodeId, reason, inputs, level, undoUntilMs },

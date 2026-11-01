@@ -91,11 +91,11 @@ import { NOTE_HIDDEN, answerSourceLine, noteText, nudgeLabel, NUDGE_LABEL } from
 import { readFileSync } from "node:fs";
 
 test("answerSourceLine names the voice source for a doctor answer and never the raw word", () => {
-  assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "prepared" }), "Muse Voice · prepared");
+  assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "prepared" }), "From voice");
   assert.equal(answerSourceLine({ source: "doctor", via: "text", heard_by: "" }), "");
   assert.equal(answerSourceLine({ source: "doctor", via: "voice", heard_by: "" }), "");
-  assert.equal(answerSourceLine({ source: "rules" }), "Rules");
-  assert.equal(answerSourceLine({ source: "muse-spark-1.3" }), "Muse Spark 1.3 · live");
+  assert.equal(answerSourceLine({ source: "rules" }), "");
+  assert.equal(answerSourceLine({ source: "muse-spark-1.3" }), "");
   assert.equal(answerSourceLine({ source: "record" }), "");
 });
 

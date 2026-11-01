@@ -27,8 +27,8 @@ export const GENERATOR = {
 };
 
 const SALINE = "Saline 1 litre over 2 hours, video check of the set-up";
-const HEARD = "Muse Voice → Rules · prepared";
-const HEARD_ONLY = "Muse Voice · prepared";
+const HEARD = "Drafted from voice";
+const HEARD_ONLY = "From voice";
 const DISCHARGE_BOXES = 'tick "Discharge card given", "Medicines handed over", "Reminders set"';
 
 export const BEATS = [
@@ -89,7 +89,7 @@ export const BEATS = [
     clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'Button "Dictate orders"', 'File eval/p2/kumar-orders.wav into "Dictate orders"', 'Button "Draft orders"'],
     expect: ["Draft from dictation", HEARD, "2 orders drafted from 25 words.", "Paracetamol · 1 g · every 6 h · proof: strip photo"],
     files: ["kumar-orders.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box.",
+    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The row reads Drafted from voice. Live speech can be replaced by typing in the box.",
   },
   {
     id: "kumar-admit", path: "kumar", role: "doctor", seconds: 4, film: true,
@@ -156,10 +156,10 @@ export const BEATS = [
     id: "kumar-paracetamol", path: "kumar", role: "nurse", seconds: 7, film: true,
     say: "Nurse Meena records the paracetamol round by voice, adds the strip photo, and confirms.",
     clicks: ['Button "Say it: Paracetamol…" on the Paracetamol row', 'File eval/p2/kumar-paracetamol.wav into that row', 'Button "Use this"', 'File eval/p2/strip-paracetamol.png into "Confirm task"', 'Button "Confirm"'],
-    expect: ["Paracetamol 1 g given to bed 4.", HEARD, "Photo matches the task", "by voice"],
-    before: ["Paracetamol 1 g given to bed 4.", HEARD],
+    expect: ["Paracetamol 1 g given to bed 4.", HEARD_ONLY, "Photo matches the task", "by voice"],
+    before: ["Paracetamol 1 g given to bed 4.", HEARD_ONLY],
     files: ["kumar-paracetamol.wav", "strip-paracetamol.png"],
-    keyed: "1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. No switch.",
+    keyed: "1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark. The row reads From voice. No switch.",
   },
   {
     id: "kumar-mycare", path: "kumar", role: "patient", seconds: 7, film: true,
@@ -175,7 +175,7 @@ export const BEATS = [
     expect: ["Reference", "Being discharged"],
     before: [HEARD, "5 sections drafted from 40 words.", "swab count closed 15 of 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The chip reads Muse Voice → Muse Spark 1.3 · live. Live speech can be replaced by typing in the box.",
+    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The row reads Drafted from voice. Live speech can be replaced by typing in the box.",
   },
   {
     id: "kumar-home", path: "kumar", role: "nurse", seconds: 3, film: true,
@@ -196,10 +196,10 @@ export const BEATS = [
     id: "kumar-review", path: "kumar", role: "doctor", seconds: 9, film: true,
     say: "Dr. Rao opens the healing photo beside the reference photo and answers by voice.",
     clicks: ["Role Doctor", 'Tab "My patients"', 'Row "R. Kumar" under "Waiting on you"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send to R. Kumar"', 'Button "No visit needed"'],
-    expect: ["Healing photo", "Reference", "by voice · Muse Voice · prepared", "No visit needed"],
+    expect: ["Healing photo", "Reference", "From voice", "No visit needed"],
     before: [HEARD_ONLY],
     files: ["rao-answer.wav"],
-    keyed: "1 Voice call (hear). The chip reads Muse Voice · live. No switch.",
+    keyed: "1 Voice call (hear). The row reads From voice. No switch.",
   },
   {
     id: "kumar-answers", path: "kumar", role: "patient", seconds: 6, film: true,

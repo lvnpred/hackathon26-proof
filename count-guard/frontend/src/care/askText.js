@@ -1,7 +1,7 @@
 import { whenText } from "./when.js";
 import { waitedText } from "./derive.js";
 import { displayName, shortName } from "./names.js";
-import { draftChip, heardChip } from "./moments.js";
+import { FROM_VOICE } from "./source.js";
 
 // Same copy as the server's not-found answer.
 export const NOT_FOUND = "I can't find that in your record.";
@@ -87,10 +87,9 @@ export function answerHow(heardText, currentText, heardBy) {
 export const QUESTION_HIDDEN = "Question from the patient";
 export const questionText = (role, question) => (role === "doctor" ? question.text : QUESTION_HIDDEN);
 
-// The chip under an answer: a doctor's voice answer shows the hearer, a bot answer shows how it was built.
+// The source words under an answer: a doctor's voice answer says so; a bot answer names no model.
 export function answerSourceLine(answer) {
-  if (answer.source === "doctor") return answer.via === "voice" && answer.heard_by ? heardChip(answer.heard_by) : "";
-  return answer.source ? draftChip("", answer.source) : "";
+  return answer.source === "doctor" && answer.via === "voice" && answer.heard_by ? FROM_VOICE : "";
 }
 
 // The patient's note on a healing photo goes to the doctor only, like the question text.

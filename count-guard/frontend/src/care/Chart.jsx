@@ -74,6 +74,7 @@ export default function Chart() {
   const upload = (path, file, fields, scope) => ward.upload(episodeId, path, file, fields, scope);
   const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
+  const lens = ward.role === "patient" ? "patient" : "staff";
 
   // Everything that asks for attention sits right under the Now card, whichever role's panel renders it.
   const attention = (
@@ -97,8 +98,8 @@ export default function Chart() {
 
       <MedicinesFromHome view={view} role={ward.role} nowMs={ward.nowMs} act={act} busy={ward.busy} />
 
-      <Fold label="Orders and evidence" count={filterMoments(view.ai_moments, "all", ward.role, ward.role === "patient" ? "patient" : "staff").length} open={recordOpen} onToggle={() => setRecordOpen(!recordOpen)}>
-        <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} />
+      <Fold label="Orders and evidence" count={filterMoments(view.ai_moments, "all", ward.role, lens).length} open={recordOpen} onToggle={() => setRecordOpen(!recordOpen)}>
+        <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} lens={lens} />
       </Fold>
 
       <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />

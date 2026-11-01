@@ -99,7 +99,8 @@ test("lastSigned returns the newest recorded moment of the capability", () => {
 test("Chart and MyCare use RecordEvidence; the three cards are gone", () => {
   const read = (name) => fs.readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
   assert.doesNotMatch(read("Chart.jsx"), /import .*\b(Photos|VideoChecks|OrderTasks)\b/);
-  assert.match(read("Chart.jsx"), /<RecordEvidence /);
+  assert.match(read("Chart.jsx"), /<RecordEvidence [^>]*lens=\{lens\}/, "the patient on /chart gets the patient lens");
+  assert.match(read("Chart.jsx"), /const lens = ward\.role === "patient" \? "patient" : "staff";/);
   assert.match(read("MyCare.jsx"), /<RecordEvidence [^>]*lens="patient"/);
   for (const name of ["Photos.jsx", "VideoChecks.jsx", "OrderTasks.jsx"]) assert.equal(fs.existsSync(new URL(`./${name}`, import.meta.url)), false);
 });
@@ -155,14 +156,16 @@ test("capabilities in the flow: sources use the new components", () => {
   assert.match(read("MedicinesFromHome.jsx"), /<AiMoment /);
   assert.match(read("AskInbox.jsx"), /Answered by record bot/);
   assert.match(read("Queue.jsx"), /<AlertCard /);
+  assert.match(read("Queue.jsx"), /open \? "Close" : "Save response"/, "spec 5.11: the demo toggle is named Save response");
+  assert.doesNotMatch(read("Queue.jsx"), /"Answer"/);
   assert.doesNotMatch(read("drafts.js"), /Rules \(no model\)|Prepared demo result/);
   const handover = read("HandoverCard.jsx");
-  for (const text of ["Shift handover", "Ask Muse Spark 1.3 to word it", "Draft handover", "Accept as {taker}"]) assert.ok(handover.includes(text), text);
+  for (const text of ["Shift handover", "Let the AI word it", "Draft handover", "Accept as {taker}"]) assert.ok(handover.includes(text), text);
   assert.match(handover, /\/handover\/\$\{handover\.id\}\/accept/);
 });
 
 test("new copy has no advice words", () => {
-  for (const s of ["Photo of strips", "Type instead", "Check these strips", "Shift handover", "Ask Muse Spark 1.3 to word it", "Draft handover", "Accept as Nurse Kavya (synthetic)", "Answered by record bot", "Inspect"]) assert.doesNotMatch(s, ADVICE);
+  for (const s of ["Photo of strips", "Type instead", "Check these strips", "Shift handover", "Let the AI word it", "Draft handover", "Accept as Nurse Kavya (synthetic)", "Answered by record bot", "Inspect"]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("the nurse sees tasks before the handover card, and no copy says 'at Yesterday'", () => {

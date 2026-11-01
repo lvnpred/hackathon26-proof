@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { BEATS, filmSeconds, missingMedia, roleSeconds } from "./beats.mjs";
 import { findChrome } from "./chrome.mjs";
-import { scanText } from "./scan.mjs";
+import { scanBeat } from "./scan.mjs";
 import { startServers } from "./server.mjs";
 import { STEPS, helpers, waitGone, waitText } from "./steps.mjs";
 
@@ -74,13 +74,17 @@ try {
       if (beat.absent) await waitGone(page, beat.absent);
       await page.waitForTimeout(150);
       if (problems.length) throw new Error(problems.join("; "));
-      // The Demo dock is demo tooling, so the scan reads the .app text without it.
+      // The Demo dock is demo tooling, so the scan reads the .app text without it. The Inspector Model tab may
+      // name models, so its panel text is passed apart while that tab is open.
       const seen = await page.evaluate(() => {
         const app = document.querySelector(".app");
         const dock = app?.querySelector("[aria-label=Demo]")?.innerText || "";
-        return (app?.innerText || "").replace(dock, "");
+        const inspector = app?.querySelector("[aria-label=Inspector]");
+        const tab = inspector?.querySelector("[role=tab][aria-selected=true]")?.innerText?.trim();
+        const modelPanel = tab === "Model" ? inspector.querySelector("[role=tabpanel]")?.innerText || "" : "";
+        return { text: (app?.innerText || "").replace(dock, ""), modelPanel };
       });
-      const bad = scanText(seen, beat.role);
+      const bad = scanBeat({ ...seen, role: beat.role, beat: beat.id });
       if (bad.length) throw new Error(`scan: ${bad.join("; ")}`);
       await page.screenshot({ path: path.join(SHOTS, `${nn}-${beat.id}.png`), fullPage: true });
       console.log(`ok   ${nn} ${beat.id}`);

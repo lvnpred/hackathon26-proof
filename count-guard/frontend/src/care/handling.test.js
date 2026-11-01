@@ -5,7 +5,7 @@ import {
   levelWords, liveCount, myPatientsStrip, needsTitle, proposalsFor, stripTitle, undoLabel,
   PAUSED_TITLE, THEATRE_NURSE, pausedRows, staffBy,
 } from "./handling.js";
-import { aiChip, pauseLabel } from "./dock.js";
+import { aiChip, dockPauseLabel, pauseLabel } from "./dock.js";
 import { routedLine } from "./thread.js";
 import { resolveMoment } from "./inspect.js";
 import { modelChip } from "./moments.js";
@@ -140,6 +140,8 @@ test("dock chip, pause label, routed line, constants", () => {
   assert.equal(aiChip(true), "AI admin: paused");
   assert.equal(pauseLabel(false), "Pause");
   assert.equal(pauseLabel(true), "Resume");
+  assert.equal(dockPauseLabel(false), "Pause AI (demo shortcut)");
+  assert.equal(dockPauseLabel(true), "Resume AI (demo shortcut)");
   assert.equal(routedLine({ ops }, "q1"), "Your question went to Dr. A. Rao");
   assert.equal(routedLine({ ops }, "zz"), "");
   assert.equal(routedLine({}, "q1"), "");

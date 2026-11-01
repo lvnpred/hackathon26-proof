@@ -28,7 +28,7 @@ export default function HandoverCard({ view, busy, act }) {
         </label>
       </div>
       <label className="small">
-        <input type="checkbox" checked={useModel} onChange={(e) => setUseModel(e.target.checked)} /> Ask Muse Spark 1.3 to word it
+        <input type="checkbox" checked={useModel} onChange={(e) => setUseModel(e.target.checked)} /> Let the AI word it
       </label>
       <div className="row">
         <button type="button" disabled={busy || !from.trim() || !taker} onClick={() => act("/handover", { from_nurse: from.trim(), to_nurse: taker, use_model: useModel })}>

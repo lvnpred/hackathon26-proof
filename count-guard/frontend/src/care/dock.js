@@ -17,6 +17,8 @@ export const alertCount = ({ mine, others }, role) =>
 // Same words in the header and the dock.
 export const aiChip = (paused) => (paused == null ? "" : `AI admin: ${paused ? "paused" : "on"}`);
 export const pauseLabel = (paused) => (paused ? "Resume" : "Pause");
+// The dock's copy of the control gets its own name, so the header's Pause/Resume stays the one button by that name.
+export const dockPauseLabel = (paused) => `${pauseLabel(paused)} AI (demo shortcut)`;
 
 export const WARD_NAME = "Ward 4";
 

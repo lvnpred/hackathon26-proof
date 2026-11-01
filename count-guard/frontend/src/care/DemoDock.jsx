@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { call } from "../journey";
 import { label, skipTargets } from "./clock";
-import { ROLE_NAME, aiChip, modelsText, pauseLabel } from "./dock";
+import { ROLE_NAME, aiChip, dockPauseLabel, modelsText } from "./dock";
 import Fault from "./Fault";
 import { CLOCK } from "./faults";
 import { findPatient } from "./Patients";
@@ -78,7 +78,7 @@ export default function DemoDock({ ward, showClock, pick, ops, demoRx }) {
           {ops.paused != null && (
             <>
               <span className="pill">{aiChip(ops.paused)}</span>
-              <button type="button" disabled={ops.busy} onClick={ops.toggle}>{pauseLabel(ops.paused)}</button>
+              <button type="button" disabled={ops.busy} onClick={ops.toggle}>{dockPauseLabel(ops.paused)}</button>
             </>
           )}
           <span>{modelsText(live)}</span>

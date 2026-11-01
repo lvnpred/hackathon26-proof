@@ -45,6 +45,7 @@ test("the AI switch is staff only and posts the signed-in person, from one share
   assert.match(shell, /<ProductHeader[\s\S]*ops=\{ops\}/);
   const dock = read("./DemoDock.jsx");
   assert.match(dock, /ops\.paused != null/);
+  assert.match(dock, /dockPauseLabel\(ops\.paused\)/, "the dock shortcut has its own name");
   const header = read("./ProductHeader.jsx");
   assert.match(header, /staff && ops\.paused != null/);
   assert.match(header, /aiChip\(ops\.paused\)/);

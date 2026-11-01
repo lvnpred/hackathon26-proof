@@ -31,7 +31,7 @@ function QueueRow({ row, ward, open, toggle }) {
         <td>{row.staffSays || row.says}</td>
         <td>{row.waited}</td>
         <td>
-          {DEMO && nudge && <button onClick={toggle}>{open ? "Close" : "Answer"}</button>} <Link to={to} tabIndex={-1}>Open →</Link>
+          {DEMO && nudge && <button onClick={toggle}>{open ? "Close" : "Save response"}</button>} <Link to={to} tabIndex={-1}>Open →</Link>
         </td>
       </tr>
       {open && nudge && (

@@ -4,6 +4,122 @@
 
 Count Guard keeps one morning for one patient. It records the medicine strips they brought, the swabs that were opened and counted back, the drugs that were confirmed in the room, and a blood-pressure log. A discharge sheet is then a view of that timeline. The product does not give medical advice.
 
+## The care app
+
+The care app is the main product: one ward (Ward 4) seen by a doctor, a nurse and a patient. All data is synthetic. Every screen carries the strip "Research demo · Synthetic data · Not for clinical use".
+
+### Start it
+
+```bash
+make setup     # once
+make dev       # backend on 8100, frontend on 5173
+```
+
+Open http://127.0.0.1:5173. The page lands on the first tab of the current role.
+
+### Switch role, patient and time
+
+The **Demo** dock at the bottom of the screen (dashed edge, dark) holds the controls that are not part of the product:
+
+| Control | What it does |
+| --- | --- |
+| Role | Doctor (Dr. A. Rao), Nurse (Nurse Meena) or Patient |
+| Patient | Which bed the patient role is |
+| Demo clock | Moves the ward clock forward; the dock shows "Day N", product screens show clock times only |
+| Reset | Starts the ward again from the seeded data |
+| Use the demo prescription | Loads the prepared prescription |
+| Pause AI / Resume AI (demo shortcut) | Same switch as Pause in the product header |
+| Guide, Older screens | The feature map and the screens built before the care app |
+
+### What each role sees
+
+| Role | Tabs | Routes |
+| --- | --- | --- |
+| Doctor | My patients, AI activity | `/patients`, `/chart/:episodeId`, `/ai` |
+| Nurse | My queue, Patients, AI activity | `/queue`, `/patients`, `/chart/:episodeId`, `/ai` |
+| Patient | Today, My care, Ask | `/today`, `/my-care`, `/ask` |
+
+The header shows who is signed in, the alerts bell and "AI admin: on" with **Pause**.
+
+### How a chart reads
+
+Top to bottom:
+
+1. **Patient band and stage rail.** Six stages (clinic, ward, theatre, …). A skipped stage says "Skipped"; after surgery the ward reads "Ward · back from theatre".
+2. **Now.** One card: the single most important thing for the signed-in person, with its action as the only main button. Below it, "Next after this" (two rows) and "N more".
+3. **Alerts.** One card per alert: the reading ("Systolic BP 82"), the limit and who set it, "What did you do?" and **Save response**.
+4. **Patient questions**, then **AI admin for this patient**.
+5. **Orders and evidence** and **History**, folded closed with a count.
+
+The Now card is picked by a fixed rank, the same on every screen (`frontend/src/care/rank.js`, `now.js`):
+
+| Rank | Kind | Example |
+| --- | --- | --- |
+| 1 | Danger | BP below the limit; swab unaccounted |
+| 2 | Blocked on you | Count not saved; orders to acknowledge |
+| 3 | Late | Observations overdue, oldest first |
+| 4 | Due now | Task due at this time |
+| 5 | Review (staff only) | AI work still inside its Undo window |
+| 6 | Nothing | "Nothing needs you." and who acts next |
+
+The patient sees a simpler "What happens next" line and never sees late items, AI bookkeeping or model names.
+
+### Status words
+
+Every status pill uses one of five roles: fine, wait, check, danger, done. The pill states the clinical finding ("Below limit", "Swab unaccounted", "Count complete", "Late"), not who touched the record.
+
+### The swab count is a hard stop
+
+Surgery cannot end until a person saves the closing swab count, and the count must add up or say what the team did.
+
+```text
+Surgery began → Pack opened 20 → closing count: Back ___
+   Back 20                     → saved, "Count complete"
+   Back 19, no reason          → refused: "Say what the team did: the count does not match."
+   Back 19 + "Found under the drape" → saved
+Surgery ended → refused unless a person's closing, saved after surgery began, adds up or has a reason
+```
+
+- Back starts empty. The camera read is shown beside it ("Camera read 14") but never fills it in.
+- After surgery begins, the opened count can only go up: **Add pack** records an extra pack. Lowering it is refused.
+- Count events, surgery steps and patient moves cannot be corrected in place.
+- Server rule: `count_gate` in `backend/app/journey/states.py`. Screen: `frontend/src/care/CountPanel.jsx`.
+
+### AI admin and Undo
+
+The AI does small admin work on behalf of Ward 4: acknowledging signed orders, assigning tasks, routing questions, drafting answers. Each row shows the time, **Undo · N min** while the window is open, and **Why**. Once every Undo window has closed, the block folds into one line, "AI did N admin tasks · Review". **Pause** in the header stops it; paused work shows as "Waiting for a person".
+
+Record rows say how a reading was made in plain words ("Read by camera", "Read from photo", "Drafted from voice", "From voice", "Checked against the order"). Model names appear only in the Inspector's Model tab and on the AI activity page.
+
+### The Inspector
+
+**Why** or **Details** on any AI row opens the Inspector, on the Why tab:
+
+| Tab | Shows |
+| --- | --- |
+| Why | What it did, Because, How it chose, Made by |
+| Evidence | The photo, video frame or text that was read |
+| History | Plain audit lines, "09:14 · Nurse Asha · Tray check by photos: all seen." "Copy event IDs" copies the raw ids |
+| Model | The models used (staff only) |
+
+The patient gets Why and Evidence only.
+
+### Test it
+
+```bash
+make test                       # backend
+cd frontend && node --test $(find src -name "*.test.js")          # screen logic
+cd frontend && node --test $(find scripts -name "*.test.mjs")     # demo harness
+cd frontend && npm run build
+make demo-check                 # the filmed demo, headless, on ports 8200/5273
+```
+
+`make demo-check` plays the 32-beat demo (doctor, nurse and patient, 58 seconds each) and checks the text each beat expects. It also fails a beat whose screen shows "Recorded" as a status, "Day N" times outside the dock, internal names such as `task.assigned`, or model names outside the AI page and the Model tab (`frontend/scripts/demo/scan.mjs`). The script and its narration are in `docs/demo/count-guard-v2-video-script.md` at the workspace root; the steps are in `frontend/scripts/demo/steps.mjs` and `beats.mjs`.
+
+The design behind this section is `docs/superpowers/specs/2026-11-01-count-guard-product-design-design.md` at the workspace root.
+
+## Older screens
+
 The running map is the guide. With the app open, start at [the guide](http://127.0.0.1:5173/guide). The same list is `GET /product`, defined in `backend/app/site.py`. Change a feature there and the page follows.
 
 | Feature | Where you use it | Where a developer edits it | Built |

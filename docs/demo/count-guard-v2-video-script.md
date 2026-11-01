@@ -137,9 +137,9 @@ On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `
 > Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Inspect shows what SAM 3.1 saw.
 
 #### `kumar-count` · 1:29 · nurse · 9 s
-Clicks: 1) Button "Close" in "Inspector"; 2) Button "Surgery began"; 3) Button "Record pack opened" (prefilled 15); 4) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 5) Field "Closing count (returned)" <- 15 (the camera read 14); 6) Field "Detail" <- "Found under the drape"; 7) Button "Record closing count"
+Clicks: 1) Button "Close" in "Inspector"; 2) Button "Surgery began"; 3) Button "Record pack opened" (prefilled 15); 4) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 5) Field "Closing count (returned)" <- 15 (the camera read 14); 6) Field "What did the team do?" <- "Found under the drape"; 7) Button "Save count as Nurse Asha"
 
-On screen: `Read 14, saved 15 by Nurse Asha`
+On screen: `Count complete` · `camera read 14` · `Found under the drape`
 
 > Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the nurse saves 15 with the reason: one was found under the drape.
 

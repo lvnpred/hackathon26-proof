@@ -370,6 +370,10 @@ def theatre_count(events: list[dict]) -> dict:
         "read": closing["payload"].get("read") if closing else None,
         "saved": closing["payload"].get("saved") if closing else None,
         "closed_by": closing["payload"].get("by") if closing else None,
+        "closed_opened": closing["payload"].get("opened") if closing else None,
+        "closed_detail": closing["payload"].get("detail") if closing else None,
+        "closed_via": closing["payload"].get("via") if closing else None,
+        "closed_at_ms": closing["ts_ms"] if closing else None,
         "camera": {"count": camera["payload"]["count"], "evidence_id": camera["payload"].get("evidence_id"),
                    "at_ms": camera["ts_ms"]} if newer else None,
     }

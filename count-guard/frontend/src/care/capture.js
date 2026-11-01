@@ -15,11 +15,6 @@ export function prefillObs(regions, form) {
   return out;
 }
 
-// The closing count starts at what the camera counted, and never overwrites what was typed.
-export function cameraPrefill(count, returned) {
-  return count?.camera && returned === "" ? String(count.camera.count) : returned;
-}
-
 export function closingBody(count, returned, detail) {
   const body = { step: "closing", returned, detail };
   return count?.camera ? { ...body, evidence_id: count.camera.evidence_id, via: "camera" } : body;

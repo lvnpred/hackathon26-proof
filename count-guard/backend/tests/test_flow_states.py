@@ -388,7 +388,8 @@ def test_count_is_per_theatre_stay(tmp_path):
     _to_theatre(client, eid)
     base, by = f"/journey/episodes/{eid}", {"by": "Nurse Asha (synthetic)", "at_ms": 0}
     empty = {"opened": None, "opened_by": None, "opened_at_ms": None, "returned": None, "missing": None,
-             "read": None, "saved": None, "closed_by": None, "camera": None}
+             "read": None, "saved": None, "closed_by": None, "closed_opened": None, "closed_detail": None,
+             "closed_via": None, "closed_at_ms": None, "camera": None}
     assert _view(client, eid)["count"] == empty
     client.post(f"{base}/count", json={"step": "opened", "quantity": 20, **by})
     closing = client.post(f"{base}/count", json={"step": "closing", "returned": 19, "detail": "Searching.", **by}).json()

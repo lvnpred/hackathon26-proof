@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { theatreSteps, checklistState, swabFigures, packLine, canRecord } from "./theatre.js";
+import { theatreSteps, checklistState, swabFigures, packLine, canRecord, countReconciled } from "./theatre.js";
 import { M } from "./clock.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
@@ -9,9 +9,9 @@ const IN_THEATRE = line("patient.state", "09:16", "moved to theatre");
 
 test("nothing done yet: every step says so", () => {
   const steps = theatreSteps({ tray: { planned: [{}], latest: null }, timeline: [IN_THEATRE] });
-  assert.deepEqual(steps.map((s) => s.title), ["Tray check", "Surgery began", "Swab count", "Surgery ended"]);
-  assert.deepEqual(steps.map((s) => s.done), [false, false, false, false]);
-  assert.deepEqual(steps.map((s) => s.says), ["Not checked yet", "Not yet", "Not started", "Not yet"]);
+  assert.deepEqual(steps.map((s) => s.title), ["Tray check", "Surgery began", "Swab count", "Surgery ended", "Back to ward"]);
+  assert.deepEqual(steps.map((s) => s.done), [false, false, false, false, false]);
+  assert.deepEqual(steps.map((s) => s.says), ["Not checked yet", "Not yet", "Not started", "Not yet", "Not yet"]);
 });
 
 test("progress reads from this theatre stay only", () => {
@@ -48,22 +48,23 @@ test("closing count and end are shown when recorded", () => {
   const steps = theatreSteps(view);
   assert.equal(steps[2].says, "Closing count: opened 15, back 15, unaccounted 0.");
   assert.equal(steps[3].says, "Ended 09:26");
-  assert.ok(steps.every((s) => s.done));
+  assert.ok(steps.slice(0, 4).every((s) => s.done));
+  assert.equal(steps[4].done, false, "Back to ward is a move, not a recorded step");
   assert.ok(steps.every((s) => !ADVICE.test(s.says)));
 });
 
 const base = { tray: { planned: [{}], latest: null }, timeline: [IN_THEATRE], count: { opened: null, returned: null, missing: null } };
 test("first not-done step is current; later steps say why they wait", () => {
   const s = checklistState(theatreSteps(base));
-  assert.deepEqual(s.map((x) => x.status), ["current", "later", "later", "later"]);
-  assert.deepEqual(s.map((x) => x.wait), ["", "after the tray check", "after surgery began", "after surgery began"]);
+  assert.deepEqual(s.map((x) => x.status), ["current", "later", "later", "later", "later"]);
+  assert.deepEqual(s.map((x) => x.wait), ["", "Locked", "Locked", "Locked", "Locked"]);
 });
-test("an open count stays expanded and does not block surgery ended", () => {
+test("an open count stays expanded", () => {
   const view = { ...base, tray: { planned: [{}], latest: { check: "tray", match: "ok", at_ms: 22 * M } },
     timeline: [IN_THEATRE, line("surgery.began", "09:24"), line("count.closing", "09:30", "Closing count: 14 of 15 back, 1 unaccounted.")],
     count: { opened: 15, returned: 14, missing: 1, opened_by: "Nurse Asha (synthetic)", opened_at_ms: 22 * M } };
   const s = checklistState(theatreSteps(view));
-  assert.deepEqual(s.map((x) => x.status), ["done", "done", "open", "current"]);
+  assert.deepEqual(s.map((x) => x.status), ["done", "done", "open", "current", "later"]);
   assert.equal(s[0].at, "09:22");
 });
 test("no tray planned reads done", () => {
@@ -88,12 +89,39 @@ test("controls follow the backend rules, not the list order", () => {
   const began = { ...base, timeline: [IN_THEATRE, line("surgery.began", "09:24")] };
   assert.equal(canRecord(began, "began"), false);
   assert.equal(canRecord(began, "tray"), false, "tray upload is hidden once surgery began");
-  assert.equal(canRecord(began, "ended"), true, "ended without a closing count");
+  assert.equal(canRecord(began, "ended"), false, "ended waits for a saved, reconciled count");
+  const saved = { ...began, count: { opened: 15, returned: 15, missing: 0, closed_opened: 15, closed_by: "Nurse Asha (synthetic)" } };
+  assert.equal(canRecord(saved, "ended"), true);
+  assert.equal(canRecord(saved, "ward"), false, "ward waits for surgery ended");
   const checked = { ...base, tray: { planned: [{}], latest: { check: "tray", match: "mismatch", at_ms: 22 * M } } };
   assert.equal(canRecord(checked, "tray"), true, "re-upload after a flagged check");
   assert.equal(canRecord({ ...base, tray: { planned: null } }, "tray"), false);
   const over = { ...began, timeline: [...began.timeline, line("surgery.ended", "10:00")] };
   assert.equal(canRecord(over, "ended"), false);
+  assert.equal(canRecord({ ...saved, timeline: over.timeline }, "ward"), true);
+});
+
+test("countReconciled mirrors the server rule", () => {
+  const ASHA = "Nurse Asha (synthetic)";
+  const v = (count) => ({ count });
+  assert.equal(countReconciled(v({})), false, "no closing");
+  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 15 })), true, "adds up");
+  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 14 })), false, "1 unaccounted, no reason");
+  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 14, closed_detail: " " })), false, "blank reason");
+  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 14, closed_detail: "Found under the drape" })), true);
+  assert.equal(countReconciled(v({ closed_by: "AI (on behalf of Nurse Asha)", closed_opened: 15, returned: 15 })), false, "an AI closing never counts");
+  assert.equal(countReconciled(v({ closed_by: ASHA, closed_opened: 15, returned: 15, missing: 3 })), true, "recomputed, not the stored figure");
+});
+
+test("the count panel keeps the nurse's own number and says what is worked out", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("./CountPanel.jsx", import.meta.url), "utf8");
+  assert.match(src, /useState\(""\)/);
+  assert.doesNotMatch(src, /value=\{[^}]*camera\.count/);
+  assert.match(src, /Worked out, not typed/);
+  assert.match(src, /Save count as \{displayName\(by\)\}/);
+  const list = fs.readFileSync(new URL("./TheatreChecklist.jsx", import.meta.url), "utf8");
+  assert.match(list, /Surgery ended unlocks when the count is saved\./);
 });
 
 test("a corrected camera count stays on the folded count line", () => {

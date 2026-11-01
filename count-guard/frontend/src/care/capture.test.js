@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cameraPrefill, closingBody, correctionLine, prefillObs } from "./capture.js";
+import * as capture from "./capture.js";
+import { closingBody, correctionLine, prefillObs } from "./capture.js";
 
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 
@@ -17,11 +18,9 @@ test("prefillObs returns a new object", () => {
   assert.notEqual(prefillObs([], form), form);
 });
 
-test("the camera count prefills the closing count and names its evidence", () => {
+test("the camera count never fills the closing count; it only names its evidence", () => {
+  assert.equal(capture.cameraPrefill, undefined);
   const count = { opened: 15, camera: { count: 14, evidence_id: "a".repeat(32) } };
-  assert.equal(cameraPrefill(count, ""), "14");
-  assert.equal(cameraPrefill(count, "15"), "15");
-  assert.equal(cameraPrefill({ opened: 15, camera: null }, ""), "");
   assert.deepEqual(closingBody(count, 14, ""), { step: "closing", returned: 14, detail: "", evidence_id: "a".repeat(32), via: "camera" });
   assert.deepEqual(closingBody({ opened: 15 }, 14, ""), { step: "closing", returned: 14, detail: "" });
 });

@@ -98,9 +98,7 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .drop-zone { display: flex; align-items: center; justify-content: center; min-height: 88px; padding: 12px; border: 2px dashed var(--line-control); border-radius: 12px; text-align: center; }
 .swab-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center; }
 .swab-figures p { margin: 0; display: grid; }
-.swab-number { font-size: 2rem; font-weight: 800; line-height: 1.1; }
-.swab-figures.tone-red .swab-number { color: var(--record); }
-.swab-figures.tone-green .swab-number { color: var(--ready-text, var(--leaf)); }
+.swab-figures .t-display.s-danger { color: var(--status-danger); }
 button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--action); text-decoration: underline; font: inherit; cursor: pointer; }
 .inbox-card { margin-bottom: 12px; }
 .quote { margin: 4px 0 8px; font-size: 1.05rem; }

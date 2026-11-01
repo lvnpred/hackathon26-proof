@@ -139,8 +139,8 @@ export const BEATS = [
   {
     id: "kumar-count", path: "kumar", role: "nurse", seconds: 9, film: true,
     say: "Surgery begins, the pack opens at 15 swabs, the camera counts 14 back, and the nurse saves 15 with the reason: one was found under the drape.",
-    clicks: ['Button "Close" in "Inspector"', 'Button "Surgery began"', 'Button "Record pack opened" (prefilled 15)', 'File eval/p3/swabs-closing.mp4 into "Swab camera count"', 'Field "Closing count (returned)" <- 15 (the camera read 14)', 'Field "Detail" <- "Found under the drape"', 'Button "Record closing count"'],
-    expect: ["Read 14, saved 15 by Nurse Asha"],
+    clicks: ['Button "Close" in "Inspector"', 'Button "Surgery began"', 'Button "Record pack opened" (prefilled 15)', 'File eval/p3/swabs-closing.mp4 into "Swab camera count"', 'Field "Closing count (returned)" <- 15 (the camera read 14)', 'Field "What did the team do?" <- "Found under the drape"', 'Button "Save count as Nurse Asha"'],
+    expect: ["Count complete", "camera read 14", "Found under the drape"],
     before: ["Saw 14 of 15 gauze swabs."],
     files: ["swabs-closing.mp4"],
     keyed: "SAM 3.1 video call for the swab camera count. The label reads SAM 3.1. Switch: SWABS_LIVE.",

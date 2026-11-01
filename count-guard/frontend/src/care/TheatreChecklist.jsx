@@ -1,7 +1,8 @@
-import { useState } from "react";
-import TheatrePanel from "./TheatrePanel";
-import { canRecord, checklistState, theatreSteps } from "./theatre";
+import { useRef, useState } from "react";
+import CountPanel from "./CountPanel";
+import { canRecord, checklistState, countReconciled, savedLine, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
+import StatusPill from "./StatusPill.jsx";
 import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
 import { pickedUpload } from "./video";
@@ -17,6 +18,7 @@ function Line({ step }) {
 // A compact way to film the tray again while the tray can still be recorded (R18).
 function TrayAgain({ busy, onFile }) {
   const [problem, setProblem] = useState("");
+  const input = useRef(null);
   async function pick(event) {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
@@ -27,16 +29,14 @@ function TrayAgain({ busy, onFile }) {
   }
   return (
     <>
-      <label className="field">
-        Check the tray again
-        <input type="file" accept="video/*,image/*" multiple disabled={busy} onChange={pick} />
-      </label>
+      <button type="button" disabled={busy} onClick={() => input.current?.click()}>Check the tray again</button>
+      <input ref={input} type="file" hidden accept="video/*,image/*" multiple disabled={busy} onChange={pick} aria-label="Tray photo or clip" />
       {problem && <p className="note" role="alert">{problem}</p>}
     </>
   );
 }
 
-// The controls inside an expanded step. The doctor reads tray and count; the nurse does all four.
+// The controls inside an expanded step. The doctor reads tray and count; the nurse does all five.
 function Controls({ step, role, view, episodeId, busy, act, upload, replaced, onNote, by }) {
   const nurse = role === "nurse";
   if (step.key === "tray") {
@@ -48,9 +48,10 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
   }
   if (step.key === "count") {
     return nurse
-      ? <TheatrePanel episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} onNote={onNote} />
+      ? <CountPanel episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} onNote={onNote} />
       : <p className="small muted">The theatre nurse records the swab count.</p>;
   }
+  if (step.key === "ward") return null; // the Back to ward button sits under the list
   const began = step.key === "began";
   return (
     <button type="button" disabled={busy} onClick={() => act("/surgery", { step: began ? "began" : "ended", by })}>
@@ -59,12 +60,13 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
   );
 }
 
-// One vertical list of the four theatre steps: done ones fold to a line, the current one opens.
+// One vertical list of the five theatre steps: done ones fold to a line, the current one opens.
 export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, replaced }) {
   const [note, setNote] = useState("");
   const by = role === "nurse" ? NURSE : DOCTOR;
   const steps = checklistState(theatreSteps(view));
   const ended = steps[3].done;
+  const reconciled = countReconciled(view);
   const move = (view.allowed || []).find((m) => m.to === "ward");
   const surgeonMoves = move?.role === "doctor";
   const trayMoment = momentFor(view, view.tray?.latest?.id);
@@ -74,28 +76,34 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
         {steps.map((step) => (
           <li key={step.key} className={`step ${step.status}`}>
             {(step.status === "done" || step.status === "open") && <Line step={step} />}
-            {!step.done && !canRecord(view, step.key) && <p className="step-line muted">{step.title} · {step.wait}</p>}
+            {step.key === "count" && step.done && !canRecord(view, "count") && (
+              <p className="small" role="status">{countReconciled(view) && <StatusPill role="fine" text="Count complete" />} {savedLine(view.count)}</p>
+            )}
+            {!step.done && !canRecord(view, step.key) && !(step.key === "ended" && steps[1].done) && <p className="step-line muted">{step.title} · {step.wait || "Locked"}</p>}
+            {step.key === "ended" && !step.done && steps[1].done && !reconciled && (
+              <>
+                <button type="button" disabled>Surgery ended</button>
+                <p className="small muted">Surgery ended unlocks when the count is saved.</p>
+              </>
+            )}
             {step.key === "tray" && step.done && trayMoment && <AiMoment moment={trayMoment} role={role} episodeId={episodeId || view.episode?.id} />}
-            {canRecord(view, step.key) && (
+            {step.key === "ward" && role === "nurse" && (ended || surgeonMoves) && (surgeonMoves ? (
+              <p className="note" role="status">The count is open: the surgeon records the reason before the patient leaves theatre.</p>
+            ) : (
+              <>
+                {move && (move.needs || []).length > 0 && <p className="small muted">Needs: {move.needs.join(", ")}</p>}
+                <button type="button" className="primary" disabled={busy} onClick={() => act("/state", { to: "ward", by, reason: "", checklist: {} })}>
+                  Back to ward
+                </button>
+              </>
+            ))}
+            {canRecord(view, step.key) && step.key !== "ward" && (
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} />
             )}
           </li>
         ))}
       </ol>
       {note && <p className="note" role="status">{note}</p>}
-      {role === "nurse" && (surgeonMoves ? (
-        <p className="note" role="status">The count is open: the surgeon records the reason before the patient leaves theatre.</p>
-      ) : (
-        <>
-          {move && (move.needs || []).length > 0 && <p className="small muted">Needs: {move.needs.join(", ")}</p>}
-          <div className="row">
-            <button type="button" className="primary" disabled={busy || !ended} onClick={() => act("/state", { to: "ward", by, reason: "", checklist: {} })}>
-              Back to ward
-            </button>
-            {!ended && <span className="small muted">after step 4</span>}
-          </div>
-        </>
-      ))}
     </section>
   );
 }

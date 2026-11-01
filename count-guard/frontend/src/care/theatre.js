@@ -3,7 +3,7 @@ import { hhmm } from "./clock.js";
 import { displayName } from "./names.js";
 import { checkLabel } from "./video.js";
 
-// The four theatre steps as the doctor sees them: one line each, read from this theatre stay only.
+// The five theatre steps as the doctor sees them: one line each, read from this theatre stay only.
 export function theatreSteps(view) {
   const lines = view.timeline || [];
   let since = 0;
@@ -33,10 +33,12 @@ export function theatreSteps(view) {
       open: (view.count?.missing ?? 0) > 0,
     },
     { key: "ended", title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${ended.when}` : "Not yet", at: clock(ended), open: false },
+    { key: "ward", title: "Back to ward", done: false, says: "Not yet", at: "", open: false },
   ];
 }
 
-const WAIT = { began: "after the tray check", count: "after surgery began", ended: "after surgery began" };
+// A step that cannot start yet just says "Locked"; what unlocks it is stated beside the control.
+const WAIT = { began: "Locked", count: "Locked", ended: "Locked", ward: "Locked" };
 
 // Where each step stands: done, open (a count with swabs missing), current (the next to do) or later.
 export function checklistState(steps) {
@@ -68,6 +70,32 @@ export function packLine(count) {
   return `Pack opened ${hhmm(count.opened_at_ms)} by ${displayName(count.opened_by)}`;
 }
 
+// What the camera read, before or after the save: the live camera count, else the figure the saved closing read.
+function cameraRead(count) {
+  if (count?.camera) return count.camera.count;
+  if (count?.read?.returned != null) return count.read.returned;
+  return count?.closed_via === "camera" ? count.returned : null;
+}
+
+// The saved line: who saved the count, when, what the camera read and what the team did.
+export function savedLine(count) {
+  if (!count?.closed_by) return "";
+  const read = count.camera ? null : cameraRead(count);
+  return ["Saved by " + displayName(count.closed_by), count.closed_at_ms != null && hhmm(count.closed_at_ms),
+    read != null && `camera read ${read}`, (count.closed_detail || "").trim()].filter(Boolean).join(" · ");
+}
+
+// The server's swab-count rule (states.count_gate), read from this stay's count in the view: a closing a person
+// saved (not the AI), with opened - returned recomputed to 0 or a non-empty reason. The server stays the authority.
+export function countReconciled(view) {
+  const count = view?.count;
+  const by = String(count?.closed_by || "").trim();
+  if (!by || by.startsWith("AI (on behalf of")) return false;
+  const { closed_opened: opened, returned } = count;
+  const addsUp = Number.isInteger(opened) && Number.isInteger(returned) && opened - returned === 0;
+  return addsUp || Boolean(String(count.closed_detail || "").trim());
+}
+
 // Which controls a step offers, by the backend's rules and not by list order: the tray can be
 // (re)checked until surgery begins, surgery ends once it began, the count needs nothing before it.
 export function canRecord(view, key) {
@@ -76,7 +104,8 @@ export function canRecord(view, key) {
     case "tray": return Boolean(view.tray?.planned) && !done.began.done;
     case "began": return !done.began.done;
     case "count": return !done.count.done || done.count.open;
-    case "ended": return done.began.done && !done.ended.done;
+    case "ended": return done.began.done && !done.ended.done && countReconciled(view);
+    case "ward": return done.ended.done;
     default: return false;
   }
 }

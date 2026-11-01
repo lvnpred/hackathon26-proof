@@ -17,7 +17,7 @@ test("displayView maps every string and keeps the rest", () => {
 
 test("the By line is static text: no editable input holds the tagged name", async () => {
   const fs = await import("node:fs");
-  for (const file of ["./TheatrePanel.jsx", "../screens/WardPanel.jsx"]) {
+  for (const file of ["./CountPanel.jsx", "../screens/WardPanel.jsx"]) {
     const src = fs.readFileSync(new URL(file, import.meta.url), "utf8");
     assert.doesNotMatch(src, /<input value=\{by\}/, file);
     assert.match(src, /By \{displayName\(by\)\}/, file);

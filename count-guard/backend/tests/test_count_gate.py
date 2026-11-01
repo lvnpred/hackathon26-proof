@@ -215,3 +215,36 @@ def test_closing_before_surgery_began_does_not_count(tmp_path):
     assert r.status_code == 409 and r.json()["detail"] == SAVE_FIRST
     assert _count(client, eid, "closing", returned=20).status_code == 200
     assert _surgery(client, eid, "ended").status_code == 200
+
+
+def _correct(client, eid, kind):
+    """The morning correct route on this episode's latest `kind` event, with its own payload."""
+    old = [e for e in _store(client).events(eid) if e["event_type"] == kind][-1]
+    return client.post(f"/morning/episodes/{eid}/events/{old['id']}/correct", json={"payload": old["payload"]})
+
+
+def test_correcting_surgery_began_cannot_drop_packs_from_the_count(tmp_path):
+    """Re-review: pack 20, began, extra 19, correct began, closing 19, ended must stay refused."""
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    _count(client, eid, "opened", quantity=20)
+    assert _surgery(client, eid, "began").status_code == 200
+    assert _count(client, eid, "opened", quantity=19, extra=True).status_code == 200
+    r = _correct(client, eid, "surgery.began")
+    assert r.status_code == 409 and r.json()["detail"] == "A surgery step is recorded on the theatre steps, not corrected here."
+    assert _count(client, eid, "closing", returned=19).status_code == 422  # 39 opened: 20 unaccounted needs a reason
+    assert _surgery(client, eid, "ended").status_code == 409
+
+
+def test_correcting_the_theatre_move_cannot_start_a_new_stay(tmp_path):
+    """Re-review: pack 20, began, correct patient.state, pack 19, began, closing 19, ended must stay refused."""
+    client, eid = _new(tmp_path)
+    _to_theatre(client, eid)
+    _count(client, eid, "opened", quantity=20)
+    assert _surgery(client, eid, "began").status_code == 200
+    r = _correct(client, eid, "patient.state")
+    assert r.status_code == 409 and r.json()["detail"] == "A patient move is recorded as a new move, not corrected here."
+    assert _count(client, eid, "opened", quantity=19).json()["detail"] == ONLY_UP
+    assert _surgery(client, eid, "began").status_code == 409  # surgery already began in this stay
+    assert _count(client, eid, "closing", returned=19).status_code == 422
+    assert _surgery(client, eid, "ended").status_code == 409

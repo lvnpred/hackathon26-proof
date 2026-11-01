@@ -149,7 +149,7 @@ export const BEATS = [
     id: "kumar-back", path: "kumar", role: "nurse", seconds: 4, film: true,
     say: "Surgery ends and he returns to the ward; Dr. Rao shows as available again.",
     clicks: ['Button "Surgery ended"', 'Button "Back to ward"'],
-    expect: ["On the ward", "Dr. A. Rao: Available"],
+    expect: ["Ward · back from theatre", "Dr. A. Rao: Available"],
     keyed: "No model call.",
   },
   {

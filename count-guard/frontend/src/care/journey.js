@@ -17,19 +17,19 @@ export const JOURNEY = [
 ];
 
 // Where the patient has been: done, current, later, or skipped (theatre never visited once past it).
+// Back on the ward after theatre, the Ward segment says so; Theatre does not tick ahead of the current step.
 export function journeySteps(state, visited = []) {
   const at = JOURNEY.findIndex((step) => step.states.includes(state));
   return JOURNEY.map((step, i) => {
-    const seen = step.states.some((s) => visited.includes(s));
     if (i === at) {
+      if (state === "ward" && visited.includes("theatre")) return { key: step.key, label: "Ward · back from theatre", status: "current", detail: "" };
       const label = state === "clinic_done" ? "Visit closed" : step.label;
       const detail = STATE_LABEL[state];
       return { key: step.key, label, status: "current", detail: detail === label ? "" : detail };
     }
-    let status;
-    if (i < at) status = step.key === "theatre" && !visited.includes("theatre") ? "skipped" : "done";
-    else status = seen ? "done" : "later";
-    return { key: step.key, label: step.label, status, detail: "" };
+    if (i > at) return { key: step.key, label: step.label, status: "later", detail: "" };
+    if (step.key === "theatre" && !visited.includes("theatre")) return { key: step.key, label: step.label, status: "skipped", detail: "Skipped" };
+    return { key: step.key, label: step.label, status: "done", detail: "" };
   });
 }
 

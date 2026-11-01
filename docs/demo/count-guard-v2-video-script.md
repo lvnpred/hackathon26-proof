@@ -146,7 +146,7 @@ On screen: `Count complete` · `camera read 14` · `Found under the drape`
 #### `kumar-back` · 1:38 · nurse · 4 s
 Clicks: 1) Button "Surgery ended"; 2) Button "Back to ward"
 
-On screen: `On the ward` · `Dr. A. Rao: Available`
+On screen: `Ward · back from theatre` · `Dr. A. Rao: Available`
 
 > Surgery ends and he returns to the ward; Dr. Rao shows as available again.
 

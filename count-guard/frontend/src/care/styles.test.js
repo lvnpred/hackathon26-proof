@@ -38,6 +38,8 @@ test("care.css styles the journey bar, the next card and the quiet row", () => {
   const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
   assert.match(css, /\.journey li\.current/);
   assert.match(css, /\.journey li\.later, \.journey li\.skipped \{[^}]*color:\s*var\(--ink-muted\)/);
+  assert.match(css, /\.journey li \{[^}]*min-height:\s*40px/);
+  assert.doesNotMatch(css, /line-through/);
   assert.match(css, /\.next-text \{[^}]*font-size/);
   assert.match(css, /\.quiet-row/);
 });

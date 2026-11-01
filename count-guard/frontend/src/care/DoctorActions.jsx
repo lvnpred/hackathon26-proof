@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RxImport, RxTable } from "../screens/ClinicPanel";
 import { answerHow } from "./askText";
 import ActionBar from "./ActionBar";
+import { IconMic } from "./icons.jsx";
 import { panelOpen, toggled } from "./actions";
 import { doctorBlocks, quietActions } from "./journey";
 import NowCard from "./NowCard";
@@ -117,7 +118,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle }) {
   }
   return (
     <>
-      <button type="button" aria-expanded={open} onClick={onToggle}>Dictate discharge</button>
+      <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
       {open && (
         <>
           <Dictate label="Dictate discharge" verb="Draft discharge" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />
@@ -200,7 +201,7 @@ function Theatre({ view, busy, act, upload }) {
 const sign = (act) => (items, draftId) => act("/orders/sign", { items, by: DOCTOR, draft_id: draftId || undefined });
 
 // The doctor's actions for the patient's current state: the card, the quiet row, the open panels, the rest.
-export default function DoctorActions({ state, card, pick, control, view, act, upload, ask, busy, footer }) {
+export default function DoctorActions({ state, card, pick, control, view, act, upload, ask, busy, afterNow = null }) {
   const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
@@ -213,8 +214,11 @@ export default function DoctorActions({ state, card, pick, control, view, act, u
   const { inside, below } = doctorBlocks(state, card);
   return (
     <>
-      <NowCard pick={pick} card={card} control={control} footer={footer} lead={open("orders") && view.drafts?.order ? <OrderDraft view={view} busy={busy} signOrders={signOrders} /> : null}>{inside.map((key) => primary[key])}</NowCard>
-      <ActionBar actions={quietActions(state, "doctor")} isOpen={open} onToggle={toggle} />
+      <NowCard pick={pick} card={card} control={control} lead={open("orders") && view.drafts?.order ? <OrderDraft view={view} busy={busy} signOrders={signOrders} /> : null}>
+        {inside.map((key) => primary[key])}
+        <ActionBar actions={quietActions(state, "doctor")} isOpen={open} onToggle={toggle} />
+      </NowCard>
+      {afterNow}
       {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
       {below.map((key) => primary[key])}

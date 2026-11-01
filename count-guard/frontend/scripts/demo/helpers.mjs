@@ -44,6 +44,11 @@ export function helpers(page, root) {
       const button = page.getByRole("button", { name, exact: true }).first();
       if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
     },
+    // Open a closed Fold by its label; leaves it open if it already is.
+    async unfold(label) {
+      const button = page.getByRole("button", { name: `Show ${label}`, exact: true });
+      if (await button.count()) await button.first().click();
+    },
     clock: (name) => page.getByRole("group", { name: "Demo clock" }).getByRole("button", { name, exact: true }).click(),
     tick: async (...labels) => { for (const l of labels) await page.getByLabel(l, { exact: true }).check(); },
     fill: (label, value, scope) => (scope ? region(scope) : page).getByLabel(label).first().fill(value),

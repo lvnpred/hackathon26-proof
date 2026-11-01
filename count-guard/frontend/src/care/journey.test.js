@@ -5,8 +5,10 @@ import { cardActions, doctorBlocks, foldLines, foldOpensFor, journeySteps, lensL
 const ADVICE = /\b(give|take|stop|increase|reduce|start|administer|consider)\b/i;
 const S = (steps) => steps.map((s) => s.status);
 
-test("returned from theatre: Theatre is done while on the ward", () => {
-  assert.deepEqual(S(journeySteps("ward", ["clinic", "admitting", "ward", "theatre", "ward"])), ["done", "done", "current", "done", "later", "later"]);
+test("returned from theatre: the Ward segment says so and Theatre does not tick ahead", () => {
+  const back = journeySteps("ward", ["clinic", "admitting", "ward", "theatre", "ward"]);
+  assert.deepEqual(S(back), ["done", "done", "current", "later", "later", "later"]);
+  assert.equal(back[2].label, "Ward · back from theatre");
   assert.deepEqual(S(journeySteps("ward", ["clinic", "admitting", "ward"])), ["done", "done", "current", "later", "later", "later"]);
 });
 test("closed visit: Clinic is current and reads Visit closed", () => {
@@ -14,7 +16,8 @@ test("closed visit: Clinic is current and reads Visit closed", () => {
   assert.deepEqual(steps[0], { key: "clinic", label: "Visit closed", status: "current", detail: "Clinic visit closed" });
   assert.deepEqual(S(steps).slice(1), ["later", "later", "later", "later", "later"]);
 });
-test("home without theatre: Theatre is skipped, not done", () => {
+test("home without theatre: Theatre is skipped, says Skipped, not done", () => {
+  assert.equal(journeySteps("home", ["clinic", "home"])[3].detail, "Skipped");
   assert.deepEqual(S(journeySteps("home", ["clinic", "admitting", "ward", "discharging", "home"])), ["done", "done", "done", "skipped", "done", "current"]);
 });
 const view = (state, next_role, extra = {}) => ({ state, order_list: [], now_next: { now: "N.", next: "X.", you_now: "YN.", you_next: "YX.", next_role }, ...extra });

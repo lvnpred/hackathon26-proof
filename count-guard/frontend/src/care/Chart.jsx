@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getAudit } from "../journey";
 import { useCareWard } from "./CareShell";
+import AiHandling from "./AiHandling.jsx";
 import AlertBanner from "./AlertBanner";
 import AskInbox from "./AskInbox";
 import { DOCTOR } from "./DoctorActions";
 import Fault from "./Fault";
+import Fold from "./Fold.jsx";
 import History from "./History";
 import { INBOX_SCOPES, NUDGE_SCOPES } from "./faults";
 import { OPS_SCOPE } from "./handling.js";
@@ -28,6 +30,7 @@ export default function Chart() {
   const line = params.get("line");
   const [rows, setRows] = useState([]);
   const [rowsError, setRowsError] = useState("");
+  const [recordOpen, setRecordOpen] = useState(false);
   const stamp = view?.timeline.length;
 
   // Audit rows feed the struck lines and the Everyone lens; refetch when the record grows.
@@ -71,21 +74,31 @@ export default function Chart() {
   const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
 
-  return (
+  // Everything that asks for attention sits right under the Now card, whichever role's panel renders it.
+  const attention = (
     <>
-      <StateHeader patient={patient} view={view} />
-
       <AlertBanner moved={movedAlertId(pick, ward.role)} view={view} role={ward.role} line={line} busy={ward.busy} act={act} nowMs={ward.nowMs} patientName={patient.name} />
       <Fault fault={ward.fault} episodeId={episodeId} only={NUDGE_SCOPES} />
 
       <AskInbox key={`ask-${episodeId}`} view={view} role={ward.role} name={patient.name} nowMs={ward.nowMs} busy={ward.busy} act={act} ask={ask} fault={ward.fault} episodeId={episodeId} />
 
-      <StatePanel pick={pick} key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} fault={ward.fault} />
+      <AiHandling view={view} role={ward.role} nowMs={ward.nowMs} act={act} episodeId={episodeId} busy={ward.busy} fault={ward.fault} movedWork={pick.now.action?.workId} />
+    </>
+  );
+
+  return (
+    <>
+      <StateHeader patient={patient} view={view} />
+
+      <StatePanel pick={pick} key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} afterNow={attention} />
+      {ward.role === "patient" && attention}
       <Fault fault={ward.fault} episodeId={episodeId} except={[...INBOX_SCOPES, ...NUDGE_SCOPES, OPS_SCOPE]} />
 
       <MedicinesFromHome view={view} role={ward.role} nowMs={ward.nowMs} act={act} busy={ward.busy} />
 
-      <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} />
+      <Fold label="Orders and evidence" open={recordOpen} onToggle={() => setRecordOpen(!recordOpen)}>
+        <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} />
+      </Fold>
 
       <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />
     </>

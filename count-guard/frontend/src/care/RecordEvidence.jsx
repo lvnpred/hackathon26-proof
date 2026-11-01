@@ -10,7 +10,7 @@ export default function RecordEvidence({ view, role, lens = "staff", episodeId, 
   const rows = filterMoments(view.ai_moments, patient ? "all" : filter, role, lens);
   return (
     <section className="card" aria-label="Record and evidence">
-      <p className="label">Record &amp; evidence</p>
+      {patient && <p className="label">Record &amp; evidence</p>}
       {!patient && (
         <div className="row" role="group" aria-label="Filter">
           {FILTERS.map(([key, text]) => (

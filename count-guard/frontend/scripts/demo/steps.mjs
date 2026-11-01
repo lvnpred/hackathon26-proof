@@ -117,6 +117,7 @@ export const STEPS = {
     await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
     await H.click("Draft discharge");
+    await H.unfold("Orders and evidence");
     await H.page.locator(".ai-moment").filter({ hasText: "sections drafted" }).first().getByRole("button", { name: "Inspect" }).click();
     await before(H, "kumar-discharge");
     await H.click("Close", "Inspector");
@@ -142,6 +143,7 @@ export const STEPS = {
     await H.tab("My patients");
     await H.page.locator(".patient-list a.waiting").filter({ hasText: KUMAR }).click();
     await H.page.locator("h1", { hasText: KUMAR }).waitFor();
+    await H.unfold("Orders and evidence");
     await H.file(/^Your answer to /, "eval/p2/rao-answer.wav");
     await before(H, "kumar-review");
     await H.click("Send to R. Kumar");
@@ -188,6 +190,7 @@ export const STEPS = {
     await H.sayText("BP and pulse every 1 h", "BP 112 over 70, pulse 84, bed 7.");
     await H.click("Use this");
     await H.click("Confirm");
+    await H.unfold("History");
     const flag = H.page.locator('article[aria-label^="Alert: Systolic BP 82"]').first();
     await flag.getByLabel("What did you do?").fill("Reading checked again at the bedside");
     await flag.getByRole("button", { name: "Save response", exact: true }).click();

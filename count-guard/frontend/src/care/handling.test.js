@@ -25,7 +25,7 @@ const prop = (id) => ({
 const ops = { handling: [row("w1"), row("w2", { status: "undone", undo_until_ms: null })], proposals: [prop("p1")], open: [], routes: { q1: "Dr. A. Rao" } };
 
 test("titles", () => {
-  assert.equal(stripTitle(3), "AI is handling · 3");
+  assert.equal(stripTitle(3), "AI admin · 3");
   assert.equal(needsTitle(2), "Needs you · 2");
 });
 

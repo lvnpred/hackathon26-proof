@@ -134,7 +134,7 @@ Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "
 
 On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `Needle holder` · `1 missing` · `Saw 2 of 3 needle holders.` · `Why`
 
-> Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Inspect shows what SAM 3.1 saw.
+> Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Details shows what SAM 3.1 saw.
 
 #### `kumar-count` · 1:29 · nurse · 9 s
 Clicks: 1) Button "Close" in "Inspector"; 2) Button "Surgery began"; 3) Button "Record pack opened" (prefilled 15); 4) File eval/p3/swabs-closing.mp4 into "Swab camera count"; 5) Field "Closing count (returned)" <- 15 (the camera read 14); 6) Field "What did the team do?" <- "Found under the drape"; 7) Button "Save count as Nurse Asha"
@@ -165,7 +165,7 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:56 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Details" on the discharge draft line; 9) Button "Close" in "Inspector"; 10) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Fold "Orders and evidence"; 9) Button "Details" on the discharge draft line; 10) Button "Close" in "Inspector"; 11) Button "Sign discharge"
 
 On screen: `Reference` · `Being discharged` (the AI moment `Drafted from voice` · `5 sections drafted from 40 words.` is on screen before Sign discharge, and the Inspector shows `swab count closed 15 of 15`)
 
@@ -186,7 +186,7 @@ On screen: `Waiting for Dr. Rao` · `The doctor will review your healing photo.`
 > At home Mr. Kumar asks Dr. Rao about his wound and sends a day 3 photo; the page says where the question went and who is waiting.
 
 #### `kumar-review` · 2:19 · doctor · 9 s
-Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 5) Button "Send to R. Kumar"; 6) Button "No visit needed"
+Clicks: 1) Role Doctor; 2) Tab "My patients"; 3) Row "R. Kumar" under "Waiting on you"; 4) Fold "Orders and evidence"; 5) In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into "Your answer"; 6) Button "Send to R. Kumar"; 7) Button "No visit needed"
 
 On screen: `Healing photo` · `Reference` · `From voice` (before Send to R. Kumar) · `From voice` · `No visit needed`
 
@@ -231,7 +231,7 @@ On screen: `finished Saline 1 litre over 2 hours, video check of the set-up at`
 > The clock moves two hours and the nurse ends the saline task.
 
 #### `iyer-recheck` · 2:57 · nurse · 5 s
-Clicks: 1) Role Nurse; 2) Button "Say it: BP and pulse every 1 h"; 3) Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.; 4) Button "Use this"; 5) Button "Confirm"; 6) Field "What did you do?" in the Systolic BP 82 alert <- Reading checked again at the bedside; 7) Button "Save response" in that alert
+Clicks: 1) Role Nurse; 2) Button "Say it: BP and pulse every 1 h"; 3) Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.; 4) Button "Use this"; 5) Button "Confirm"; 6) Fold "History"; 7) Field "What did you do?" in the Systolic BP 82 alert <- Reading checked again at the bedside; 8) Button "Save response" in that alert
 
 On screen: `logged BP 112/70, HR 84` · the waiting strip no longer shows `→ Systolic BP 82 is below the limit of 90`
 

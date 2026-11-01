@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { BEATS, filmSeconds, missingMedia, roleSeconds } from "./beats.mjs";
 import { findChrome } from "./chrome.mjs";
+import { scanText } from "./scan.mjs";
 import { startServers } from "./server.mjs";
 import { STEPS, helpers, waitGone, waitText } from "./steps.mjs";
 
@@ -73,6 +74,14 @@ try {
       if (beat.absent) await waitGone(page, beat.absent);
       await page.waitForTimeout(150);
       if (problems.length) throw new Error(problems.join("; "));
+      // The Demo dock is demo tooling, so the scan reads the .app text without it.
+      const seen = await page.evaluate(() => {
+        const app = document.querySelector(".app");
+        const dock = app?.querySelector("[aria-label=Demo]")?.innerText || "";
+        return (app?.innerText || "").replace(dock, "");
+      });
+      const bad = scanText(seen, beat.role);
+      if (bad.length) throw new Error(`scan: ${bad.join("; ")}`);
       await page.screenshot({ path: path.join(SHOTS, `${nn}-${beat.id}.png`), fullPage: true });
       console.log(`ok   ${nn} ${beat.id}`);
     } catch (err) {

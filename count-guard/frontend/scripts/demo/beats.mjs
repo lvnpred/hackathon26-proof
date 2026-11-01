@@ -130,7 +130,7 @@ export const BEATS = [
   },
   {
     id: "kumar-tray", path: "kumar", role: "nurse", seconds: 6, film: true,
-    say: "Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Inspect shows what SAM 3.1 saw.",
+    say: "Nurse Asha films the tray; the check finds one needle holder missing and flags it for the surgeon, and Details shows what SAM 3.1 saw.",
     clicks: ["Role Nurse", "Chart R. Kumar", 'File eval/p3/tray-hernia.mp4 into "Tray check"', 'Button "Details" in "Theatre steps"'],
     expect: ["Flagged: not everything planned was seen. The surgeon decides.", "Needle holder", "1 missing", "Saw 2 of 3 needle holders.", "Why"],
     files: ["tray-hernia.mp4"],
@@ -171,7 +171,7 @@ export const BEATS = [
   {
     id: "kumar-discharge", path: "kumar", role: "doctor", seconds: 8, film: true,
     say: "Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'File eval/p4/wound-day0.png into "Wound photo"', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Button "Details" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'File eval/p4/wound-day0.png into "Wound photo"', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Fold "Orders and evidence"', 'Button "Details" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
     expect: ["Reference", "Being discharged"],
     before: [HEARD, "5 sections drafted from 40 words.", "swab count closed 15 of 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
@@ -195,7 +195,7 @@ export const BEATS = [
   {
     id: "kumar-review", path: "kumar", role: "doctor", seconds: 9, film: true,
     say: "Dr. Rao opens the healing photo beside the reference photo and answers by voice.",
-    clicks: ["Role Doctor", 'Tab "My patients"', 'Row "R. Kumar" under "Waiting on you"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send to R. Kumar"', 'Button "No visit needed"'],
+    clicks: ["Role Doctor", 'Tab "My patients"', 'Row "R. Kumar" under "Waiting on you"', 'Fold "Orders and evidence"', 'In "Ask inbox", the item with the question: file eval/p2/rao-answer.wav into the region "Your answer to <name> at <time>"', 'Button "Send to R. Kumar"', 'Button "No visit needed"'],
     expect: ["Healing photo", "Reference", "From voice", "No visit needed"],
     before: [HEARD_ONLY],
     files: ["rao-answer.wav"],
@@ -243,7 +243,7 @@ export const BEATS = [
   {
     id: "iyer-recheck", path: "iyer", role: "nurse", seconds: 5, film: true,
     say: "Her next reading is typed in and is back above the limit; the nurse answers the flag and it clears.",
-    clicks: ["Role Nurse", 'Button "Say it: BP and pulse every 1 h"', 'Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Button "Confirm"', 'Field "What did you do?" in the Systolic BP 82 alert <- Reading checked again at the bedside', 'Button "Save response" in that alert'],
+    clicks: ["Role Nurse", 'Button "Say it: BP and pulse every 1 h"', 'Textarea "What was said" in that row <- BP 112 over 70, pulse 84, bed 7.', 'Button "Use this"', 'Button "Confirm"', 'Fold "History"', 'Field "What did you do?" in the Systolic BP 82 alert <- Reading checked again at the bedside', 'Button "Save response" in that alert'],
     expect: ["logged BP 112/70, HR 84"],
     absent: "→ Systolic BP 82 is below the limit of 90",
     keyed: "1 Spark text call (typed text, no Voice call). The label reads Muse Spark. No switch.",

@@ -34,7 +34,7 @@ function AiStrip({ ward }) {
   const { rows, proposals } = myPatientsStrip(ward.patients, ward.role);
   if (!rows.length && !proposals.length) return null;
   return (
-    <section className="ai-handling" aria-label="AI is handling">
+    <section className="ai-handling" aria-label="AI admin">
       <p className="label">{stripTitle(rows.length)}</p>
       <ul className="ai-handling-list">
         {rows.map((r) => (

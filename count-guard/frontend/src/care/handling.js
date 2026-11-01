@@ -18,7 +18,7 @@ export const pausedRows = (ops, role) =>
   role === "patient" ? [] : (ops?.open || []).filter((r) => r.paused_note)
     .map((r) => ({ workId: r.work_id, text: pausedText(r) }));
 
-export const stripTitle = (n) => `AI is handling · ${n}`;
+export const stripTitle = (n) => `AI admin · ${n}`;
 const LEVELS = {
   L2: "The AI did this on its own, and you can undo it.",
   L1: "The AI proposed this and waited for a person to approve it.",

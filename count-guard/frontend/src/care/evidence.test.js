@@ -101,12 +101,12 @@ test("a photo sidecar explains its regions", () => {
 });
 
 test("capturedLine", () => {
-  assert.equal(capturedLine({ type: "tray.checked", when: 9 * 60000 - 9 * 60000 + 18 * 60000, by: "Nurse Asha (synthetic)" }), "Captured to record: tray.checked · 09:18 · Nurse Asha");
-  assert.equal(capturedLine({ type: "tray.checked", when: "Mon 2 Nov, 09:18", by: "Nurse Asha" }), "Captured to record: tray.checked · 09:18 · Nurse Asha");
+  assert.equal(capturedLine({ type: "tray.checked", when: 9 * 60000 - 9 * 60000 + 18 * 60000, by: "Nurse Asha (synthetic)" }), "Saved to the record: 09:18 · Nurse Asha");
+  assert.equal(capturedLine({ type: "tray.checked", when: "Mon 2 Nov, 09:18", by: "Nurse Asha" }), "Saved to the record: 09:18 · Nurse Asha");
 });
 
 test("viewer copy has no advice words", () => {
-  for (const s of ["Expected", "Seen", "Status", "Why:", "Raw output", "Show ignored", "Captured to record: tray.checked · 09:18 · Nurse Asha", "Nothing found above confidence 0.45.", "The best frame was 3.5 s.", "2 detections under confidence 0.45 were ignored.", "Read 3 values from 3 regions."]) assert.doesNotMatch(s, ADVICE);
+  for (const s of ["Expected", "Seen", "Status", "Why:", "Raw output", "Show ignored", "Saved to the record: 09:18 · Nurse Asha", "Nothing found above confidence 0.45.", "The best frame was 3.5 s.", "2 detections under confidence 0.45 were ignored.", "Read 3 values from 3 regions."]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("startImage opens on the best frame of the first short row", () => {
@@ -214,8 +214,8 @@ test("explain counts an ignored detection once however many frames it appears in
 });
 
 test("capturedLine joins only the parts it has", () => {
-  assert.equal(capturedLine({ type: "tray.checked", when: "09:18", by: "" }), "Captured to record: tray.checked · 09:18");
-  assert.equal(capturedLine({ type: "tray.checked", when: "", by: "Nurse Asha" }), "Captured to record: tray.checked · Nurse Asha");
+  assert.equal(capturedLine({ type: "tray.checked", when: "09:18", by: "" }), "Saved to the record: 09:18");
+  assert.equal(capturedLine({ type: "tray.checked", when: "", by: "Nurse Asha" }), "Saved to the record: Nurse Asha");
 });
 
 test("a photo read with regions names both models in the viewer chip", () => {
@@ -271,4 +271,8 @@ test("only the Inspector, the model cards and the AI page pass model to Evidence
   }
   const ev = fs.readFileSync(new URL("Evidence.jsx", dir), "utf8");
   assert.doesNotMatch(ev, /view\.chip/);
+});
+
+test("capturedLine never prints the event type", () => {
+  assert.doesNotMatch(capturedLine({ type: "swabs.counted", when: 26 * 60000, by: "Nurse Asha (synthetic)" }), /swabs\.counted|\b[a-z]+\.[a-z_]+\b/);
 });

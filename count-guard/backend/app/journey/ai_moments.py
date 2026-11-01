@@ -22,7 +22,7 @@ VISUAL = {"tray.checked": "tray", "setup.checked": "setup", "swabs.counted": "sw
 def line_of(event: dict, now_ms: int | None = None) -> dict:
     """C2: one recorded event as a citable line."""
     return {
-        "id": event["id"], "type": event["event_type"], "when": when_text(event["ts_ms"], now_ms),
+        "id": event["id"], "type": event["event_type"], "when": when_text(event["ts_ms"], now_ms), "at_ms": event["ts_ms"],
         "by": (event.get("payload") or {}).get("by"), "plain": plain(event),
     }
 
@@ -86,7 +86,7 @@ def _written(ix: _Index, anchor: dict, extra: list[dict]) -> list[dict]:
     for e in sorted(rows.values(), key=lambda e: ix.order[e["id"]]):
         p = e["payload"]
         out.append({
-            "event_id": e["id"], "type": e["event_type"], "when": when_text(e["ts_ms"], ix.now_ms), "by": p.get("by"), "plain": plain(e),
+            "event_id": e["id"], "type": e["event_type"], "when": when_text(e["ts_ms"], ix.now_ms), "at_ms": e["ts_ms"], "by": p.get("by"), "plain": plain(e),
             **{k: p[k] for k in ("read", "saved") if k in p},
         })
     return out

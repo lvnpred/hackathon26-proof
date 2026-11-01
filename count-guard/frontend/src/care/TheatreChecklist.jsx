@@ -57,10 +57,10 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
 }
 
 // One vertical list of the five theatre steps: done ones fold to a line, the current one opens.
-export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, replaced, primary = false }) {
+export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, replaced, nowMs, primary = false }) {
   const [note, setNote] = useState("");
   const by = role === "nurse" ? NURSE : DOCTOR;
-  const steps = checklistState(theatreSteps(view));
+  const steps = checklistState(theatreSteps(view, nowMs));
   const ended = steps[3].done;
   const reconciled = countReconciled(view);
   const move = (view.allowed || []).find((m) => m.to === "ward");

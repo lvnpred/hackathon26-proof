@@ -195,7 +195,7 @@ def test_strip_photo_batch_is_one_moment_with_calls_on_the_first_row():
 
 def test_line_of_is_a_citable_line():
     line = line_of(_ev("g1", "dose.given", 0, name="Paracetamol", amount="1 g", by=ASHA), 0)
-    assert set(line) == {"id", "type", "when", "by", "plain"} and line["when"] == "09:00" and line["by"] == ASHA
+    assert set(line) == {"id", "type", "when", "at_ms", "by", "plain"} and line["when"] == "09:00" and line["by"] == ASHA
 
 
 def test_view_has_ai_moments(tmp_path):
@@ -297,3 +297,10 @@ def test_proof_photo_with_nothing_read_is_a_record_row():
     m = _one(moments([e]))
     assert (m["kind"], m["title"], m["photo_id"], m["status"], m["filter"]) == ("record", "Proof photo", "ph9", "recorded", "photos")
     assert m["finding"] == "Proof photo kept, not checked." and not ADVICE.search(m["finding"])
+
+
+def test_cited_lines_carry_ms():
+    from app.journey.ai_moments import line_of
+
+    row = line_of({"id": "e1", "event_type": "obs.recorded", "ts_ms": 90_000, "payload": {"by": "n"}}, 90_000)
+    assert row["at_ms"] == 90_000 and row["when"]

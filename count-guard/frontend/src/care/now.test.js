@@ -138,3 +138,13 @@ test("the Now Undo is secondary and Why is quiet, the same size (spec 5.9)", asy
   const css = fs.readFileSync(new URL("./care.css", import.meta.url), "utf8");
   assert.match(css, /\.undo-why button\.quiet \{ padding: 0 18px; align-self: auto; \}/);
 });
+
+test("nextUp adds ' by HH:MM' only when the backend sent a due time", () => {
+  const nn = { next_role: "nurse", you_next: "The nurse acknowledges the new orders from Dr. A. Rao." };
+  const H = 3600000;
+  assert.equal(nextUp(view({ state: "ward", now_next: { ...nn, due_ms: 5 * H } }), 5 * H).text, "The nurse will acknowledge the new orders from Dr. A. Rao by 14:00.");
+  assert.equal(nextUp(view({ state: "ward", now_next: { ...nn, due_ms: 5 * H } }), 5 * H + 24 * H).text, "The nurse will acknowledge the new orders from Dr. A. Rao by Yesterday 14:00.");
+  assert.equal(nextUp(view({ state: "ward", now_next: { ...nn, due_ms: null } }), 0).text, "The nurse will acknowledge the new orders from Dr. A. Rao.");
+  assert.equal(nextUp(view({ state: "ward", now_next: nn }), 0).text, "The nurse will acknowledge the new orders from Dr. A. Rao.");
+  assert.equal(nextUp(view({ state: "home", now_next: { next_role: "doctor", you_next: "Dr. Rao has not seen your day 2 check-in yet.", due_ms: 2 * H } }), 0).text, "Dr. Rao will look at your day 2 check-in by 11:00.");
+});

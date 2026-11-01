@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { closingBody } from "./capture";
 import AiMark from "./AiMark.jsx";
 import { displayName } from "./names";
-import { countReconciled, packLine, reasonNeeded, savedLine, swabFigures, theatreSteps } from "./theatre";
+import { afterBegan, countReconciled, packLine, reasonNeeded, savedLine, swabFigures, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
 import { momentFor } from "./moments.js";
 import { latestCheck, swabTotal } from "./video";
@@ -38,6 +38,14 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
   // Once surgery began the opened count can only go up: the pack is not replaced, an extra pack adds to it.
   const began = theatreSteps(view).find((step) => step.key === "began")?.done;
   const extra = packed && began;
+  // When surgery begins, an open "change" form closes and its field empties: it must not turn into "Add pack" holding the old total.
+  useEffect(() => {
+    if (extra) {
+      const next = afterBegan({ changing, quantity });
+      setChanging(next.changing);
+      setQuantity(next.quantity);
+    }
+  }, [extra]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function post(body) {
     onNote("");

@@ -161,13 +161,13 @@ function SendToTheatre({ view, busy, act, primary }) {
   );
 }
 
-function Theatre({ view, busy, act, upload }) {
+function Theatre({ view, busy, act, upload, nowMs }) {
   const [reason, setReason] = useState("");
   const ended = theatreSteps(view)[3].done;
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
   return (
     <>
-      <TheatreChecklist role="doctor" view={view} busy={busy} act={act} upload={upload} />
+      <TheatreChecklist role="doctor" view={view} busy={busy} act={act} upload={upload} nowMs={nowMs} />
       {move && (
         <section className="card">
           <label className="field">
@@ -193,7 +193,7 @@ function Theatre({ view, busy, act, upload }) {
 const sign = (act) => (items, draftId) => act("/orders/sign", { items, by: DOCTOR, draft_id: draftId || undefined });
 
 // The doctor's actions for the patient's current state: the card, the quiet row, the open panels, the rest.
-export default function DoctorActions({ state, card, pick, control, view, act, upload, ask, busy, afterNow = null }) {
+export default function DoctorActions({ state, card, pick, control, view, act, upload, ask, busy, nowMs, afterNow = null }) {
   const [chosen, setChosen] = useState(() => new Set());
   const signOrders = sign(act);
   const open = (id) => panelOpen(chosen, id, view);
@@ -216,7 +216,7 @@ export default function DoctorActions({ state, card, pick, control, view, act, u
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
       {below.map((key) => blocks(false)[key])}
       {state === "clinic" && <Clinic view={view} busy={busy} act={act} upload={upload} />}
-      {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} />}
+      {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} nowMs={nowMs} />}
     </>
   );
 }

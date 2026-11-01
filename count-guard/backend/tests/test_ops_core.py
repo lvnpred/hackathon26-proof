@@ -112,7 +112,7 @@ def test_handling_row_carries_written_and_model():
     assert row["model"] == "spark"
     assert [w["event_id"] for w in row["written"]] == ["k1", "t1", "d1"]
     first = row["written"][0]
-    assert set(first) == {"event_id", "type", "when", "by", "plain"} and first["by"] == AI_BY and first["plain"]
+    assert set(first) == {"event_id", "type", "when", "at_ms", "by", "plain"} and first["by"] == AI_BY and first["plain"]
 
 
 def test_task_input_labels_name_the_task_and_stay_plain():

@@ -9,7 +9,7 @@ export default function StatePanel({ state, role, pick, view, act, upload, ask, 
   const control = <NowAction item={pick.now} view={view} role={role} busy={busy} act={act} nowMs={nowMs} episodeId={episodeId} />;
   switch (role) {
     case "doctor":
-      return <DoctorActions key={state} state={state} card={card} pick={pick} control={control} view={view} act={act} upload={upload} ask={ask} busy={busy} afterNow={afterNow} />;
+      return <DoctorActions key={state} state={state} card={card} pick={pick} control={control} view={view} act={act} upload={upload} ask={ask} busy={busy} nowMs={nowMs} afterNow={afterNow} />;
     case "nurse":
       return <NurseActions state={state} card={card} pick={pick} control={control} view={view} act={act} upload={upload} ask={ask} busy={busy} nowMs={nowMs} episodeId={episodeId} replaced={replaced} afterNow={afterNow} />;
     default:

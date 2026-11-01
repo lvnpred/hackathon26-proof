@@ -5,6 +5,7 @@ import { displayName } from "./names.js";
 import { explainRegions, plural, regionLabel } from "./evidence.js";
 import { stripLabel } from "./brownbag.js";
 import { sentenceText } from "./orders.js";
+import { stamp } from "./when.js";
 
 export const TABS = [["why", "Why"], ["evidence", "Evidence"], ["history", "History"], ["model", "Model"]];
 
@@ -30,9 +31,9 @@ export const modelRows = (calls, handmade) => (calls || []).map((c) => ({
   ms: c.ms == null ? "—" : `${c.ms} ms`,
 }));
 
-export const recordLine = (w, lens) => {
-  const hhmm = String(w.when || "").slice(-5);
-  return lens === "patient" ? `${hhmm} · ${w.plain}` : `${w.type} · ${hhmm} · ${displayName(w.by)} · ${w.plain}`;
+export const recordLine = (w, lens, nowMs) => {
+  const hhmm = stamp(w, nowMs);
+  return lens === "patient" ? `${hhmm} · ${w.plain}` : `${hhmm} · ${displayName(w.by)} · ${w.plain}`;
 };
 
 // The ward's AI admin signs its writes with this label (backend ops/policy.py AI_BY); the History tab shows it as "AI".
@@ -41,8 +42,8 @@ export const AI_NOTE = "AI = AI admin acting for Ward 4";
 export const isAiBy = (by) => String(by || "").startsWith("AI (on behalf of");
 
 // "09:20 · Nurse Asha logged BP 88/60.": no event name, the AI label once; who is added (with " · ") only when plain does not name them.
-export function historyLine(w) {
-  const hhmm = String(w.when || "").slice(-5);
+export function historyLine(w, nowMs) {
+  const hhmm = stamp(w, nowMs);
   const who = isAiBy(w.by) ? "AI" : displayName(w.by);
   const plain = displayName(String(w.plain || "").replaceAll(AI_BY, "AI"));
   return `${hhmm} · ${!who || plain.includes(who) ? plain : `${who} · ${plain}`}`;
@@ -167,10 +168,10 @@ export function diffLine(d) {
 
 // Two records side by side: what was ordered, and what was read or recorded (R16: the patient lens drops the event type).
 export const NOT_RECORDED = "Not recorded";
-export function ruleCards(refs, lens) {
+export function ruleCards(refs, lens, nowMs) {
   const card = (heading, line) => ({
     heading,
-    line: line ? recordLine(line, lens) : NOT_RECORDED,
+    line: line ? recordLine(line, lens, nowMs) : NOT_RECORDED,
     id: line?.id ?? null,
   });
   return [card("Ordered / prescribed", refs?.intent), card("What was read", refs?.fact)];

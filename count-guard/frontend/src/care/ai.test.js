@@ -11,7 +11,7 @@ test("card words", () => {
   assert.deepEqual([null, 2400].map(latencyText), ["Prepared · timing shown when live", "2.4 s median"]);
   assert.equal(modeLabel("failed"), "Failed");
   assert.equal(modeLabel("Sample"), "Sample");
-  assert.equal(recentText({ when: "Yesterday 09:24", name: "SAM 3.1", patient: "R. Kumar (synthetic)", what: "Tray check by video: x" }), "09:24 SAM 3.1 · R. Kumar · Tray check by video: x");
+  assert.equal(recentText({ when: "Yesterday 09:24", name: "SAM 3.1", patient: "R. Kumar (synthetic)", what: "Tray check by video: x" }), "Yesterday 09:24 SAM 3.1 · R. Kumar · Tray check by video: x");
 });
 
 test("the three pipelines", () => {
@@ -135,4 +135,12 @@ test("pipeline buttons have a spaced name and a 44 px target; the two fallback s
   assert.equal(lead, "What the AI did on this ward, by patient and pipeline.");
   for (const s of [lead, "Nothing yet today."]) assert.doesNotMatch(s, ADVICE);
   assert.match(page, /"Nothing yet today\."/);
+});
+
+test("recentText shows the call's time on the dock clock", async () => {
+  const { recentText } = await import("./ai.js");
+  const H = 3600000;
+  const row = { at_ms: 13 * H, when: "22:00", name: "Muse Voice", patient: "R. Kumar", what: "Logged BP" };
+  assert.match(recentText(row, 13 * H), /^22:00 Muse Voice/);
+  assert.match(recentText(row, 37 * H), /^Yesterday 22:00 Muse Voice/);
 });

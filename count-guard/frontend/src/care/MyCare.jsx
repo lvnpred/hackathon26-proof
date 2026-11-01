@@ -20,7 +20,7 @@ export default function MyCare() {
   return (
     <Fragment key={patient.id}>
       <PageLead kicker={patient.name} title="My care" body="Where you are and what has been recorded. You can read it here." />
-      <StateHeader patient={patient} view={view} you />
+      <StateHeader patient={patient} view={view} nowMs={ward.nowMs} you />
       <section className="card">
         <p className="label">Orders and tasks</p>
         {(view.order_list || []).length === 0 && <p className="empty small">No orders yet.</p>}
@@ -55,7 +55,7 @@ export default function MyCare() {
       <RecordEvidence view={view} role="patient" lens="patient" episodeId={patient.id} />
       <section className="card">
         <p className="label">Timeline</p>
-        <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" />
+        <Timeline lines={view.timeline} nudges={view.nudges} replaced={new Set()} lens="patient" role="patient" nowMs={ward.nowMs} />
       </section>
     </Fragment>
   );

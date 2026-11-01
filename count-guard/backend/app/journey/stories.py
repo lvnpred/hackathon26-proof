@@ -266,7 +266,7 @@ def timeline_items(events: list[dict], now_ms: int | None = None) -> list[dict]:
     now_ms = latest_ms(events) if now_ms is None else now_ms
     tasks = {e["id"]: e.get("payload") or {} for e in events if e["event_type"] == "task.created"}
     signed = any(e["event_type"] == "discharge.signed" for e in events)
-    return [{"id": e["id"], "when": when_text(e["ts_ms"], now_ms), "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed),
+    return [{"id": e["id"], "when": when_text(e["ts_ms"], now_ms), "at_ms": e["ts_ms"], "type": e["event_type"], "plain": plain(e), "patient": patient_line(e, tasks, signed),
              "evidence_id": (e.get("payload") or {}).get("evidence_id"), "calls": (e.get("payload") or {}).get("calls") or []}
             for e in events if e["event_type"] not in HIDDEN_FROM_TIMELINE]
 

@@ -4,6 +4,7 @@ import { bannerAlerts, bannerClass, nudgeText } from "./alerts";
 import { showTrayFlag } from "./derive";
 import { momentFor } from "./moments.js";
 import { trayFlag } from "./video";
+import { stamp } from "./when.js";
 
 // Every open alert at the top of the chart, answered here and nowhere else.
 export default function AlertBanner({ view, role, line, busy, act, nowMs, patientName, moved = null }) {
@@ -22,7 +23,7 @@ export default function AlertBanner({ view, role, line, busy, act, nowMs, patien
             ) : moment ? (
               <AiMoment moment={moment} role={role} lens={lens} episodeId={view.episode?.id} />
             ) : (
-              <p><span className="tag">{nudge.when}</span> <b>{nudgeText(nudge, role)}</b></p>
+              <p><span className="tag">{stamp(nudge, nowMs)}</span> <b>{nudgeText(nudge, role)}</b></p>
             )}
           </div>
         );

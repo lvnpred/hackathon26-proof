@@ -32,6 +32,13 @@ export function whenText(tsMs, nowMs) {
   return `${WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}, ${time}`;
 }
 
+// One clock for every product screen: a server row with at_ms is formatted here, against the dock clock.
+// The server's own `when` (relative to its newest event) is used only when the row has no ms or no clock is known.
+export function stamp(row, nowMs) {
+  if (row?.at_ms != null && nowMs != null) return whenText(row.at_ms, nowMs);
+  return String(row?.when ?? "");
+}
+
 // For a sentence: "at 09:14", but "Yesterday 09:14" and "Wed 4 Nov, 09:14" take no "at".
 export function atText(tsMs, nowMs) {
   const text = whenText(tsMs, nowMs);

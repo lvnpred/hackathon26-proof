@@ -9,8 +9,8 @@ const NO_SOURCES = "No record lines were cited.";
 const NO_INPUT = "No input: this check compares two records.";
 
 // A staff reader jumps to the chart line; a patient reads the quote.
-function LineLink({ line, episodeId, lens }) {
-  const text = recordLine(line, lens);
+function LineLink({ line, episodeId, lens, nowMs }) {
+  const text = recordLine(line, lens, nowMs);
   if (lens === "patient" || !episodeId) return <q>{text}</q>;
   return <Link to={chartLine(episodeId, line.id)}>{text}</Link>;
 }
@@ -50,12 +50,12 @@ export function RuleInput() {
 }
 
 // Ordered / prescribed beside Recorded / read, then the rule in words.
-export function RuleFound({ moment, lens }) {
+export function RuleFound({ moment, lens, nowMs }) {
   const refs = moment.refs || {};
   return (
     <div className="inspector-found">
       <div className="rule-cards">
-        {ruleCards(refs, lens).map((c) => (
+        {ruleCards(refs, lens, nowMs).map((c) => (
           <div key={c.heading} className="card">
             <p className="label">{c.heading}</p>
             <p>{c.line}</p>
@@ -68,21 +68,21 @@ export function RuleFound({ moment, lens }) {
 }
 
 // The record lines the draft was written from.
-export function DraftInput({ moment, episodeId, lens }) {
+export function DraftInput({ moment, episodeId, lens, nowMs }) {
   const lines = draftSources(moment.refs);
   if (!lines.length) return <div className="inspector-input"><p className="muted">{NO_SOURCES}</p></div>;
   return (
     <ul className="inspector-input">
-      {lines.map((line) => <li key={line.id}><LineLink line={line} episodeId={episodeId} lens={lens} /></li>)}
+      {lines.map((line) => <li key={line.id}><LineLink line={line} episodeId={episodeId} lens={lens} nowMs={nowMs} /></li>)}
     </ul>
   );
 }
 
-function Evidence({ lines, episodeId, lens }) {
+function Evidence({ lines, episodeId, lens, nowMs }) {
   if (!lines?.length) return null;
   return (
     <ul className="small">
-      {lines.map((line) => <li key={line.id}><LineLink line={line} episodeId={episodeId} lens={lens} /></li>)}
+      {lines.map((line) => <li key={line.id}><LineLink line={line} episodeId={episodeId} lens={lens} nowMs={nowMs} /></li>)}
     </ul>
   );
 }
@@ -114,7 +114,7 @@ function PlanRows({ moment, episodeId, focus, setFocus }) {
 }
 
 // Handover: the model text (Spark only), then each line with its evidence. Day plan: rows. Card: its lines.
-export function DraftFound({ moment, episodeId, lens, focus, setFocus }) {
+export function DraftFound({ moment, episodeId, lens, focus, setFocus, nowMs }) {
   const refs = moment.refs || {};
   if (moment.capability === "day_plan") {
     return <div className="inspector-found"><PlanRows moment={moment} episodeId={episodeId} focus={focus} setFocus={setFocus} /></div>;
@@ -129,7 +129,7 @@ export function DraftFound({ moment, episodeId, lens, focus, setFocus }) {
         {(refs.lines || []).map((l, i) => (
           <li key={i}>
             <p>{l.text}</p>
-            <Evidence lines={l.evidence} episodeId={episodeId} lens={lens} />
+            <Evidence lines={l.evidence} episodeId={episodeId} lens={lens} nowMs={nowMs} />
           </li>
         ))}
       </ul>

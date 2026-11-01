@@ -429,3 +429,10 @@ def test_next_mine_names_a_waiting_order_draft(tmp_path):
     signed = client.post(f"/journey/episodes/{eid}/orders/sign", json={
         "items": view["drafts"]["order"]["items"], "by": "Dr. A. Rao (synthetic)", "draft_id": view["drafts"]["order"]["id"], "at_ms": 0}).json()
     assert signed["now_next"]["next_mine"] == "Admit the patient or close the visit."
+
+
+def test_rows_carry_ms_so_the_screen_can_format_them(tmp_path):
+    client, eid = _new(tmp_path)
+    _to_ward(client, eid)
+    view = _view(client, eid)
+    assert view["timeline"] and all(isinstance(row["at_ms"], int) and row["when"] for row in view["timeline"])

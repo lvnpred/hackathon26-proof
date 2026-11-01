@@ -90,7 +90,7 @@ export default function Chart() {
 
   return (
     <>
-      <StateHeader patient={patient} view={view} />
+      <StateHeader patient={patient} view={view} nowMs={ward.nowMs} />
 
       <StatePanel pick={pick} key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} afterNow={attention} />
       {ward.role === "patient" && attention}
@@ -102,7 +102,7 @@ export default function Chart() {
         <RecordEvidence key={`record-${episodeId}`} view={view} role={ward.role} episodeId={episodeId} nowMs={ward.nowMs} lens={lens} />
       </Fold>
 
-      <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} />
+      <History key={`history-${episodeId}`} view={view} role={ward.role} line={line} rows={rows} rowsError={rowsError} replaced={replaced} nowMs={ward.nowMs} />
     </>
   );
 }

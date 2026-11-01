@@ -1,6 +1,7 @@
 import { hhmm } from "./clock.js";
 import { taskDue, waitedText } from "./derive.js";
 import { displayName } from "./names.js";
+import { stamp } from "./when.js";
 
 const ORDER = { overdue: 0, due: 1, running: 2, later: 3, paused: 3, done: 4, closed: 5 };
 
@@ -43,12 +44,13 @@ export function obsValues(form) {
 
 // Surgery times for the current stay: the `when` of its began and ended lines, null when absent.
 // Only lines after the latest patient.state count.
-export function surgeryNow(timeline) {
+export function surgeryNow(timeline, nowMs) {
   const lines = timeline || [];
   let since = 0;
   lines.forEach((line, i) => { if (line.type === "patient.state") since = i + 1; });
-  const when = (type) => lines.slice(since).filter((line) => line.type === type).pop()?.when || null;
-  return { began: when("surgery.began"), ended: when("surgery.ended") };
+  const when = (type) => lines.slice(since).filter((line) => line.type === type).pop();
+  const text = (line) => (line ? stamp(line, nowMs) || null : null);
+  return { began: text(when("surgery.began")), ended: text(when("surgery.ended")) };
 }
 
 // The server lists what a move still needs; a reason is asked only while it appears there.

@@ -150,18 +150,20 @@ const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 // The patient's one line (Today, My care): what they must do, who acts next, or that nothing is needed.
 // One rule: the backend's next owner and its second-person sentence ("The nurse acknowledges the new orders.")
 // read as "The nurse will acknowledge the new orders." The backend owns who and what; this only changes the tense.
-export function nextUp(view) {
+export function nextUp(view, nowMs) {
   const nn = view?.now_next || {};
   const owner = nn.next_role ?? null;
   const said = displayName(nn.you_next);
   if (owner === "patient" && said) return { kind: "you", text: `You need to: ${lowerFirst(said)}` };
+  // " by 14:30" only when the backend knows a due time for this step; never guessed.
+  const by = nn.due_ms == null ? "" : ` by ${whenText(nn.due_ms, nowMs)}`;
   const staff = /^(The doctor|The nurse) (\w+?)s (.+?)\.?$/.exec(said);
   if (owner && owner !== "patient" && staff) {
     const rest = staff[3].replace(/ (or|then) (\w+?)s /g, " $1 $2 ");
-    return { kind: "who", text: `${staff[1]} will ${staff[2]} ${rest}.` };
+    return { kind: "who", text: `${staff[1]} will ${staff[2]} ${rest.replace(/\.$/, "")}${by}.` };
   }
   const seen = /^Dr\. Rao has not seen your (.+?)\.?$/.exec(said);
-  if (owner && seen) return { kind: "who", text: `Dr. Rao will look at your ${seen[1].replace(/ yet$/, "")}.` };
+  if (owner && seen) return { kind: "who", text: `Dr. Rao will look at your ${seen[1].replace(/ yet$/, "")}${by}.` };
   return { kind: "none", text: "You don't need to do anything now." };
 }
 

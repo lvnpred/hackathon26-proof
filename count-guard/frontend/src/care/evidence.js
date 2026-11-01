@@ -114,7 +114,7 @@ export function explainRegions(regions) {
 
 export function capturedLine(cited) {
   const when = typeof cited.when === "number" ? hhmm(cited.when) : String(cited.when || "").slice(-5);
-  return `Captured to record: ${[cited.type, when, cited.by ? displayName(cited.by) : ""].filter(Boolean).join(" · ")}`;
+  return `Saved to the record: ${[when, cited.by ? displayName(cited.by) : ""].filter(Boolean).join(" · ")}`;
 }
 
 const TITLE = { tray: "Tray check", setup: "Set-up check", swabs: "Swab camera count", monitor: "Monitor photo", strip: "Strip photo", medicines: "Medicines photo" };

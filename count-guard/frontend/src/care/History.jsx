@@ -9,7 +9,7 @@ const LENS_CHIPS = [["nurse", "Nurse"], ["doctor", "Doctor"], ["patient", "Patie
 
 // The record, closed by default. Opening shows the role's lens, the other lenses and the audit.
 // A deep-linked line opens it (R7: the fold state is never stored).
-export default function History({ view, role, line, rows, rowsError, replaced }) {
+export default function History({ view, role, line, rows, rowsError, replaced, nowMs }) {
   const [open, setOpen] = useState(() => Boolean(line));
   const [picked, setPicked] = useState(null);
   const lens = open ? lensFor(role, picked) : lensFor(role, null);
@@ -31,7 +31,7 @@ export default function History({ view, role, line, rows, rowsError, replaced })
             rowsError ? <p className="error" role="alert">Could not load the audit lines: {rowsError}</p>
             : rows.length ? <AuditTable rows={rows} /> : <p className="empty small">Nothing recorded for this patient yet.</p>
           ) : (
-            <Timeline episodeId={view.episode?.id} lines={lines} nudges={view.nudges} replaced={replaced} lens={shownLens} role={role} line={line} />
+            <Timeline episodeId={view.episode?.id} lines={lines} nudges={view.nudges} replaced={replaced} lens={shownLens} role={role} line={line} nowMs={nowMs} />
           )}
         </div>
       </section>

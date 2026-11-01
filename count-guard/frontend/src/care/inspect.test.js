@@ -29,8 +29,9 @@ test("modelRows", () => {
 
 test("recordLine", () => {
   const w = { type: "tray.checked", when: "09:20", by: "Nurse Asha (synthetic)", plain: "Tray checked, 14 of 15." };
-  assert.equal(recordLine(w, "staff"), "tray.checked · 09:20 · Nurse Asha · Tray checked, 14 of 15.");
+  assert.equal(recordLine(w, "staff"), "09:20 · Nurse Asha · Tray checked, 14 of 15.");
   assert.equal(recordLine(w, "patient"), "09:20 · Tray checked, 14 of 15.");
+  assert.doesNotMatch(recordLine(w, "staff"), /\b[a-z]+\.[a-z_]+\b/);
   assert.doesNotMatch(recordLine(w, "patient"), /\b[a-z]+\.[a-z_]+\b/);
 });
 
@@ -159,7 +160,7 @@ const line = (id, type) => ({ id, type, when: "09:20", by: "Dr. A. Rao (syntheti
 test("ruleCards: both sides, a missing fact, and a patient lens with no event code", () => {
   const both = ruleCards({ intent: line("a", "rx.ordered"), fact: line("b", "dose.logged") }, "staff");
   assert.deepEqual(both.map((c) => c.heading), ["Ordered / prescribed", "What was read"]);
-  assert.match(both[0].line, /^rx\.ordered · 09:20 · /);
+  assert.match(both[0].line, /^09:20 · /);
   const none = ruleCards({ intent: line("a", "rx.ordered"), fact: null }, "staff");
   assert.equal(none[1].line, NOT_RECORDED);
   assert.equal(none[1].line, "Not recorded");
@@ -220,7 +221,7 @@ test("historyLine reads as a plain audit trail", () => {
   const bare = { type: "tray.checked", event_id: "e3", when: "Yesterday 09:30", by: "Nurse Asha (synthetic)", plain: "Tray check by photos: all seen." };
   assert.equal(historyLine(ai), "09:20 · AI: Assigned 2 tasks to Nurse Asha.");
   assert.equal(historyLine(nurse), "09:25 · Nurse Asha logged BP 88/60.");
-  assert.equal(historyLine(bare), "09:30 · Nurse Asha · Tray check by photos: all seen.");
+  assert.equal(historyLine(bare), "Yesterday 09:30 · Nurse Asha · Tray check by photos: all seen.");
   for (const w of [ai, nurse, bare]) {
     const line = historyLine(w);
     assert.doesNotMatch(line, /task\.assigned|work\.done|\b[a-z]+\.[a-z_]+\b/);
@@ -244,4 +245,24 @@ test("the Inspector opens on Why, keeps Undo in the header and handles a failed 
   assert.doesNotMatch(s, /<span className="chip">\{modelChip\(moment\)\}<\/span>\s*<StatusPill/);
   assert.match(src("./InspectAgent.jsx"), /"How it chose"/);
   assert.match(src("./InspectAgent.jsx"), /A fixed rule, not a model/);
+});
+
+test("record and history lines use the dock clock when the row carries ms", async () => {
+  const { historyLine, recordLine } = await import("./inspect.js");
+  const H = 3600000;
+  const w = { at_ms: 13 * H, when: "22:00", by: "Nurse Asha", plain: "Nurse Asha logged BP.", type: "obs.recorded" };
+  assert.equal(historyLine(w, 13 * H), "22:00 · Nurse Asha logged BP.");
+  assert.equal(historyLine(w, 37 * H), "Yesterday 22:00 · Nurse Asha logged BP.");
+  assert.equal(recordLine(w, "patient", 37 * H), "Yesterday 22:00 · Nurse Asha logged BP.");
+  assert.equal(historyLine({ ...w, at_ms: undefined, when: "Yesterday 22:00" }, 37 * H), "Yesterday 22:00 · Nurse Asha logged BP.");
+});
+
+test("every product screen formats times from ms with the dock clock, not the server's when", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = (f) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8");
+  assert.match(src("AlertBanner.jsx"), /stamp\(nudge, nowMs\)/);
+  assert.match(src("Timeline.jsx"), /stamp\(item, nowMs\)/);
+  assert.match(src("InspectAgent.jsx"), /stamp\(i, nowMs\)/);
+  assert.doesNotMatch(src("AlertBanner.jsx"), /nudge\.when/);
+  assert.doesNotMatch(src("Timeline.jsx"), /item\.when/);
 });

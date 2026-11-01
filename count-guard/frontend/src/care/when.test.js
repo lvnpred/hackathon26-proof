@@ -33,3 +33,14 @@ test("atText adds 'at' only before a clock time", () => {
   assert.equal(atText(ms(0, 22, 10), ms(1, 9, 0)), "Yesterday 22:10");
   assert.equal(atText(ms(2, 9, 14), ms(5, 9)), "Wed 4 Nov, 09:14");
 });
+
+test("stamp formats a row from its ms on the dock clock and falls back to the server text", async () => {
+  const { stamp } = await import("./when.js");
+  const H = 3600000;
+  const row = { at_ms: 13 * H, when: "22:00" };
+  assert.equal(stamp(row, 13 * H), "22:00");
+  assert.equal(stamp(row, 13 * H + 24 * H), "Yesterday 22:00");
+  assert.equal(stamp({ when: "Mon 2 Nov, 09:14" }, 13 * H), "Mon 2 Nov, 09:14");
+  assert.equal(stamp(row, undefined), "22:00");
+  assert.equal(stamp(null, 5), "");
+});

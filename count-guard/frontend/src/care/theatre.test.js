@@ -168,3 +168,22 @@ test("a done tray step folds to its AI moment and offers Check the tray again", 
   assert.doesNotMatch(fs.readFileSync(new URL("./VideoCheck.jsx", import.meta.url), "utf8"), /hideUpload/);
   assert.doesNotMatch("Check the tray again", ADVICE);
 });
+
+test("when surgery begins an open change form closes and its field is cleared; Add pack starts empty", async () => {
+  const { afterBegan } = await import("./theatre.js");
+  assert.deepEqual(afterBegan({ changing: true, quantity: "20" }), { changing: false, quantity: "" });
+  const src = require_src("CountPanel.jsx");
+  assert.match(src, /useEffect\(\(\) => \{\s*if \(extra\) \{\s*const next = afterBegan\(\{ changing, quantity \}\);\s*setChanging\(next\.changing\);\s*setQuantity\(next\.quantity\);/);
+  assert.match(src, /setChanging\(true\); if \(extra\) setQuantity\(""\);/);
+});
+
+test("theatre steps say Began and Ended on the dock clock from the line's ms, the server text only without ms", async () => {
+  const { theatreSteps } = await import("./theatre.js");
+  const H = 3600000;
+  const view = (line) => ({ timeline: [line], tray: { planned: false } });
+  const began = { type: "surgery.began", at_ms: 13 * H, when: "22:00" };
+  // dock one day later: the server's own "now" would have said 22:00, the dock clock says Yesterday
+  assert.match(theatreSteps(view(began), 13 * H + 24 * H)[1].says, /^Began Yesterday 22:00$/);
+  assert.equal(theatreSteps(view(began), 13 * H)[1].says, "Began 22:00");
+  assert.equal(theatreSteps(view({ type: "surgery.began", when: "Mon 2 Nov, 09:14" }), 5)[1].says, "Began Mon 2 Nov, 09:14");
+});

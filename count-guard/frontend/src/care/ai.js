@@ -1,4 +1,5 @@
 import { displayName, shortName } from "./names.js";
+import { stamp } from "./when.js";
 
 // The three spec pipelines, one array of steps each.
 export const PIPELINES = [
@@ -21,8 +22,8 @@ export const canSeeAi = (role) => role !== "patient";
 
 export const modeLabel = (mode) => ({ live: "Live", prepared: "Prepared", failed: "Failed" })[mode] || mode;
 
-// "Day 0 09:24" -> "09:24".
-export const recentText = (row) => `${row.when.slice(-5)} ${row.name} · ${displayName(row.patient)} · ${displayName(row.what)}`;
+// "09:24 Muse Spark 1.3 · ..." on the dock clock (a row from another day says Yesterday or the date).
+export const recentText = (row, nowMs) => `${stamp(row, nowMs)} ${row.name} · ${displayName(row.patient)} · ${displayName(row.what)}`;
 
 // The four cards before any summary exists (a ward with no patients still shows its models).
 export const EMPTY_MODELS = [

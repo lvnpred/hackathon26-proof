@@ -1,9 +1,10 @@
 import { hhmm } from "./clock.js";
 import { displayName } from "./names.js";
 import { checkLabel } from "./video.js";
+import { stamp } from "./when.js";
 
 // The five theatre steps as the doctor sees them: one line each, read from this theatre stay only.
-export function theatreSteps(view) {
+export function theatreSteps(view, nowMs) {
   const lines = view.timeline || [];
   let since = 0;
   lines.forEach((line, i) => { if (line.type === "patient.state") since = i + 1; });
@@ -14,13 +15,13 @@ export function theatreSteps(view) {
   const opened = last("count.pack_opened");
   const closing = last("count.closing");
   const ended = last("surgery.ended");
-  const clock = (line) => (line ? line.when.slice(-5) : "");
+  const clock = (line) => (!line ? "" : line.at_ms != null ? hhmm(line.at_ms) : String(line.when).slice(-5));
   const noTray = !view.tray?.planned;
   return [
     noTray
       ? { key: "tray", title: "Tray check", done: true, says: "No tray planned", at: "", open: false }
       : { key: "tray", title: "Tray check", done: Boolean(tray), says: tray ? checkLabel(tray) : "Not checked yet", at: tray?.at_ms != null ? hhmm(tray.at_ms) : "", open: false },
-    { key: "began", title: "Surgery began", done: Boolean(began), says: began ? `Began ${began.when}` : "Not yet", at: clock(began), open: false },
+    { key: "began", title: "Surgery began", done: Boolean(began), says: began ? `Began ${stamp(began, nowMs)}` : "Not yet", at: clock(began), open: false },
     {
       key: "count",
       title: "Swab count",
@@ -29,7 +30,7 @@ export function theatreSteps(view) {
       at: clock(closing),
       open: (view.count?.missing ?? 0) > 0,
     },
-    { key: "ended", title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${ended.when}` : "Not yet", at: clock(ended), open: false },
+    { key: "ended", title: "Surgery ended", done: Boolean(ended), says: ended ? `Ended ${stamp(ended, nowMs)}` : "Not yet", at: clock(ended), open: false },
     { key: "ward", title: "Back to ward", done: false, says: "Not yet", at: "", open: false },
   ];
 }
@@ -115,3 +116,6 @@ export function canRecord(view, key) {
     default: return false;
   }
 }
+
+// The pack form once surgery has begun: closed and empty. "Add pack" then opens it empty (the pack is never replaced).
+export const afterBegan = () => ({ changing: false, quantity: "" });

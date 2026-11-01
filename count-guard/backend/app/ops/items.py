@@ -112,7 +112,7 @@ def _inputs(ids: list[str], by_id: dict[str, dict], now_ms: int | None = None) -
     rows = []
     for input_id in ids:
         event = by_id.get(input_id)
-        rows.append({"id": input_id, "label": _label(event), "when": when_text(event["ts_ms"], now_ms) if event else ""})
+        rows.append({"id": input_id, "label": _label(event), "when": when_text(event["ts_ms"], now_ms) if event else "", "at_ms": event["ts_ms"] if event else None})
     return rows
 
 
@@ -123,7 +123,7 @@ def _written(d: dict, by_id: dict[str, dict], now_ms: int | None = None) -> list
     for event_id in dict.fromkeys(ids):
         e = by_id[event_id]
         p = e["payload"]
-        out.append({"event_id": e["id"], "type": e["event_type"], "when": when_text(e["ts_ms"], now_ms), "by": p.get("by"),
+        out.append({"event_id": e["id"], "type": e["event_type"], "when": when_text(e["ts_ms"], now_ms), "at_ms": e["ts_ms"], "by": p.get("by"),
                     "plain": plain(e), **{k: p[k] for k in ("read", "saved") if k in p}})
     return out
 

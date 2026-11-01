@@ -1,13 +1,14 @@
 import { OPS_SCOPE, STAFF_BY, levelWords, undoLabel } from "./handling.js";
 import { modelChip } from "./moments.js";
+import { stamp } from "./when.js";
 
 // What the AI read: each input as label · when.
-export function AgentInput({ moment }) {
+export function AgentInput({ moment, nowMs }) {
   const inputs = moment.refs?.inputs || [];
   if (!inputs.length) return <div className="inspector-input"><p>No inputs were kept.</p></div>;
   return (
     <div className="inspector-input">
-      <ul className="plan-list">{inputs.map((i, n) => <li key={i.id || n}>{i.label} · {i.when}</li>)}</ul>
+      <ul className="plan-list">{inputs.map((i, n) => <li key={i.id || n}>{i.label} · {stamp(i, nowMs)}</li>)}</ul>
     </div>
   );
 }

@@ -64,7 +64,7 @@ def test_timeline_items_carry_both_texts():
     events = [ev("task.created", "t1", **{**TASKS["t1"], "order_id": "o1"}),
               ev("task.done", "d1", 120_000, by="Nurse Meena (synthetic)", task_id="t1", via="tap")]
     item = timeline_items(events)[1]
-    assert item == {"id": "d1", "when": "09:02", "type": "task.done",
+    assert item == {"id": "d1", "when": "09:02", "at_ms": 120_000, "type": "task.done",
                     "plain": "Nurse Meena (synthetic) finished a task.", "patient": "Nurse Meena gave paracetamol.", "evidence_id": None, "calls": []}
 
 def test_ward_orders_and_rx_counts_are_singular():

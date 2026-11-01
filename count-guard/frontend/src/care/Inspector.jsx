@@ -68,7 +68,7 @@ function ModelTab({ moment, episodeId }) {
 }
 
 // A plain audit trail: "09:20 · Nurse Asha logged BP 88/60." with no event names; a line links to the chart only when it can.
-function HistoryTab({ moment, episodeId }) {
+function HistoryTab({ moment, episodeId, nowMs }) {
   const [copied, setCopied] = useState("");
   const written = moment.written || [];
   const copy = () => {
@@ -80,7 +80,7 @@ function HistoryTab({ moment, episodeId }) {
       {written.some((w) => isAiBy(w.by)) && <p className="small muted">{AI_NOTE}</p>}
       <ul className="inspector-record">
         {written.map((w) => {
-          const text = historyLine(w);
+          const text = historyLine(w, nowMs);
           const fix = correctionLine(w.read, w.saved, w.by);
           return (
             <li key={w.event_id}>
@@ -101,7 +101,7 @@ function Body({ moment, tab, episodeId, view, role, lens, initialFocus, act, now
   const views = KIND_VIEWS[moment.kind];
   const props = { moment, episodeId, view, role, lens, focus, setFocus, act, nowMs, busy, fault };
   const finding = <p>{findingFor(moment, lens)}</p>;
-  if (tab === "history") return <HistoryTab moment={moment} episodeId={episodeId} />;
+  if (tab === "history") return <HistoryTab moment={moment} episodeId={episodeId} nowMs={nowMs} />;
   if (tab === "model") return <ModelTab moment={moment} episodeId={episodeId} />;
   const View = views?.[tab === "evidence" ? "Input" : "Found"];
   return View ? <View {...props} /> : finding;

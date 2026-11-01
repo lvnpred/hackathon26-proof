@@ -44,7 +44,7 @@ export default function NurseActions({ state, card, pick, control, view, act, up
         <Checklist items={ADMISSION} busy={busy} button="Complete admission" primary={nowStep} onDone={(c) => move("ward", c)} />
       </div>
     ),
-    theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} primary={nowStep} />,
+    theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} nowMs={nowMs} primary={nowStep} />,
     discharge: (
       <div key="discharge">
         <p className="label">Discharge checklist</p>

@@ -53,7 +53,10 @@ test("all C7 copy passes the advice rule", () => {
 test("AiMoment hides the arrow from the accessible name", () => {
   const src = fs.readFileSync(new URL("./AiMoment.jsx", import.meta.url), "utf8");
   assert.match(src, /aria-hidden="true">›/);
-  assert.match(src, /className="ai-moment" data-moment=/);
+  assert.match(src, /className="ai-moment moment-row" data-moment=/);
+  assert.match(src, /<button type="button" className="ai-moment moment-row"/);
+  assert.match(src, /Details/);
+  assert.doesNotMatch(src, /Inspect </);
 });
 
 const mom = (id, filter, status, owner, patient_finding = "x", capability = "tray") => ({ id, filter, status, owner, patient_finding, capability });
@@ -101,10 +104,12 @@ test("Chart and MyCare use RecordEvidence; the three cards are gone", () => {
   for (const name of ["Photos.jsx", "VideoChecks.jsx", "OrderTasks.jsx"]) assert.equal(fs.existsSync(new URL(`./${name}`, import.meta.url)), false);
 });
 
-test("RecordEvidence copy, aria-pressed chips and thumbnail", () => {
+test("RecordEvidence copy, Show menu and thumbnail", () => {
   const src = fs.readFileSync(new URL("./RecordEvidence.jsx", import.meta.url), "utf8");
   assert.match(src, /aria-label="Record and evidence"/);
-  assert.match(src, /aria-pressed=\{filter === key\}/);
+  assert.match(src, /<label htmlFor=\{showId\}>Show<\/label>/);
+  assert.match(src, /FILTERS\.map\(\(\[key, text\]\) => <option key=\{key\} value=\{key\}>\{text\}<\/option>\)/);
+  assert.doesNotMatch(src, /aria-pressed/);
   assert.match(src, /Nothing here for this filter\./);
   assert.match(src, /\/journey\/episodes\/\$\{episodeId\}\/photos\/\$\{moment\.photo_id\}/);
   assert.match(src, /width=\{40\}/);

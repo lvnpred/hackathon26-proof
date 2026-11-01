@@ -130,7 +130,7 @@ On screen: `In theatre with R. Kumar, expected free soon`
 Filming note: `kumar-free-soon` is not in the film. The check moves the clock on one hour here and reads the chip. In the filmed take the +1 h move is skipped (or done off camera and not shown), and `kumar-tray` follows `kumar-chip` directly, so its first two clicks (Role Nurse, Chart R. Kumar) are on camera.
 
 #### `kumar-tray` · 1:23 · nurse · 6 s
-Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "Tray check"; 4) Button "Inspect" in "Theatre steps"
+Clicks: 1) Role Nurse; 2) Chart R. Kumar; 3) File eval/p3/tray-hernia.mp4 into "Tray check"; 4) Button "Details" in "Theatre steps"
 
 On screen: `Flagged: not everything planned was seen. The surgeon decides.` · `Needle holder` · `1 missing` · `Saw 2 of 3 needle holders.` · `Why`
 
@@ -165,7 +165,7 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:56 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Inspect" on the discharge draft line; 9) Button "Close" in "Inspector"; 10) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Button "Details" on the discharge draft line; 9) Button "Close" in "Inspector"; 10) Button "Sign discharge"
 
 On screen: `Reference` · `Being discharged` (the AI moment `Drafted from voice` · `5 sections drafted from 40 words.` is on screen before Sign discharge, and the Inspector shows `swab count closed 15 of 15`)
 
@@ -264,7 +264,7 @@ On screen: `Ibuprofen` · `Pantoprazole 40 mg:` · `Ibuprofen 400 mg · not pres
 #### `close` · 3:17 · none · 3 s
 Clicks: 1) Role Doctor; 2) Tab "My patients"
 
-On screen: `Dr. A. Rao: Available`
+On screen: `Available`
 
 > Back on My patients, Dr. Rao shows as available and every step above has a record.
 

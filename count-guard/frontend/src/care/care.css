@@ -207,8 +207,17 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .ev-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px }
 
 /* AI moment line and Inspector drawer */
-.ai-moment { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0 }
-.ai-moment-text { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere }
+.ai-moment { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.moment-main { flex: 1 1 auto; min-width: 0; display: grid; gap: 4px }
+.ai-moment-text { min-width: 0; overflow-wrap: anywhere }
+.moment-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0 }
+.moment-time { font-size: 12px; line-height: 16px; font-weight: 700; color: var(--ink-muted) }
+button.moment-row { width: 100%; min-height: 56px; padding: 8px 4px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer }
+button.moment-row:hover { background: var(--surface-sunk) }
+.moment-more { flex: none; color: var(--ink-muted); font-size: 14px }
+.show-menu { align-items: center; gap: 8px }
+.show-menu select { min-height: 44px }
+.bell-count { display: none }
 .source { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-muted) }
 .chip { display: inline-block; padding: 2px 8px; border: 1px solid var(--line-control); border-radius: 999px; background: var(--surface-sunk); font-size: 0.85em; overflow-wrap: anywhere }
 .pill.tone-blue { background: var(--sky-soft); color: var(--sky) }
@@ -271,3 +280,16 @@ button.quiet { min-height: 44px; padding: 0 8px; border: 0; background: transpar
 .alert-card-head h3 { margin: 0; }
 .alert-card p { margin: 0; }
 .alert-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Phone header: mark, alerts bell, Pause, initials (44 px targets). The nav drops to its own row. */
+@media (max-width: 640px) {
+  .app-bar { gap: 8px; }
+  .brand { flex: 1 1 auto; }
+  .brand-names, .ai-admin-state, .signed-in-name, .bell-text { display: none; }
+  .app-bar .nav { order: 9; flex: 1 0 100%; margin-left: 0; }
+  .app-bar .bell { min-width: 44px; min-height: 44px; padding: 0 8px; border-radius: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+  .app-bar .bell .bell-count { display: inline; font-size: 12px; font-weight: 800; }
+  .ai-admin button { min-height: 44px; min-width: 44px; }
+  .avatar { width: 44px; height: 44px; }
+  .moment-more-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

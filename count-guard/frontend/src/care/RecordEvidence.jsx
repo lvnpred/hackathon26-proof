@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import AiMoment from "./AiMoment.jsx";
 import { FILTERS, filterMoments } from "./moments.js";
 import { orderDetail } from "./tasklist.js";
@@ -6,16 +6,18 @@ import { orderDetail } from "./tasklist.js";
 // The one list of every AI result and kept record on a chart (R17). The patient lens drops the chips.
 export default function RecordEvidence({ view, role, lens = "staff", episodeId, nowMs }) {
   const [filter, setFilter] = useState("all");
+  const showId = useId();
   const patient = lens === "patient";
   const rows = filterMoments(view.ai_moments, patient ? "all" : filter, role, lens);
   return (
     <section className="card" aria-label="Record and evidence">
       {patient && <p className="label">Record &amp; evidence</p>}
       {!patient && (
-        <div className="row" role="group" aria-label="Filter">
-          {FILTERS.map(([key, text]) => (
-            <button type="button" key={key} className="quiet" aria-pressed={filter === key} onClick={() => setFilter(key)}>{text}</button>
-          ))}
+        <div className="row show-menu">
+          <label htmlFor={showId}>Show</label>
+          <select id={showId} value={filter} onChange={(e) => setFilter(e.target.value)}>
+            {FILTERS.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
+          </select>
         </div>
       )}
       {rows.length === 0 && <p className="empty small">Nothing here for this filter.</p>}

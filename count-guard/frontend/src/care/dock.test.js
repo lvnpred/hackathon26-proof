@@ -22,10 +22,11 @@ test("alertCount sums own and grouped pills, and is 0 for the patient", () => {
   assert.equal(alertCount({ mine: [], others: [] }, "doctor"), 0);
 });
 
-test("the patient's product bar shows no doctor chip (the greeting row keeps it)", async () => {
+test("the product bar holds no doctor chip; Now holds it for staff and the greeting row keeps it", async () => {
   const fs = await import("node:fs");
   const shell = fs.readFileSync(new URL("./CareShell.jsx", import.meta.url), "utf8");
-  assert.match(shell, /ward\.role !== "patient" && <DoctorChip/);
+  assert.doesNotMatch(shell, /chip=\{/);
+  assert.match(fs.readFileSync(new URL("./NowCard.jsx", import.meta.url), "utf8"), /role !== "patient" && doctorStatus && <> <DoctorChip/);
   const today = fs.readFileSync(new URL("./Today.jsx", import.meta.url), "utf8");
   assert.match(today, /<DoctorChip/);
 });

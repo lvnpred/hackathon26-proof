@@ -1,5 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { Mark } from "../App";
+import { IconBell } from "./icons.jsx";
 import { aiChip, alertsLabel, pauseLabel, pausedText } from "./dock";
 import { SIGNED_IN, initials } from "./people";
 import { whenText } from "./when";
@@ -15,8 +16,8 @@ export function PausedBanner({ ops, nowMs }) {
   );
 }
 
-// Brand, ward, main nav and (staff) alerts, doctor status, AI admin switch and the signed-in person.
-export default function ProductHeader({ role, tabs, unread, alerts, alertsOpen, onAlerts, ops, chip }) {
+// Brand, ward, main nav and (staff) alerts, AI admin switch and the signed-in person. On a phone: mark, bell, Pause, initials.
+export default function ProductHeader({ role, tabs, unread, alerts, alertsOpen, onAlerts, ops }) {
   const staff = role !== "patient";
   const person = SIGNED_IN[role];
   return (
@@ -34,14 +35,15 @@ export default function ProductHeader({ role, tabs, unread, alerts, alertsOpen, 
         ))}
       </nav>
       {staff && alerts > 0 && (
-        <button type="button" className="pill wait" aria-expanded={alertsOpen} onClick={onAlerts}>
-          {alertsLabel(alerts)}
+        <button type="button" className="pill wait bell" aria-expanded={alertsOpen} onClick={onAlerts}>
+          <IconBell />
+          <span className="bell-text">{alertsLabel(alerts)}</span>
+          <span className="bell-count" aria-hidden="true">{alerts}</span>
         </button>
       )}
-      {staff && chip}
       {staff && ops.paused != null && (
         <span className="ai-admin">
-          <span>{aiChip(ops.paused)}</span>
+          <span className="ai-admin-state">{aiChip(ops.paused)}</span>
           <button type="button" disabled={ops.busy} onClick={ops.toggle}>{pauseLabel(ops.paused)}</button>
           {ops.error && <span className="error small" role="alert">{ops.error}</span>}
         </span>
@@ -49,7 +51,7 @@ export default function ProductHeader({ role, tabs, unread, alerts, alertsOpen, 
       {person && (
         <span className="signed-in">
           <span className="avatar" aria-hidden="true">{initials(person.name)}</span>
-          <span>{person.name} · {person.role}</span>
+          <span className="signed-in-name">{person.name} · {person.role}</span>
         </span>
       )}
     </header>

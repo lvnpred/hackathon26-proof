@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DoctorChip, useCareWard } from "./CareShell";
 import Fold from "./Fold.jsx";
 import StatusPill from "./StatusPill.jsx";
 
@@ -15,6 +16,7 @@ function Row({ item }) {
 // primary buttons while the step is Now; when something else is Now they stay reachable but quiet.
 export default function NowCard({ pick, card = null, control = null, lead = null, footer = null, children = null }) {
   const [open, setOpen] = useState(false);
+  const { role, doctorStatus } = useCareWard();
   const { now, next, more, rest } = pick;
   const stepIsNow = now.action?.kind === "step";
   const alert = now.action?.kind === "alert" && control;
@@ -28,7 +30,9 @@ export default function NowCard({ pick, card = null, control = null, lead = null
             <h2 className="t-heading">{now.patient ? `Bed ${now.patient.bed}, ${now.patient.name} · ${now.title}` : now.title}</h2>
             <StatusPill role={now.pill.role} text={now.pill.text} />
           </div>
-          {now.detail && <p className="now-detail">{now.detail}</p>}
+          {(now.detail || role !== "patient") && (
+            <p className="now-detail">{now.detail}{role !== "patient" && doctorStatus && <> <DoctorChip status={doctorStatus} /></>}</p>
+          )}
           {control}
         </>
       )}

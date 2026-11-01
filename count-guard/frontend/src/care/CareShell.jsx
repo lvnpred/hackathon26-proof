@@ -120,7 +120,6 @@ export default function CareShell({ ward, children }) {
         alertsOpen={alertsOpen}
         onAlerts={() => setAlertsOpen((v) => !v)}
         ops={ops}
-        chip={ward.role !== "patient" && <DoctorChip status={ward.doctorStatus} />}
       />
       {alerts > 0 && alertsOpen && <Strip mine={mine} others={others} />}
       {ward.role !== "patient" && <PausedBanner ops={ops} nowMs={ward.nowMs} />}

@@ -33,7 +33,7 @@ function TrayAgain({ busy, onFile }) {
 }
 
 // The controls inside an expanded step. The doctor reads tray and count; the nurse does all five.
-function Controls({ step, role, view, episodeId, busy, act, upload, replaced, onNote, by }) {
+function Controls({ step, role, view, episodeId, busy, act, upload, replaced, onNote, by, primary }) {
   const nurse = role === "nurse";
   if (step.key === "tray") {
     const onFile = (file) => upload("/video", file, { check: "tray", by });
@@ -44,7 +44,7 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
   }
   if (step.key === "count") {
     return nurse
-      ? <CountPanel episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} onNote={onNote} />
+      ? <CountPanel episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} onNote={onNote} primary={primary} />
       : <p className="small muted">The theatre nurse records the swab count.</p>;
   }
   if (step.key === "ward") return null; // the Back to ward button sits under the list
@@ -57,7 +57,7 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
 }
 
 // One vertical list of the five theatre steps: done ones fold to a line, the current one opens.
-export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, replaced }) {
+export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, replaced, primary = false }) {
   const [note, setNote] = useState("");
   const by = role === "nurse" ? NURSE : DOCTOR;
   const steps = checklistState(theatreSteps(view));
@@ -88,13 +88,13 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
             ) : (
               <>
                 {move && (move.needs || []).length > 0 && <p className="small muted">Needs: {move.needs.join(", ")}</p>}
-                <button type="button" className="primary" disabled={busy} onClick={() => act("/state", { to: "ward", by, reason: "", checklist: {} })}>
+                <button type="button" className={primary ? "primary" : undefined} disabled={busy} onClick={() => act("/state", { to: "ward", by, reason: "", checklist: {} })}>
                   Back to ward
                 </button>
               </>
             ))}
             {canRecord(view, step.key) && step.key !== "ward" && (
-              <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} />
+              <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} primary={primary} />
             )}
           </li>
         ))}

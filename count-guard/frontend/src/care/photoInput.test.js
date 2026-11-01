@@ -30,9 +30,9 @@ test("the tray and clip checks say what they add", () => {
 });
 
 test("the only .primary buttons outside the Now card are Now-owned blocks", () => {
-  const allowed = new Set(["NowAction.jsx", "NurseActions.jsx", "Checklist.jsx", "CountPanel.jsx", "TheatreChecklist.jsx", "DoctorActions.jsx", "AlertCard.jsx"]);
+  const allowed = new Set(["NowAction.jsx"]);
   for (const name of jsx) {
-    if (/className=(\{[^}]*)?"primary"/.test(read(name))) assert.ok(allowed.has(name), `${name} has a stray primary button`);
+    if (/className="primary"/.test(read(name))) assert.ok(allowed.has(name), `${name} has a stray primary button`);
   }
   assert.doesNotMatch(read("AlertBanner.jsx"), /primary/);
   assert.doesNotMatch(read("Queue.jsx"), /primary/);

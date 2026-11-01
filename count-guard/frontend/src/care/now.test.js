@@ -115,3 +115,14 @@ test("Now holds the winner's action: an alert is moved out of the list, a task o
   const other = view({ nudges: [nudge("n2", "obs_past_limit", NOW - M, "nurse")] });
   assert.equal(pickNow(other, DOCTOR, NOW).now.action, null);
 });
+
+test("the doctor's clinic step names the patient and the ward; other steps keep their text", async () => {
+  const { withAdmitHeading } = await import("./now.js");
+  const clinic = view({ state: "clinic", now_next: { now: "N.", next: "The doctor admits.", next_mine: "Admit the patient or close the visit.", you_next: "x", next_role: "doctor" } });
+  const pick = withAdmitHeading(pickNow(clinic, DOCTOR, NOW), clinic, "doctor", "A. Das");
+  assert.equal(pick.now.title, "Admit A. Das to Ward 4, or close the visit");
+  const nurse = withAdmitHeading(pickNow(clinic, NURSE, NOW), clinic, "nurse", "A. Das");
+  assert.doesNotMatch(nurse.now.title, /Ward 4/);
+  const ward = view();
+  assert.doesNotMatch(withAdmitHeading(pickNow(ward, DOCTOR, NOW), ward, "doctor", "A. Das").now.title, /Ward 4/);
+});

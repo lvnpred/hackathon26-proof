@@ -20,13 +20,13 @@ const DISCHARGE = [
   ["reminders_set", "Reminders set"],
 ];
 
-function Orders({ orders, by, busy, act }) {
+function Orders({ orders, by, busy, act, primary }) {
   const fresh = orders.filter((order) => !order.acknowledged_by);
   return fresh.map((order) => (
     <div key={order.id}>
       <p className="label">New orders from {order.by}</p>
       <ul>{(order.items || []).map((item, i) => <li key={i}>{sentenceText(item)}</li>)}</ul>
-      <button type="button" className="primary" disabled={busy} onClick={() => act(`/orders/${order.id}/ack`, { by })}>Acknowledge</button>
+      <button type="button" className={primary ? "primary" : undefined} disabled={busy} onClick={() => act(`/orders/${order.id}/ack`, { by })}>Acknowledge</button>
     </div>
   ));
 }
@@ -34,20 +34,21 @@ function Orders({ orders, by, busy, act }) {
 // The nurse's actions for the patient's current state: the card holds the step, the ward tasks follow.
 export default function NurseActions({ state, card, pick, control, view, act, upload, ask, busy, nowMs, episodeId, replaced, afterNow = null }) {
   const by = state === "theatre" ? THEATRE_NURSE : WARD_NURSE;
+  const nowStep = pick.now.action?.kind === "step"; // only the Now action is primary
   const move = (to, checklist) => act("/state", { to, by, reason: "", checklist });
   const primary = {
-    ack: <Orders key="ack" orders={view.order_list || []} by={by} busy={busy} act={act} />,
+    ack: <Orders key="ack" orders={view.order_list || []} by={by} busy={busy} act={act} primary={nowStep} />,
     admission: (
       <div key="admission">
         <p className="label">Admission checklist</p>
-        <Checklist items={ADMISSION} busy={busy} button="Complete admission" onDone={(c) => move("ward", c)} />
+        <Checklist items={ADMISSION} busy={busy} button="Complete admission" primary={nowStep} onDone={(c) => move("ward", c)} />
       </div>
     ),
-    theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} />,
+    theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} primary={nowStep} />,
     discharge: (
       <div key="discharge">
         <p className="label">Discharge checklist</p>
-        <Checklist items={DISCHARGE} busy={busy} button="Complete discharge" onDone={(c) => move("home", c)} />
+        <Checklist items={DISCHARGE} busy={busy} button="Complete discharge" primary={nowStep} onDone={(c) => move("home", c)} />
       </div>
     ),
   };

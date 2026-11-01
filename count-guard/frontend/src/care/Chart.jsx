@@ -16,7 +16,7 @@ import RecordEvidence from "./RecordEvidence.jsx";
 import { filterMoments } from "./moments.js";
 import StateHeader from "./StateHeader";
 import StatePanel from "./StatePanel";
-import { movedAlertId, pickNow } from "./now.js";
+import { movedAlertId, pickNow, withAdmitHeading } from "./now.js";
 import { SIGNED_IN } from "./people.js";
 import { unseenCheckins } from "./thread.js";
 
@@ -69,7 +69,7 @@ export default function Chart() {
     return <p className="empty">No patient with that id. <Link to="/patients">Back to patients</Link></p>;
   }
 
-  const pick = pickNow(view, { role: ward.role, name: SIGNED_IN[ward.role]?.name }, ward.nowMs);
+  const pick = withAdmitHeading(pickNow(view, { role: ward.role, name: SIGNED_IN[ward.role]?.name }, ward.nowMs), view, ward.role, patient.name);
   const act = (path, body, scope) => ward.act(episodeId, path, body, scope);
   const upload = (path, file, fields, scope) => ward.upload(episodeId, path, file, fields, scope);
   const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);

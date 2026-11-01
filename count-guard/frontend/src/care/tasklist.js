@@ -10,10 +10,10 @@ export function sortTasks(tasks, nowMs) {
   return [...tasks].sort((a, b) => ORDER[taskDue(a, nowMs)] - ORDER[taskDue(b, nowMs)] || key(a) - key(b));
 }
 
-// Due work gets the main button; work not yet due can still be marked, as "early".
+// Work not yet due can still be marked, as "early".
 export function markDone(due) {
   const early = due === "later";
-  return { label: early ? "Mark done early" : "Mark done", primary: !early };
+  return { label: early ? "Mark done early" : "Mark done" };
 }
 
 // Server bounds for an observation set; required fields first.
@@ -136,7 +136,7 @@ export function taskGroups(tasks, nowMs, state) {
 
 // The button a row gets. Observations save readings; a dose or task not yet due is marked early.
 export function rowMark(task, due) {
-  if (task.kind === "obs") return { label: "Save readings", primary: true };
-  if (due === "later") return { label: task.kind === "dose" ? "Given early" : "Mark done early", primary: false };
-  return { label: "Mark done", primary: true };
+  if (task.kind === "obs") return { label: "Save readings" };
+  if (due === "later") return { label: task.kind === "dose" ? "Given early" : "Mark done early" };
+  return { label: "Mark done" };
 }

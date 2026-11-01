@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 // Every box must be ticked before the button enables. onDone gets { key: true, ... }.
-export default function Checklist({ items, busy, onDone, button }) {
+export default function Checklist({ items, busy, onDone, button, primary = false }) {
   const [ticked, setTicked] = useState({});
   const all = items.every(([key]) => ticked[key]);
   return (
@@ -20,7 +20,7 @@ export default function Checklist({ items, busy, onDone, button }) {
           </li>
         ))}
       </ul>
-      <button type="button" className="primary" disabled={busy || !all} onClick={() => onDone(Object.fromEntries(items.map(([key]) => [key, true])))}>
+      <button type="button" className={primary ? "primary" : undefined} disabled={busy || !all} onClick={() => onDone(Object.fromEntries(items.map(([key]) => [key, true])))}>
         {button}
       </button>
     </div>

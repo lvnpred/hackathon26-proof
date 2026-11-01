@@ -18,7 +18,9 @@ export const alertCount = ({ mine, others }, role) =>
 export const aiChip = (paused) => (paused == null ? "" : `AI admin: ${paused ? "paused" : "on"}`);
 export const pauseLabel = (paused) => (paused ? "Resume" : "Pause");
 
+export const WARD_NAME = "Ward 4";
+
 // The ward-wide banner. A missing time or name leaves that part out.
 export function pausedText(by, atText) {
-  return `AI admin is paused for Ward 4. Paused by ${by || "a person"}${atText ? ` at ${atText}` : ""}. New orders and tasks wait for a person.`;
+  return `AI admin is paused for ${WARD_NAME}. Paused by ${by || "a person"}${atText ? ` at ${atText}` : ""}. New orders and tasks wait for a person.`;
 }

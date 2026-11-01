@@ -10,7 +10,7 @@ import { latestCheck, swabTotal } from "./video";
 const NURSE = "Nurse Asha (synthetic)";
 
 // The swab count: pack opened, what the camera read, the number the nurse types, and a save by a person.
-export default function CountPanel({ episodeId, view, busy, act, upload, replaced, onNote }) {
+export default function CountPanel({ episodeId, view, busy, act, upload, replaced, onNote, primary = false }) {
   const [quantity, setQuantity] = useState(String(swabTotal(view) ?? "20"));
   const [returned, setReturned] = useState("");
   const [detail, setDetail] = useState("");
@@ -95,7 +95,7 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
           What did the team do?{needsReason ? " (required)" : ""}
           <input value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Found under the drape" />
         </label>
-        <button className="primary" disabled={!canSave} onClick={() => save(null)}>Save count as {displayName(by)}</button>
+        <button className={primary ? "primary" : undefined} disabled={!canSave} onClick={() => save(null)}>Save count as {displayName(by)}</button>
         {open && !corrected && (
           <button disabled={!canSave} onClick={() => save(open.fact_id)}>Correct the count</button>
         )}

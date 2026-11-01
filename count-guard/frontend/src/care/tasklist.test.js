@@ -107,10 +107,10 @@ test("orderStatus for the patient never mentions acknowledgement, the nurse or t
   assert.equal(orderStatus(o, "clinic_done", true), "Not started: the visit was closed");
 });
 
-test("markDone: due work is primary, later work is early", () => {
-  assert.deepEqual(markDone("overdue"), { label: "Mark done", primary: true });
-  assert.deepEqual(markDone("due"), { label: "Mark done", primary: true });
-  assert.deepEqual(markDone("later"), { label: "Mark done early", primary: false });
+test("markDone: later work is marked early", () => {
+  assert.deepEqual(markDone("overdue"), { label: "Mark done" });
+  assert.deepEqual(markDone("due"), { label: "Mark done" });
+  assert.deepEqual(markDone("later"), { label: "Mark done early" });
 });
 
 const k = (o) => ({ id: "t", title: "BP", kind: "obs", status: "open", due_ms: 60 * M, ...o });
@@ -131,10 +131,10 @@ test("taskGroups splits due now from later and drops done", () => {
   assert.deepEqual(taskGroups([k({})], 0, "theatre").later.map((r) => r.status), ["paused while in theatre"]);
 });
 test("rowMark labels", () => {
-  assert.deepEqual(rowMark(k({}), "due"), { label: "Save readings", primary: true });
-  assert.deepEqual(rowMark(k({ kind: "dose" }), "later"), { label: "Given early", primary: false });
-  assert.deepEqual(rowMark(k({ kind: "task" }), "later"), { label: "Mark done early", primary: false });
-  assert.deepEqual(rowMark(k({ kind: "dose" }), "overdue"), { label: "Mark done", primary: true });
+  assert.deepEqual(rowMark(k({}), "due"), { label: "Save readings" });
+  assert.deepEqual(rowMark(k({ kind: "dose" }), "later"), { label: "Given early" });
+  assert.deepEqual(rowMark(k({ kind: "task" }), "later"), { label: "Mark done early" });
+  assert.deepEqual(rowMark(k({ kind: "dose" }), "overdue"), { label: "Mark done" });
 });
 test("M2 copy has no advice words", () => {
   for (const s of ["Given early", "Save readings", "due now", "paused while in theatre", "Due now", "Later today", "Signed orders"]) assert.doesNotMatch(s, ADVICE);

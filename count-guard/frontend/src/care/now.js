@@ -1,3 +1,4 @@
+import { WARD_NAME } from "./dock.js";
 import { SAFETY, alertParts, alertPill, bannerAlerts, nudgeText } from "./alerts.js";
 import { taskDue } from "./derive.js";
 import { nextCard } from "./journey.js";
@@ -166,3 +167,9 @@ export function nextUp(view) {
 
 // The alert that Now holds. The chart's alert list leaves it out, so its controls exist once on the screen.
 export const movedAlertId = (pick, role) => (role !== "patient" && pick.now.action?.kind === "alert" ? pick.now.action.nudgeId : null);
+
+// The doctor's clinic step names the patient and the ward in its heading; the buttons keep their short names.
+export function withAdmitHeading(pick, view, role, patientName) {
+  if (role !== "doctor" || view?.state !== "clinic" || pick.now.action?.kind !== "step" || !patientName) return pick;
+  return { ...pick, now: { ...pick.now, title: `Admit ${patientName} to ${WARD_NAME}, or close the visit` } };
+}

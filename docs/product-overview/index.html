@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>hackathon26 Product Overview</title>
+  <meta name="description" content="Evidence-backed product and codebase overview of the hackathon26 repository: Doctor Dictation and Count Guard.">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="topbar"><button id="menu" aria-label="Open navigation">☰ Menu</button><b>hackathon26 overview</b></div>
+  <div class="layout">
+    <aside class="sidebar" aria-label="Sections">
+      <div class="brand">hackathon26</div>
+      <div class="brand-sub">Product &amp; Codebase Overview</div>
+      <nav class="nav">
+        <a href="#overview"><span class="num">1</span>Executive Overview</a>
+        <a href="#map"><span class="num">2</span>Product Map</a>
+        <a href="#catalogue"><span class="num">3</span>Feature Catalogue</a>
+        <a href="#demos"><span class="num">4</span>Demo Centre</a>
+        <a href="#arch"><span class="num">5</span>Architecture Explorer</a>
+        <a href="#repo"><span class="num">6</span>Repository Explorer</a>
+        <a href="#classify"><span class="num">7</span>Product vs Demo vs POC</a>
+        <a href="#overlap"><span class="num">8</span>Overlap &amp; Consolidation</a>
+        <a href="#stack"><span class="num">9</span>Technical Stack</a>
+        <a href="#gaps"><span class="num">10</span>Gaps &amp; Recommendations</a>
+      </nav>
+      <button class="theme-btn" id="theme">Toggle light / dark</button>
+      <div class="side-foot" id="foot"></div>
+      <div class="side-foot">Companion docs: PRODUCT_INVENTORY.md, FEATURE_CATALOGUE.md, DEMO_GUIDE.md, ARCHITECTURE_OVERVIEW.md, CONSOLIDATION_RECOMMENDATIONS.md</div>
+    </aside>
+    <main>
+      <section class="page" id="overview"></section>
+      <section class="page" id="map"></section>
+      <section class="page" id="catalogue"></section>
+      <section class="page" id="demos"></section>
+      <section class="page" id="arch"></section>
+      <section class="page" id="repo"></section>
+      <section class="page" id="classify"></section>
+      <section class="page" id="overlap"></section>
+      <section class="page" id="stack"></section>
+      <section class="page" id="gaps"></section>
+      <noscript>This overview needs JavaScript. The same content is in the Markdown files in this folder.</noscript>
+    </main>
+  </div>
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Details"><div id="drawer-body"></div></aside>
+
+  <script src="assets/data-products.js"></script>
+  <script src="assets/data-features.js"></script>
+  <script src="assets/data-demos.js"></script>
+  <script src="assets/data-arch.js"></script>
+  <script src="assets/data-findings.js"></script>
+  <script src="assets/app.js"></script>
+  <!-- Optional: renders the architecture diagrams. Without network, the diagram source is shown instead. -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"
+          integrity="sha384-WmdflGW9aGfoBdHc4rRyWzYuAjEmDwMdGdiPNacbwfGKxBW/SO6guzuQ76qjnSlr" crossorigin="anonymous"
+          onload="window.__mermaidReady(true)" onerror="window.__mermaidReady(false)" async></script>
+</body>
+</html>

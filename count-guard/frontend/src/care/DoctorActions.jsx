@@ -16,7 +16,7 @@ import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
 import PhotoInput from "./PhotoInput.jsx";
-import StripPhoto from "./StripPhoto.jsx";
+import HomeMedicines from "./HomeMedicines.jsx";
 import { TrayPreview } from "./VideoCheck";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
@@ -88,7 +88,7 @@ function Clinic({ view, busy, act, upload }) {
         <RxImport busy={busy} act={act} />
         <RxTable rx={view.rx} />
       </section>
-      <StripPhoto view={view} busy={busy} upload={upload} act={act} />
+      <HomeMedicines view={view} busy={busy} upload={upload} act={act} />
     </>
   );
 }

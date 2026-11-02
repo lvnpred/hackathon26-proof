@@ -9,7 +9,7 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.journey import dictation, evidence, expected, live, proof, spoken, states, switches, tasks, verdict
+from app.journey import dictation, evidence, expected, home_medicines, live, proof, spoken, states, switches, tasks, verdict
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, settle, view
 from app.journey.regions import strips_from
 from app.journey.rx import key_of
@@ -287,7 +287,7 @@ def strips_photo(
     _require(request, episode_id)
     raw, kind = read_upload_photo(file)
     store, settings = _store(request), request.app.state.settings
-    read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=switches.is_live(settings, "medicines"))
+    read = home_medicines.read(settings, raw, file.filename or "", kind)  # prepared by the photo's bytes; live failure is a 502
     strips = strips_from(read["text"] or "")
     if not strips:
         raise HTTPException(status_code=422, detail=NO_STRIPS)

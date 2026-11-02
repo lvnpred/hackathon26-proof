@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import BANNER
-from app.journey import nudges as rules
+from app.journey import home_medicines, nudges as rules
 from app.journey.ai_moments import moments
 from app.journey.handover import draft as draft_handover
 from app.journey.intake import chart_header
@@ -190,7 +190,7 @@ def view(request: Request, episode_id: str) -> dict:
         "orders": orders["payload"] if orders else None,
         "card": card["payload"] if card else None,
         "handover": handover,
-        "strips": [e["payload"] for e in visible_events(events) if e["event_type"] == "brownbag.med_found"],
+        "strips": home_medicines.with_match(visible_events(events)),
         "nudges": [
             {**e["payload"], "id": e["id"], "when": when_text(e["ts_ms"], now)} for e in rules.open_nudges(events)
         ],

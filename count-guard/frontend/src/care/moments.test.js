@@ -139,16 +139,16 @@ test("botMoment and dayPlanMoment find their moment", () => {
 
 test("capabilities in the flow: sources use the new components", () => {
   const read = (name) => fs.readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
-  const strip = read("StripPhoto.jsx");
-  assert.match(strip, /aria-label="Photo of strips"/);
+  const strip = read("HomeMedicines.jsx");
+  assert.match(strip, /aria-label="Photo of medicines from home"/);
   assert.match(strip, /Type instead/);
   assert.match(strip, /aria-expanded=\{typing\}/);
   assert.match(strip, /<PhotoInput /);
   assert.match(strip, /upload\("\/strips\/photo", file, \{ by: DOCTOR \}\)/);
-  assert.match(strip, /Check these strips/);
+  assert.match(strip, /Check these medicines/);
   const doctor = read("DoctorActions.jsx");
-  assert.doesNotMatch(doctor, /One strip per line: name then strength/);
-  assert.match(doctor, /<StripPhoto /);
+  assert.doesNotMatch(doctor, /One medicine per line: name then strength/);
+  assert.match(doctor, /<HomeMedicines /);
   assert.match(read("NurseActions.jsx"), /<HandoverCard /);
   assert.match(read("DayPlan.jsx"), /openInspector\(/);
   assert.match(read("AlertBanner.jsx"), /<AlertCard /);
@@ -165,7 +165,7 @@ test("capabilities in the flow: sources use the new components", () => {
 });
 
 test("new copy has no advice words", () => {
-  for (const s of ["Photo of strips", "Type instead", "Check these strips", "Shift handover", "Let the AI word it", "Draft handover", "Accept as Nurse Kavya (synthetic)", "Answered by record bot", "Inspect"]) assert.doesNotMatch(s, ADVICE);
+  for (const s of ["Photo of medicines from home", "Type instead", "Check these medicines", "Shift handover", "Let the AI word it", "Draft handover", "Accept as Nurse Kavya (synthetic)", "Answered by record bot", "Inspect"]) assert.doesNotMatch(s, ADVICE);
 });
 
 test("the nurse sees tasks before the handover card, and no copy says 'at Yesterday'", () => {

@@ -55,7 +55,7 @@ On screen: `In clinic` · `Amlodipine`
 > Dr. Rao opens Mr. Das, an outpatient, and loads the prescription for his clinic visit.
 
 #### `das-strip` · 0:28 · doctor · 5 s
-Clicks: 1) File eval/p4/strip-amlodipine.png into "Photo of strips"
+Clicks: 1) File eval/p4/strip-amlodipine.png into "Photo of medicines from home"
 
 On screen: `Strip reads amlodipine 10 mg; prescription says 5 mg.`
 

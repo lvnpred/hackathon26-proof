@@ -56,7 +56,7 @@ export const BEATS = [
   {
     id: "das-strip", path: "das", role: "doctor", seconds: 5, film: true,
     say: "A photo of the pharmacy strip is read and checked against the prescription, and the mismatch is named.",
-    clicks: ['File eval/p4/strip-amlodipine.png into "Photo of strips"'],
+    clicks: ['File eval/p4/strip-amlodipine.png into "Photo of medicines from home"'],
     expect: ["Strip reads amlodipine 10 mg; prescription says 5 mg."],
     files: ["strip-amlodipine.png"],
     keyed: "1 SAM 3.1 image call (strip regions) and 1 Spark vision call. Switch: MEDICINES_LIVE.",

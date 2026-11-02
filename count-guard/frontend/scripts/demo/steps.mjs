@@ -40,7 +40,7 @@ export const STEPS = {
     await H.click("Use the demo prescription");
   },
   async "das-strip"(H) {
-    await H.file("Photo of strips", "eval/p4/strip-amlodipine.png");
+    await H.file("Photo of medicines from home", "eval/p4/strip-amlodipine.png");
   },
   async "das-close"(H) {
     await H.click("Close visit");

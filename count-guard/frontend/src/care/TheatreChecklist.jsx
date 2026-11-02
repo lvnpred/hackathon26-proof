@@ -9,6 +9,7 @@ import { pickedUpload } from "./video";
 import PhotoInput from "./PhotoInput.jsx";
 import ProofItem from "./ProofItem.jsx";
 import { checkFor } from "./verdict.js";
+import TheatrePanels from "./TheatrePanels.jsx";
 
 const NURSE = "Nurse Asha (synthetic)";
 // Theatre-step photo proofs (spec §6.6). They keep only their own item open: never surgery ended, never a move.
@@ -71,6 +72,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
   const surgeonMoves = move?.role === "doctor";
   const trayMoment = momentFor(view, view.tray?.latest?.id);
   return (
+    <>
     <section className="card" aria-label="Theatre steps">
       <ol className="checklist">
         {steps.map((step) => (
@@ -110,5 +112,8 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
       </ol>
       {note && <p className="note" role="status">{note}</p>}
     </section>
+    {/* Drug given by voice, the simulated vitals strip and the context card (spec §6.4). */}
+    <TheatrePanels episodeId={episodeId || view.episode?.id} view={view} role={role} by={by} busy={busy} act={act} upload={upload} />
+    </>
   );
 }

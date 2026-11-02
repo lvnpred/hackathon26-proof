@@ -18,6 +18,7 @@ from app.journey.intake_api import intake_router
 from app.journey.ask_api import ask_router
 from app.journey.count_api import count_router
 from app.journey.staff_api import staff_router
+from app.journey.theatre_api import NotInTheatre, not_in_theatre, theatre_router
 from app.journey.media_api import media_router, models_router
 from app.journey.verdict_api import verdict_router
 from app.journey.video_api import video_router
@@ -57,6 +58,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(site_router)
     app.include_router(journey_router)
     app.include_router(count_router)
+    app.include_router(theatre_router)
+    app.add_exception_handler(NotInTheatre, not_in_theatre)
     app.include_router(demo_router)
     app.include_router(ward_router)
     app.include_router(intake_router)

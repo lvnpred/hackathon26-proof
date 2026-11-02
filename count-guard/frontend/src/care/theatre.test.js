@@ -187,3 +187,35 @@ test("theatre steps say Began and Ended on the dock clock from the line's ms, th
   assert.equal(theatreSteps(view(began), 13 * H)[1].says, "Began 22:00");
   assert.equal(theatreSteps(view({ type: "surgery.began", when: "Mon 2 Nov, 09:14" }), 5)[1].says, "Began Mon 2 Nov, 09:14");
 });
+
+test("theatre panels: simulated vitals, heard rows and packs read as plain staff words", async () => {
+  const { vitalsLabel, drugLine, drugStatus, heardPackLine, cardWords, RESEARCH_BANNER } = await import("./theatreLive.js");
+  const reading = { systolic: 86, diastolic: 50, hr: 76, source: "simulated" };
+  assert.ok(vitalsLabel(reading).includes("Simulated"));
+  assert.equal(vitalsLabel(reading), "BP 86/50 · HR 76 · Simulated");
+  const row = { generic: "lignocaine", strength: "2%", amount: 5, unit: "ml", route: "local infiltration", grounded: true, given: null };
+  assert.equal(drugLine(row), "lignocaine 2% 5 ml local infiltration");
+  assert.equal(drugStatus(row), "Heard, not confirmed");
+  assert.match(drugStatus({ ...row, grounded: false }), /Check the name/);
+  assert.equal(drugStatus({ ...row, given: { by: "Dr. A. Rao (synthetic)", at_ms: 40 * M } }), "Given 09:40 · confirmed by Dr. A. Rao");
+  assert.equal(heardPackLine({ text: "opening twenty swabs", n: 20, item_type: "swab", confirmed_by: null }),
+    "Heard “opening twenty swabs” · 20 swabs · not counted until a person confirms");
+  assert.equal(RESEARCH_BANNER, "Research demo — not for clinical use");
+  assert.equal(cardWords({ wording: "template" }), "Template from the record");
+  for (const s of [vitalsLabel(reading), drugStatus(row), heardPackLine({ text: "x", n: 1, item_type: "swab" }), cardWords({ wording: "llm" })]) {
+    assert.doesNotMatch(s, ADVICE);
+    assert.doesNotMatch(s, /_|\b[a-z]{3,}\.[a-z]{3,}\b/);
+  }
+});
+
+test("the theatre chart carries the three panels; the card shows the research banner and its source", () => {
+  const list = require_src("TheatreChecklist.jsx");
+  assert.match(list, /<TheatrePanels /);
+  const panels = require_src("TheatrePanels.jsx");
+  for (const name of ["TheatreDrugs", "VitalsStrip", "ContextCard"]) assert.match(panels, new RegExp(`<${name} `));
+  const card = require_src("ContextCard.jsx");
+  assert.match(card, /RESEARCH_BANNER/);
+  assert.match(card, /<Source words=\{cardWords\(card\)\} prepared=\{isPrepared\(card\)\} \/>/);
+  assert.match(require_src("VitalsStrip.jsx"), /vitalsLabel\(/);
+  assert.match(require_src("TheatreDrugs.jsx"), /confirm/);
+});

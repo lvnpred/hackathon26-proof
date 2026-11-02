@@ -226,7 +226,8 @@ def by_ai(payload: dict) -> bool:
     return str(payload.get("by") or "").startswith(AI_PREFIX)
 
 
-STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd", "check.photo", "check.override")
+STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd", "check.photo", "check.override", "druglog.parsed",
+              "count.pack_heard", "vitals.card")
 HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted", "patient.registered")  # bookkeeping, not care
 
 

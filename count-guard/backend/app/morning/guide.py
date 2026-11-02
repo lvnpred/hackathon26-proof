@@ -80,8 +80,16 @@ def explain_event(event: dict) -> str:
     if kind == "druglog.given":
         name = payload.get("generic") or payload.get("name_as_heard")
         return f"Confirmed {name} {payload.get('amount') or ''} {payload.get('unit') or ''} {payload.get('route') or ''}".strip() + "."
+    if kind == "drug.given":
+        name = payload.get("generic") or payload.get("name_as_heard")
+        said = " ".join(str(x) for x in (name, payload.get("strength"), payload.get("amount"), payload.get("unit"),
+                                          payload.get("route")) if x)
+        return f"{payload.get('by')} confirmed {said} given."
+    if kind == "count.pack_heard":
+        return f"Heard: {payload.get('text')}. Not counted until a person confirms the pack."
     if kind == "vitals.reading":
-        return f"Blood pressure {payload.get('systolic')}/{payload.get('diastolic')}, heart rate {payload.get('hr')}."
+        simulated = " (simulated)" if payload.get("source") == "simulated" else ""
+        return f"Blood pressure {payload.get('systolic')}/{payload.get('diastolic')}, heart rate {payload.get('hr')}{simulated}."
     if kind == "vitals.card":
         return payload.get("text") or "Fact card."
     if kind == "discharge.drafted":

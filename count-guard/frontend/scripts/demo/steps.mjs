@@ -131,9 +131,11 @@ export const STEPS = {
     await H.chart(KUMAR);
     await H.open("Wound photo");
     await H.file("Wound photo", "eval/p4/wound-day0.png");
+    await H.click("Draft discharge");
+    await H.waitText("opened 15 / returned 15");
     await H.open("Dictate discharge");
     await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
-    await H.click("Draft discharge");
+    await H.click("Update draft");
     await H.unfold("Orders and evidence");
     await H.page.locator("button.ai-moment").filter({ hasText: "sections drafted" }).first().click();
     await before(H, "kumar-discharge");

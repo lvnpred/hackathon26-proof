@@ -143,6 +143,8 @@ def plain(event: dict) -> str:
     if kind == "order.drafted":
         return f"{p.get('by')} dictated {count_of(len(p.get('items') or []), 'order')} (draft, not signed)."
     if kind == "discharge.drafted":
+        if p.get("from_timeline") and not p.get("transcript"):
+            return f"{p.get('by')} drafted the discharge from the record (draft, not signed)."
         return f"{p.get('by')} dictated a discharge summary (draft, not signed)."
     if kind == "tray.planned":
         n = sum(i["qty"] for i in p["instruments"])

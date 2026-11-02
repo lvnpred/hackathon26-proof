@@ -89,7 +89,7 @@ export const BEATS = [
     clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Use the demo prescription"', 'Button "Dictate orders"', 'File eval/p2/kumar-orders.wav into "Dictate orders"', 'Button "Draft orders"'],
     expect: ["Draft from dictation", HEARD, "2 orders drafted from 25 words.", "Paracetamol · 1 g · every 6 h · proof: strip photo"],
     files: ["kumar-orders.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The row reads Drafted from voice. Live speech can be replaced by typing in the box.",
+    keyed: "1 Spark text call for the draft wording, 1 Voice call and 1 Spark text call for the dictation. Labels read Muse Voice and Muse Spark. The rows read Drafted from the record and Drafted from voice. Live speech can be replaced by typing in the box.",
   },
   {
     id: "kumar-admit", path: "kumar", role: "doctor", seconds: 4, film: true,
@@ -170,12 +170,12 @@ export const BEATS = [
   },
   {
     id: "kumar-discharge", path: "kumar", role: "doctor", seconds: 8, film: true,
-    say: "Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.",
-    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'File eval/p4/wound-day0.png into "Wound photo"', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Draft discharge"', 'Fold "Orders and evidence"', 'Button "Details" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
+    say: "Dr. Rao adds a reference wound photo, drafts the discharge from the record, dictates changes, and signs it.",
+    clicks: ["Role Doctor", "Chart R. Kumar", 'Button "Wound photo"', 'File eval/p4/wound-day0.png into "Wound photo"', 'Button "Draft discharge"', 'Button "Dictate discharge"', 'File eval/p2/kumar-discharge.wav into "Dictate discharge"', 'Button "Update draft"', 'Fold "Orders and evidence"', 'Button "Details" on the discharge draft line', 'Button "Close" in "Inspector"', 'Button "Sign discharge"'],
     expect: ["Reference", "Being discharged"],
-    before: [HEARD, "5 sections drafted from 40 words.", "swab count closed 15 of 15"],
+    before: [HEARD, "5 sections drafted from 40 words.", "swab count closed 15 of 15", "Drafted from the record", "opened 15 / returned 15"],
     files: ["wound-day0.png", "kumar-discharge.wav"],
-    keyed: "1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The row reads Drafted from voice. Live speech can be replaced by typing in the box.",
+    keyed: "1 Spark text call for the draft wording, 1 Voice call and 1 Spark text call for the dictation. Labels read Muse Voice and Muse Spark. The rows read Drafted from the record and Drafted from voice. Live speech can be replaced by typing in the box.",
   },
   {
     id: "kumar-home", path: "kumar", role: "nurse", seconds: 3, film: true,

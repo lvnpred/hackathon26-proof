@@ -26,6 +26,16 @@ def write_discharge(path: Path, *, label: str, sheet: dict) -> None:
     line("Discharge sheet", size=18, bold=True)
     line(f"Session: {label}")
     line(sheet["narrative"])
+    if sheet.get("summary"):  # a care stay's draft (journey/discharge_draft.py) adds the sections below
+        line("Summary", bold=True)
+        line(sheet["summary"])
+    if "prescription" in sheet:
+        line("Prescription", bold=True)
+        rx = sheet["prescription"]
+        if not rx or not rx["rows"]:
+            line("None recorded.")
+        for row in (rx or {}).get("rows") or []:
+            line(" ".join(part for part in (row["name"], row["strength"], row["dose"], row["instructions"]) if part))
     line("OPD medicines", bold=True)
     if not sheet["opd"]:
         line("None recorded.")
@@ -53,4 +63,12 @@ def write_discharge(path: Path, *, label: str, sheet: dict) -> None:
         line("None.")
     for reading in sheet["readings"]:
         line(f"BP {reading['systolic']}/{reading['diastolic']}, HR {reading['hr']}")
+    if "events" in sheet:
+        line("Key events", bold=True)
+        for move in sheet["events"]:
+            line(f"{move['when']}: {move['text']} ({move['by']})")
+    if "follow_up" in sheet:
+        follow = sheet["follow_up"]
+        line("Follow-up", bold=True)
+        line(f"{follow['text']}: {follow['when']} ({follow['date']}).")
     pdf.output(str(path))

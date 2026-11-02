@@ -227,8 +227,10 @@ def _order_draft(ix: _Index, e: dict) -> dict:
                   signed_items=signed[0]["payload"].get("items") if signed else None)
 
 
-def _discharge_draft(ix: _Index, e: dict) -> dict:
+def _discharge_draft(ix: _Index, e: dict) -> dict | None:
     p = e["payload"]
+    if not p.get("transcript"):  # drafted from the timeline, nothing heard: not a voice moment (Task 9)
+        return None
     signed = ix.after("discharge.signed", e["id"])
     sections = p.get("sections") or []
     return _voice(ix, e, "discharge", p.get("transcript", ""),

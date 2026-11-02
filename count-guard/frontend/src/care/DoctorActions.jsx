@@ -8,7 +8,9 @@ import { doctorBlocks, quietActions } from "./journey";
 import NowCard from "./NowCard";
 import Dictate from "./Dictate";
 import AiMoment from "./AiMoment.jsx";
-import { draftChanged, sectionsToSummary } from "./drafts";
+import { draftChanged } from "./drafts";
+import { draftSummary } from "./dischargeDraft.js";
+import DischargeDraft from "./DischargeDraft.jsx";
 import { lastSigned, momentFor } from "./moments";
 import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
@@ -91,7 +93,8 @@ function Clinic({ view, busy, act, upload }) {
   );
 }
 
-// Primary action for the ward card: dictate the discharge, then sign it. The form keeps its text while closed.
+// Primary action for the ward card: draft the discharge from the record, dictate changes, then sign the latest draft.
+// The form keeps its text while closed.
 function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   const [summary, setSummary] = useState("");
   const [summaryDraftId, setSummaryDraftId] = useState(null);
@@ -99,7 +102,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   const draft = view.drafts?.discharge;
   if (draftChanged(summaryDraftId, draft)) {
     setSummaryDraftId(draft.id);
-    setSummary(sectionsToSummary(draft.sections || []));
+    setSummary(draftSummary(draft));
   }
   const templates = Object.entries(view.templates || {});
   async function signDischarge() {
@@ -111,16 +114,18 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   }
   return (
     <>
+      <button type="button" className={primary && !draft ? "primary" : undefined} disabled={busy} onClick={() => act("/discharge/draft", { by: DOCTOR })}>Draft discharge</button>
       <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
-      {open && (
+      {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />}
+      {(open || draft) && (
         <>
-          <Dictate label="Dictate discharge" capability="discharge" verb="Draft discharge" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />
+          <DischargeDraft draft={draft} episodeId={view.episode?.id} />
           <div>
             <p className="label">Discharge</p>
             {summaryDraftId && (
               <>
                 {momentFor(view, draft?.id) && <AiMoment moment={momentFor(view, draft.id)} role="doctor" episodeId={view.episode?.id} />}
-                <p className="note small" role="status">Draft from dictation. Check the summary, then sign.</p>
+                <p className="note small" role="status">{draft?.timeline ? "Draft from the record." : "Draft from dictation."} Check the summary, then sign.</p>
               </>
             )}
             <label className="field">
@@ -134,7 +139,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
                 {templates.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
               </select>
             </label>
-            <button type="button" className={primary ? "primary" : undefined} disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
+            <button type="button" className={primary && (draft || summary.trim()) ? "primary" : undefined} disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
           </div>
         </>
       )}

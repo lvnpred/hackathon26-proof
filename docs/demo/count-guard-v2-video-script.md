@@ -165,11 +165,11 @@ On screen: `, by voice` · `Photo matches the task`
 > Mr. Kumar's My care page shows the task as done by voice, with the photo check.
 
 #### `kumar-discharge` · 1:56 · doctor · 8 s
-Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Dictate discharge"; 6) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 7) Button "Draft discharge"; 8) Fold "Orders and evidence"; 9) Button "Details" on the discharge draft line; 10) Button "Close" in "Inspector"; 11) Button "Sign discharge"
+Clicks: 1) Role Doctor; 2) Chart R. Kumar; 3) Button "Wound photo"; 4) File eval/p4/wound-day0.png into "Wound photo"; 5) Button "Draft discharge"; 6) Button "Dictate discharge"; 7) File eval/p2/kumar-discharge.wav into "Dictate discharge"; 8) Button "Update draft"; 9) Fold "Orders and evidence"; 10) Button "Details" on the discharge draft line; 11) Button "Close" in "Inspector"; 12) Button "Sign discharge"
 
-On screen: `Reference` · `Being discharged` (the AI moment `Drafted from voice` · `5 sections drafted from 40 words.` is on screen before Sign discharge, and the Inspector shows `swab count closed 15 of 15`)
+On screen: `Reference` · `Being discharged` (the AI moment `Drafted from voice` · `5 sections drafted from 40 words.` is on screen before Sign discharge, and the Inspector shows `swab count closed 15 of 15`; the discharge draft shows `Drafted from the record` and `opened 15 / returned 15`)
 
-> Dr. Rao adds a reference wound photo, dictates the discharge summary, and signs it.
+> Dr. Rao adds a reference wound photo, drafts the discharge from the record, dictates changes, and signs it.
 
 #### `kumar-home` · 2:04 · nurse · 3 s
 Clicks: 1) Role Nurse; 2) tick "Discharge card given", "Medicines handed over", "Reminders set"; 3) Button "Complete discharge"
@@ -284,7 +284,7 @@ Staff rows say how a reading was made (`Read by camera`, `Read from photo`, `Dra
 | `kumar-tray` | SAM 3.1 video call (clip seconds, capped at 120 s). The label reads SAM 3.1. Switch: TRAY_LIVE. Run make cost CLIP=<file> for the bill. |
 | `kumar-count` | SAM 3.1 video call for the swab camera count. The label reads SAM 3.1. Switch: SWABS_LIVE. |
 | `kumar-paracetamol` | 1 Voice call and 1 Spark text call, plus 1 SAM 3.1 image call and 1 Spark vision call for the strip photo. Labels read Muse Voice and Muse Spark. The row reads From voice. No switch. |
-| `kumar-discharge` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. The row reads Drafted from voice. Live speech can be replaced by typing in the box. |
+| `kumar-discharge` | 1 Spark text call for the draft wording, 1 Voice call and 1 Spark text call for the dictation. Labels read Muse Voice and Muse Spark. The rows read Drafted from the record and Drafted from voice. Live speech can be replaced by typing in the box. |
 | `kumar-review` | 1 Voice call (hear). The row reads From voice. No switch. |
 | `iyer-bp` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. No switch. |
 | `iyer-orders` | 1 Voice call and 1 Spark text call. Labels read Muse Voice and Muse Spark. Live speech can be replaced by typing in the box. |

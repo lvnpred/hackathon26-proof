@@ -27,6 +27,7 @@ MAGIC = {
 }
 HEARERS = live.HEARERS
 NOTHING = "Nothing to draft was heard. Type the {what} instead."
+AMENDED = ("from_timeline", "timeline", "summary", "lines", "wording", "summary_source", "model_note", "pdf_url", "ics_url")
 
 
 @models_router.get("/models")
@@ -130,7 +131,11 @@ def dictate_discharge(
         file, text, dictation.DISCHARGE_PROMPT, dictation.sections_from_reply, dictation.discharge_sections,
         "discharge summary", lambda r: not r, heard_by,
     )
-    return _act(request, episode_id, "discharge.drafted", {**meta, "sections": result, "by": by}, at_ms)
+    # Dictation amends an open draft written from the timeline: the new draft keeps that draft's record and summary.
+    open_draft = dictation.open_drafts(_store(request).events(episode_id))["discharge"]
+    kept = {k: open_draft[k] for k in AMENDED if k in open_draft} if open_draft and open_draft.get("from_timeline") else {}
+    amends = {"amends": open_draft["id"]} if kept else {}
+    return _act(request, episode_id, "discharge.drafted", {**kept, **meta, "sections": result, "by": by, **amends}, at_ms)
 
 
 @media_router.post("/dictate/task")

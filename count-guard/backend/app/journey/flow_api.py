@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field, field_validator, model_validator
 
-from app.journey import check_gate, live, states, tasks
+from app.journey import check_gate, discharge_draft, live, states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, settle, view
 from app.journey.dictation import draft_refusal
 from app.journey.doctor_status import theatre_payload
@@ -193,6 +193,8 @@ def sign_discharge(episode_id: str, body: DischargeIn, request: Request) -> dict
     refusal = draft_refusal(events, "discharge", body.draft_id)
     if refusal:
         raise HTTPException(status_code=refusal[0], detail=refusal[1])
+    if discharge_draft.stale(events, body.draft_id):  # dictation amended this draft: sign the latest
+        raise HTTPException(status_code=409, detail="A newer discharge draft exists. Sign the latest draft.")
     ts = _at(store, episode_id, body.at_ms)
     rx = _latest(events, "rx.ordered")
     signed = {"summary": body.summary.strip(), "by": body.by, **({"draft_id": body.draft_id} if body.draft_id else {})}

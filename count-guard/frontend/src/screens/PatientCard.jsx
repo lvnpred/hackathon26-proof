@@ -1,8 +1,9 @@
 import { useState } from "react";
 import Fault from "../care/Fault";
+import { dischargeLinks } from "../care/dischargeDraft.js";
 
-// The signed discharge card in plain words.
-export function MyCard({ card }) {
+// The signed discharge card in plain words. With an episode id it links the follow-up visit for a calendar.
+export function MyCard({ card, episodeId }) {
   if (!card) return <p className="empty small">Your card appears here when the doctor signs it.</p>;
   return (
     <div className="stack">
@@ -16,6 +17,7 @@ export function MyCard({ card }) {
       {card.wound_care && <p><b>Wound:</b> {card.wound_care}</p>}
       {card.help_line && <p><b>Help line:</b> {card.help_line}</p>}
       {card.review && <p><b>Next visit:</b> {card.review}</p>}
+      {episodeId && <p><a href={dischargeLinks(episodeId).ics} download="follow-up.ics">Add the follow-up visit to my calendar</a></p>}
       <p className="small muted">Signed by {card.by}</p>
     </div>
   );

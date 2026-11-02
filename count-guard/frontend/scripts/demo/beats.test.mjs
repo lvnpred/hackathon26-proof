@@ -92,7 +92,8 @@ test("expected strings follow the accepted rulings", () => {
   assert.ok(by["iyer-setup"].expect.includes(`${title} running`));
   assert.ok(by["iyer-end"].expect.includes(`finished ${title} at`));
   assert.ok(by["kumar-count"].before.includes("Saw 14 of 15 gauze swabs."));
-  const GONE_AFTER_SIGN = ["Drafted from voice", "5 sections drafted from 40 words.", "swab count closed 15 of 15"];
+  assert.ok(by["kumar-discharge"].clicks.indexOf('Button "Draft discharge"') < by["kumar-discharge"].clicks.indexOf('Button "Update draft"'));
+  const GONE_AFTER_SIGN = ["Drafted from voice", "5 sections drafted from 40 words.", "swab count closed 15 of 15", "Drafted from the record", "opened 15 / returned 15"];
   // kumar-review: the Dictate chip goes once the answer is sent, so it is checked before and not in expect.
   // kumar-discharge: the chip, the finding and the Inspector's swab count are gone once the discharge is signed, so they are checked before only.
   // kumar-count: the swab viewer goes once the count is saved, because the count step folds.

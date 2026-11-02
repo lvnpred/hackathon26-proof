@@ -55,7 +55,7 @@ function TodayBody({ ward, patient }) {
   const sent = checkinStatusLine(view, ward.nowMs);
   const upload = (path, file) => ward.upload(patient.id, path, file);
   const folds = {
-    card: <MyCard card={view.card} />,
+    card: <MyCard card={view.card} episodeId={patient.id} />,
     medicines: (
       <>
         <DayPlan

@@ -79,6 +79,11 @@ class Settings:
         return bool(self.meta_api_key)
 
 
+def sync_token() -> str:
+    """CG_SYNC_TOKEN, read at call time. Empty means the intake push needs no token."""
+    return os.environ.get("CG_SYNC_TOKEN", "")
+
+
 def get_settings() -> Settings:
     load_dotenv()
     load_dotenv(WORKSPACE_ROOT / ".env")

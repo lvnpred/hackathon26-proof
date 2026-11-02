@@ -14,6 +14,7 @@ from app.engine import Engine
 from app.journey.ai_api import ai_router, evidence_router
 from app.journey.api import demo_router, router as journey_router
 from app.journey.flow_api import flow_router
+from app.journey.intake_api import intake_router
 from app.journey.ask_api import ask_router
 from app.journey.count_api import count_router
 from app.journey.staff_api import staff_router
@@ -57,6 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(count_router)
     app.include_router(demo_router)
     app.include_router(ward_router)
+    app.include_router(intake_router)
     app.include_router(flow_router)
     app.include_router(media_router)
     app.include_router(ask_router)

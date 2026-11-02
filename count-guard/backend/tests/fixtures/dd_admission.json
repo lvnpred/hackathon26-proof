@@ -1,0 +1,21 @@
+{
+  "source": "doctor-dictation",
+  "document_id": 42,
+  "status": "admit",
+  "admit_reason": "Inguinal hernia repair",
+  "finalized_at": "2026-11-03T10:14:05",
+  "document": {
+    "document_id": 42,
+    "structured": {
+      "patientName": "M. Fernandes (synthetic)",
+      "ageSex": "52 F",
+      "opNo": "OP-24-0042",
+      "diagnosis": ["Left inguinal hernia, for elective repair"],
+      "rx": [
+        {"name": "Paracetamol", "strength": "650 mg", "dose": "1-0-1", "instructions": "After food", "status": "verified"},
+        {"name": "Pantoprazole", "strength": "40 mg", "dose": "1-0-0", "instructions": "Before breakfast", "status": "verified"}
+      ]
+    },
+    "author": {"doctor_name": "Dr. A. Rao (synthetic)"}
+  }
+}

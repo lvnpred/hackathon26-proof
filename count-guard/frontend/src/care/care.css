@@ -298,3 +298,7 @@ button.moment-row:hover { background: var(--surface-sunk) }
   .avatar { width: 44px; height: 44px; }
   .moment-more-word { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* Chart header: what Doctor Dictation sent about the patient. */
+.state-facts { margin: 0; gap: 4px 20px; }
+.state-facts dd { margin: 0; color: var(--ink); }

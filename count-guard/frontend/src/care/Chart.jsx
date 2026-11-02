@@ -90,7 +90,7 @@ export default function Chart() {
 
   return (
     <>
-      <StateHeader patient={patient} view={view} nowMs={ward.nowMs} />
+      <StateHeader patient={patient} view={view} nowMs={ward.nowMs} role={ward.role} act={act} busy={ward.busy} />
 
       <StatePanel pick={pick} key={episodeId} state={view.state} role={ward.role} view={view} act={act} upload={upload} ask={ask} busy={ward.busy} nowMs={ward.nowMs} episodeId={episodeId} replaced={replaced} afterNow={attention} />
       {ward.role === "patient" && attention}

@@ -29,11 +29,26 @@ CREATE TABLE IF NOT EXISTS episode_beds (
   episode_id TEXT PRIMARY KEY,
   bed TEXT UNIQUE
 );
+CREATE TABLE IF NOT EXISTS intake_keys (
+  source TEXT NOT NULL,
+  document_id INTEGER NOT NULL,
+  episode_id TEXT NOT NULL,
+  finalized_at TEXT NOT NULL,
+  PRIMARY KEY (source, document_id)
+);
 CREATE TABLE IF NOT EXISTS clock (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   now_ms INTEGER
 );
 """
+
+
+def lowest_free_bed(taken: set[str]) -> str:
+    """The lowest whole-number bed not in `taken`, as text. The one bed rule for the seed, intake and next_bed."""
+    bed = 1
+    while str(bed) in taken:
+        bed += 1
+    return str(bed)
 
 
 class MorningStore:
@@ -156,6 +171,69 @@ class MorningStore:
                 "ON CONFLICT(episode_id) DO UPDATE SET bed = excluded.bed",
                 (episode_id, bed),
             )
+            self._conn.commit()
+
+    def claim_intake(
+        self, source: str, document_id: int | None, finalized_at: str, label: str
+    ) -> tuple[str, bool]:
+        """Claim an intake key and, when it is new, make the episode and give it a bed, all in one transaction.
+
+        Returns (episode_id, created). A key already held returns the stored episode with created False. A document_id of None (a patient made in Count Guard) has nothing to repeat, so it
+        always makes a new episode.
+        """
+        episode_id = new_id()
+        with self._lock:
+            try:
+                if document_id is not None:
+                    self._conn.execute(
+                        "INSERT INTO intake_keys (source, document_id, episode_id, finalized_at) VALUES (?, ?, ?, ?)",
+                        (source, int(document_id), episode_id, finalized_at),
+                    )
+                self._conn.execute(
+                    "INSERT INTO episodes (id, label, created_at) VALUES (?, ?, ?)", (episode_id, label, now_iso())
+                )
+                taken = {row["bed"] for row in self._conn.execute("SELECT bed FROM episode_beds")}
+                bed = lowest_free_bed(taken)
+                self._conn.execute("INSERT INTO episode_beds (episode_id, bed) VALUES (?, ?)", (episode_id, bed))
+                self._conn.commit()
+                return episode_id, True
+            except sqlite3.IntegrityError:
+                self._conn.rollback()
+                if document_id is None:
+                    raise
+                row = self._conn.execute(
+                    "SELECT episode_id FROM intake_keys WHERE source = ? AND document_id = ?",
+                    (source, int(document_id)),
+                ).fetchone()
+                if row is None:  # the key was not the clash
+                    raise
+                return row["episode_id"], False
+
+    def intake_episode(self, source: str, document_id: int) -> str | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT episode_id FROM intake_keys WHERE source = ? AND document_id = ?", (source, int(document_id))
+            ).fetchone()
+        return row["episode_id"] if row else None
+
+    def update_intake(self, source: str, document_id: int, finalized_at: str) -> bool:
+        """Record a re-saved document's time. True when it is later than the stored one.
+
+        Times are Doctor Dictation's ISO strings, which sort as text. An older save arriving late (a slow push
+        after a Sync) changes nothing, so it can never put an earlier prescription back.
+        """
+        with self._lock:
+            cursor = self._conn.execute(
+                "UPDATE intake_keys SET finalized_at = ? WHERE source = ? AND document_id = ? AND finalized_at < ?",
+                (finalized_at, source, int(document_id), finalized_at),
+            )
+            self._conn.commit()
+        return cursor.rowcount == 1
+
+    def clear_intake_keys(self) -> None:
+        """Forget every intake, so a document pushed again after a reset makes its patient again."""
+        with self._lock:
+            self._conn.execute("DELETE FROM intake_keys")
             self._conn.commit()
 
     def clear_beds(self) -> None:

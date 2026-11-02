@@ -13,6 +13,7 @@ from app.config import BANNER
 from app.journey import nudges as rules
 from app.journey.ai_moments import moments
 from app.journey.handover import draft as draft_handover
+from app.journey.intake import chart_header
 from app.journey.medicines import day_plan
 from app.journey.play import play_journey
 from app.journey.rx import document_for, fetch_document, from_document, key_of
@@ -179,6 +180,7 @@ def view(request: Request, episode_id: str) -> dict:
         handover = {**handover["payload"], "id": handover["id"], "accepted_by": took["payload"]["by"] if took else None}
     return {
         "episode": episode,
+        "header": chart_header(events, store.beds().get(episode_id), request.app.state.settings.dd_base),
         "banner": BANNER,
         "stories": build_stories(events),
         "rx": rx["payload"] if rx else None,

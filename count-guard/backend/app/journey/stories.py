@@ -100,6 +100,10 @@ def plain(event: dict) -> str:
         return f"Nudge to {p.get('to')}: {p.get('says')}"
     if kind == "patient.registered":
         return f"Given bed {p.get('bed')} on the ward list."
+    if kind == "bed.changed":
+        return f"{p.get('by')} moved the patient from bed {p.get('from')} to bed {p.get('to')}."
+    if kind == "notice.dd":
+        return p.get("text")
     if kind == "nudge.seen":
         return f"{p.get('by')} answered a nudge: {(p.get('note') or 'seen').rstrip('.')}."
     if kind == "handover.drafted":
@@ -214,7 +218,7 @@ def by_ai(payload: dict) -> bool:
     return str(payload.get("by") or "").startswith(AI_PREFIX)
 
 
-STAFF_ONLY = ("order.drafted", "discharge.drafted")
+STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd")
 HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted", "patient.registered")  # bookkeeping, not care
 
 

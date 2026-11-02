@@ -47,12 +47,13 @@ def card_payload(template_key: str, rx_payload: dict | None, by: str) -> dict:
 def seed_ward(store, raise_nudges: Callable) -> dict:
     """Create the three episodes and the staff board; Iyer gets her ward history.
 
-    A seed is a fresh ward: earlier episodes keep their records but leave the ward list, and the demo
-    clock goes back to unset (Day 0 09:00).
+    A seed is a fresh ward: earlier episodes, intake patients too, keep their records but leave the ward
+    list, the intake keys are forgotten, and the demo clock goes back to unset (Day 0 09:00).
     Returns {"patients": id, bed and name in bed order, "board": the staff board's episode id}.
     """
     store.clear_beds()
     store.clear_clock()
+    store.clear_intake_keys()  # a document pushed again after a reset makes its patient again
     made = []
     for bed, name in PATIENTS:
         episode_id = store.create_episode(name)["id"]

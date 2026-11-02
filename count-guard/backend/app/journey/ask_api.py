@@ -13,7 +13,7 @@ from pydantic import Field
 
 from app.journey import states
 from app.journey.api import At, _at, _require, _store, settle, view
-from app.journey import live
+from app.journey import live, switches
 from app.journey.ask import ANSWERED, DECISIONS, PHOTO_STATES
 from app.journey.media_api import _heard, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
 from app.journey.medicines import dose_rows, match_medicines, record_holds
@@ -29,7 +29,6 @@ MEDICINES_REFUSED = "A medicines photo is checked once the visit is closed or yo
 NO_MEDICINES = "There is no prescription or signed medicine order on your record yet, so the medicines cannot be matched."
 WARD_VIEW = ("discharging", "home")  # states in which a dose order is a ward order, not a home one
 DOCTOR_ONLY = "Only the doctor marks medicines from home."
-MEDICINES_LIVE = True  # D3 second cut: False makes the medicine photo always use the prepared result
 
 
 class QuestionIn(At):
@@ -189,7 +188,7 @@ def ask_medicines(
     raw, kind = read_upload_photo(file)
     ts, by = _at(store, episode_id, at_ms), episode["label"]
     photo = write_photo(settings, store, episode_id, raw, kind, {"purpose": "medicines", "by": by}, ts)
-    read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
+    read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=switches.is_live(settings, "medicines"))
     matched = match_medicines(strips_from(read["text"] or ""), ordered[-1]["payload"] if ordered else None, doses,
                              ward=states.current_state(events) in WARD_VIEW)
     kept = keep_photo_evidence(settings, episode_id, "medicines", photo["id"], read, read["regions"])

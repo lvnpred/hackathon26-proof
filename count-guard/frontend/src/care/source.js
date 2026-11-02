@@ -16,3 +16,19 @@ export function sourceWords(moment) {
     default: return null;
   }
 }
+
+// Spec §6.7: a prepared (fixture) result never passes for live. It says "Prepared" beside its source words.
+export const PREPARED = "Prepared";
+
+// A moment, check, or heard result -> true when a prepared result stands behind it.
+export function isPrepared(x) {
+  if (!x) return false;
+  if (x.source === "prepared" || x.heard_by === "prepared") return true;
+  return (x.calls || []).some((c) => c.source === "prepared");
+}
+
+// The words a staff screen shows: "Read by camera · Prepared", "Prepared" alone, or the words as they are.
+export function sourceLine(words, prepared) {
+  if (!prepared) return words || null;
+  return words ? `${words} · ${PREPARED}` : PREPARED;
+}

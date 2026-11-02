@@ -1,5 +1,5 @@
 import { diffLine, fieldDiffs, segments } from "./inspect.js";
-import { sourceWords } from "./source.js";
+import { isPrepared, sourceWords } from "./source.js";
 import Source from "./Source.jsx";
 import { orderSentence } from "./orders.js";
 
@@ -14,7 +14,7 @@ export function VoiceInput({ moment }) {
   return (
     <div className="inspector-input">
       <p className="quote">{"“"}{transcript || ""}{"”"}</p>
-      <p className="small">{typed ? <span className="source">Typed</span> : <Source words={sourceWords(moment)} />} <span className="muted">{wordsIn(transcript)} words</span></p>
+      <p className="small">{typed ? <span className="source">Typed</span> : <Source words={sourceWords(moment)} prepared={isPrepared({ heard_by: by }) || isPrepared(moment)} />} <span className="muted">{wordsIn(transcript)} words</span></p>
     </div>
   );
 }

@@ -9,7 +9,7 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.journey import dictation, evidence, live, proof, spoken, states, tasks
+from app.journey import dictation, evidence, live, proof, spoken, states, switches, tasks
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, settle, view
 from app.journey.regions import strips_from
 from app.journey.rx import key_of
@@ -32,7 +32,8 @@ NOTHING = "Nothing to draft was heard. Type the {what} instead."
 @models_router.get("/models")
 def models(request: Request) -> dict:
     settings = request.app.state.settings
-    return {"live": settings.spark_configured, "voice": settings.voice_configured}
+    on = switches.report(settings)
+    return {"live": any(on.values()), "voice": on["voice"], "switches": on}
 
 
 def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = "") -> dict:
@@ -55,9 +56,12 @@ def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = 
     if not raw or len(raw) > MAX_AUDIO_BYTES:
         raise HTTPException(status_code=400, detail="The recording is empty or larger than 10 MB.")
     try:
-        return live.transcribe(settings, raw, file.filename or "", kind)
+        heard = live.transcribe(settings, raw, file.filename or "", kind)
     except live.NotHeard as exc:
         raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+    if heard["source"] == switches.UNAVAILABLE:
+        raise HTTPException(status_code=502, detail=heard["why"])  # §6.7: an error to retry, nothing prepared
+    return heard
 
 
 def _structure(settings, prompt: str, transcript: str, from_reply, from_rules):
@@ -70,7 +74,7 @@ def _structure(settings, prompt: str, transcript: str, from_reply, from_rules):
     got = from_reply(reply, transcript)
     if got is not None:
         return got, SPARK, [live.call_of("spark", settings, SPARK, ms)]
-    if settings.spark_configured:
+    if switches.is_live(settings, "spark"):
         source = "rules (model reply not usable)"
         return from_rules(transcript), source, [live.call_of("spark", settings, source, ms)]
     return from_rules(transcript), "rules", []
@@ -272,12 +276,10 @@ def strips_photo(
     at_ms: int | None = Form(None, ge=0),
 ) -> dict:
     """A photo of strips is read like the medicines photo: boxes, values, a kept sidecar. Offline it uses the prepared fixture (R11)."""
-    from app.journey.ask_api import MEDICINES_LIVE  # ask_api imports this module, so import it late
-
     _require(request, episode_id)
     raw, kind = read_upload_photo(file)
     store, settings = _store(request), request.app.state.settings
-    read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=MEDICINES_LIVE)
+    read = live.read_photo(settings, "strip", raw, file.filename or "", kind, live_ok=switches.is_live(settings, "medicines"))
     strips = strips_from(read["text"] or "")
     if not strips:
         raise HTTPException(status_code=422, detail=NO_STRIPS)

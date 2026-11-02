@@ -1,5 +1,5 @@
 import { canInspect, findingFor } from "./moments.js";
-import { sourceWords } from "./source.js";
+import { isPrepared, sourceWords } from "./source.js";
 import Source from "./Source.jsx";
 import { findingPill } from "./finding.js";
 import { hhmm } from "./clock.js";
@@ -21,7 +21,7 @@ export default function AiMoment({ moment, role, lens = "staff", episodeId, thum
         <span className="moment-meta">
           <StatusPill {...findingPill(moment, role)} />
           {moment.at_ms != null && <span className="moment-time">{hhmm(moment.at_ms)}</span>}
-          <Source words={words} />
+          <Source words={words} prepared={isPrepared(moment)} />
         </span>
       </span>
       {inspect && <span className="moment-more"><span className="moment-more-word">Details</span> <span aria-hidden="true">›</span></span>}

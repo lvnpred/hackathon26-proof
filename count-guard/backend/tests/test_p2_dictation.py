@@ -251,7 +251,8 @@ def test_dictate_discharge_and_sign(tmp_path):
 
 def test_models_endpoint_reports_no_key(tmp_path):
     client, _ = _new(tmp_path)
-    assert client.get("/journey/models").json() == {"live": False, "voice": False}
+    got = client.get("/journey/models").json()
+    assert (got["live"], got["voice"]) == (False, False) and not any(got["switches"].values())
 
 
 def test_sections_reply_checks(tmp_path):
@@ -271,9 +272,7 @@ def test_transcribe_maps_non_json_and_empty(tmp_path, monkeypatch):
         raise ValueError("no json")
 
     monkeypatch.setattr(VoiceAdapter, "transcribe", not_json)
-    with pytest.raises(live.NotHeard) as err:
-        live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")
-    assert err.value.status == 502
+    assert live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")["source"] == "unavailable"
     monkeypatch.setattr(VoiceAdapter, "transcribe", lambda self, path, offset_ms=0, content_type="audio/wav": [{"text": "  ", "t0_ms": 0, "t1_ms": 0}])
     with pytest.raises(live.NotHeard) as err:
         live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")

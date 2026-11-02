@@ -57,7 +57,7 @@ test("regionLabel and explainRegions", () => {
 });
 
 test("mode, chip and colour", () => {
-  assert.deepEqual([["sam-3.1", false], ["prepared", false], ["prepared", true], ["prepared (live call failed)", false]].map(([s, h]) => modeWord(s, h)), ["live", "prepared", "Sample", "failed"]);
+  assert.deepEqual([["sam-3.1", false], ["prepared", false], ["prepared", true], ["prepared (live call failed)", false], ["unavailable", false]].map(([s, h]) => modeWord(s, h)), ["live", "prepared", "Sample", "failed", "failed"]);
   assert.equal(modeWord("rules", false), "");
   assert.equal(chipText([{ model: "spark", source: "prepared" }, { model: "sam", source: "prepared" }], true), "SAM 3.1 · Sample");
   assert.equal(chipText([{ model: "spark", source: "muse-spark-1.3" }], false), "Muse Spark 1.3 · live");

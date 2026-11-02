@@ -15,7 +15,7 @@ from app.journey.stories import count_of, plain
 from app.morning.discharge import visible_events
 
 MONITOR_KEYS = (("sbp", "SBP"), ("dbp", "DBP"), ("hr", "HR"))
-FAILED_SOURCES = ("failed", "unreadable", "prepared (live call failed)", "rules (model reply not usable)")
+FAILED_SOURCES = ("failed", "unreadable", "prepared (live call failed)", "rules (model reply not usable)", "unavailable")
 VISUAL = {"tray.checked": "tray", "setup.checked": "setup", "swabs.counted": "swabs"}
 
 

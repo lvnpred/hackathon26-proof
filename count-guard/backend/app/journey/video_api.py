@@ -8,7 +8,7 @@ from typing import Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from app.journey import evidence, live, states, tasks
+from app.journey import evidence, live, states, switches, tasks
 from app.journey.live import segment_clip, segment_photos
 from app.journey.api import _at, _require, _store, settle, view
 from app.journey.media_api import PHOTO_TYPES, read_upload_photo, write_photo
@@ -18,9 +18,6 @@ from app.media_pipeline import cut_frames
 
 video_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 
-SETUP_LIVE = True  # D3 cut switch: False makes the set-up check use the prepared result only
-TRAY_LIVE = True  # the same cut switch for the tray check
-SWABS_LIVE = True  # and for the swab camera count
 MAX_VIDEO_BYTES = 50 * 1024 * 1024
 VIDEO_TYPES = {"video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm"}
 NAMES_TASK = "A set-up check names its task; a tray or swab check names none."
@@ -83,7 +80,7 @@ def _setup_refusal(events: list[dict], task_id: str) -> tuple[str | None, int, s
     return key, 200, ""
 
 
-def _read_clip(request: Request, episode_id: str, raw: bytes, suffix: str, filename: str, rows: list[dict], live_ok: bool):
+def _read_clip(request: Request, episode_id: str, raw: bytes, suffix: str, filename: str, rows: list[dict], live_ok: bool, check: str):
     """Check the clip against the rows and keep its frames: (found, result, kept paths)."""
     settings = request.app.state.settings
     folder = settings.data_dir / "journey_media" / episode_id
@@ -93,7 +90,7 @@ def _read_clip(request: Request, episode_id: str, raw: bytes, suffix: str, filen
         clip = work / f"clip{suffix}"  # a server-made name; the client's name is never a path
         clip.write_bytes(raw)
         try:
-            found = segment_clip(settings, clip, filename, [r["concept"] for r in rows], live_ok=live_ok)
+            found = segment_clip(settings, clip, filename, [r["concept"] for r in rows], live_ok=live_ok, check=check)
         except live.NotHeard as exc:
             raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
         result = compare(rows, found["detections"], found["source"])
@@ -113,7 +110,7 @@ def _read_clip(request: Request, episode_id: str, raw: bytes, suffix: str, filen
     return found, result, kept
 
 
-def _read_photos(request: Request, episode_id: str, photos: list[tuple[bytes, str]], filename: str, rows: list[dict], live_ok: bool):
+def _read_photos(request: Request, episode_id: str, photos: list[tuple[bytes, str]], filename: str, rows: list[dict], live_ok: bool, check: str):
     """Check the photos against the rows: (found, result). Nothing is stored here."""
     settings = request.app.state.settings
     work = settings.data_dir / "journey_media" / episode_id / f"tmp-{uuid.uuid4().hex}"
@@ -124,7 +121,7 @@ def _read_photos(request: Request, episode_id: str, photos: list[tuple[bytes, st
             path = work / f"photo{n}{PHOTO_TYPES[kind]}"  # a server-made name; the client's name is never a path
             path.write_bytes(raw)
             paths.append(path)
-        found = segment_photos(settings, paths, [r["concept"] for r in rows], filename, live_ok=live_ok)
+        found = segment_photos(settings, paths, [r["concept"] for r in rows], filename, live_ok=live_ok, check=check)
     finally:
         shutil.rmtree(work, ignore_errors=True)
     return found, compare(rows, found["detections"], found["source"], "photos")
@@ -174,27 +171,27 @@ def add_video(
         key, status, detail = _setup_refusal(events, task_id)
         if key is None:
             raise HTTPException(status_code=status, detail=detail)
-        rows, live_ok = expected_for_setup(key), SETUP_LIVE
+        rows, live_ok = expected_for_setup(key), switches.is_live(settings, "setup")
         extra, planned = {"setup": key, "task_id": task_id}, None
     elif check == "swabs":
         opened, refusal = _swabs_refusal(events)
         if refusal:
             raise HTTPException(status_code=409, detail=refusal)
-        rows, live_ok, extra, planned = [{"concept": "gauze swab", "names": ["Swab"], "planned": opened}], SWABS_LIVE, {}, None
+        rows, live_ok, extra, planned = [{"concept": "gauze swab", "names": ["Swab"], "planned": opened}], switches.is_live(settings, "swabs"), {}, None
     else:
         refusal = _tray_refusal(events)
         if refusal:
             raise HTTPException(status_code=409, detail=refusal)
         planned = next(e for e in reversed(events) if e["event_type"] == "tray.planned")["payload"]
-        rows, live_ok = expected_for_tray(planned), TRAY_LIVE
+        rows, live_ok = expected_for_tray(planned), switches.is_live(settings, "tray")
         extra = {"template": planned["template"]}
     media = "photos" if photos else "video"
     filename = (photo_files[0] if photos else file).filename or ""
     kept: list = []
     if photos:
-        found, result = _read_photos(request, episode_id, photos, filename, rows, live_ok)
+        found, result = _read_photos(request, episode_id, photos, filename, rows, live_ok, check)
     else:
-        found, result, kept = _read_clip(request, episode_id, raw, suffix, filename, rows, live_ok)
+        found, result, kept = _read_clip(request, episode_id, raw, suffix, filename, rows, live_ok, check)
     ts = _at(store, episode_id, at_ms)
     frame = {"purpose": "frame", "video": check, "by": by, "media": media, **({"task_id": task_id} if task_id else {})}
     if photos:

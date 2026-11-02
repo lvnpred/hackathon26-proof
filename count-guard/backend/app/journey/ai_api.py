@@ -8,12 +8,11 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from app.config import REPO_ROOT
-from app.journey import evidence, live
+from app.journey import evidence, live, switches
 from app.journey.ai_summary import summary
 from app.journey.api import _require, _store
 from app.journey.procedures import tray_plan
 from app.journey.video import compare, expected_for_tray
-from app.journey.video_api import TRAY_LIVE
 
 evidence_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 ai_router = APIRouter(prefix="/journey/ai")
@@ -105,6 +104,8 @@ def try_sample(model: Literal["voice", "spark", "sam", "spark-open"], request: R
             heard = live.transcribe(settings, raw, "kumar-orders.wav", "audio/wav")
         except live.NotHeard as exc:
             raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+        if heard["source"] == switches.UNAVAILABLE:
+            raise HTTPException(status_code=502, detail=heard["why"])
         return {"model": model, "mode": _mode(heard["source"]), "text": heard["text"]}
     if model == "spark":
         raw = _sample_bytes(settings, "monitor-88-54.png")
@@ -115,7 +116,7 @@ def try_sample(model: Literal["voice", "spark", "sam", "spark-open"], request: R
     plan = tray_plan("hernia-repair")
     rows = expected_for_tray(plan)
     found = live.segment_photos(settings, [_sample_path("tray-hernia.png")], [r["concept"] for r in rows],
-                                "tray-hernia.png", live_ok=TRAY_LIVE)
+                                "tray-hernia.png", live_ok=switches.is_live(settings, "tray"), check="tray")
     result = compare(rows, found["detections"], found["source"], "photos")
     return {"model": model, "mode": _mode(found["source"]),
             "evidence": _sample_evidence("tray", "tray-hernia.png", found, result)}

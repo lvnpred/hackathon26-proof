@@ -49,6 +49,10 @@ class Settings:
     # Doctor Dictation, read over HTTP for the prescription (option A: no shared code).
     dd_base: str = "http://127.0.0.1:8000"
     ops_agent: bool = False
+    # Live switches (spec §6.7): None follows the key; False keeps that step on prepared results.
+    voice_live: bool | None = None
+    proof_live: bool | None = None
+    spark_live: bool | None = None
 
     @property
     def db_path(self) -> Path:
@@ -84,6 +88,12 @@ def sync_token() -> str:
     return os.environ.get("CG_SYNC_TOKEN", "")
 
 
+def _switch(name: str) -> bool | None:
+    """VOICE_LIVE=1 or 0 from the environment; unset or empty follows the key."""
+    value = os.environ.get(name, "").strip()
+    return None if not value else value not in ("0", "false", "off", "no")
+
+
 def get_settings() -> Settings:
     load_dotenv()
     load_dotenv(WORKSPACE_ROOT / ".env")
@@ -109,4 +119,7 @@ def get_settings() -> Settings:
             "DD_BASE_URL", f"http://127.0.0.1:{os.environ.get('DD_PORT', '8000')}"
         ).rstrip("/"),
         ops_agent=os.environ.get("CG_OPS_AGENT", "1") == "1",
+        voice_live=_switch("VOICE_LIVE"),
+        proof_live=_switch("PROOF_LIVE"),
+        spark_live=_switch("SPARK_LIVE"),
     )

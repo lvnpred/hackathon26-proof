@@ -18,6 +18,7 @@ from app.adapters.spark import SparkAdapter
 from app.adapters.voice import VoiceAdapter
 from app.adapters.sam import SamAdapter
 from app.config import Settings
+from app.journey import switches
 from app.journey.proof import parse_monitor_text
 from app.journey.regions import READER_CONCEPTS, monitor_values, pair_regions, strip_values, strips_from
 from app.journey.video import frames_from, summarize
@@ -37,7 +38,7 @@ UNREACHABLE = "The transcriber did not answer. Type what was said in the box."
 
 MODEL_IDS = {"voice": "voice_model", "spark": "spark_model", "sam": "sam_model", "spark-open": "spark_open_model"}
 _LIVE = ("muse-voice-transcribe", "muse-spark-1.3", "sam-3.1")
-_FAILED = (FALLBACK, "failed", "unreadable", "rules (model reply not usable)")
+_FAILED = (FALLBACK, "failed", "unreadable", "rules (model reply not usable)", "unavailable")
 
 
 def call_of(model: str, settings: Settings, source: str, ms: int | None) -> dict:
@@ -118,7 +119,8 @@ def _reason(exc: Exception, key: str) -> str:
 
 
 def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str) -> dict:
-    if settings.voice_configured:
+    """Live with VOICE_LIVE on; a failed live call is `unavailable`, never a fixture named like the upload (§4)."""
+    if switches.is_live(settings, "voice"):
         start = time.monotonic()
         try:
             wav = to_wav(raw, content_type)
@@ -129,10 +131,7 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
                 turns = VoiceAdapter(settings).transcribe(path, 0, "audio/wav")
         except (httpx.HTTPError, subprocess.SubprocessError, OSError, ValueError) as exc:
             log.warning("Voice transcription failed: %s", _reason(exc, settings.meta_api_key))
-            found = prepared(filename)
-            if found and found.get("transcript"):
-                return {"text": found["transcript"], "source": FALLBACK, "calls": [call_of("voice", settings, FALLBACK, _since(start))]}
-            raise NotHeard(502, UNREACHABLE) from exc
+            return {**switches.unavailable(UNREACHABLE), "text": None, "calls": [call_of("voice", settings, switches.UNAVAILABLE, _since(start))]}
         ms = _since(start)
         text = " ".join(t["text"] for t in turns).strip()
         if not text:
@@ -145,7 +144,7 @@ def transcribe(settings: Settings, raw: bytes, filename: str, content_type: str)
 
 
 def spark_text(settings: Settings, prompt: str) -> str | None:
-    if not settings.spark_configured:
+    if not switches.is_live(settings, "spark"):
         return None
     try:
         return SparkAdapter(settings).write(prompt)
@@ -190,34 +189,29 @@ def read_photo(
     raw: bytes,
     filename: str,
     content_type: str,
-    live_ok: bool = True,
+    live_ok: bool | None = None,
 ) -> dict:
-    """A photo read is two calls: SAM boxes each region, Spark reads the values, `pair_regions` joins them (D1(b))."""
-    found = prepared(filename)
-    if settings.spark_configured and live_ok:
+    """A photo read is two calls: SAM boxes each region, Spark reads the values, `pair_regions` joins them (D1(b)).
+
+    live_ok None follows PROOF_LIVE; the medicine routes pass their own switch. With it on, a failed Spark call is
+    `unavailable` (NOT_CHECKED): the uploaded file name never picks a prepared answer (§4)."""
+    on = switches.is_live(settings, "proof") if live_ok is None else live_ok and settings.spark_configured
+    if on:
         kind = content_type if (content_type or "").startswith("image/") else "image/jpeg"
         data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
         boxes, parsed, sam_call = _boxes(settings, reader, data_url)
-        adapter = SparkAdapter(settings)
         start = time.monotonic()
         try:
+            adapter = SparkAdapter(settings)
             text = adapter.read_strips(data_url) if reader == "strip" else adapter.read_monitor(data_url)
         except (httpx.HTTPError, RuntimeError, ValueError):
-            ms = _since(start)
-            if found and found.get("text"):
-                text, source = found["text"], FALLBACK
-                # As for video (_stored_or): the fixture's regions stand whole, with its own handmade flag (T4-1).
-                stored = found.get("regions")
-                regions = stored or pair_regions(boxes, _values(reader, text))
-                handmade = bool(found.get("handmade")) if stored else False
-            else:
-                text, source, regions, handmade = None, "failed", pair_regions(boxes, []), False
-            spark_call = call_of("spark", settings, source, ms)
-        else:
-            source, handmade = "muse-spark-1.3", False
-            spark_call = call_of("spark", settings, source, _since(start))
-            regions = pair_regions(boxes, _values(reader, text))
-        return _photo(text, source, regions, [sam_call, spark_call], {"sam": parsed, "spark": text}, handmade)
+            spark_call = call_of("spark", settings, switches.UNAVAILABLE, _since(start))
+            return {**_photo(None, switches.UNAVAILABLE, pair_regions(boxes, []), [sam_call, spark_call],
+                             {"sam": parsed, "spark": None}, False), **switches.unavailable(switches.NOT_CHECKED)}
+        spark_call = call_of("spark", settings, "muse-spark-1.3", _since(start))
+        regions = pair_regions(boxes, _values(reader, text))
+        return _photo(text, "muse-spark-1.3", regions, [sam_call, spark_call], {"sam": parsed, "spark": text}, False)
+    found = prepared(filename)
     if found and found.get("text"):
         values = _values(reader, found["text"])
         stored = found.get("regions")
@@ -241,10 +235,11 @@ def _live_evidence(records: list[dict], fps: int, settings: Settings, photos: bo
     return {"frames": frames, "raw": {"sam": parsed}, "handmade": False}
 
 
-def _stored_or(settings: Settings, found: dict | None, failed: str, ms: int | None, key: str) -> dict:
-    """A live call did not work: the prepared detections under the fallback label, else `failed`."""
+def _stored_or(settings: Settings, check: str | None, failed: str, ms: int | None, key: str) -> dict:
+    """A live call did not work: the prepared detections of the check kind (never the upload's name), else `failed`."""
+    found = prepared(switches.PREPARED_BY_CHECK[check]) if check in switches.PREPARED_BY_CHECK else None
     stored = found.get("detections") if found else None
-    source = FALLBACK if stored else failed
+    source = "prepared" if stored else failed
     return {"detections": stored or None, "source": source, "calls": _calls("sam", settings, source, ms),
             **(_stored(found, key) if stored else _stored(None, key))}
 
@@ -258,10 +253,9 @@ def _prepared_or_none(settings: Settings, found: dict | None, key: str) -> dict:
 
 
 def segment_clip(
-    settings: Settings, clip: Path, filename: str, concepts: list[str], live_ok: bool = True
+    settings: Settings, clip: Path, filename: str, concepts: list[str], live_ok: bool = True, check: str | None = None
 ) -> dict:
     """Detections by concept for one clip: live SAM 3.1 with a key (and live_ok), else the prepared result."""
-    found = prepared(filename)
     if settings.sam_configured and live_ok:
         try:
             seconds = clip_seconds(clip)
@@ -281,19 +275,19 @@ def segment_clip(
             detections = summarize(records, settings.sam_fps, settings.low_confidence, concepts)
             evidence = _live_evidence(records, settings.sam_fps, settings, photos=False)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            return _stored_or(settings, found, "failed", _since(start), "frames")
+            return _stored_or(settings, check, "failed", _since(start), "frames")
         return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms), **evidence}
-    return _prepared_or_none(settings, found, "frames")
+    return _prepared_or_none(settings, prepared(filename), "frames")
 
 
 _IMAGE_TYPES = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 
 def segment_photos(
-    settings: Settings, paths: list[Path], concepts: list[str], filename: str, live_ok: bool = True
+    settings: Settings, paths: list[Path], concepts: list[str], filename: str, live_ok: bool = True,
+    check: str | None = None,
 ) -> dict:
     """Detections by concept for 1-6 photos: per concept the most seen in any one photo (as for frames)."""
-    found = prepared(filename)
     if settings.sam_configured and live_ok:
         start = time.monotonic()
         try:
@@ -307,8 +301,8 @@ def segment_photos(
             detections = summarize(records, 1, settings.low_confidence, concepts)
             evidence = _live_evidence(records, 1, settings, photos=True)
         except (httpx.HTTPError, RuntimeError, OSError, ValueError, KeyError, TypeError):
-            return _stored_or(settings, found, "failed", _since(start), "stills")
+            return _stored_or(settings, check, "failed", _since(start), "stills")
         for cell in detections.values():
             cell["at_s"] = None  # a photo has no time
         return {"detections": detections, "source": "sam-3.1", "calls": _calls("sam", settings, "sam-3.1", ms), **evidence}
-    return _prepared_or_none(settings, found, "stills")
+    return _prepared_or_none(settings, prepared(filename), "stills")

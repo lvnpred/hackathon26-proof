@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.adapters.sam import SamAdapter
-from app.journey import live, video_api
+from app.journey import live, switches, video_api
 from app.journey.dictation import parse_order_text
 from app.main import create_app
 from tests.test_flow_states import _move, _new, _to_ward, _view
@@ -140,7 +140,7 @@ def test_setup_live_cut_switch(tmp_path, monkeypatch):
         raise AssertionError("the live model was called")
 
     monkeypatch.setattr(SamAdapter, "segment_video", boom)
-    monkeypatch.setattr(video_api, "SETUP_LIVE", False)
+    monkeypatch.setattr(switches, "SETUP_LIVE", False)
     client = TestClient(create_app(_keyed(tmp_path)))
     eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
     task = _ward(client, eid, [SALINE])[SALINE["text"]]

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app import media_pipeline
 from app.adapters.sam import SamAdapter
-from app.journey import live, video, video_api
+from app.journey import live, switches, video, video_api
 from app.journey.procedures import tray_plan
 from app.main import create_app
 from tests.test_p3_video import _keyed
@@ -231,7 +231,7 @@ def test_tray_live_cut_switch(tmp_path, monkeypatch):
         raise AssertionError("the live model was called")
 
     monkeypatch.setattr(SamAdapter, "segment_video", boom)
-    monkeypatch.setattr(video_api, "TRAY_LIVE", False)
+    monkeypatch.setattr(switches, "TRAY_LIVE", False)
     client = TestClient(create_app(_keyed(tmp_path)))
     eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
     _to_theatre(client, eid)

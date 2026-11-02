@@ -18,7 +18,7 @@ export function colourFor(concept) {
 }
 
 const LIVE = ["muse-voice-transcribe", "muse-spark-1.3", "sam-3.1"];
-const FAILED = ["prepared (live call failed)", "failed", "unreadable", "rules (model reply not usable)"];
+const FAILED = ["prepared (live call failed)", "failed", "unreadable", "rules (model reply not usable)", "unavailable"];
 
 // A handmade fixture shows Sample in place of the mode (R6).
 export function modeWord(source, handmade) {

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { sourceWords } from "./source.js";
+import { isPrepared, sourceWords } from "./source.js";
 import Source from "./Source.jsx";
 import { audioName, micStatus, pickMime } from "./recorder";
 
@@ -100,7 +100,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
         </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
-      {heard && heard.text === text && <p className="small"><Source words={sourceWords({ kind: "voice", capability })} /></p>}
+      {heard && heard.text === text && <p className="small"><Source words={sourceWords({ kind: "voice", capability })} prepared={isPrepared({ heard_by: heard.by })} /></p>}
       <label className={`dictate-upload${busy || recording ? " disabled" : ""}`}>
         Upload audio
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />

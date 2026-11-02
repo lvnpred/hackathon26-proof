@@ -7,6 +7,7 @@ import Fault from "./Fault";
 import { INBOX_SCOPES } from "./faults";
 import { botMoment } from "./moments.js";
 import Source from "./Source.jsx";
+import { isPrepared } from "./source.js";
 import { answerHow, answerSourceLine, checkinLine, inboxGroups, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
 
 // The three fixed review decisions, as the server names them.
@@ -19,7 +20,7 @@ function Answered({ answer, text, nowMs }) {
   const how = answer.via === "text" ? "typed" : "";
   return (
     <p className="small">
-      {text} <span className="muted">{answer.by} · {whenText(answer.at_ms, nowMs)}{how ? ` · ${how}` : ""}</span>{source && <> <Source words={source} /></>}
+      {text} <span className="muted">{answer.by} · {whenText(answer.at_ms, nowMs)}{how ? ` · ${how}` : ""}</span>{source && <> <Source words={source} prepared={isPrepared({ heard_by: answer.heard_by })} /></>}
     </p>
   );
 }

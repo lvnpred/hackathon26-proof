@@ -1,4 +1,4 @@
-import { sourceWords } from "./source.js";
+import { isPrepared, sourceWords } from "./source.js";
 import Source from "./Source.jsx";
 import { checkLabel, pickedUpload } from "./video";
 import { useState } from "react";
@@ -30,7 +30,7 @@ function CheckResult({ check, episodeId, version, moment }) {
     <div>
       <p className="small">
         <span className={`pill ${check.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span>{" "}
-        <Source words={sourceWords(moment)} />{" "}{check.why}
+        <Source words={sourceWords(moment)} prepared={isPrepared(moment || check)} />{" "}{check.why}
       </p>
       {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} version={version} />}
       {!proved && (check.rows || []).length > 0 && (

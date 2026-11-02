@@ -167,20 +167,20 @@ def test_keyed_failure_falls_back_to_prepared(tmp_path, monkeypatch, exc):
     client = TestClient(create_app(_keyed(tmp_path)))
     eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)
-    r = _photos(client, eid)
-    assert r.json()["tray"]["latest"]["source"] == "prepared (live call failed)"
-    r2 = _photos(client, eid, ("unknown-photo.png",))
-    assert r2.json()["tray"]["latest"]["source"] == "failed"
+    # Any upload name gets the tray kind's prepared result, labelled prepared (spec §6.7).
+    for names in (("tray-hernia.png",), ("unknown-photo.png",), ("swabs-closing.png",)):
+        latest = _photos(client, eid, names).json()["tray"]["latest"]
+        assert latest["source"] == "prepared"
 
 
 def test_cut_switch_off_uses_prepared_even_with_a_key(tmp_path, monkeypatch):
-    from app.journey import video_api
+    from app.journey import switches
 
     def boom(self, body):
         raise AssertionError("the live model was called")
 
     monkeypatch.setattr(SamAdapter, "_stream", boom)
-    monkeypatch.setattr(video_api, "TRAY_LIVE", False)
+    monkeypatch.setattr(switches, "TRAY_LIVE", False)
     client = TestClient(create_app(_keyed(tmp_path)))
     eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)

@@ -94,9 +94,8 @@ def test_key_adapter_error_is_502(tmp_path, monkeypatch):
         raise httpx.ConnectError("down")
 
     monkeypatch.setattr(VoiceAdapter, "transcribe", boom)
-    with pytest.raises(live.NotHeard) as err:
-        live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")
-    assert err.value.status == 502
+    out = live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")
+    assert out["source"] == "unavailable" and out["why"] == live.UNREACHABLE  # the route turns this into a 502
 
 
 def test_read_photo_prepared_and_unknown(tmp_path):
@@ -122,7 +121,7 @@ def test_read_photo_key_uses_faked_spark(tmp_path, monkeypatch):
 
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_strips", boom)
     out = live.read_photo(_keyed(tmp_path), "strip", b"x", "s.png", "image/png")
-    assert bare(out) == {"text": None, "source": "failed"}
+    assert bare(out) == {"text": None, "source": "unavailable", "why": "Not checked — model unavailable"}
 
 
 def test_spark_text(tmp_path, monkeypatch):

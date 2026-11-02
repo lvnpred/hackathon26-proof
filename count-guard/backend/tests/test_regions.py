@@ -177,34 +177,25 @@ def _spark_down(monkeypatch):
     monkeypatch.setattr(SparkAdapter, "read_strips", boom)
 
 
-def test_spark_fallback_uses_the_fixture_regions_whole(tmp_path, monkeypatch):
+def test_spark_failure_keeps_live_boxes_and_never_the_fixture(tmp_path, monkeypatch):
+    # A file named like a fixture gets no prepared regions or values when Spark fails live (spec §4).
     monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: _recs((0.1,)))
     _spark_down(monkeypatch)
     out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "monitor-88-54.png", "image/png")
-    assert [(r["label"], r["value"]) for r in out["regions"]] == [("SBP", "88"), ("DBP", "54"), ("HR", "112")]
-    assert out["regions"][0]["bbox"][0] == 0.4688 and out["handmade"] is True
-    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "sam-3.1"), ("spark", live.FALLBACK)]
+    assert out["source"] == "unavailable" and out["text"] is None and out["handmade"] is False
+    assert [(r["bbox"] is not None, r["value"]) for r in out["regions"]] == [(True, None)]
+    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "sam-3.1"), ("spark", "unavailable")]
 
 
-def test_spark_fallback_without_fixture_regions_pairs_live_boxes(tmp_path, monkeypatch):
-    monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: _recs((0.1, 0.4, 0.7)))
-    monkeypatch.setattr(live, "prepared", lambda name: {"text": MONITOR, "handmade": True})
-    _spark_down(monkeypatch)
-    out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "x.png", "image/png")
-    assert [(r["bbox"][1], r["value"]) for r in out["regions"]] == [(0.1, "118"), (0.4, "76"), (0.7, "80")]
-    assert out["handmade"] is False
-    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "sam-3.1"), ("spark", live.FALLBACK)]
-
-
-def test_spark_fallback_keeps_fixture_regions_when_sam_also_failed(tmp_path, monkeypatch):
+def test_spark_failure_when_sam_also_failed(tmp_path, monkeypatch):
     def boom(*a, **k):
         raise httpx.ConnectError("no")
 
     monkeypatch.setattr(SamAdapter, "segment_images", boom)
     _spark_down(monkeypatch)
     out = live.read_photo(_keyed(tmp_path), "strip", b"x", "meds-kumar.png", "image/png")
-    assert len(out["regions"]) == 4 and all(r["bbox"] for r in out["regions"]) and out["handmade"] is True
-    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "failed"), ("spark", live.FALLBACK)]
+    assert out["regions"] == [] and out["handmade"] is False
+    assert [(c["model"], c["source"]) for c in out["calls"]] == [("sam", "failed"), ("spark", "unavailable")]
 
 
 def test_garbage_monitor_text_gives_no_regions(tmp_path, monkeypatch):

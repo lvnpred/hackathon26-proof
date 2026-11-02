@@ -162,9 +162,10 @@ def test_segment_clip_keyed_failure_falls_back(tmp_path, monkeypatch, exc):
 
     monkeypatch.setattr(SamAdapter, "segment_video", boom)
     keyed = _keyed(tmp_path)
-    got = live.segment_clip(keyed, tmp_path / "c.mp4", "tray-hernia.mp4", ["needle holder"])
-    assert got["source"] == live.FALLBACK and got["detections"]["needle holder"]["count"] == 2
-    assert bare(live.segment_clip(keyed, tmp_path / "c.mp4", "IMG_0001.mov", ["needle holder"])) == {
+    # The check kind picks the prepared result, whatever the upload is called (spec §4, §6.7).
+    got = live.segment_clip(keyed, tmp_path / "c.mp4", "IMG_0001.mov", ["needle holder"], check="tray")
+    assert got["source"] == "prepared" and got["detections"]["needle holder"]["count"] == 2
+    assert bare(live.segment_clip(keyed, tmp_path / "c.mp4", "tray-hernia.mp4", ["needle holder"])) == {
         "detections": None, "source": "failed"}
 
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 
 import httpx
 import pytest
@@ -120,31 +119,28 @@ def test_grounded_checks_negation_and_direction():
     assert not dictation.grounded("Review before discharge", "Review after discharge")
 
 
-# 5. a failed keyed call falls back to the prepared result
-def test_failed_transcribe_falls_back_to_prepared(tmp_path, monkeypatch):
+# 5. a failed keyed call is unavailable: no prepared result picked by the file name (spec §4)
+def test_failed_transcribe_is_unavailable(tmp_path, monkeypatch):
     monkeypatch.setattr(live, "to_wav", lambda raw, content_type: raw)
 
     def boom(self, path, offset_ms=0, content_type="audio/wav"):
         raise httpx.ConnectError("down")
 
     monkeypatch.setattr(VoiceAdapter, "transcribe", boom)
-    out = live.transcribe(_keyed(tmp_path), b"x", "kumar-orders.wav", "audio/wav")
-    assert out["source"] == "prepared (live call failed)" and out["text"].startswith("Admit for open hernia")
-    with pytest.raises(live.NotHeard) as err:
-        live.transcribe(_keyed(tmp_path), b"x", "recording.webm", "audio/webm")
-    assert err.value.status == 502
+    for name in ("kumar-orders.wav", "recording.webm"):
+        out = live.transcribe(_keyed(tmp_path), b"x", name, "audio/wav")
+        assert out["source"] == "unavailable" and out["text"] is None
 
 
-def test_failed_read_photo_falls_back_to_prepared(tmp_path, monkeypatch):
+def test_failed_read_photo_is_unavailable(tmp_path, monkeypatch):
     monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
     def boom(self, url):
         raise httpx.ConnectError("down")
 
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_monitor", boom)
-    out = live.read_photo(_keyed(tmp_path), "monitor", b"x", "monitor-88-54.png", "image/png")
-    assert out["source"] == "prepared (live call failed)"
-    assert json.loads(out["text"])["sbp"] == 88
-    assert bare(live.read_photo(_keyed(tmp_path), "monitor", b"x", "IMG_1.png", "image/png")) == {"text": None, "source": "failed"}
+    for name in ("monitor-88-54.png", "IMG_1.png"):
+        out = live.read_photo(_keyed(tmp_path), "monitor", b"x", name, "image/png")
+        assert (out["source"], out["text"]) == ("unavailable", None)
 
 
 # 6a. the bytes must be the declared image type

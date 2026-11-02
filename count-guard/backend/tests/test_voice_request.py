@@ -66,9 +66,9 @@ def test_request_has_json_request_part_and_audio_part(tmp_path, monkeypatch):
 def test_a_rejected_call_is_logged_with_its_reason(tmp_path, monkeypatch, caplog):
     monkeypatch.setattr(live, "to_wav", lambda raw, content_type: raw)
     _fake_client(monkeypatch, lambda request: httpx.Response(400, json={"error": {"message": "Malformed request"}}))
-    with caplog.at_level(logging.WARNING, logger="app.journey.live"), pytest.raises(live.NotHeard) as err:
-        live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")
-    assert err.value.status == 502
+    with caplog.at_level(logging.WARNING, logger="app.journey.live"):
+        out = live.transcribe(_keyed(tmp_path), b"x", "a.webm", "audio/webm")
+    assert out["source"] == "unavailable"
     assert "Malformed request" in caplog.text
     assert "test-key" not in caplog.text
 

@@ -13,6 +13,7 @@ import httpx
 
 from app.adapters.spark import SparkAdapter
 from app.agent.verifier import ADVICE
+from app.journey import switches
 from app.journey.live import call_of
 from app.journey.nudges import HOUR_MS, hours, open_nudges
 from app.journey.clocktext import when_text
@@ -97,7 +98,7 @@ def reword(lines: list[dict], settings, write=None, prompt: str = PROMPT) -> tup
     No tools are needed here, so the handover runs on the same key as strips and the second look.
     """
     if write is None:
-        if not settings.spark_configured:
+        if not switches.is_live(settings, "spark"):
             return None, NO_KEY
         write = SparkAdapter(settings).write
     facts = "\n".join(f"{n}. {line['text']}" for n, line in enumerate(lines, 1))

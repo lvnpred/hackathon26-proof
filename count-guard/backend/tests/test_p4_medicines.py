@@ -10,7 +10,7 @@ import pytest
 
 from app.adapters.sam import SamAdapter
 from app.adapters import spark as spark_mod
-from app.journey import ask_api, proof
+from app.journey import proof, switches
 from app.journey.ask_api import NO_MEDICINES
 from app.journey.ask import ask_view
 from app.journey.stories import plain
@@ -160,14 +160,14 @@ def test_live_read_and_cut_switch(tmp_path, monkeypatch):
 
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_strips", boom)
     got = _post(keyed, kumar2).json()["ask"]["medicines"][-1]
-    assert got["source"] == "prepared (live call failed)" and len(got["rows"]) == 4
+    assert got["source"] == "unavailable"  # never the prepared strips named like the upload (spec §4)
 
     monkeypatch.setattr(spark_mod.SparkAdapter, "read_strips", fake)
-    monkeypatch.setattr(ask_api, "MEDICINES_LIVE", False)
+    monkeypatch.setattr(switches, "MEDICINES_LIVE", False)
     del calls[:]
     got = _post(keyed, kumar2).json()["ask"]["medicines"][-1]
     assert got["source"] == "prepared" and calls == [] and len(got["rows"]) == 4
-    assert ask_api.MEDICINES_LIVE is False
+    assert switches.MEDICINES_LIVE is False
 
 
 def _keyed_client(tmp_path):

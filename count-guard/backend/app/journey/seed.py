@@ -1,6 +1,8 @@
 """The ward demo seed: three synthetic patients on one shared demo clock (episode ms, 0 = Day 0 09:00).
 
-Kumar and Das start empty, in clinic (the video builds their stories live). Iyer was admitted the
+Each patient is first put on the ward list (patient.registered at 0, bookkeeping: hidden from the
+timelines and not counted by the clock's stamp). Beyond that, Kumar and Das start empty, in clinic (the
+video builds their stories live). Iyer was admitted the
 day before and is on the ward with a signed, acknowledged hourly-observation order and one reading
 taken, so the rules in nudges.py raise her overdue round the first time the clock passes Day 0 10:00.
 The seed writes through the same helpers the routes use, so it cannot drift from them.

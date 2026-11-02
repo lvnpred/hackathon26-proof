@@ -137,3 +137,29 @@ def test_clock_route_refuses_bad_values(tmp_path):
     assert client.post("/journey/clock", json={"ms": -1}).status_code == 422
     assert client.post("/journey/clock", json={"ms": "soon"}).status_code == 422
     assert client.post("/journey/clock", json={"ms": 5, "extra": 1}).status_code == 422
+
+
+def test_registration_stays_out_of_the_timelines(tmp_path):
+    client = _client(tmp_path)
+    for patient in _seed(client)["patients"]:
+        view = client.get(f"/journey/episodes/{patient['id']}").json()
+        assert all(item["type"] != "patient.registered" for item in view["timeline"])
+        lines = " ".join(f"{item['plain']} {item['patient']}" for item in view["timeline"]).lower()
+        assert "registered" not in lines
+
+
+def test_registration_reads_plainly_in_the_audit(tmp_path):
+    client = _client(tmp_path)
+    kumar = _seed(client)["patients"][0]["id"]
+    rows = client.get(f"/journey/episodes/{kumar}/audit").json()["rows"]
+    assert [row["what"] for row in rows] == ["Given bed 4 on the ward list."]
+
+
+def test_registration_does_not_move_the_first_untimed_action(tmp_path):
+    # Kumar and Das are still "empty" for the clock: the registration alone does not push their first step to 1 s.
+    client = _client(tmp_path)
+    kumar = _seed(client)["patients"][0]["id"]
+    store = _store(client)
+    assert clock.stamp(store, kumar, None) == 0
+    store.append(kumar, "note.added", {}, ts_ms=0)
+    assert clock.stamp(store, kumar, None) == 1000

@@ -98,6 +98,8 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} logged {', '.join(x for x in parts if x)}."
     if kind == "nudge.raised":
         return f"Nudge to {p.get('to')}: {p.get('says')}"
+    if kind == "patient.registered":
+        return f"Given bed {p.get('bed')} on the ward list."
     if kind == "nudge.seen":
         return f"{p.get('by')} answered a nudge: {(p.get('note') or 'seen').rstrip('.')}."
     if kind == "handover.drafted":
@@ -213,7 +215,7 @@ def by_ai(payload: dict) -> bool:
 
 
 STAFF_ONLY = ("order.drafted", "discharge.drafted")
-HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted")  # bookkeeping; the visible record is work.done and the rest
+HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted", "patient.registered")  # bookkeeping, not care
 
 
 def patient_line(event: dict, tasks: dict[str, dict], signed: bool = False) -> str:

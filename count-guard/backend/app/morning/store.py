@@ -184,10 +184,12 @@ class MorningStore:
             self._conn.execute("DELETE FROM clock")
             self._conn.commit()
 
-    def latest_ts(self, episode_id: str) -> int | None:
-        """The latest ts_ms on an episode, or None when it has no events."""
+    def latest_ts(self, episode_id: str, *, skip: tuple[str, ...] = ()) -> int | None:
+        """The latest ts_ms on an episode, leaving out the event types in `skip`; None when there are none."""
+        marks = ",".join("?" * len(skip))
+        where = f" AND event_type NOT IN ({marks})" if skip else ""
         with self._lock:
             row = self._conn.execute(
-                "SELECT MAX(ts_ms) AS ts FROM timeline WHERE episode_id = ?", (episode_id,)
+                f"SELECT MAX(ts_ms) AS ts FROM timeline WHERE episode_id = ?{where}", (episode_id, *skip)
             ).fetchone()
         return None if row["ts"] is None else int(row["ts"])

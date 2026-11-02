@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 from app.journey.ask import short_name
 from app.journey.clocktext import latest_ms, when_text
 from app.morning.guide import explain_event
@@ -224,10 +226,26 @@ AI_PREFIX = "AI (on behalf of"  # the start of ops.policy.AI_BY; ops imports thi
 CAMERA_BY = "Count Guard AI"  # the swab camera and its rules (journey/advice.py): advice only, never a count
 
 
+# Cyrillic and Greek letters that look like the Latin ones in the AI labels (after casefold), so "AІ" is still "ai".
+_LOOKALIKE = str.maketrans("асеіјорхуԁһӏսոαεικνορτυ", "aceijopxydhlunaeikvoptu")
+
+
+def _plain(text: str) -> str:
+    """Letters and digits only: NFKC (full-width, ligatures), casefold, accents and lookalikes folded, the rest
+    (spacing, punctuation, zero-width characters) dropped."""
+    text = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", text).casefold())
+    return "".join(c for c in text if c.isalnum()).translate(_LOOKALIKE)
+
+
+_AI_STARTS = (_plain(AI_PREFIX), _plain(CAMERA_BY))
+_AI_EXACT = ("ai", "camera")  # a bare "AI" or "Camera" names no person: read as the machine, never as a person
+
+
 def by_ai(payload: dict) -> bool:
-    """True when the AI wrote the event (its `by` is the AI label)."""
-    by = " ".join(str(payload.get("by") or "").split()).casefold()  # spacing and case never hide the AI
-    return by.startswith(AI_PREFIX.casefold()) or by == CAMERA_BY.casefold()
+    """True when the AI or the camera wrote the event: its `by` is an AI label, however it is spaced, punctuated or
+    spelled with lookalike letters. Stricter is safe here: a `by` read as the AI can never save a count (U10)."""
+    by = _plain(str(payload.get("by") or ""))
+    return by.startswith(_AI_STARTS) or by in _AI_EXACT
 
 
 STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd", "check.photo", "check.override", "druglog.parsed",

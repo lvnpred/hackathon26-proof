@@ -16,11 +16,13 @@ from pydantic import Field, field_validator
 from app.journey import live, states, switches, theatre
 from app.journey.api import At, _act, _at, _require, _store, settle, view
 from app.journey.media_api import SPARK, _heard
+from app.journey.stories import by_ai
 from app.journey.theatre import DRUG_GIVEN, DRUG_HEARD, PACK_HEARD, PACK_OPENED
 from app.morning.vitals import choose_wording
 
 theatre_router = APIRouter(prefix="/journey/episodes/{episode_id}/theatre")
 NOT_IN_THEATRE = "not in theatre"
+A_PERSON = "A person confirms what was heard; the camera and the AI only advise."
 
 
 class NotInTheatre(Exception):
@@ -112,9 +114,11 @@ def hear_drug(
     return _act(request, episode_id, kind, payload, at_ms)
 
 
-def _confirm(request: Request, episode_id: str, draft_id: str, kinds: tuple[str, str], missing: str) -> dict:
+def _confirm(request: Request, episode_id: str, draft_id: str, kinds: tuple[str, str], missing: str, by: str) -> dict:
     heard_kind, done_kind = kinds
     stay = theatre.placed_stay(_events(request, episode_id))  # a corrected heard line is confirmed in place
+    if by_ai({"by": by}):  # U10, the check /count and /correct use: an AI or camera `by` never confirms
+        raise HTTPException(status_code=422, detail=A_PERSON)
     found = theatre.draft(stay, heard_kind, draft_id)
     if found is None:
         raise HTTPException(status_code=404, detail=missing)
@@ -126,7 +130,7 @@ def _confirm(request: Request, episode_id: str, draft_id: str, kinds: tuple[str,
 @theatre_router.post("/drug/{draft_id}/confirm")
 def confirm_drug(episode_id: str, draft_id: str, body: ConfirmIn, request: Request) -> dict:
     """A person's tap: the heard row becomes a drug given, by them."""
-    found = _confirm(request, episode_id, draft_id, (DRUG_HEARD, DRUG_GIVEN), "Heard drug line not found.")
+    found = _confirm(request, episode_id, draft_id, (DRUG_HEARD, DRUG_GIVEN), "Heard drug line not found.", body.by)
     keep = {k: v for k, v in found["payload"].items() if k not in ("by", "calls")}
     payload = {**keep, "confirmed": True, "by": body.by, "draft_id": draft_id}
     return _act(request, episode_id, DRUG_GIVEN, payload, body.at_ms)
@@ -135,10 +139,10 @@ def confirm_drug(episode_id: str, draft_id: str, body: ConfirmIn, request: Reque
 @theatre_router.post("/pack/{draft_id}/confirm")
 def confirm_pack(episode_id: str, draft_id: str, body: ConfirmIn, request: Request) -> dict:
     """A person's tap: the heard pack is opened, by them. Like Add pack, a heard pack adds to the count."""
-    found = _confirm(request, episode_id, draft_id, (PACK_HEARD, PACK_OPENED), "Heard pack not found.")
+    found = _confirm(request, episode_id, draft_id, (PACK_HEARD, PACK_OPENED), "Heard pack not found.", body.by)
     heard = found["payload"]
     payload = {"item_type": heard["item_type"], "quantity": heard["n"], "source": "voice", "by": body.by,
-               "draft_id": draft_id}
+               "draft_id": draft_id, "extra": True}  # R27: it adds, before incision too
     return _act(request, episode_id, PACK_OPENED, payload, body.at_ms)
 
 

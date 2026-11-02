@@ -356,14 +356,16 @@ def stay_latest(events: list[dict], kind: str) -> dict | None:
 
 
 def stay_packs(events: list[dict]) -> list[dict]:
-    """The packs that make up this theatre stay's opened count: the last pack recorded before surgery began, then
-    every pack since (an extra pack adds; once surgery began the count can only go up). Before surgery began the
-    latest pack replaces any other."""
+    """The packs that make up this theatre stay's opened count (R27). Before surgery began: the last pack that names
+    a total (not `extra`) plus every extra pack written after it, so a total re-entered before incision replaces the
+    earlier ones and an extra pack (Add pack, a confirmed heard pack) adds. Once surgery began: every pack."""
     stay = stay_events(events)
     began = _latest(stay, "surgery.began")
     cut = stay.index(began) if began else len(stay)
     before = [e for e in stay[:cut] if e["event_type"] == "count.pack_opened"]
-    return before[-1:] + [e for e in stay[cut:] if e["event_type"] == "count.pack_opened"]
+    totals = [i for i, e in enumerate(before) if not e["payload"].get("extra")]
+    kept = before[totals[-1]:] if totals else before
+    return kept + [e for e in stay[cut:] if e["event_type"] == "count.pack_opened"]
 
 
 def stay_opened(events: list[dict]) -> int | None:

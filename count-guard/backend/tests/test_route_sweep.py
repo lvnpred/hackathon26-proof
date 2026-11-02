@@ -204,3 +204,32 @@ def test_static_scan_sees_a_constant_and_a_keyword():
     assert names == {"CLOSING", "B"}
     call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
     assert _is_closing(call.keywords[0].value, names)
+
+
+def test_camera_live_socket_never_writes_a_count_or_a_surgery_step(tmp_path):
+    """Final fix I2: the sweep reads OpenAPI, which does not list the camera WebSocket. Drive it here: detections, a
+    spoken pack, a finalize checkpoint. Nothing it writes is `count.*` or `surgery.*`, and surgery still cannot end."""
+    client, eid = _begun(tmp_path)
+    _count(client, eid, "opened", quantity=20)
+    assert client.post(f"/journey/episodes/{eid}/camera/case", json={"by": PERSON}).status_code == 200
+    events = client.app.state.morning.events
+    guarded = ("count.", "surgery.")
+    before = [e["id"] for e in events(eid) if e["event_type"].startswith(guarded)]
+    swabs = [{"track_id": f"g{i}", "label": "gauze swab", "bbox": [0.06 + i * 0.05, 0.2, 0.05, 0.05], "score": 0.9}
+             for i in range(3)]
+    with client.websocket_connect(f"/journey/episodes/{eid}/camera/live") as socket:
+        assert socket.receive_json()["type"] == "ready"
+        for message in (
+            {"type": "detections", "detections": swabs, "media_ts_ms": 2000},
+            {"type": "utterance", "text": "opening twenty swabs, closing count twenty, all back", "media_ts_ms": 3000},
+            {"type": "detections", "detections": swabs, "media_ts_ms": 30000},
+            {"type": "checkpoint", "phase": "closing", "media_ts_ms": 60000, "finalize": True},
+        ):
+            socket.send_json(message)
+            assert socket.receive_json()["type"] == "state"
+    after = events(eid)
+    assert [e["id"] for e in after if e["event_type"].startswith(guarded)] == before
+    assert [e for e in after if e["event_type"] == "camera.advice"]  # the socket did write: advice only
+    assert all(e["payload"].get("by") for e in after if e["event_type"].startswith("camera."))
+    r = _surgery(client, eid, "ended")
+    assert r.status_code == 409 and r.json()["detail"] == SAVE_FIRST

@@ -220,3 +220,103 @@ def test_replay_resolve_and_close_never_make_the_gate_ok(tmp_path):
     assert r.status_code == 409 and r.json()["detail"] == SAVE_FIRST  # resolved advice and a closed case are not a count
     assert _post_json(client, eid, "/count", {"step": "closing", "returned": 10, "by": NURSE}).status_code == 200
     assert _end(client, eid).status_code == 200
+
+
+# R27 (final fix C1): an extra pack before incision adds to the opened count; only a non-extra re-entry replaces it.
+def _theatre_patient(tmp_path):
+    client, eid = _new_patient(tmp_path)
+    assert _post_json(client, eid, "/count", {"step": "opened", "quantity": 20, "by": NURSE}).status_code == 200
+    return client, eid
+
+
+def _closing(client, eid, returned):
+    return _post_json(client, eid, "/count", {"step": "closing", "returned": returned, "by": NURSE})
+
+
+def test_heard_pack_confirmed_before_incision_adds_to_the_opened_count(tmp_path):
+    """The probe: opened 20, then "opening five swabs" confirmed before incision. It used to replace the 20 with 5."""
+    client, eid = _theatre_patient(tmp_path)
+    heard = client.post(f"/journey/episodes/{eid}/theatre/drug", data={"by": NURSE, "text": "opening five swabs"})
+    assert heard.status_code == 200, heard.text
+    [draft] = [e for e in _events(client, eid) if e["event_type"] == "count.pack_heard"]
+    r = _post_json(client, eid, f"/theatre/pack/{draft['id']}/confirm", {"by": NURSE})
+    assert r.status_code == 200, r.text
+    [_, added] = [e for e in _events(client, eid) if e["event_type"] == "count.pack_opened"]
+    assert added["payload"]["extra"] is True and added["payload"]["quantity"] == 5
+    assert states.stay_opened(_events(client, eid)) == 25
+    assert _post_json(client, eid, "/surgery", {"step": "began", "by": NURSE}).status_code == 200
+    assert _closing(client, eid, 5).status_code == 422  # the probe's closing of 5: 20 unaccounted needs a reason
+    assert _closing(client, eid, 20).status_code == 422
+    # A person's closing of 20 with no reason, written past the route: the gate reads it as unreconciled.
+    client.app.state.morning.append(eid, "count.closing", states.closing_payload(_events(client, eid), 20, NURSE),
+                                    ts_ms=10**9)
+    assert states.count_gate(_events(client, eid)) == "unreconciled"
+    assert _end(client, eid).status_code == 409
+    assert _closing(client, eid, 25).status_code == 200
+    assert _end(client, eid).status_code == 200
+
+
+def test_count_extra_before_incision_adds_to_the_opened_count(tmp_path):
+    client, eid = _theatre_patient(tmp_path)
+    r = _post_json(client, eid, "/count", {"step": "opened", "quantity": 5, "extra": True, "by": NURSE})
+    assert r.status_code == 200, r.text
+    assert [e["payload"].get("extra") for e in _events(client, eid) if e["event_type"] == "count.pack_opened"] == [None, True]
+    assert states.stay_opened(_events(client, eid)) == 25
+    assert _post_json(client, eid, "/surgery", {"step": "began", "by": NURSE}).status_code == 200
+    assert _closing(client, eid, 5).status_code == 422
+    assert _closing(client, eid, 25).status_code == 200
+    assert _end(client, eid).status_code == 200
+
+
+def test_a_non_extra_re_entry_before_incision_still_replaces(tmp_path):
+    client, eid = _theatre_patient(tmp_path)
+    assert _post_json(client, eid, "/count", {"step": "opened", "quantity": 5, "extra": True, "by": NURSE}).status_code == 200
+    assert _post_json(client, eid, "/count", {"step": "opened", "quantity": 30, "by": NURSE}).status_code == 200
+    assert states.stay_opened(_events(client, eid)) == 30  # the new total names every swab; the extra before it is in it
+    assert _post_json(client, eid, "/count", {"step": "opened", "quantity": 2, "extra": True, "by": NURSE}).status_code == 200
+    assert states.stay_opened(_events(client, eid)) == 32
+    assert _post_json(client, eid, "/surgery", {"step": "began", "by": NURSE}).status_code == 200
+    assert _closing(client, eid, 32).status_code == 200
+    assert _end(client, eid).status_code == 200
+
+
+# Final fix m1: punctuation, zero-width and homoglyph spellings of the AI label are still the AI.
+AI_SPELLINGS = ["Count Guard AI.", "Count-Guard AI", "CountGuard AI", "​Count Guard AI", "Count Guard AІ",
+                "AI(on behalf of Ward 4)", "A.I. (on behalf of Ward 4)", "Ｃount Guard AI", "Count Guard AΙ",
+                "AI", "a.i.", "Camera", " camera ", "Count Guard AI (camera)"]
+PEOPLE = ["Nurse Meena (synthetic)", "Dr. A. Rao (synthetic)", NURSE, "Sister M. Thomas (synthetic)", "Aisha K.",
+          "Cameron (synthetic)", "Dr. Ai Tanaka (synthetic)"]
+
+
+def test_by_ai_sees_disguised_labels_and_never_a_person():
+    from app.journey.stories import by_ai
+
+    assert [by for by in AI_SPELLINGS if not by_ai({"by": by})] == []
+    assert [by for by in PEOPLE if by_ai({"by": by})] == []
+    assert by_ai({"by": AI_BY}) and by_ai({"by": CAMERA_BY}) and not by_ai({}) and not by_ai({"by": ""})
+
+
+def test_disguised_ai_labels_cannot_close_the_count(tmp_path):
+    client, eid = _new_patient(tmp_path)
+    _begin_with_pack(client, eid)
+    for by in AI_SPELLINGS:
+        r = _post_json(client, eid, "/count", {"step": "closing", "returned": 10, "by": by})
+        assert r.status_code == 422, (by, r.text)
+        client.app.state.morning.append(
+            eid, "count.closing", {"opened": 10, "returned": 10, "unaccounted": 0, "detail": "", "by": by}, ts_ms=10**9
+        )
+        assert states.count_gate(_events(client, eid)) == "none", by
+    assert _end(client, eid).status_code == 409
+
+
+# Final fix m2: an unreconciled closing needs a reason with words in it, not "." or a zero-width space.
+def test_unreconciled_closing_needs_a_real_reason(tmp_path):
+    client, eid = _new_patient(tmp_path)
+    _begin_with_pack(client, eid)
+    for detail in (".", "​", " ", " - ", "ok", "​o​k​", "1234", "⁠﻿"):
+        r = _post_json(client, eid, "/count", {"step": "closing", "returned": 9, "by": NURSE, "detail": detail})
+        assert r.status_code == 422, (detail, r.text)
+    assert _end(client, eid).status_code == 409
+    r = _post_json(client, eid, "/count", {"step": "closing", "returned": 9, "by": NURSE, "detail": "X-ray clear"})
+    assert r.status_code == 200, r.text
+    assert _end(client, eid).status_code == 200

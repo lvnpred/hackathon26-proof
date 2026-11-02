@@ -43,6 +43,13 @@ class CountIn(At):
         return self
 
 
+def _has_reason(detail: str) -> bool:
+    """A reason says something: at least 3 letters once zero-width characters and no-break spaces are removed.
+    "." or a lone zero-width space is not a reason (the gate's own check stays a plain non-blank test)."""
+    kept = detail.translate({ord(c): None for c in "\u200b\u200c\u200d\u2060\ufeff\u00a0"})
+    return sum(c.isalpha() for c in kept) >= 3
+
+
 def _camera_count(events: list[dict], evidence_id: str) -> dict:
     """The `swabs.counted` event of this theatre stay that holds the id, else a 422."""
     held = [e for e in states.stay_events(events) if e["event_type"] == "swabs.counted" and e["payload"].get("evidence_id") == evidence_id]
@@ -52,8 +59,9 @@ def _camera_count(events: list[dict], evidence_id: str) -> dict:
 
 
 def _pack_quantity(events: list[dict], body: CountIn) -> int:
-    """The swabs this pack adds. Before surgery began a pack replaces the last one. Once it began the count can only
-    go up: an extra pack adds its quantity; a new total adds the difference, and a total that is not higher is a 422."""
+    """The swabs this pack adds. An extra pack adds its quantity. Otherwise, before surgery began a pack names the
+    new total and replaces the earlier ones (`states.stay_packs`); once it began the count can only go up: a new total
+    adds the difference, and a total that is not higher is a 422."""
     if states.surgery_status(events) == "none" or body.extra:
         return body.quantity
     current = states.stay_opened(events) or 0
@@ -77,6 +85,8 @@ def count(episode_id: str, body: CountIn, request: Request) -> dict:
     events = store.events(episode_id)
     if body.step == "opened":
         payload = {"item_type": "swab", "quantity": _pack_quantity(events, body), "source": "typed", "by": body.by}
+        if body.extra:
+            payload["extra"] = True  # R27: before incision too, an extra pack adds instead of replacing
         return _act(request, episode_id, "count.pack_opened", payload, body.at_ms, body.supersedes_id)
     # A correction keeps the camera count its closing came from, so the record shows what was read and what was saved.
     evidence_id = body.evidence_id or (old["payload"].get("evidence_id") if old else None)
@@ -87,6 +97,6 @@ def count(episode_id: str, body: CountIn, request: Request) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     read = camera["payload"].get("count") if camera else None
-    if not body.detail.strip() and (payload["unaccounted"] != 0 or (read is not None and body.returned != read)):
+    if not _has_reason(body.detail) and (payload["unaccounted"] != 0 or (read is not None and body.returned != read)):
         raise HTTPException(status_code=422, detail=NEEDS_REASON)
     return _act(request, episode_id, "count.closing", payload, body.at_ms, body.supersedes_id)

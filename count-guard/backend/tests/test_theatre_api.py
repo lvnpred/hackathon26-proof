@@ -184,3 +184,29 @@ def test_theatre_lines_read_as_plain_words(tmp_path):
         assert not re.search(r"\b[a-z]{3,}\.[a-z]{3,}\b|_", item["plain"]), item["plain"]
     assert any("(simulated)" in t["plain"] for t in ours)
     assert all(t["patient"] == "" for t in ours if t["type"] in ("druglog.parsed", "count.pack_heard"))
+
+
+AI_BYS = ("Count Guard AI", "AI (on behalf of Ward 4)", "count-guard ai.")
+
+
+def test_ai_by_cannot_confirm_a_heard_pack(tmp_path):
+    """Final fix I1: the pack confirm refuses an AI or camera `by`, as /count and /correct do (U10)."""
+    client, eid = _theatre(tmp_path)
+    _say(client, eid, "opening twenty swabs", by=NURSE)
+    [heard] = _of(client, eid, "count.pack_heard")
+    for by in AI_BYS:
+        r = client.post(_url(eid, f"/pack/{heard['id']}/confirm"), json={"by": by})
+        assert r.status_code == 422, (by, r.text)
+    assert _of(client, eid, "count.pack_opened") == []
+    assert client.post(_url(eid, f"/pack/{heard['id']}/confirm"), json={"by": NURSE}).status_code == 200
+
+
+def test_ai_by_cannot_confirm_a_heard_drug(tmp_path):
+    client, eid = _theatre(tmp_path)
+    _say(client, eid, "lignocaine two percent, five ml, local infiltration")
+    [draft] = _of(client, eid, "druglog.parsed")
+    for by in AI_BYS:
+        r = client.post(_url(eid, f"/drug/{draft['id']}/confirm"), json={"by": by})
+        assert r.status_code == 422, (by, r.text)
+    assert _of(client, eid, "drug.given") == []
+    assert client.post(_url(eid, f"/drug/{draft['id']}/confirm"), json={"by": DOCTOR}).status_code == 200

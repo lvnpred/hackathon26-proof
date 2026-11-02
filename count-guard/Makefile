@@ -7,7 +7,7 @@ CG_API_PORT ?= 8100
 CG_WEB_PORT ?= 5173
 export CG_API_PORT CG_WEB_PORT
 
-.PHONY: setup test eval day1 cost baseline backend frontend dev demo-check
+.PHONY: setup test eval day1 cost baseline backend frontend dev demo-check live-check
 
 setup:
 	python3 -m venv .venv
@@ -47,3 +47,8 @@ demo-check:
 	$(PY)/python eval/p3/make_clips.py
 	$(PY)/python eval/p4/make_photos.py
 	cd frontend && node --test 'scripts/demo/*.test.mjs' && node scripts/demo/run.mjs
+
+# By hand, with a key: one real call per model (spec §6.7) on the synthetic demo media; artifacts in eval/live/<date>/.
+live-check:
+	$(PY)/python eval/make_media.py
+	$(PY)/python -m app.live_check

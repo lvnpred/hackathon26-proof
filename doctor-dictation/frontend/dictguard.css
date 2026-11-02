@@ -4,3 +4,6 @@
 .name-check button { font-size:16px; min-height:44px; padding:6px 16px; margin-right:8px; }
 .undo-dict { margin:8px 0; }
 .undo-dict button { font-size:15px; min-height:40px; padding:4px 14px; }
+/* The two-app demo banner (demobanner.js): one quiet line above the top bar. */
+.demo-banner { margin: 0; padding: 4px 12px; text-align: center; font-size: 13px; background: var(--sun-soft); color: var(--sun-text); }
+.demo-banner[hidden] { display: none; }

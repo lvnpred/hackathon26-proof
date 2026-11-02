@@ -7,10 +7,10 @@ import { call } from "../journey.js";
 const base = (id) => `/journey/episodes/${id}/theatre`;
 const getTheatre = (id) => call(base(id));
 const setTier = (id, on) => call(`${base(id)}/tier`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on }) });
-// The card, or null while the tier is off or before a drop (the server says 404).
+// The card, or null while the tier is off or before a drop (the server says 404). The reply is {banner, card}.
 async function getCard(id) {
   try {
-    return await call(`${base(id)}/card`);
+    return (await call(`${base(id)}/card`)).card ?? null;
   } catch (exc) {
     if (exc.status === 404) return null;
     throw exc;

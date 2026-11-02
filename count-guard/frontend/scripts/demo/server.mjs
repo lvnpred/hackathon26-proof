@@ -1,12 +1,14 @@
 import { spawn } from "node:child_process";
 import { closeSync, openSync } from "node:fs";
 import net from "node:net";
+import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { DD_ARGS, DD_PORT, DD_PYTHON, FORBIDDEN_PORTS, assertDdOffline, ddEnv, refuseOwnerPorts, urls } from "./dd.mjs";
 
-// Pure guards for the demo check's own servers. The owner's servers (8100, 5173) are never used.
+// Pure guards for the demo check's own servers. The owner's servers (8000, 8100, 5173) are never used.
 export const API_PORT = 8200;
 export const WEB_PORT = 5273;
-export const OWNER_PORTS = [8100, 5173];
+export const OWNER_PORTS = FORBIDDEN_PORTS;
 // Built from parts so no tracked line reads the key name, "=", then a quote (repo hygiene test).
 export const NO_KEY = ["MODEL_API_KEY", ""].join("=");
 export const NO_KEYS = [NO_KEY, ["BASETEN_API_KEY", ""].join("="), ["META_API_KEY", ""].join("=")];
@@ -19,11 +21,14 @@ export function devArgs(dataDir) {
 }
 
 // Environment for the child `make dev`: the three model keys emptied here (and again on the make command line,
-// which wins over any value make loads itself), nothing inherited from a parent make.
-export function childEnv(parent) {
+// which wins over any value make loads itself), nothing inherited from a parent make. Count Guard reads the demo
+// check's own Doctor Dictation and shares a one-run intake token with it.
+export function childEnv(parent, token = "") {
   const env = { ...parent };
   for (const k of DROPPED) delete env[k];
   for (const k of EMPTIED) env[k] = "";
+  env.DD_BASE_URL = urls(API_PORT).dd;
+  env.CG_SYNC_TOKEN = token;
   return env;
 }
 
@@ -35,7 +40,7 @@ export function assertOffline(models) {
 
 // free: port -> true when nothing listens there.
 export function busyPorts(free) {
-  for (const port of [API_PORT, WEB_PORT]) {
+  for (const port of [API_PORT, WEB_PORT, DD_PORT]) {
     if (free[port] !== true) {
       return `Port ${port} is in use. Stop that server first; demo-check never stops a server it did not start.`;
     }
@@ -81,28 +86,40 @@ const REAL = {
   web: async (url) => (await fetch(url)).ok || null,
 };
 
-// onSpawn(stop) runs right after the spawn, so a signal during start-up can still stop the group.
-// deps replaces process control in tests.
-export async function startServers({ dataDir, logPath, onSpawn = () => {}, deps = {} }) {
+// onSpawn(stop) runs right after the spawns, so a signal during start-up can still stop both groups.
+// deps replaces process control in tests. ddDbPath is Doctor Dictation's temp database (default: in dataDir).
+export async function startServers({ dataDir, logPath, ddDbPath = `${dataDir}/dd-app.db`, onSpawn = () => {}, deps = {} }) {
   const d = { ...REAL, ...deps };
-  const probes = { [API_PORT]: await d.free(API_PORT), [WEB_PORT]: await d.free(WEB_PORT) };
+  refuseOwnerPorts([API_PORT, WEB_PORT, DD_PORT]);
+  const ports = [API_PORT, WEB_PORT, DD_PORT];
+  const probes = {};
+  for (const port of ports) probes[port] = await d.free(port);
   const busy = busyPorts(probes);
   if (busy) throw new Error(busy);
 
+  const token = randomBytes(18).toString("base64url"); // this run's intake token, shared by the two children only
   const log = openSync(logPath, "a");
-  const child = d.spawn("make", devArgs(dataDir), {
-    cwd: REPO, detached: true, stdio: ["ignore", log, log], env: childEnv(process.env),
-  });
+  const children = [
+    ["make", d.spawn("make", devArgs(dataDir), { cwd: REPO, detached: true, stdio: ["ignore", log, log], env: childEnv(process.env, token) })],
+    ["Doctor Dictation", d.spawn(`${REPO}${DD_PYTHON}`, DD_ARGS, {
+      cwd: `${REPO}../doctor-dictation`, detached: true, stdio: ["ignore", log, log],
+      env: ddEnv(process.env, { dbPath: ddDbPath, apiPort: API_PORT, token }),
+    })],
+  ];
   let spawnError = null;
-  child.on("error", (err) => { spawnError = err; });
+  for (const [name, child] of children) child.on("error", (err) => { spawnError ??= `Could not start ${name}: ${err.message}`; });
   let stopping = null;
-  const alive = () => { try { d.kill(-child.pid, 0); return true; } catch { return false; } };
+  const alive = (child) => { try { d.kill(-child.pid, 0); return true; } catch { return false; } };
+  const signal = (sig) => {
+    for (const [, child] of children) if (alive(child)) { try { d.kill(-child.pid, sig); } catch { /* already gone */ } }
+  };
+  const allFree = async () => { for (const port of ports) if (!(await d.free(port))) return false; return true; };
   const stop = () => {
     stopping ??= (async () => {
-      if (alive()) { try { d.kill(-child.pid, "SIGTERM"); } catch { /* already gone */ } }
+      signal("SIGTERM");
       const end = Date.now() + 10000;
-      while (Date.now() < end && !((await d.free(API_PORT)) && (await d.free(WEB_PORT)))) await sleep(250);
-      if (alive()) { try { d.kill(-child.pid, "SIGKILL"); } catch { /* already gone */ } }
+      while (Date.now() < end && !(await allFree())) await sleep(250);
+      signal("SIGKILL");
       closeSync(log);
     })();
     return stopping;
@@ -110,7 +127,7 @@ export async function startServers({ dataDir, logPath, onSpawn = () => {}, deps 
   onSpawn(stop);
 
   const cancelled = () => {
-    if (spawnError) throw new Error(`Could not start make: ${spawnError.message}`);
+    if (spawnError) throw new Error(spawnError);
     return stopping !== null;
   };
   try {
@@ -118,6 +135,7 @@ export async function startServers({ dataDir, logPath, onSpawn = () => {}, deps 
     assertOffline(await waitFor("The API", () => d.json(`http://127.0.0.1:${API_PORT}/journey/models`), cancelled));
     await waitFor("The web server", () => d.web(`http://127.0.0.1:${WEB_PORT}/`), cancelled);
     assertOffline(await waitFor("The web proxy", () => d.json(`http://127.0.0.1:${WEB_PORT}/journey/models`), cancelled));
+    assertDdOffline(await waitFor("Doctor Dictation", () => d.json(`${urls(API_PORT).dd}/health`), cancelled));
   } catch (err) {
     await stop();
     throw err;

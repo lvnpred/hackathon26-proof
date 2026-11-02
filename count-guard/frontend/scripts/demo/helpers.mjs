@@ -3,18 +3,19 @@ import { resolve } from "node:path";
 
 const collapse = (s) => s.replace(/\s+/g, " ");
 
-export async function waitText(page, s, ms = 10000) {
+// root: the element whose text counts. Count Guard's is .app; Doctor Dictation has no app root, so its is body.
+export async function waitText(page, s, ms = 10000, root = ".app") {
   await page.waitForFunction(
-    (want) => (document.querySelector(".app")?.innerText || "").replace(/\s+/g, " ").includes(want),
-    s,
+    ([want, sel]) => (document.querySelector(sel)?.innerText || "").replace(/\s+/g, " ").includes(want),
+    [s, root],
     { timeout: ms },
   ).catch(() => { throw new Error(`Text never appeared: "${s}"`); });
 }
 
-export async function waitGone(page, regexSource, ms = 3000) {
+export async function waitGone(page, regexSource, ms = 3000, root = ".app") {
   await page.waitForFunction(
-    (src) => !new RegExp(src).test((document.querySelector(".app")?.innerText || "").replace(/\s+/g, " ")),
-    regexSource,
+    ([src, sel]) => !new RegExp(src).test((document.querySelector(sel)?.innerText || "").replace(/\s+/g, " ")),
+    [regexSource, root],
     { timeout: ms },
   ).catch(() => { throw new Error(`Text that must be absent is on screen: /${regexSource}/`); });
 }
@@ -24,6 +25,7 @@ export function helpers(page, root) {
   const region = (scope) => page.getByRole("region", { name: scope, exact: true });
   return {
     page,
+    root,
     role: (name) => page.getByRole("group", { name: "Role" }).getByRole("button", { name, exact: true }).click(),
     // Staff open a chart through the Patients tab ("My patients" for the doctor).
     async chart(who) {
@@ -65,6 +67,6 @@ export function helpers(page, root) {
     sayFile: (rowText, rel) => page.locator("li.task-row").filter({ hasText: rowText }).locator('input[type=file][accept="audio/*"]').setInputFiles(resolve(root, rel)),
     sayText: (rowText, text) => page.locator("li.task-row").filter({ hasText: rowText }).getByLabel("What was said").fill(text),
     text: async () => collapse(await page.locator(".app").innerText()),
-    waitText: (s, ms) => waitText(page, s, ms),
+    waitText: (s, ms, on = page, textRoot = ".app") => waitText(on, s, ms, textRoot),
   };
 }

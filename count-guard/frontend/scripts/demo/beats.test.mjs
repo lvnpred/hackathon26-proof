@@ -1,47 +1,54 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ADVICE, BEATS, GENERATOR, MEDIA, ROLES, filmSeconds, missingMedia, roleSeconds } from "./beats.mjs";
+import fs from "node:fs";
+import { ADVICE, APPS, BEATS, GENERATOR, MEDIA, ROLES, SCENES, SCENE_SECONDS, filmSeconds, missingMedia, sceneSeconds } from "./beats.mjs";
 
-test("ids are unique and every beat has a known role and path", () => {
+const by = Object.fromEntries(BEATS.map((b) => [b.id, b]));
+const allText = (b) => [...b.expect, ...(b.before ?? [])].join(" | ");
+
+test("ids are unique, the count is pinned, and every beat has a known scene, app and role", () => {
   const ids = BEATS.map((b) => b.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(BEATS.length, 32);
+  assert.equal(BEATS.length, 20);
   for (const b of BEATS) {
+    assert.ok(SCENES.includes(b.scene), b.id);
+    assert.ok(APPS.includes(b.app), b.id);
     assert.ok([...ROLES, "none"].includes(b.role), b.id);
-    assert.ok(["intro", "das", "kumar", "iyer", "close"].includes(b.path), b.id);
   }
 });
 
-test("paths run intro twice, then das, kumar, iyer, and close last", () => {
-  const order = BEATS.map((b) => b.path);
-  assert.deepEqual(order.slice(0, 2), ["intro", "intro"]);
-  assert.equal(order.at(-1), "close");
-  const middle = order.slice(2, -1);
-  const rank = { das: 0, kumar: 1, iyer: 2 };
-  assert.ok(middle.every((p) => p in rank));
-  assert.deepEqual(middle.map((p) => rank[p]), [...middle.map((p) => rank[p])].sort());
+test("scenes follow the spec §12 order: title, DD, ward, theatre, discharge, close", () => {
+  assert.deepEqual(SCENES, ["title", "dd", "ward", "theatre", "discharge", "close"]);
+  const order = BEATS.map((b) => SCENES.indexOf(b.scene));
+  assert.deepEqual(order, [...order].sort((a, b) => a - b));
+  assert.equal(BEATS[0].scene, "title");
+  assert.equal(BEATS.at(-1).scene, "close");
+  for (const b of BEATS.filter((x) => x.scene === "dd")) assert.equal(b.app, "dd", b.id);
+  for (const b of BEATS.filter((x) => x.scene !== "dd" && x.scene !== "title")) assert.equal(b.app, "cg", b.id);
 });
 
-test("each role is filmed 54 to 62 s, the opening and close take 26 s and the film is at most 200 s", () => {
-  const sums = roleSeconds(BEATS);
-  for (const r of ROLES) assert.ok(sums[r] >= 54 && sums[r] <= 62, `${r} ${sums[r]}`);
-  assert.equal(sums.none, 26);
-  assert.ok(filmSeconds(BEATS) <= 200, String(filmSeconds(BEATS)));
+test("scene seconds match spec §12 within 4 s (DD 30, ward 25, theatre 60, discharge 40) and the film is at most 180 s", () => {
+  assert.deepEqual(SCENE_SECONDS, { dd: 30, ward: 25, theatre: 60, discharge: 40 });
+  const sums = sceneSeconds(BEATS);
+  for (const [scene, want] of Object.entries(SCENE_SECONDS)) {
+    assert.ok(Math.abs(sums[scene] - want) <= 4, `${scene} ${sums[scene]} s, want ${want} ± 4`);
+  }
+  assert.ok(filmSeconds(BEATS) <= 180, String(filmSeconds(BEATS)));
 });
 
-test("roleSeconds counts filmed beats only", () => {
+test("sceneSeconds counts filmed beats only", () => {
   const beats = [
-    { role: "doctor", seconds: 5, film: true },
-    { role: "doctor", seconds: 0, film: false },
-    { role: "none", seconds: 3, film: true },
+    { scene: "dd", seconds: 5, film: true },
+    { scene: "dd", seconds: 0, film: false },
+    { scene: "title", seconds: 3, film: true },
   ];
-  assert.deepEqual(roleSeconds(beats), { doctor: 5, nurse: 0, patient: 0, none: 3 });
+  assert.equal(sceneSeconds(beats).dd, 5);
+  assert.equal(sceneSeconds(beats).title, 3);
   assert.equal(filmSeconds(beats), 8);
 });
 
 test("check-only beats are 0 s and not filmed", () => {
   for (const b of BEATS) assert.equal(b.film === false, b.seconds === 0, b.id);
-  assert.deepEqual(BEATS.filter((b) => !b.film).map((b) => b.id), ["kumar-free-soon"]);
 });
 
 test("every filmed beat has narration, at least one click and one expected text", () => {
@@ -51,7 +58,6 @@ test("every filmed beat has narration, at least one click and one expected text"
     assert.ok(b.expect.length >= 1, b.id);
     assert.ok(b.keyed.length > 0, b.id);
   }
-  for (const b of BEATS) assert.ok(b.expect.length >= 1, b.id);
 });
 
 test("narration passes the no-advice regex", () => {
@@ -66,36 +72,83 @@ test("every file a beat uses is in MEDIA, and each folder has a generator", () =
 test("missingMedia names the first missing file and its generator", () => {
   assert.equal(missingMedia("/r", () => true), "");
   assert.equal(
-    missingMedia("/r", (p) => !p.endsWith("wound-day0.png")),
-    "Missing eval/p4/wound-day0.png. Run: .venv/bin/python eval/p4/make_photos.py (or make demo-check).",
+    missingMedia("/r", (p) => !p.endsWith("consent-form.png")),
+    "Missing eval/media/consent/consent-form.png. Run: .venv/bin/python eval/make_media.py (or make demo-check).",
   );
 });
 
-test("expected strings follow the accepted rulings", () => {
-  const by = Object.fromEntries(BEATS.map((b) => [b.id, b]));
-  assert.ok(by["kumar-orders"].expect.includes("Draft from dictation"));
-  assert.ok(by["kumar-orders"].expect.includes("Drafted from voice"));
-  assert.ok(by["kumar-orders"].expect.includes("2 orders drafted from 25 words."));
-  assert.deepEqual(by["kumar-review"].before, ["From voice"]);
-  assert.ok(by["kumar-review"].expect.includes("From voice"));
-  assert.equal(BEATS[1].id, "ai");
-  assert.ok(by.ai.expect.includes("Saw 2 of 3 needle holders."));
-  assert.ok(by["iyer-meds"].expect.includes("Pantoprazole 40 mg:"));
-  const title = "Saline 1 litre over 2 hours, video check of the set-up";
-  const ACK = "Acknowledged Dr. A. Rao's orders";
-  assert.ok(by["kumar-admit"].expect.includes(ACK));
-  assert.ok(by["kumar-admission"].before.includes(ACK) && by["kumar-admission"].expect.includes(ACK));
-  assert.ok(by["iyer-orders"].expect.includes(ACK));
-  assert.ok(!by["kumar-admission"].clicks.includes('Button "Acknowledge"'));
-  assert.ok(!by["iyer-setup"].clicks.includes('Button "Acknowledge"'));
-  assert.ok(by["kumar-ask"].expect.includes("Your question went to Dr. A. Rao"));
-  assert.ok(by["iyer-setup"].expect.includes(`${title} running`));
-  assert.ok(by["iyer-end"].expect.includes(`finished ${title} at`));
-  assert.ok(by["kumar-count"].before.includes("Saw 14 of 15 gauze swabs."));
-  assert.ok(by["kumar-discharge"].clicks.indexOf('Button "Draft discharge"') < by["kumar-discharge"].clicks.indexOf('Button "Update draft"'));
-  const GONE_AFTER_SIGN = ["Drafted from voice", "5 sections drafted from 40 words.", "swab count closed 15 of 15", "Drafted from the record", "opened 15 / returned 15"];
-  // kumar-review: the Dictate chip goes once the answer is sent, so it is checked before and not in expect.
-  // kumar-discharge: the chip, the finding and the Inspector's swab count are gone once the discharge is signed, so they are checked before only.
-  // kumar-count: the swab viewer goes once the count is saved, because the count step folds.
-  for (const b of BEATS) for (const s of b.before ?? []) assert.ok(b.expect.includes(s) || b.id === "kumar-review" || (b.id === "kumar-discharge" && GONE_AFTER_SIGN.includes(s)) || (b.id === "kumar-count" && s === "Saw 14 of 15 gauze swabs."), `${b.id} ${s}`);
+test("DD: dictate, then Save & admit to ward, and the save reaches Count Guard", () => {
+  const dd = BEATS.filter((b) => b.app === "dd");
+  assert.ok(dd.some((b) => b.clicks.some((c) => c.includes("Save & admit to ward"))));
+  const saved = BEATS.findIndex((b) => b.expect.includes("Saved and in Count Guard."));
+  assert.ok(saved >= 0 && BEATS[saved].app === "dd");
+  assert.ok(by["dd-dictate"].expect.includes("M. Fernandes (synthetic)"));
+});
+
+test("the patient is on the CG ward within 3 s of the DD save (A1)", () => {
+  const saved = BEATS.findIndex((b) => b.expect.includes("Saved and in Count Guard."));
+  const arrival = BEATS[saved + 1];
+  assert.equal(arrival.app, "cg");
+  assert.equal(arrival.scene, "ward");
+  assert.ok(arrival.arrivalMs > 0 && arrival.arrivalMs <= 3000, String(arrival.arrivalMs));
+  assert.ok(arrival.expect.includes("M. Fernandes, 52 F"));
+  assert.ok(arrival.expect.includes("Being admitted"));
+});
+
+test("\"synthetic data\" and \"Research demo\" are expected on screen in both apps", () => {
+  for (const app of ["dd", "cg"]) {
+    const text = BEATS.filter((b) => b.app === app).map(allText).join(" | ");
+    assert.match(text, /synthetic data/i, app);
+    assert.match(text, /research demo/i, app);
+  }
+});
+
+test("the §12 moments are each expected by a beat", () => {
+  const scene = (s) => BEATS.filter((b) => b.scene === s).map(allText).join(" | ");
+  assert.match(scene("ward"), /Accepted — The photo shows a patient wristband/);
+  assert.match(scene("ward"), /Not accepted — /);
+  assert.match(scene("ward"), /On the ward/);
+  assert.match(scene("theatre"), /From voice/);
+  assert.match(scene("theatre"), /confirmed by Nurse Asha/);
+  assert.match(scene("theatre"), /Research demo — not for clinical use/);
+  assert.match(scene("theatre"), /BP 86\/50, down 28% in 4 min\./);
+  assert.match(scene("theatre"), /Advice only\. The count a person saves decides\./);
+  assert.match(scene("theatre"), /One lap sponge was not seen back\./);
+  assert.match(scene("theatre"), /Surgery ended unlocks when the count is saved\./);
+  assert.match(scene("discharge"), /Drafted from the record/);
+  assert.match(scene("discharge"), /Discharge PDF/);
+  assert.match(scene("discharge"), /opened 15 \/ returned 15/);
+});
+
+test("the wrong photo is retaken in the ward scene", () => {
+  const ward = BEATS.filter((b) => b.scene === "ward");
+  const wrong = ward.findIndex((b) => b.expect.some((s) => s.startsWith("Not accepted — ")));
+  assert.ok(wrong >= 0);
+  assert.ok(ward.slice(wrong + 1).some((b) => b.clicks.some((c) => c.includes("again"))));
+});
+
+test("every beat with before strings has its step check them through before(H, id)", () => {
+  const steps = fs.readFileSync(new URL("./steps.mjs", import.meta.url), "utf8");
+  const withBefore = BEATS.filter((b) => (b.before ?? []).length);
+  assert.ok(withBefore.length >= 4);
+  for (const b of withBefore) {
+    const start = steps.indexOf(`async ${/^[a-z]+$/.test(b.id) ? b.id : `"${b.id}"`}(H) {`);
+    assert.ok(start >= 0, `no step for ${b.id}`);
+    const body = steps.slice(start, steps.indexOf("\n  },", start));
+    assert.match(body, new RegExp(`before\\(H, "${b.id}"`), `${b.id}: its step never checks its before strings`);
+  }
+});
+
+test("the DD save status accepts either first line, so the 1 s Sending line cannot race", () => {
+  assert.deepEqual(by["dd-admit"].firstOf, ["Saved. Sending to Count Guard…", "Saved and in Count Guard."]);
+  assert.equal(by["dd-admit"].before, undefined);
+});
+
+test("the discharge is signed before the PDF opens, and the PDF must hold the drug log and the count", () => {
+  const ids = BEATS.map((b) => b.id);
+  assert.ok(ids.indexOf("discharge-sign") < ids.indexOf("discharge-pdf"));
+  assert.ok(ids.indexOf("discharge-draft") < ids.indexOf("discharge-sign"));
+  assert.ok(by["discharge-sign"].before.includes("Discharge PDF"));
+  assert.ok(by["discharge-pdf"].pdf.includes("lignocaine 2% 5 ml local infiltration"));
+  assert.ok(by["discharge-pdf"].pdf.includes("Opened 15. Returned 15. Unaccounted 0."));
 });

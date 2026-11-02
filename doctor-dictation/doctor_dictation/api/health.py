@@ -1,4 +1,6 @@
 """Health endpoints. Settings are read per request, never at import."""
+import os
+
 from fastapi import APIRouter
 
 from doctor_dictation.api import visit
@@ -63,4 +65,6 @@ def health():
         "date_locale": visit.locale(),           # the page formats dates and times with these two (frontend/dates.js)
         "timezone": visit.effective_zone_name(),   # the zone the server uses, so page and print agree
         "stt_decode": {k: v for k, v in STT_DECODE.items() if k != "initial_prompt"},
+        # The two-app demo's banner (frontend/demobanner.js); off unless DEMO_BANNER=1, read per request.
+        "demo_banner": os.getenv("DEMO_BANNER", "").strip() == "1",
     }

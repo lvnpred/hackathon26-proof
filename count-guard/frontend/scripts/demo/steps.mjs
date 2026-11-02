@@ -1,237 +1,178 @@
 // One step per beat id: the clicks of the beat table, as browser actions. Expected strings are checked by run.mjs.
-import { BEATS } from "./beats.mjs";
+// H is the Count Guard helper set (helpers.mjs) plus H.dd (the Doctor Dictation tab), H.cgApi (the API origin)
+// and H.marks (what one step leaves for a later one).
+import { resolve } from "node:path";
+import { BEATS, PATIENT } from "./beats.mjs";
+import { pdfText } from "./pdftext.mjs";
 export { helpers, waitGone, waitText } from "./helpers.mjs";
 
-const URL = "http://127.0.0.1:5273/";
+const CG = "http://127.0.0.1:5273/";
+const DD = "http://127.0.0.1:8300/";
+const FULL_NAME = "M. Fernandes, 52 F (synthetic)";
+const NURSE_THEATRE = "Nurse Asha (synthetic)";
 const ADMISSION = ["Wristband on", "Allergies checked", "Baseline observations taken", "Consent on file"];
 const DISCHARGE = ["Discharge card given", "Medicines handed over", "Reminders set"];
-const KUMAR = "R. Kumar";
-const IYER = "S. Iyer";
-// Photo proofs for checklist items (spec §6.6): [checklist label, demo photo, words the prepared verdict shows].
-// Each upload is a recorded action (2 demo minutes), so admission takes one photo: more would close the undo
-// window of the AI's order acknowledgement that this beat shows. Items without a photo show "No photo".
-const ADMISSION_PHOTOS = [
-  ["Wristband on", "eval/media/wristband/wristband-synthetic.png", "shows a patient wristband"],
-];
-const DISCHARGE_PHOTOS = [
-  ["Discharge card given", "eval/media/discharge/discharge-card.png", "shows the discharge card"],
-  ["Medicines handed over", "eval/media/medicine-bag/medicine-bag-synthetic.png", "shows a medicine bag"],
-];
-const photos = async (H, rows) => {
-  for (const [label, file, seen] of rows) {
-    await H.file(`Photo check: ${label}`, file);
-    await H.waitText(seen);
-  }
-};
+const MISSING = "One lap sponge was not seen back.";
+const FOUND = "Found under the drape, counted by hand";
+
 // A beat's "seen before" strings, asserted before the click that would change them.
-const before = async (H, id) => { for (const s of BEATS.find((b) => b.id === id).before) await H.waitText(s); };
+const before = async (H, id, page = H.page, root = ".app") => {
+  for (const s of BEATS.find((b) => b.id === id).before) await H.waitText(s, 10000, page, root);
+};
+const photo = async (H, label, file, seen) => {
+  await H.file(`Photo check: ${label}`, file);
+  await H.waitText(seen);
+};
+const episodeId = (H) => new URL(H.page.url()).pathname.split("/").pop();
+
+// The patient on Count Guard's ward list, read from the same API the list polls. Resolves with the ms since `from`.
+async function arrival(api, from, ms = 10000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    try {
+      const ward = await (await fetch(`${api}/journey/ward`)).json();
+      if ((ward.patients || []).some((p) => p.name === FULL_NAME)) return Date.now() - from;
+    } catch {
+      // the next poll tries again
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return Infinity;
+}
 
 export const STEPS = {
-  async intro(H) {
-    await H.page.goto(URL, { waitUntil: "domcontentloaded" });
+  async title(H) {
+    await H.dd.goto(DD, { waitUntil: "domcontentloaded" });
+    await H.page.goto(CG, { waitUntil: "domcontentloaded" });
+    await H.page.bringToFront();
     await H.role("Doctor");
   },
-  async ai(H) {
-    await H.tab("AI activity");
-    await H.click("Try sample", "SAM 3.1");
+  async "dd-open"(H) {
+    await H.dd.bringToFront();
+    await H.dd.locator("#recBtn").waitFor();
   },
-  async "das-rx"(H) {
-    await H.chart("A. Das");
-    await H.click("Use the demo prescription");
+  async "dd-dictate"(H) {
+    await H.dd.click("#recBtn");
+    await H.dd.waitForTimeout(3000); // the fake microphone records about 3 s
+    await H.dd.click("#recBtn");
+    await H.dd.locator("#admitBtn").waitFor({ state: "visible", timeout: 60000 });
   },
-  async "das-strip"(H) {
-    await H.file("Photo of medicines from home", "eval/p4/strip-amlodipine.png");
+  async "dd-admit"(H) {
+    await H.dd.click("#admitBtn"); // the first press asks for the reason
+    await H.dd.fill("#admitReason", "Right inguinal hernia repair");
+    const saved = H.dd.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/v1/documents");
+    await H.dd.click("#admitBtn");
+    const reply = await saved;
+    if (!reply.ok()) throw new Error(`The DD save answered ${reply.status()}`);
+    H.marks.arrived = arrival(H.cgApi, Date.now());
+    const first = BEATS.find((b) => b.id === "dd-admit").firstOf;
+    await H.dd.waitForFunction((lines) => lines.some((l) => document.getElementById("status")?.innerText.includes(l)), first, { timeout: 10000 })
+      .catch(() => { throw new Error(`No save status: none of ${first.join(" / ")}`); });
   },
-  async "das-close"(H) {
-    await H.click("Close visit");
-  },
-  async "das-ask"(H) {
-    await H.role("Patient");
-    await H.pick("A. Das");
-    await H.tab("Ask");
-    await H.fill("Your question", "When do I take amlodipine?", "Ask your record");
-    await H.click("Ask the record");
-  },
-  async "das-mycare"(H) {
-    await H.tab("My care");
-  },
-  async "kumar-orders"(H) {
-    await H.role("Doctor");
-    await H.chart(KUMAR);
-    await H.click("Use the demo prescription");
-    await H.open("Dictate orders");
-    await H.file("Dictate orders", "eval/p2/kumar-orders.wav");
-    await H.click("Draft orders");
-  },
-  async "kumar-admit"(H) {
-    await H.click("Sign orders");
-    await H.click("Admit");
-  },
-  async "kumar-admission"(H) {
+  async "ward-arrival"(H) {
+    const ms = await H.marks.arrived;
+    const limit = BEATS.find((b) => b.id === "ward-arrival").arrivalMs;
+    if (!(ms <= limit)) throw new Error(`The patient reached the Count Guard ward ${ms} ms after the DD save (limit ${limit} ms)`);
+    await H.page.bringToFront();
     await H.role("Nurse");
-    await H.tab("My queue");
-    await H.chart(KUMAR);
-    await before(H, "kumar-admission");
-    await photos(H, ADMISSION_PHOTOS);
+    await H.tab("Patients");
+  },
+  async "ward-photo-ok"(H) {
+    await H.chart(PATIENT);
+    await H.file("Photo check: Wristband on", "eval/media/wristband/wristband-synthetic.png");
+  },
+  async "ward-photo-wrong"(H) {
+    await H.file("Photo check: Consent on file", "eval/media/wrong-photo/wrong-photo-bed-rail-synthetic.png");
+  },
+  async "ward-retake"(H) {
+    await photo(H, "Consent on file", "eval/media/consent/consent-form.png", "Accepted — The photo shows a signed consent form");
+    await before(H, "ward-retake");
     await H.tick(...ADMISSION);
     await H.click("Complete admission");
   },
-  async "kumar-theatre"(H) {
+  async "theatre-send"(H) {
     await H.role("Doctor");
     await H.page.locator("label.field", { hasText: "Procedure" }).locator("select").selectOption("hernia-repair");
-    await before(H, "kumar-theatre");
     await H.click("Send to theatre");
   },
-  async "kumar-chip"(H) {
-    await H.role("Patient");
-    await H.pick(KUMAR);
-    await H.tab("Today");
-  },
-  async "kumar-free-soon"(H) {
+  async "theatre-drug"(H) {
     await H.role("Nurse");
-    await H.chart(KUMAR);
-    await H.clock("+1 h");
+    const drug = H.page.getByRole("region", { name: "Drug given" });
+    await drug.locator('input[type=file][accept="audio/*"]').setInputFiles(resolve(H.root, "eval/media/drug-phrases/drug-lignocaine.wav"));
+    await H.page.waitForFunction(() => document.querySelector("[aria-label='Drug given'] textarea")?.value.includes("lignocaine"));
+    await drug.getByRole("button", { name: "Add heard line", exact: true }).click();
+    await before(H, "theatre-drug");
+    await drug.getByRole("button", { name: "Confirm given", exact: true }).click();
   },
-  async "kumar-tray"(H) {
-    await H.role("Nurse");
-    await H.chart(KUMAR);
-    await H.file("Tray check", "eval/p3/tray-hernia.mp4");
-    await H.page.getByRole("region", { name: "Theatre steps" }).locator("button.ai-moment").first().click();
+  async "theatre-card"(H) {
+    const strip = H.page.getByRole("region", { name: "Vitals strip" });
+    for (let i = 0; i < 4; i++) {
+      await strip.getByRole("button", { name: /^Next reading/ }).click();
+      await H.page.waitForFunction((n) => document.querySelectorAll("[aria-label='Vitals strip'] li").length === n, i + 1);
+    }
+    // The tier is turned on after the drop, so the card is written at once (before a drop the server has none).
+    await H.page.getByRole("region", { name: "Context card" }).getByLabel("Context card (research tier)").click();
   },
-  async "kumar-count"(H) {
-    await H.click("Close", "Inspector");
+  async "theatre-camera"(H) {
     await H.click("Surgery began");
     await H.click("Record pack opened");
-    await H.file("Swab camera count", "eval/p3/swabs-closing.mp4");
-    await H.waitText("Camera read 14");
-    await before(H, "kumar-count");
-    await H.fill("Closing count (returned)", "15");
-    await H.fill("What did the team do?", "Found under the drape");
-    await H.click("Save count as Nurse Asha");
+    await H.waitText("Pack opened recorded.");
+    await H.click("Start the swab camera");
+    await H.click("Play the recorded theatre clip");
   },
-  async "kumar-back"(H) {
+  async "theatre-missing"(H) {
+    const row = H.page.locator(".alert-card").filter({ hasText: MISSING });
+    const frame = row.locator('img[alt="Last frame the camera saw it in"]');
+    await frame.scrollIntoViewIfNeeded();
+    await H.page.waitForFunction((img) => img.complete && img.naturalWidth > 0, await frame.elementHandle(), { timeout: 10000 })
+      .catch(() => { throw new Error("The missing sponge's last frame did not load"); });
+  },
+  async "theatre-hard-stop"(H) {
+    await H.fill("Closing count (returned)", "14");
+    // The count gate itself: with no count a person saved, the API refuses to end surgery.
+    const refused = await H.page.request.post(`${H.cgApi}/journey/episodes/${episodeId(H)}/surgery`, { data: { step: "ended", by: NURSE_THEATRE } });
+    if (refused.status() !== 409) throw new Error(`Ending surgery before the count answered ${refused.status()}, not 409`);
+  },
+  async "theatre-reconcile"(H) {
+    const row = H.page.locator(".alert-card").filter({ hasText: MISSING });
+    await row.getByLabel("If you disagree, say why").fill(FOUND);
+    await row.getByRole("button", { name: "Acknowledge", exact: true }).click();
+    await H.fill("Closing count (returned)", "15");
+    await H.click("Save count as Nurse Asha");
+    await before(H, "theatre-reconcile");
     await H.click("Surgery ended");
     await H.click("Back to ward");
   },
-  async "kumar-paracetamol"(H) {
-    await H.say("Paracetamol");
-    await H.sayFile("Paracetamol", "eval/p2/kumar-paracetamol.wav");
-    await H.click("Use this");
-    await before(H, "kumar-paracetamol");
-    await H.file("Confirm task", "eval/p2/strip-paracetamol.png");
-    await H.click("Confirm");
-  },
-  async "kumar-mycare"(H) {
-    await H.role("Patient");
-    await H.pick(KUMAR);
-    await H.tab("My care");
-  },
-  async "kumar-discharge"(H) {
+  async "discharge-draft"(H) {
     await H.role("Doctor");
-    await H.chart(KUMAR);
-    await H.open("Wound photo");
-    await H.file("Wound photo", "eval/p4/wound-day0.png");
     await H.click("Draft discharge");
-    await H.waitText("opened 15 / returned 15");
-    await H.open("Dictate discharge");
-    await H.file("Dictate discharge", "eval/p2/kumar-discharge.wav");
-    await H.click("Update draft");
-    await H.unfold("Orders and evidence");
-    await H.page.locator("button.ai-moment").filter({ hasText: "sections drafted" }).first().click();
-    await before(H, "kumar-discharge");
-    await H.click("Close", "Inspector");
+  },
+  async "discharge-sign"(H) {
+    H.marks.episode = episodeId(H);
+    await before(H, "discharge-sign");
     await H.click("Sign discharge");
   },
-  async "kumar-home"(H) {
+  // After the signature, as spec §12 reads: the PDF is read back and must hold the drug log and the count.
+  async "discharge-pdf"(H) {
+    const base = `${CG}journey/episodes/${H.marks.episode}`;
+    const got = await H.page.request.get(`${base}/discharge.pdf`);
+    const body = await got.body();
+    if (!got.ok() || body.subarray(0, 5).toString() !== "%PDF-") throw new Error(`The discharge PDF answered ${got.status()} without a PDF`);
+    const text = pdfText(body);
+    for (const want of BEATS.find((b) => b.id === "discharge-pdf").pdf) {
+      if (!text.includes(want)) throw new Error(`The discharge PDF does not say "${want}"`);
+    }
+    const cal = await H.page.request.get(`${base}/follow-up.ics`);
+    if (!cal.ok() || !(await cal.text()).includes("BEGIN:VCALENDAR")) throw new Error(`The follow-up answered ${cal.status()} without a calendar`);
+  },
+  async "discharge-home"(H) {
     await H.role("Nurse");
-    await H.chart(KUMAR);
-    await photos(H, DISCHARGE_PHOTOS);
+    await H.chart(PATIENT);
+    await photo(H, "Discharge card given", "eval/media/discharge/discharge-card.png", "shows the discharge card");
+    await photo(H, "Medicines handed over", "eval/media/medicine-bag/medicine-bag-synthetic.png", "shows a medicine bag");
+    await before(H, "discharge-home");
     await H.tick(...DISCHARGE);
     await H.click("Complete discharge");
-  },
-  async "kumar-ask"(H) {
-    await H.role("Patient");
-    await H.pick(KUMAR);
-    await H.tab("Ask");
-    await H.fill("Your question", "Is the swelling normal on day 3?", "Ask Dr. Rao");
-    await H.click("Send to Dr. Rao");
-    await H.fill("Note for the doctor (optional)", "Healing photo after surgery", "Healing photo");
-    await H.file("Healing photo", "eval/p4/wound-day3.png");
-  },
-  async "kumar-review"(H) {
-    await H.role("Doctor");
-    await H.tab("My patients");
-    await H.page.locator(".patient-list a.waiting").filter({ hasText: KUMAR }).click();
-    await H.page.locator("h1", { hasText: KUMAR }).waitFor();
-    await H.unfold("Orders and evidence");
-    await H.file(/^Your answer to /, "eval/p2/rao-answer.wav");
-    await before(H, "kumar-review");
-    await H.click("Send to R. Kumar");
-    await H.click("No visit needed");
-  },
-  async "kumar-answers"(H) {
-    await H.role("Patient");
-    await H.pick(KUMAR);
-    await H.tab("Ask");
-  },
-  async "iyer-bp"(H) {
-    await H.role("Nurse");
-    await H.chart(IYER);
-    await H.say("BP and pulse");
-    await H.sayFile("BP and pulse", "eval/p2/iyer-bp.wav");
-    await H.click("Use this");
-    await before(H, "iyer-bp");
-    await H.click("Confirm");
-  },
-  async "iyer-orders"(H) {
-    await H.role("Doctor");
-    await H.tab("My patients");
-    await H.chart(IYER);
-    await H.open("Dictate orders");
-    await H.file("Dictate orders", "eval/p2/iyer-saline.wav");
-    await H.click("Draft orders");
-    await H.click("Sign orders");
-  },
-  async "iyer-setup"(H) {
-    await H.role("Nurse");
-    await H.chart(IYER);
-    await H.file("Set-up check", "eval/p3/saline-setup.mp4");
-    await H.waitText("Set-up matches the list");
-    await H.click("Begin");
-  },
-  async "iyer-end"(H) {
-    await H.clock("+1 h");
-    await H.clock("+1 h");
-    await H.click("End");
-  },
-  async "iyer-recheck"(H) {
-    await H.role("Nurse");
-    await H.say("BP and pulse every 1 h");
-    await H.sayText("BP and pulse every 1 h", "BP 112 over 70, pulse 84, bed 7.");
-    await H.click("Use this");
-    await H.click("Confirm");
-    await H.unfold("History");
-    const flag = H.page.locator('article[aria-label^="Alert: Systolic BP 82"]').first();
-    await flag.getByLabel("What did you do?").fill("Reading checked again at the bedside");
-    await flag.getByRole("button", { name: "Save response", exact: true }).click();
-  },
-  async "iyer-discharge"(H) {
-    await H.role("Doctor");
-    await H.open("Dictate discharge");
-    await H.fill("Summary", "Recovered on the ward after saline. BP back above the limit.");
-    await H.click("Sign discharge");
-  },
-  async "iyer-home"(H) {
-    await H.role("Nurse");
-    await H.chart(IYER);
-    await H.tick(...DISCHARGE);
-    await H.click("Complete discharge");
-  },
-  async "iyer-meds"(H) {
-    await H.role("Patient");
-    await H.pick(IYER);
-    await H.tab("Ask");
-    await H.file("Medicines photo", "eval/p4/meds-iyer.png");
   },
   async close(H) {
     await H.role("Doctor");

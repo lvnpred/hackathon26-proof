@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   };
 
   // "/journey" is also a screen; only the API paths below go to the backend.
-  const journeyApi = ["/journey/episodes", "/journey/demo", "/journey/models", "/journey/staff", "/journey/ai", "/journey/ops", "/journey/ward", "/journey/clock"];
+  const journeyApi = ["/journey/episodes", "/journey/demo", "/journey/models", "/journey/staff", "/journey/ai", "/journey/ops", "/journey/ward", "/journey/clock", "/journey/sync", "/journey/patients"];
   const journey = {
     target: apiTarget,
     bypass(req) {

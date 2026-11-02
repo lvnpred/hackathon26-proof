@@ -118,3 +118,14 @@ export function num(value) {
   const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : null;
 }
+
+const json = (body) => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+// Sync asks Count Guard to pull from Doctor Dictation; the token never reaches the browser.
+export function syncWard() {
+  return call("/journey/sync", json({}));
+}
+
+export function newPatient({ name, ageSex, reason }) {
+  return call("/journey/patients", json({ name: name.trim(), age_sex: ageSex.trim(), reason: reason.trim() }));
+}

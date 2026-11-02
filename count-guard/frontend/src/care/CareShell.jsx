@@ -13,6 +13,7 @@ import "./care.css";
 import { readOpened, unreadCount } from "./thread.js";
 import { findPatient } from "./Patients";
 import { useWard } from "./ward";
+import WardActions from "./WardActions";
 
 const STAFF_TABS = {
   doctor: [["/patients", "My patients"], ["/ai", "AI activity"]],
@@ -124,6 +125,7 @@ export default function CareShell({ ward, children }) {
       {alerts > 0 && alertsOpen && <Strip mine={mine} others={others} />}
       {ward.role !== "patient" && <PausedBanner ops={ops} nowMs={ward.nowMs} />}
       <main className="page">
+        {(pathname === "/patients" || pathname === "/queue") && <WardActions role={ward.role} />}
         {children}
         <Inspector ward={ward} />
       </main>

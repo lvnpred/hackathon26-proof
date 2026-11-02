@@ -422,3 +422,6 @@ a.list-row:hover { background: var(--surface-sunk); }
 @media (max-width: 800px) {
   .grid-3 { grid-template-columns: minmax(0, 1fr); }
 }
+
+.ward-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ward-actions form { flex-basis: 100%; display: grid; gap: 8px; max-width: 420px; }

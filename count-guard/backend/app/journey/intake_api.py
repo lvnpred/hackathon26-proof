@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import sync_token
-from app.journey import clock, intake, ward_api
+from app.journey import clock, intake, sync, ward_api
 from app.journey.api import At, Strict, _at, _require, _store, settle, view
 
 intake_router = APIRouter(prefix="/journey")
@@ -51,6 +51,10 @@ class PatientIn(Strict):
     name: str = Field(min_length=1, max_length=80)
     age_sex: str = Field(default="", max_length=20)
     reason: str = Field(default="", max_length=300)
+
+
+class SyncIn(Strict):
+    since: str | None = Field(default=None, max_length=40)
 
 
 class BedIn(At):
@@ -93,6 +97,17 @@ def new_patient(body: PatientIn, request: Request) -> JSONResponse:
     result = intake.new_patient(store, name=name, age_sex=body.age_sex, reason=body.reason,
                                 now_ms=clock.now_ms(store))
     return _answer(request, result)
+
+
+@intake_router.post("/sync")
+def sync_ward(request: Request, body: SyncIn | None = None) -> dict:
+    """The Sync button: Count Guard asks Doctor Dictation (token sent here, never from the browser)."""
+    store = _store(request)
+    got = sync.pull(request.app.state.settings, store, since=body.since if body else None,
+                    now_ms=clock.now_ms(store))
+    for episode_id, at_ms in got.pop("changed"):
+        settle(request, episode_id, at_ms)
+    return got
 
 
 @intake_router.post("/episodes/{episode_id}/bed")

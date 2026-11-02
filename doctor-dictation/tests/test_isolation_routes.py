@@ -31,13 +31,16 @@ def _norm(path):
 ADMIN_ONLY = ("/api/v1/formulary/", "/api/v1/users/", "/api/v1/spoken/mishearings/")      # admin-only routes: swept with admin clients in test_isolation_formulary.py, not with a doctor (a doctor gets 403 first)
 
 
+SINGLE_CLINIC_ONLY = ("/api/v1/documents/{document_id}/admission",)   # DD -> Count Guard intake: 404 in multi-clinic mode (spec §7.4); test_admit.py
+
+
 LIST_ROUTES = ("/api/v1/lists/", "/api/v1/owner/lists/")      # {kind} names a list ("medicine"), not a row id: nothing to look up in another clinic; test_lists_routes.py
 
 
 def id_routes(app):
     out = []
     for path, ops in app.openapi()["paths"].items():
-        if "{" in path and not path.startswith(ADMIN_ONLY + LIST_ROUTES):
+        if "{" in path and not path.startswith(ADMIN_ONLY + LIST_ROUTES + SINGLE_CLINIC_ONLY):
             out.extend((m.upper(), path) for m in ops if m.upper() in WRITE | {"GET"})
     return sorted(out)
 
@@ -204,6 +207,8 @@ CLASSIFIED = {
     "POST /api/v1/rx/check-row": "reads the caller's own clinic layer via use_clinic_layer: test_formulary_routes.py (a clinic's names never reach another clinic)",
     "POST /api/v1/review-date": "stateless: no database, no clinic data (plan I2-b)",
     "POST /api/v1/investigations/lookup": "reads the caller's own clinic list via use_investigations: test_investigations_api.py (another clinic's test is never verified)",
+    "GET /api/v1/admissions": "single-clinic only, 404 in multi-clinic mode: test_admit.py::test_admissions_404_in_multi_clinic",
+    "GET /api/v1/documents/{document_id}/admission": "single-clinic only, 404 in multi-clinic mode: test_admit.py::test_admission_status_404_in_multi_clinic",
     "GET /api/health": "public",
     "GET /health": "public",
     "GET /login": "public page",

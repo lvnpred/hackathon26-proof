@@ -1132,6 +1132,7 @@ async function saveDocument() {
     };
     // Opened from "Today" -> update that document in place (design #1).
     if (state.documentId != null) payload.document_id = state.documentId;
+    if (window.ddAdmit) Object.assign(payload, window.ddAdmit);   // Save & admit to ward (admit.js)
     const j = await postJson("/api/v1/documents", payload, SAVE_TIMEOUT_MS);
     clearUndo(); // only a successful save retires the undo (a blocked/failed one keeps it)
     hideBlockPanel();
@@ -1160,6 +1161,7 @@ async function saveDocument() {
       ? "Saved — but you changed the sheet while saving; press Save again before printing."
       : verb + " — document " + j.document_id + ". Press Print to print it. Need a change? " +
         "Edit the sheet or dictate a correction, then Save again. Press “New patient” before the next visit.");
+    return j;
   } catch (e) {
     setWorking(false);
     if (e && e.status === 409 && e.data && Array.isArray(e.data.block)) {

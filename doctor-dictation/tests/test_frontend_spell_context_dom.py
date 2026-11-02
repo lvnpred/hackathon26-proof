@@ -69,7 +69,7 @@ def test_group_helpers_and_the_arrow_keys_run_over_list_then_group():
 def test_versions_and_markup():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
     assert html.index('id="spellList"') < html.index('id="spellCtx"') < html.index('id="spellPrev"')
-    for pin in ("suglist.js?v=5", "rxview.js?v=20", "spellmodal.js?v=3", "app.js?v=61", "theme.css?v=9"):
+    for pin in ("suglist.js?v=5", "rxview.js?v=20", "spellmodal.js?v=3", "app.js?v=62", "theme.css?v=9"):
         assert pin in html
     for js in ("suglist.js", "spellmodal.js"):
         assert "innerHTML" not in (FRONT / js).read_text(encoding="utf-8")

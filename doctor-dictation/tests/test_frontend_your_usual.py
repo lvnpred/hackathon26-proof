@@ -190,7 +190,7 @@ def test_the_page_loads_and_wires_the_strip():
     html, app = _read("index.html"), _read("app.js")
     assert 'id="usualRx"' in html and 'class="usual-rx no-print"' in html
     assert html.index('<tbody id="pRx">') < html.index('id="usualRx"') < html.index('data-sec="advice"')
-    assert html.index("rxstate.js?v=") < html.index("yourusual.js?v=2") < html.index("app.js?v=61")
+    assert html.index("rxstate.js?v=") < html.index("yourusual.js?v=2") < html.index("app.js?v=62")
     assert "YourUsual.init(" in app and "function addRxRow(" in app
     for hook in ("YourUsual.refresh()", "YourUsual.render()", "YourUsual.clear()"):
         assert hook in app

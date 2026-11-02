@@ -16,7 +16,7 @@ from doctor_dictation import clinics
 from doctor_dictation import db as dbmod
 from doctor_dictation import sessions
 from doctor_dictation.api import format as format_api
-from doctor_dictation.api import auth, health, persistence, profile, review, rx, share, stt
+from doctor_dictation.api import admit, auth, health, persistence, profile, review, rx, share, stt
 from doctor_dictation.api import sections as sections_api
 from doctor_dictation.api import share_public
 from doctor_dictation.api import formulary as formulary_api
@@ -87,7 +87,7 @@ def create_app() -> FastAPI:
     )
     logging.getLogger("uvicorn.access").addFilter(share_public.MASK)   # one instance: adding it again is a no-op
     for module in (auth, health, stt, format_api, profile, persistence, users_api, rx, formulary_api, investigations_api, lists_api,
-                   owner_lists_api, review, spoken_api, your_usual_api, sections_api, share, share_public):
+                   owner_lists_api, review, spoken_api, your_usual_api, sections_api, share, share_public, admit):
         app.include_router(module.router)
     app.include_router(templates_api.router)
     # Serve the frontend from the same process; mounted last so it never shadows /api.

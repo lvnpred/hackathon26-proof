@@ -43,4 +43,4 @@ def test_a_new_hand_added_row_has_nothing_to_carry():
 
 
 def test_the_page_loads_the_new_rxstate():
-    assert "rxstate.js?v=14" in (FRONT / "index.html").read_text(encoding="utf-8")
+    assert "rxstate.js?v=15" in (FRONT / "index.html").read_text(encoding="utf-8")

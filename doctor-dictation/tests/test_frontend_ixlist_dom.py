@@ -367,7 +367,7 @@ def test_app_js_hooks():
 
 def test_index_html_pins():
     html = (FRONT / "index.html").read_text(encoding="utf-8")
-    assert html.index("rx.css?v=10") < html.index("ixlist.css?v=3")
-    assert html.index("ixlist.js?v=4") < html.index("app.js?v=61")
+    assert html.index("rx.css?v=11") < html.index("ixlist.css?v=3")
+    assert html.index("ixlist.js?v=4") < html.index("app.js?v=62")
     assert '<ul id="pIx" class="ix-list"></ul>' in html and not re.search(r'id="pIx"[^>]*editable-list', html)
     assert len((FRONT / "ixlist.js").read_text(encoding="utf-8").splitlines()) < 300

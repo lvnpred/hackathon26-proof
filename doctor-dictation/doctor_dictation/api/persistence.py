@@ -4,12 +4,12 @@ import logging
 import sqlite3
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from doctor_dictation import db as dbmod
-from doctor_dictation.api import authorship, visit
+from doctor_dictation.api import admit as admit_api, authorship, visit
 from doctor_dictation.api import sections as sections_api
 from doctor_dictation.api import share
 from doctor_dictation.api.pastday import is_past, past_refusal, visit_day, visit_day_iso
@@ -144,6 +144,8 @@ class DocumentCreate(BaseModel):
     engine: str = ""
     transcript_sha256: str = ""
     document_id: int | None = None
+    admit: bool = False                   # Save & admit to ward: push to Count Guard after the commit (spec §7.1)
+    admit_reason: str = Field("", max_length=300)
 
 
 def _pdf_inputs(conn, structured, day, encounter_id):
@@ -196,7 +198,8 @@ def _render_with_fallback(structured, meta, layout, out_path):
 
 
 @router.post("/api/v1/documents", dependencies=[Depends(use_clinic_layer)])
-def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(use_investigations)):
+def create_document(req: DocumentCreate, request: Request, background_tasks: BackgroundTasks,
+                    _ix: None = Depends(use_investigations)):
     """Save & Print: enforce the verify gate, then persist encounter/document/audit.
 
     The gate blocks while any Rx row is not ``verified`` and the doctor did not
@@ -213,6 +216,9 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
     (``documents.finalized_by``); a re-save needs ``document.edit`` (only the author; 403 otherwise),
     keeps the author and records the new saver.
     """
+    refused = admit_api.reason_refusal(req.admit, req.admit_reason)
+    if refused is not None:
+        return refused
     ident = authorship.identity(request)
     if req.document_id is not None:
         denied = authorship.check_document(request, "document.edit", req.document_id)
@@ -351,6 +357,8 @@ def create_document(req: DocumentCreate, request: Request, _ix: None = Depends(u
                            ident.user_id if ident else None)       # commits too; never raises
         learn_spoken_terms(conn, validated, document_id, ident.user_id if ident else None,
                            previous=previous)                       # SH-H1: last; commits; never raises
+        admit_api.after_save(request, background_tasks, document_id=document_id, admit=req.admit,
+                             reason=req.admit_reason, resave=resave)   # after every commit; never raises
         return {
             "patient_id": patient_id,
             "encounter_id": encounter_id,

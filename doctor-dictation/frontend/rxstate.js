@@ -159,7 +159,7 @@
       title: total + (total === 1 ? " medicine" : " medicines"),
       ready: (total - needs) + " ready",
       needs: needs + (needs === 1 ? " needs you" : " need you"),
-      saveLabel: checking ? "Checking..." : needs ? "Resolve " + needs + " to save" : "Save prescription",
+      saveLabel: checking ? "Checking..." : needs ? "Resolve " + needs + " to save" : "Save & send home",
       saveDisabled: checking > 0 || needs > 0,
     };
   }

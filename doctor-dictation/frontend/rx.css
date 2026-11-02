@@ -48,6 +48,10 @@
 .rx-bar-main { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .rx-bar .save-row { margin:0; }
 .rx-bar .save { margin:0; min-height:44px; padding:0 22px; font-size:15px; }
+/* Save & admit to ward (admit.js): the reason box appears beside the button when it is pressed. */
+.admit-row { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.admit-row[hidden], .admit-row input[hidden] { display:none; }
+.admit-row input { min-height:44px; min-width:14rem; padding:0 10px; font-size:15px; }
 #sheet.view-only .rx-act, #sheet.view-only .rx-chips { display:none; }
 .rx-act.sug { flex-direction:column; align-items:flex-start; gap:2px; padding:6px 14px; border-radius:14px; min-height:44px; max-width:100%; box-sizing:border-box; text-align:left; white-space:normal; border-color:#b9c5ff; }
 .rx-checking { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--accent); }

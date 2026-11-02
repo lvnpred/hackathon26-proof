@@ -77,7 +77,7 @@ def test_a_hand_edit_drops_stale_reasons_and_a_name_edit_drops_the_old_drugs_dat
 def test_summary_words():
     a, b, c = _node("[RxState.summary({total:6,needs:2,checking:0}), RxState.summary({total:6,needs:0,checking:0}), RxState.summary({total:1,needs:1,checking:0})]")
     assert a == {"title": "6 medicines", "ready": "4 ready", "needs": "2 need you", "saveLabel": "Resolve 2 to save", "saveDisabled": True}
-    assert b["saveLabel"] == "Save prescription" and b["saveDisabled"] is False and c["title"] == "1 medicine" and c["needs"] == "1 needs you"
+    assert b["saveLabel"] == "Save & send home" and b["saveDisabled"] is False and c["title"] == "1 medicine" and c["needs"] == "1 needs you"
 
 def test_odd_statuses_are_unreadable_confirms_with_a_safe_reason():
     odd = [["verified"], 5, {}, True, " verified ", "VERIFIED", "verified\n"]
@@ -118,7 +118,7 @@ def test_after_edit_for_every_column():
 
 def test_summary_edge_inputs_never_show_negative_or_impossible_numbers():
     a, b, c, d = _node("[RxState.summary(), RxState.summary({total:2,needs:5,checking:0}), RxState.summary({total:-3,needs:-1,checking:-2}), RxState.summary({total:'4',needs:2.9,checking:'x'})]")
-    assert a == {"title": "0 medicines", "ready": "0 ready", "needs": "0 need you", "saveLabel": "Save prescription", "saveDisabled": False}
+    assert a == {"title": "0 medicines", "ready": "0 ready", "needs": "0 need you", "saveLabel": "Save & send home", "saveDisabled": False}
     assert b["ready"] == "0 ready" and b["needs"] == "2 need you" and b["saveLabel"] == "Resolve 2 to save"
     assert c == a
     assert d["title"] == "4 medicines" and d["ready"] == "2 ready" and d["needs"] == "2 need you" and d["saveDisabled"] is True
@@ -324,8 +324,8 @@ def test_save_follows_the_rows_working_and_view_only_and_blank_rows_do_not_count
       out.bar = els.rxBar.hidden; out.h = document.documentElement.style.v;
       console.log(JSON.stringify(out));""")
     assert r["needs"] == [True, "Resolve 1 to save", "1 needs you", "2 medicines"]
-    assert r["ready"] == [False, "Save prescription", "1 medicine"]
-    assert r["confirmed"] == [False, "Save prescription"] and r["working"] is True
+    assert r["ready"] == [False, "Save & send home", "1 medicine"]
+    assert r["confirmed"] == [False, "Save & send home"] and r["working"] is True
     assert r["view"] == [True, "View only"] and r["viewOk"] == [True, "View only"]
     assert r["bar"] is False and r["h"] == {"--topbar-h": "104px"}
 
@@ -393,4 +393,4 @@ def test_the_on_screen_print_fallback_prints_the_medicine_name_in_capitals():
     prints = re.findall(r"@media print \{([^@]*?)\}\s*\}", css)
     assert any(re.search(r'table\.rx \[data-col="name"\] \{ text-transform:uppercase; ', p) for p in prints)
     assert css.count('[data-col="name"]') == 1                          # only in print: the screen stays as dictated
-    assert 'rx.css?v=10"' in (FRONT / "index.html").read_text(encoding="utf-8")
+    assert 'rx.css?v=11"' in (FRONT / "index.html").read_text(encoding="utf-8")

@@ -3,46 +3,68 @@ window.DATA = window.DATA || {};
 
 DATA.diagrams = [
   { id: "hier", title: "Product hierarchy", kind: "Implemented",
-    note: "Solid = current product. Dashed = legacy generations still mounted in Count Guard.",
+    note: "Solid = current product. Dashed = archived to count-guard/archive/ (not mounted). The thick arrow is the DD → CG patient flow added on 2 Nov.",
     src: `flowchart TB
   WS["hackathon26 workspace<br/>(shared .env, Makefile)"]
   WS --> DD["Doctor Dictation<br/>OPD voice → prescription"]
-  WS --> CG["Count Guard app<br/>(one FastAPI + one React)"]
-  DD --> DD1[Capture] & DD2[Structuring] & DD3[Medication safety] & DD4[Records & output] & DD5[Clinic learning] & DD6[Access & tenancy]
-  CG --> D["D · Care app 'Ward 4'<br/>CURRENT"]
-  CG --> E["E · AI admin ops agent<br/>CURRENT"]
-  CG --> K["Care platform kernel<br/>ledger · perception seam · verifier"]
-  CG -.-> A["A · Camera swab counter<br/>legacy"]
-  CG -.-> B["B · Morning timeline<br/>legacy"]
-  CG -.-> C["C · Care journey v1<br/>legacy"]
-  CG --> X["Demo layer<br/>dock · seed · fixtures · demo-check"]
-  CG ==HTTP GET document==> DD` },
+  WS --> CG["Count Guard<br/>(one FastAPI + one React)"]
+  DD --> DD1[Capture] & DD2[Structuring] & DD3[Medication safety] & DD4[Records & output] & DD5[Admit to ward] & DD6[Access & tenancy]
+  CG --> D["Care app 'Ward 4'<br/>ward · theatre · discharge"]
+  CG --> E["AI admin ops agent"]
+  CG --> K["Care platform kernel<br/>ledger · switches · camera libs · verifier"]
+  CG --> X["Demo layer<br/>dock · seed · demo-check · live-check"]
+  CG -.-> AR["archive/<br/>camera counter · morning · journey v1 screens & routes"]
+  DD5 ==Save & admit: push to /journey/intake==> D
+  D ==Sync: GET /api/v1/admissions==> DD` },
   { id: "app", title: "Application architecture (as built)", kind: "Implemented",
-    note: "The two apps share no code. The only runtime link is Count Guard reading a Doctor Dictation document over HTTP.",
+    note: "Two servers, two databases, no shared code. DD pushes admissions to CG; CG pulls them on Sync; CG links to the DD PDF. The legacy camera libraries (core/, engine.py, report/) are now imported by the theatre camera.",
     src: `flowchart LR
   subgraph DDapp["Doctor Dictation :8000"]
-    DUI["Vanilla JS SPA<br/>frontend/app.js"] --> DAPI["FastAPI<br/>19 routers"]
+    DUI["Vanilla JS SPA<br/>app.js · admit.js"] --> DAPI["FastAPI<br/>20 routers"]
     DAPI --> DCORE["core/ pure rules<br/>lexicon · rowcheck · LASA · vitals"]
-    DAPI --> DDB[("SQLite<br/>app.db per clinic<br/>directory.db")]
+    DAPI --> DDB[("SQLite<br/>app.db per clinic (+ admissions)<br/>directory.db")]
     DAPI --> PDF["Chromium PDF pool"]
+    DAPI --> ADM["api/admit.py<br/>background push"]
   end
   subgraph CGapp["Count Guard :5173 → :8100"]
-    CUI["React 19 + Vite<br/>src/care · src/screens"] -->|"Vite proxy"| CAPI["FastAPI<br/>18 routers"]
-    CAPI --> J["journey/ care app"]
+    CUI["React 19 + Vite<br/>src/care only"] -->|"Vite proxy · SSE"| CAPI["FastAPI<br/>26 routers"]
+    CAPI --> J["journey/ care app<br/>intake · ward · theatre · camera · discharge"]
     CAPI --> O["ops/ agent"]
-    CAPI --> M["morning/ (legacy + store)"]
-    CAPI --> V1["core/ engine/ (legacy)"]
-    J & O & M --> MDB[("morning.db<br/>episodes + timeline")]
-    V1 --> CDB[("countguard.db")]
-    J --> LIVE["live.py seam<br/>key? live : prepared JSON"]
+    J & O --> MDB[("morning.db<br/>episodes · timeline · intake_keys · clock")]
+    J --> CAM["core/ · engine.py · report/<br/>camera libraries"] --> CDB[("countguard.db<br/>camera cases")]
+    J --> SW["switches.py + live.py<br/>live : prepared (labelled)"]
   end
   DAPI --> LLM["LLM: OpenAI-compatible<br/>openai · deepseek · groq · meta"]
   DAPI --> STT["STT: OpenAI · Groq · AssemblyAI<br/>Muse · faster-whisper"]
-  LIVE --> META["Meta API<br/>SAM 3.1 · Voice · Spark 1.3"]
-  V1 --> BT["Baseten<br/>Spark Open"]
-  J -->|"rx/import"| DAPI` },
+  SW --> META["Meta API<br/>SAM 3.1 · Voice · Spark 1.3"]
+  ADM -->|"POST /journey/intake"| CAPI
+  J -->|"Sync: GET /api/v1/admissions"| DAPI` },
+  { id: "integration", title: "DD → Count Guard: Save & admit, push, Sync", kind: "Implemented",
+    note: "doctor_dictation/api/admit.py:101-178, migration 015_admissions.sql, count-guard journey/intake.py, intake_api.py:78-111, sync.py. Single-clinic DD only; optional CG_SYNC_TOKEN header on both hops; the token never reaches a browser.",
+    src: `sequenceDiagram
+  participant Dr as Doctor (DD page)
+  participant DD as DD FastAPI
+  participant ADB as DD app.db (admissions)
+  participant CG as CG FastAPI
+  participant IN as journey/intake.py
+  participant MDB as morning.db
+  Dr->>DD: POST /api/v1/documents {admit: true, admit_reason}
+  DD->>ADB: commit document + admissions row (status admit)
+  DD-->>Dr: document_id (Save never waits for CG)
+  DD--)CG: background POST /journey/intake (1 s connect, 3 s total)
+  CG->>IN: take(source, document_id)
+  IN->>MDB: claim intake_keys first (duplicate = already here)
+  IN->>MDB: patient.registered → rx.ordered → clinic→admitting
+  CG->>CG: settle(): nudges + ops agent
+  CG-->>DD: 200
+  DD->>ADB: pushed_at (or last_error)
+  Dr->>DD: poll GET /api/v1/documents/{id}/admission
+  Note over CG,DD: Backup: nurse presses Sync
+  CG->>DD: GET /api/v1/admissions?since=
+  DD-->>CG: same payloads as the push
+  CG->>IN: take() each row: new / already here / updated` },
   { id: "cgwrite", title: "Count Guard: one write, end to end", kind: "Implemented",
-    note: "Every care write recomputes alerts and runs the ops agent synchronously before returning the whole patient view.",
+    note: "Every care write recomputes alerts and runs the ops agent synchronously before returning the patient view; the SSE streams then notify the ward list and chart.",
     src: `sequenceDiagram
   participant UI as React care app
   participant R as journey router
@@ -50,37 +72,40 @@ DATA.diagrams = [
   participant N as nudges
   participant OPS as ops agent
   UI->>R: POST /journey/episodes/{id}/count
-  R->>R: Pydantic validate (extra=forbid, bounds)
+  R->>R: Pydantic validate (extra=forbid, bounds), at_ms clamped to the server clock
   R->>S: append event (append-only, supersedes_id for corrections)
   R->>N: settle(): raise_nudges
-  R->>OPS: settle(): watch → plan → gate → apply (≤3 passes, per-episode lock)
+  R->>OPS: settle(): watch → plan → gate → apply
   OPS->>S: work.* events as "AI (on behalf of Ward 4)"
   R->>S: view(): recompute stories, flow, ai_moments, ops
-  R-->>UI: full patient view` },
+  R-->>UI: full patient view
+  S--)UI: SSE /journey/ward/stream · /episodes/{id}/stream` },
   { id: "gate", title: "Swab-count hard stop", kind: "Implemented",
-    note: "count_gate in journey/states.py:95-110; enforced by POST …/surgery step=ended (flow_api.py:68-76).",
+    note: "count_gate in journey/states.py:95-109, unchanged by the consolidation; by_ai in stories.py:245-249 folds look-alike letters. test_route_sweep.py proves only POST …/count writes a person's closing.",
     src: `flowchart TD
   S[POST surgery step=ended] --> G{count_gate}
   G -->|no closing after 'began'| N["409 Save the swab count first"]
-  G -->|closing by AI / no person| N
+  G -->|closing 'by' reads as AI or camera| N
   G -->|opened − returned ≠ 0 and no reason| U["409 count does not add up"]
   G -->|adds up OR reason given| OK["surgery.ended recorded"]
-  P[Pack opened] -->|after began: only up| G
-  CAM[Camera read] -.shown beside, never fills.-> G` },
+  P["Pack opened / extra pack / confirmed heard pack"] -->|adds to opened| G
+  CAM["Swab camera, rules R1–R6, replay, dwell"] -.advice only, never read.-> G
+  AI["AI-signed confirm"] -->|422 refused| P` },
   { id: "states", title: "Patient state machine", kind: "Implemented",
-    note: "journey/states.py:19-38. The current state is the latest patient.state event.",
+    note: "journey/states.py:130-170 and check_gate.py. The current state is the latest patient.state event. Intake enters at clinic (New patient) or admitting (DD admission).",
     src: `stateDiagram-v2
-  [*] --> clinic
+  [*] --> clinic: New patient
+  [*] --> admitting: DD Save & admit
   clinic --> clinic_done
   clinic --> admitting
-  admitting --> ward: checklist band · allergies · baseline obs · consent
+  admitting --> ward: checklist + photo checks accepted
   ward --> theatre
   theatre --> ward: needs count_gate ok
   ward --> discharging
-  discharging --> home: card · medicines · reminders
+  discharging --> home: checks + photo checks accepted
   clinic_done --> [*]
   home --> [*]` },
-  { id: "ddflow", title: "Doctor Dictation: dictate → save", kind: "Implemented",
+  { id: "ddflow", title: "Doctor Dictation: dictate → save → (admit)", kind: "Implemented",
     src: `sequenceDiagram
   participant Dr as Doctor (browser)
   participant API as DD FastAPI
@@ -99,12 +124,13 @@ DATA.diagrams = [
     API->>C: rules fallback + lexicon
   end
   API-->>Dr: sheet + row pills
-  Dr->>API: POST /api/v1/documents (confirmed_rows)
+  Dr->>API: POST /api/v1/documents (confirmed_rows, admit?)
   API->>C: verify gate (409 if unverified)
-  API->>DB: document, audit, learning side effects
-  API-->>Dr: document_id → PDF, share link` },
+  API->>DB: document, audit, learning side effects, admissions row
+  API-->>Dr: document_id → PDF, share link
+  API--)API: admit? background push to Count Guard` },
   { id: "auth", title: "Authentication & authorisation", kind: "Implemented",
-    note: "Doctor Dictation only, and only with MULTI_CLINIC=1. Count Guard has no authentication: the actor is a free-text 'by' field and role is client UI state.",
+    note: "Doctor Dictation only, and only with MULTI_CLINIC=1 (where intake answers 404). Count Guard has no user authentication: the actor is a free-text 'by' field and role is client UI state. The DD↔CG hops can share an optional CG_SYNC_TOKEN header.",
     src: `sequenceDiagram
   participant B as Browser
   participant MW as SessionMiddleware
@@ -125,27 +151,30 @@ DATA.diagrams = [
   DD_CLINIC_DB ||--o{ patients : has
   patients ||--o{ encounters : has
   encounters ||--o{ documents : has
+  documents ||--o| admissions : "admit / send_home (015)"
   encounters ||--o| share_links : has
   DD_CLINIC_DB ||--o{ clinic_formulary : learns
-  DD_CLINIC_DB ||--o{ clinic_overlay : curates
   DD_CLINIC_DB ||--o{ spoken_terms : learns
   DD_DIRECTORY ||--o{ clinics : lists
   DD_DIRECTORY ||--o{ login_index : maps
   CG_MORNING_DB ||--o{ episodes : "patients + staff board + ops site"
   episodes ||--o{ timeline : "append-only events (supersedes_id)"
-  CG_COUNTGUARD_DB ||--o{ cases : "legacy camera counter"` },
+  episodes ||--o| episode_beds : bed
+  CG_MORNING_DB ||--o{ intake_keys : "source + document_id → episode"
+  CG_MORNING_DB ||--o| clock : "server demo clock"
+  CG_COUNTGUARD_DB ||--o{ cases : "theatre camera cases"` },
   { id: "deploy", title: "Deployment", kind: "Documented",
-    note: "DD's Docker/Caddy/VPS assets are real; the live pilot (docs/working/2026-10-18-deployment) cannot be verified from code, and 02-deploy.sh clones a separate upstream repo. Count Guard has no deployment assets: local dev only.",
+    note: "DD's Docker/Caddy/VPS assets are real; the live pilot (docs/working/2026-10-18-deployment) cannot be verified from code, and 02-deploy.sh clones a separate upstream repo. Count Guard has no deployment assets: local dev only, and the DD→CG push assumes both on one machine (COUNT_GUARD_URL default 127.0.0.1:8100).",
     src: `flowchart LR
   subgraph VPS["Ubuntu VPS (documented pilot)"]
     CADDY["Caddy 2<br/>auto-HTTPS, log masking"] --> APP["DD container<br/>uvicorn ×2, Chromium, ffmpeg<br/>MULTI_CLINIC=1"]
     APP --> VOL[("/data volume")]
     BK["03-backup.sh<br/>age-encrypted, every 6h"] --> VOL
   end
-  GH["upstream repo<br/>lvnpred/doctor-dictation"] -->|02-deploy.sh| APP
-  LOCAL["Laptop: make dev<br/>DD :8000 · CG :8100/:5173"]` },
+  GH["upstream repo"] -->|02-deploy.sh| APP
+  LOCAL["Laptop: make dev<br/>DD :8000 · CG :8100/:5173<br/>demo-check: DD :8300 · CG :8200/:5273"]` },
   { id: "plan", title: "Originally planned architecture (21 Oct)", kind: "Documented",
-    note: "docs/hackathon/02-architecture.md. NOT built: superseded by decisions D1 and J1 (separate Count Guard repo, HTTP link).",
+    note: "docs/hackathon/02-architecture.md. NOT built: superseded by decisions D1 and J1 (separate Count Guard app, HTTP link) and by the 2 Nov push + Sync design.",
     src: `flowchart LR
   DDp["Doctor Dictation"] --> HX["doctor_dictation/hx/<br/>HACKATHON=1"]
   HX --> TL[("timeline_events<br/>011_timeline.sql")]
@@ -153,64 +182,64 @@ DATA.diagrams = [
   HX --> VT["VitalsPort<br/>sim · hl7 · screen"]
   HX --> SSE["SSE /api/hx/episodes/{id}/stream"]` },
   { id: "proposed", title: "Recommended module boundaries", kind: "Proposed",
-    note: "Recommendation only — nothing has been moved.",
+    note: "Recommendation only. The archive step is done (2 Nov); the platform extraction and async ops runner are not.",
     src: `flowchart TB
   subgraph Products
-    RX["Doctor Dictation<br/>(OPD prescription)"]
-    WARD["Count Guard Care<br/>(ward: flow, count, tasks, ask)"]
+    RX["Doctor Dictation<br/>(OPD prescription + admit)"]
+    WARD["Count Guard Care<br/>(ward, theatre, discharge, ask)"]
   end
-  subgraph Platform["Care platform (extract from CG)"]
-    LED["ledger: episodes, events, supersede"]
-    PER["perception: adapters + live/prepared seam"]
+  subgraph Platform["Care platform (extract from CG) — not done"]
+    LED["ledger: episodes, events, supersede, intake keys"]
+    PER["perception: adapters + switches + camera libs"]
     OPS["ops agent (async, outbox)"]
     VER["advice verifier"]
   end
   subgraph Showcase
-    DEMO["demo: dock, seed, fixtures, demo-check"]
+    DEMO["demo: dock, seed, fixtures, demo-check, live-check"]
   end
-  subgraph Archive
-    ARC["camera counter · morning · journey v1"]
+  subgraph Archive["Archive — done 2 Nov"]
+    ARC["count-guard/archive/"]
   end
   WARD --> LED & PER & OPS
   OPS --> VER
-  WARD -->|"Rx API"| RX
+  RX -->|"intake push"| WARD
+  WARD -->|"Sync pull"| RX
   DEMO -.-> WARD` }
 ];
 
 /* Product vs Demo vs POC classification */
 DATA.classification = [
   { bucket: "Product (current)", status: "Implemented", items: [
-    ["Doctor Dictation core", "Dictate → structure → ground → verify → save → PDF/share, multi-clinic tenancy", "doctor-dictation/doctor_dictation/api/"],
-    ["Count Guard care app (D)", "State machine, orders/tasks, swab hard stop, alerts, Ask, discharge, Inspector", "count-guard/backend/app/journey/, count-guard/frontend/src/care/"],
-    ["AI admin ops agent (E)", "Rule-based clerical agent with policy gate and Undo", "count-guard/backend/app/ops/"]] },
+    ["Doctor Dictation core", "Dictate → structure → ground → verify → save → PDF/share, multi-clinic tenancy, Save & admit", "doctor-dictation/doctor_dictation/api/"],
+    ["Count Guard care app", "Ward list + intake/Sync, state machine, photo verdicts, theatre, swab hard stop, discharge draft/PDF, Ask, Inspector, Help", "count-guard/backend/app/journey/, count-guard/frontend/src/care/"],
+    ["AI admin ops agent", "Rule-based clerical agent with policy gate and Undo", "count-guard/backend/app/ops/"],
+    ["DD → CG patient flow", "Push on admit, Sync pull, one intake path", "doctor-dictation/doctor_dictation/api/admit.py, count-guard/backend/app/journey/intake.py"]] },
   { bucket: "Partial (real code, missing data or wiring)", status: "Partial", items: [
     ["LASA guard", "8 unreviewed pairs", "doctor-dictation/doctor_dictation/core/lexicon/lasa_pairs.json"],
     ["Dose-range check", "dosing.json is empty", "doctor-dictation/doctor_dictation/core/lexicon/dosing.json"],
     ["Investigations grounding", "catalogue file missing", "doctor-dictation/doctor_dictation/core/investigations.py:19"],
-    ["Sheet sections", "no per-clinic override", "doctor-dictation/doctor_dictation/api/sections.py:24"]] },
-  { bucket: "Mock (real logic, simulated model output)", status: "Mock", items: [
-    ["Count Guard video, photo and voice reads", "Hand-made fixtures chosen by uploaded file name; no real key ever used", "count-guard/backend/app/journey/live.py:87-100, journey/prepared/*.json"],
-    ["Legacy camera counter detections", "Scripted scenarios", "count-guard/backend/app/scenarios.py"],
-    ["Vitals feed", "Simulator", "count-guard/backend/app/morning/sim.py"]] },
+    ["Live camera / real-video SAM", "Live call works; 0 swabs found on drawn media; no real clip measured", "count-guard/backend/app/journey/camera_extra_api.py:96, media_pipeline.py"]] },
+  { bucket: "Mock (real logic, prepared or simulated model output)", status: "Mock", items: [
+    ["Count Guard video, photo and voice reads (switch off)", "Prepared results labelled 'Prepared'; tray/set-up/swab fixtures still picked by file name, photos by bytes", "count-guard/backend/app/journey/live.py:94-98, switches.py"],
+    ["Recorded theatre clip", "Scripted scenario, labelled Prepared", "count-guard/backend/app/scenarios.py, journey/camera_api.py:163-200"],
+    ["Theatre vitals", "Simulated strip", "count-guard/backend/app/morning/vitals.py"]] },
   { bucket: "Demo / showcase only", status: "Demo", items: [
-    ["Count Guard Demo dock, seed, demo prescription, clock", "Presenter controls outside the product", "count-guard/frontend/src/care/DemoDock.jsx"],
-    ["AI activity 'Try sample'", "Bundled samples; spark-open always prepared", "count-guard/backend/app/journey/ai_api.py:96-130"],
-    ["demo-check (32 beats)", "Headless regression of the demo story", "count-guard/frontend/scripts/demo/"],
-    ["DD seed-demo and demo_browser.py", "Two fake clinics, stub STT/LLM", "doctor-dictation/doctor_dictation/admin_demo.py"],
-    ["DD stub providers", "ALLOW_STUB_PROVIDERS=1", "doctor-dictation/doctor_dictation/providers/llm/stub.py"]] },
+    ["Count Guard Demo dock, seed, demo prescription", "Presenter controls outside the product", "count-guard/frontend/src/care/DemoDock.jsx"],
+    ["AI activity 'Try sample'", "Bundled samples unless a switch is live", "count-guard/backend/app/journey/ai_api.py"],
+    ["Two-app demo-check (20 beats, 180 s)", "Headless regression of the video flow", "count-guard/frontend/scripts/demo/"],
+    ["DD seed-demo, demo_browser.py, DEMO_BANNER", "Fake clinics, stub STT/LLM, research banner", "doctor-dictation/doctor_dictation/admin_demo.py"]] },
   { bucket: "POC / experimental", status: "POC", items: [
-    ["Spark Open discrepancy reconciler", "Never called live", "count-guard/backend/app/agent/reconciler.py"],
-    ["Real-video SAM pipeline + WebSocket", "Never run with a key; WS has no caller", "count-guard/backend/app/media_pipeline.py, api/ws.py"],
+    ["Discrepancy explanation", "Wired into camera close; live only with SPARK_LIVE / Baseten; not live-checked", "count-guard/backend/app/journey/camera_explain.py"],
     ["Fixture recorder, day-1 check, cost estimator", "Research tooling", "count-guard/eval/record_fixtures.py, backend/app/day1.py, spend.py"],
     ["DD STT benchmark", "No clips ship", "doctor-dictation/doctor_dictation/bench/"]] },
   { bucket: "Stub / planned", status: "Stub", items: [
     ["Spark baseline", "NotImplementedError", "count-guard/backend/app/baseline.py:66-67"],
     ["ONNX/Snapdragon STT", "Deferred", "doctor-dictation/doctor_dictation/providers/stt/onnx.py"],
     ["Browser Web Speech fallback", "Promised in an error message, not built", "doctor-dictation/doctor_dictation/providers/stt/factory.py:116"],
-    ["MedASR / ElevenLabs STT, HL7 vitals, sam-local, hx/ timeline", "Docs only", "doctor-dictation/docs/superpowers/plans/, docs/hackathon/02-architecture.md"]] },
-  { bucket: "Legacy (superseded but mounted)", status: "Deprecated", items: [
-    ["Camera swab counter (A)", "Older screens /count, /case/:id", "count-guard/backend/app/core/, engine.py, api/routes.py"],
-    ["Morning timeline (B)", "/steps, /opd, /ot, /ward, /morning", "count-guard/backend/app/morning/"],
-    ["Care journey v1 (C)", "/journey, /doctor, /nurse, /patient, /audit", "count-guard/backend/app/journey/api.py, play.py, frontend/src/screens/"],
+    ["CG discharge report back to DD", "Deferred until after the hackathon (spec U16)", "docs/superpowers/specs/2026-11-02-dd-to-count-guard-patient-flow-design.md:50"]] },
+  { bucket: "Archived / deprecated", status: "Deprecated", items: [
+    ["Camera counter, morning and journey v1 screens & routes", "Moved with git mv; not imported or mounted", "count-guard/archive/"],
+    ["Scripted plays (three-act, morning)", "Retired (U13)", "count-guard/archive/backend/app/journey/play.py, morning/script.py"],
+    ["CG POST …/rx/import", "Still mounted; no screen calls it (intake replaced it)", "count-guard/backend/app/journey/api.py:226"],
     ["DD patient/encounter CRUD", "UI never calls", "doctor-dictation/doctor_dictation/api/persistence.py:60-89"]] }
 ];

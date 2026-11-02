@@ -70,29 +70,29 @@
     const ready = D.demos.filter((d) => d.ready).length;
     $("#overview").innerHTML = `
       <h1>What is in this repository?</h1>
-      <p class="lead">Two independent clinical-workflow products built for a hackathon (13 Oct – 1 Nov 2026), sharing one repo, one <code>.env</code> and the Meta Muse model key. There is <b>no umbrella product in code</b>: the only runtime link is Count Guard reading a saved Doctor Dictation prescription over HTTP.</p>
+      <p class="lead">Two clinical-workflow apps built for a hackathon (13 Oct – 2 Nov 2026), sharing one repo, one <code>.env</code> and the Meta Muse model key. Since the 2 Nov consolidation they form <b>one patient flow</b>: a Doctor Dictation clinic visit saved with <b>Save &amp; admit to ward</b> is pushed to Count Guard, which follows the patient through ward, theatre and discharge. The apps keep separate servers, databases and code.</p>
       <div class="grid g4">${D.metrics.map((m) => `<div class="card metric"><div class="v">${esc(m.v)}</div><div class="l">${esc(m.l)}</div><div class="s">${esc(m.s)}</div></div>`).join("")}</div>
-      <h2>The two products</h2>
+      <h2>The two apps</h2>
       <div class="grid g2">
         <div class="card"><h3>Doctor Dictation <span class="badge b-Implemented">Shipping-shaped</span></h3>
           <p><b>Problem:</b> OPD doctors in India spend minutes per patient writing prescriptions; STT mangles drug names.</p>
-          <p><b>What it does:</b> the doctor dictates the visit → speech-to-text → an LLM drafts a structured sheet → deterministic rules repair drug names and grade every row → Save is blocked until every medicine is verified → PDF on the clinic letterhead with a QR share link.</p>
-          <p><b>Users:</b> clinic doctors, assistants, clinic admin, app owner. <b>Maturity:</b> multi-clinic tenancy, Docker/Caddy deploy, 3,338 tests; safety data partly missing.</p>
+          <p><b>What it does:</b> the doctor dictates the visit → speech-to-text → an LLM drafts a structured sheet → deterministic rules repair drug names and grade every row → Save is blocked until every medicine is verified → PDF on the clinic letterhead with a QR share link, or <b>Save &amp; admit to ward</b>, which hands the patient to Count Guard.</p>
+          <p><b>Users:</b> clinic doctors, assistants, clinic admin, app owner. <b>Maturity:</b> multi-clinic tenancy, Docker/Caddy deploy, 3,361 tests; safety data partly missing; admit is single-clinic only.</p>
           ${statusBar(ddF)}</div>
         <div class="card"><h3>Count Guard <span class="badge b-Partial">Research demo</span></h3>
           <p><b>Problem:</b> on a ward, things get lost around one patient — swabs, instruments, medicines, orders, questions.</p>
-          <p><b>What it does:</b> one append-only timeline per patient shared by doctor, nurse and patient; a server-enforced swab-count hard stop; video/photo checks; alerts; a patient Ask inbox; an AI admin agent whose every action is labelled and undoable. “The AI does the reading, counting and writing. People decide.”</p>
-          <p><b>Users:</b> ward doctor, nurse, patient (synthetic data). <b>Maturity:</b> no auth, no deploy; all model results are prepared fixtures; three older product generations still mounted.</p>
+          <p><b>What it does:</b> one append-only timeline per patient shared by doctor, nurse and patient: intake from Doctor Dictation (push, Sync, New patient); photo proofs with verdicts; theatre with drug-by-voice, a context card and an advice-only swab camera; a server-enforced swab-count hard stop; discharge drafted from the timeline with PDF and .ics; a patient Ask inbox; an AI admin agent whose every action is labelled and undoable. “The system formats. The doctor decides.”</p>
+          <p><b>Users:</b> ward doctor, nurse, patient (synthetic data). <b>Maturity:</b> no auth, no deploy. Every AI step has a live switch; live calls to all four models answered on 2 Nov, but the demo default is prepared results, labelled “Prepared”. Older generations archived.</p>
           ${statusBar(cgF)}</div>
       </div>
-      <div class="callout"><b>One-line answer:</b> the actual products are <b>Doctor Dictation</b> (OPD prescription) and the <b>Count Guard care app “Ward 4”</b> with its AI admin agent. Everything else in <code>count-guard/</code> — the camera swab counter, the “morning” timeline, journey v1 — is earlier generations kept alive behind “Older screens”.</div>
+      <div class="callout"><b>One-line answer:</b> the actual products are <b>Doctor Dictation</b> (OPD prescription) and the <b>Count Guard care app “Ward 4”</b> with its AI admin agent. Every feature of the earlier generations (camera swab counter, “morning” timeline, journey v1) now lives in the care app; their screens and routes sit in <code>count-guard/archive/</code>, unmounted.</div>
       <h2>Main capabilities</h2>
       <div class="grid g3">
         <div class="card tight"><h3>Voice → checked prescription</h3><div class="small muted">STT chain, LLM loop, offline rules fallback, lexicon repair, row pills, verify gate.</div></div>
         <div class="card tight"><h3>Records, PDF & sharing</h3><div class="small muted">Today list, past-day lock, Chromium PDF, letterhead from a photo, 7-day QR link.</div></div>
         <div class="card tight"><h3>Clinic tenancy & learning</h3><div class="small muted">Per-clinic DB, sessions, roles, learned formulary, spoken terms, “Your usual”.</div></div>
-        <div class="card tight"><h3>Patient flow on one timeline</h3><div class="small muted">State machine, signed orders, nurse tasks with proof, discharge.</div></div>
-        <div class="card tight"><h3>Swab-count hard stop</h3><div class="small muted">Surgery cannot end until a person saves a count that adds up or gives a reason.</div></div>
+        <div class="card tight"><h3>One patient across two apps</h3><div class="small muted">Save &amp; admit → intake → ward → theatre → discharge PDF; Sync as backup; photo verdicts; state machine.</div></div>
+        <div class="card tight"><h3>Swab-count hard stop</h3><div class="small muted">Surgery cannot end until a person saves a count that adds up or gives a reason; camera and rules are advice only.</div></div>
         <div class="card tight"><h3>Explainable AI admin</h3><div class="small muted">Rule-based ops agent, policy “Never” list, Undo, Pause, Inspector with evidence.</div></div>
       </div>
       <h2>Feature status at a glance</h2>
@@ -102,7 +102,7 @@
   /* ---------- 2. Product map ---------- */
   function treeHTML(list) {
     return `<ul class="tree">${list.map((p) => `<li class="${p.children ? "" : "leaf"}">
-      <div class="node" data-pid="${p.id}"><span class="tw">${p.children ? "▾" : "•"}</span><span class="nm">${esc(p.name)}</span> ${cat(p.category)} ${badge(p.status)} ${p.lifecycle === "Legacy" ? plain("Legacy") : ""}
+      <div class="node" data-pid="${p.id}"><span class="tw">${p.children ? "▾" : "•"}</span><span class="nm">${esc(p.name)}</span> ${cat(p.category)} ${badge(p.status)} ${p.lifecycle === "Legacy" || p.lifecycle === "Archived" ? plain(p.lifecycle) : ""}
       <span class="ds">${esc(p.desc)}</span></div>${p.children ? treeHTML(p.children) : ""}</li>`).join("")}</ul>`;
   }
   function renderMap() {
@@ -114,7 +114,7 @@
       <div class="pm">
         ${col("Doctor Dictation", cat("Product"), dd.children)}
         ${col("Count Guard — current product", cat("Product"), cg.children.filter((p) => p.lifecycle === "Current" && p.category !== "Demo").flatMap((p) => p.children ? [p, ...p.children] : [p]))}
-        ${col("Count Guard — demo, POC & legacy", plain("Not the product"), cg.children.filter((p) => p.lifecycle === "Legacy" || p.category === "Demo"))}
+        ${col("Count Guard — demo, POC & archive", plain("Not the product"), cg.children.filter((p) => p.lifecycle === "Legacy" || p.lifecycle === "Archived" || p.category === "Demo"))}
       </div>
       <h2>Full hierarchy</h2><div class="card">${treeHTML(D.products)}</div>`;
     $("#map").querySelectorAll("[data-pid]").forEach((el) => el.addEventListener("click", (e) => {
@@ -149,7 +149,7 @@
   function renderDemos() {
     const groups = ["All", "Ready now", "Needs setup", "Standalone", "End-to-end", "Cross-module", "Advanced technical", "Experimental"];
     $("#demos").innerHTML = `<h1>Demo Centre</h1>
-      <p class="lead">${D.demos.length} scripted demos, all backed by existing code. ${D.demos.filter((d) => d.ready).length} run offline with no keys. Media files for Count Guard must keep their generated names — the offline model results are matched by file name.</p>
+      <p class="lead">${D.demos.length} scripted demos, all backed by existing code. ${D.demos.filter((d) => d.ready).length} run offline with no keys. With no key, Count Guard's tray, set-up and swab media must keep their generated names — those prepared results are matched by file name (photos are matched by content).</p>
       <h2>Recommended journeys by audience</h2>
       <div class="table-wrap"><table><thead><tr><th>Audience</th><th>Sequence</th><th>Time</th><th>Key message</th><th>Avoid</th></tr></thead><tbody>
       ${D.journeys.map((j) => `<tr><td><b>${esc(j.audience)}</b><div>${j.label === "Supported" ? '<span class="badge b-yes">Supported</span>' : '<span class="badge b-setup">Suggested</span>'}</div></td>
@@ -211,7 +211,7 @@
     $("#repo").innerHTML = `<h1>Repository Explorer</h1>
       <p class="lead">Important directories, what they do, and which product they belong to. Badges use the same status vocabulary as the catalogue. Click ▾ to fold.</p>
       <div class="card"><ul class="tree">${repoHTML(D.repo)}</ul></div>
-      <div class="callout warn"><b>Folder names mislead here:</b> <code>count-guard/backend/app/morning/</code> is labelled legacy but holds the event store the current care app and ops agent depend on; <code>agent/</code> holds both a POC (reconciler) and a live shared component (advice verifier).</div>`;
+      <div class="callout warn"><b>Folder names mislead here:</b> <code>count-guard/backend/app/morning/</code> has no routes any more but holds the event store and helpers the care app depends on; <code>core/</code>, <code>engine.py</code> and <code>report/</code> came from the old camera counter and are now libraries of the theatre camera. Only <code>count-guard/archive/</code> is truly retired.</div>`;
     $("#repo").querySelectorAll(".tw").forEach((t) => t.addEventListener("click", () => { const li = t.closest("li"); li.classList.toggle("collapsed"); t.textContent = li.classList.contains("collapsed") ? "▸" : "▾"; }));
   }
 
@@ -226,15 +226,16 @@
 
   /* ---------- 8. Overlap ---------- */
   function renderOverlap() {
+    const stB = (s) => `<span class="badge ${s === "Resolved" ? "b-Implemented" : s === "Partly resolved" ? "b-Partial" : "b-plain"}">${esc(s || "Open")}</span>`;
     const sevB = (s) => `<span class="badge ${s === "High" ? "b-Stub" : s === "Medium" ? "b-Partial" : "b-plain"}">${s}</span>`;
     $("#overlap").innerHTML = `<h1>Overlap & Consolidation</h1>
-      <p class="lead">${D.overlaps.length} findings. Architectural assessment only — nothing has been moved or refactored.</p>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Finding</th><th>Severity</th><th>Recommendation</th></tr></thead><tbody>
-      ${D.overlaps.map((o) => `<tr class="clickable" data-o="${o.id}"><td class="mono">${o.id}</td><td><b>${esc(o.title)}</b></td><td>${sevB(o.sev)}</td><td>${plain(o.verdict)}</td></tr>`).join("")}</tbody></table></div>
-      <h2>Details</h2>${D.overlaps.map((o) => `<details class="demo" id="ov-${o.id}"><summary><span class="mono">${o.id}</span><span class="t">${esc(o.title)}</span>${sevB(o.sev)} ${plain(o.verdict)}</summary>
+      <p class="lead">${D.overlaps.length} findings, first assessed at e40d8c7 and re-checked at ${esc(D.meta.commit)} after the 2 Nov consolidation: ${D.overlaps.filter((o) => o.state === "Resolved").length} resolved, ${D.overlaps.filter((o) => o.state === "Partly resolved").length} partly resolved, ${D.overlaps.filter((o) => o.state === "Open").length} open. This overview changed no code.</p>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Finding</th><th>Severity</th><th>Recommendation</th><th>State</th></tr></thead><tbody>
+      ${D.overlaps.map((o) => `<tr class="clickable" data-o="${o.id}"><td class="mono">${o.id}</td><td><b>${esc(o.title)}</b></td><td>${sevB(o.sev)}</td><td>${plain(o.verdict)}</td><td>${stB(o.state)}</td></tr>`).join("")}</tbody></table></div>
+      <h2>Details</h2>${D.overlaps.map((o) => `<details class="demo" id="ov-${o.id}"><summary><span class="mono">${o.id}</span><span class="t">${esc(o.title)}</span>${sevB(o.sev)} ${stB(o.state)}</summary>
       <div class="body"><dl class="kv"><dt>What is combined</dt><dd>${esc(o.combined)}</dd><dt>Where</dt><dd>${codeList(o.where)}</dd><dt>Why it confuses</dt><dd>${esc(o.why)}</dd>
       <dt>Logical separation</dt><dd>${esc(o.separation)}</dd><dt>Target shape</dt><dd><code>${esc(o.target)}</code></dd></dl></div></details>`).join("")}
-      <div class="callout"><b>Recommended product boundaries:</b> (1) Doctor Dictation — OPD prescription product; (2) Count Guard Care — ward product incl. AI admin; (3) a small Care platform extracted from Count Guard (ledger, perception seam, verifier, ops runner); (4) a Showcase package (dock, seed, fixtures, demo-check); (5) an Archive for the camera counter, morning timeline and journey v1. See the “Recommended module boundaries” diagram in Architecture (Proposed).</div>`;
+      <div class="callout"><b>Recommended product boundaries:</b> (1) Doctor Dictation — OPD prescription product; (2) Count Guard Care — ward product incl. AI admin; (3) a small Care platform extracted from Count Guard (ledger, perception seam, verifier, ops runner); (4) a Showcase package (dock, seed, fixtures, demo-check); (5) an Archive for the camera counter, morning timeline and journey v1 — <b>done on 2 Nov</b> (<code>count-guard/archive/</code>). See the “Recommended module boundaries” diagram in Architecture (Proposed).</div>`;
     $("#overlap").querySelectorAll("[data-o]").forEach((tr) => tr.addEventListener("click", () => { const el = $("#ov-" + tr.dataset.o); el.open = true; el.scrollIntoView({ behavior: "smooth" }); }));
   }
 
@@ -253,10 +254,10 @@
       ${D.gaps.map((g) => `<tr><td>${pB(g.p)}</td><td>${plain(g.kind)}</td><td>${esc(g.text)}</td><td><code>${esc(g.ev)}</code></td></tr>`).join("")}</tbody></table></div>
       <h2>Recommended next steps</h2>
       <ol class="steps">
-        <li>Decide the pitch: present Doctor Dictation + Count Guard Care as the products, and label all Count Guard model output as prepared until real calls are recorded.</li>
-        <li>Record real fixtures once with <code>eval/record_fixtures.py --spend</code>, or state “prepared” in the demo narration.</li>
+        <li>Film the live swab camera on a real prop tray (video script, spec U14), or keep the “Prepared” label on screen and in the narration.</li>
+        <li>Set <code>CG_SYNC_TOKEN</code> for every two-app run, and rewrite the Count Guard README submission notes from the 2 Nov live-check.</li>
         <li>Ship or remove DD safety claims: load reviewed dosing and investigations data, review the LASA pairs.</li>
-        <li>Put Count Guard legacy generations behind a flag (Overlap O1) and extract the ledger kernel first (O2) so archiving is safe.</li>
+        <li>Extract the ledger kernel and the camera/perception libraries from <code>morning/</code>, <code>core/</code> and <code>agent/</code> (O2, O10); the archive step (O1) is done.</li>
         <li>Move the ops agent off the request path (O3).</li>
         <li>Mark <code>docs/hackathon/01–06</code> superseded and link to this overview.</li>
       </ol>

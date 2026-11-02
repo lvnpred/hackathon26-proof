@@ -33,7 +33,7 @@ def _client(tmp_path, *, dd_base="http://127.0.0.1:9"):
         sam_fps=2,
         dd_base=dd_base,
     )
-    return TestClient(create_app(settings))
+    return TestClient(create_app(settings), client=("127.0.0.1", 50000))   # loopback: intake needs it without a token
 
 
 def _episode_with_orders(tmp_path):

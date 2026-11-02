@@ -62,11 +62,22 @@ class BedIn(At):
     by: str = Field(min_length=1, max_length=80)
 
 
-def _check_token(given: str | None) -> None:
-    """When CG_SYNC_TOKEN is set, the push must carry it. The value is never logged or echoed."""
+# Hosts counted as this machine when CG_SYNC_TOKEN is unset. Tests pass client=("127.0.0.1", 50000) to TestClient,
+# whose default host "testclient" is refused like any other.
+LOOPBACK = frozenset({"127.0.0.1", "::1"})
+OTHER_HOST = {"error": "set CG_SYNC_TOKEN to accept other hosts"}
+
+
+def _check_token(request: Request, given: str | None) -> JSONResponse | None:
+    """With CG_SYNC_TOKEN set, the push must carry it (constant-time compare; never logged or echoed).
+    Unset, only this machine may push: any other host gets 403."""
     expected = sync_token()
-    if expected and not hmac.compare_digest((given or "").encode(), expected.encode()):
+    if not expected:
+        host = request.client.host if request.client else ""
+        return None if host in LOOPBACK else JSONResponse(OTHER_HOST, status_code=403)
+    if not hmac.compare_digest((given or "").encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="The sync token is missing or wrong.")
+    return None
 
 
 def _answer(request: Request, result: dict) -> JSONResponse:
@@ -78,7 +89,9 @@ def _answer(request: Request, result: dict) -> JSONResponse:
 @intake_router.post("/intake")
 def take_intake(body: IntakeIn, request: Request, x_cg_sync_token: str | None = Header(default=None)) -> JSONResponse:
     """Doctor Dictation's push on admit, and each row Sync pulls. 201 when the patient is new, else 200."""
-    _check_token(x_cg_sync_token)
+    refused = _check_token(request, x_cg_sync_token)
+    if refused is not None:
+        return refused
     store = _store(request)
     try:
         result = intake.take(store, body.model_dump(), now_ms=clock.now_ms(store))

@@ -84,8 +84,8 @@ class Settings:
 
 
 def sync_token() -> str:
-    """CG_SYNC_TOKEN, read at call time. Empty means the intake push needs no token."""
-    return os.environ.get("CG_SYNC_TOKEN", "")
+    """CG_SYNC_TOKEN, read at call time and stripped (as Doctor Dictation does). Empty or blank means no token."""
+    return os.environ.get("CG_SYNC_TOKEN", "").strip()
 
 
 def _switch(name: str) -> bool | None:

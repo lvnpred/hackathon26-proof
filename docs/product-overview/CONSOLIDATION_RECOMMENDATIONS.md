@@ -177,10 +177,10 @@
 
 **Severity:** Low · **Recommendation:** Archive · **State:** Open
 
-1. **What is combined:** docs/hackathon/README.md still says 'Nothing is built yet'. count-guard/README.md 'Submission notes' still say the four models were never called with a real key and every count is scripted, although live-check called all four on 2 Nov.
-2. **Where:** `docs/hackathon/README.md:3`, `count-guard/README.md:237-241`
+1. **What is combined:** docs/hackathon/README.md still says 'Nothing is built yet'. (count-guard/README.md 'Submission notes' are now correct: they report the 2 Nov live-check, line 239.)
+2. **Where:** `docs/hackathon/README.md:3`, `count-guard/README.md:239`
 3. **Why it confuses:** New readers and judges start from the most stale document.
-4. **Logical separation:** Mark docs/hackathon 01–06 superseded; rewrite the CG submission notes from the live-check log.
+4. **Logical separation:** Mark docs/hackathon 01–06 superseded.
 5. **Keep together or separate:** Archive
 6. **Target shape:** `docs/hackathon/ARCHIVE`
 
@@ -190,18 +190,18 @@
 | --- | --- | --- | --- |
 | P1 | Validation | No Count Guard model output has been measured on real media. Live calls work (live-check 2 Nov: voice, Spark text, Spark vision, SAM all answered), but live SAM found 0 swabs on the drawn demo media, and the demo default is prepared results. | `count-guard/backend/app/live_check.py:1-6; docs/demo/dd-cg-flow-video-script.md (The swab camera)` |
 | P1 | Missing | DD safety data is absent or unreviewed: dosing.json is empty, investigations.json is missing, and the 8 LASA pairs and 448-entry lexicon are not clinician-reviewed. | `doctor-dictation/doctor_dictation/core/lexicon/` |
-| P1 | Security | Count Guard has no user authentication; actor and role are client-supplied. POST /journey/intake accepts any caller unless CG_SYNC_TOKEN is set; POST …/theatre/tier toggles decision content without auth. | `count-guard/backend/app/journey/intake_api.py:78; theatre_api.py:164` |
-| P1 | Security | DD single-clinic mode (the default) has no auth and CORS '*'. GET /api/v1/admissions returns every admitted document body to any caller unless CG_SYNC_TOKEN is set. Safe on localhost only. | `doctor-dictation/doctor_dictation/api/admit.py:160-166; api/app.py:81-87` |
-| P2 | Architecture | The DD → CG push is fire-and-forget with no retry; a lost push is recovered only when a person presses Sync. The CG discharge does not go back to DD (deferred, U16). | `doctor-dictation/doctor_dictation/api/admit.py:120-140` |
+| P1 | Security | Count Guard has no user authentication; actor and role are client-supplied. POST …/theatre/tier toggles decision content without auth. Resolved 2 Nov: with CG_SYNC_TOKEN unset, POST /journey/intake now accepts loopback callers only (403 otherwise). | `count-guard/backend/app/journey/intake_api.py:66-80; theatre_api.py:164` |
+| P1 | Security | DD single-clinic mode (the default) has no auth and CORS '*'. Safe on localhost only. Resolved 2 Nov: with CG_SYNC_TOKEN unset, GET /api/v1/admissions now answers loopback callers only (403 otherwise). | `doctor-dictation/doctor_dictation/api/admit.py:182-191; api/app.py:81-87` |
+| P2 | Architecture | The CG discharge does not go back to DD (deferred, U16). Resolved 2 Nov: the DD → CG push now retries a connection error or 5xx up to 3 attempts (0.5 s, 1.5 s backoff); after that, Sync recovers it. | `doctor-dictation/doctor_dictation/api/admit.py:127-162` |
 | P2 | Security | DD verify gate trusts the client-supplied row status on Save; rows are not re-grounded server-side. | `doctor-dictation/doctor_dictation/api/persistence.py:223-245` |
 | P2 | Architecture | Ops agent runs synchronously in every care write, including intake; failures are swallowed. No queue, no retry, no metrics. | `count-guard/backend/app/journey/api.py:153-161` |
 | P2 | Architecture | Process-local state breaks with >1 worker: DD format cache, share-link rate limiter, login semaphore. | `doctor-dictation/doctor_dictation/core/determinism.py:61; api/share_public.py:29-30` |
 | P2 | Incomplete | Browser Web Speech fallback is promised in an error message but not implemented. | `doctor-dictation/doctor_dictation/providers/stt/factory.py:116` |
 | P2 | Incomplete | Spark baseline scoring raises NotImplementedError (the only TODO in the repo). | `count-guard/backend/app/baseline.py:66-67` |
 | P2 | Missing | Consent capture and data retention are not implemented (encounters.consent_at column only), yet a live pilot is claimed. | `doctor-dictation/doctor_dictation/db/__init__.py:208` |
-| P3 | Docs | count-guard/README.md 'Submission notes' still say no model was ever called and every count is scripted — contradicted by the 2 Nov live-check. docs/hackathon/README.md still says 'Nothing is built yet'. | `count-guard/README.md:237-241; docs/hackathon/README.md:3` |
+| P3 | Docs | docs/hackathon/README.md still says 'Nothing is built yet'. Resolved 2 Nov: count-guard/README.md 'Submission notes' now report the 2 Nov live-check timings and the DD → CG video script. | `count-guard/README.md:235-243; docs/hackathon/README.md:3` |
 | P3 | Docs | count-guard/docs/architecture.md covers only the camera counter; the care app, intake/Sync and ops agent have no architecture doc (the 2 Nov spec is the nearest). | `count-guard/docs/architecture.md` |
-| P3 | Docs | .env.example misses names the code reads, including the new COUNT_GUARD_URL, CG_SYNC_TOKEN, VOICE_LIVE, PROOF_LIVE, SPARK_LIVE and DEMO_BANNER, and the older CG_OPS_AGENT, DD_BASE_URL, MODEL_API_KEY. | `.env.example; count-guard/backend/app/journey/switches.py:1-6; doctor-dictation/doctor_dictation/api/admit.py:7` |
+| P3 | Docs | Resolved 2 Nov: .env.example now lists COUNT_GUARD_URL, DD_BASE_URL, CG_SYNC_TOKEN, DEMO_BANNER, VOICE_LIVE, PROOF_LIVE, SPARK_LIVE and CG_OPS_AGENT (MODEL_API_KEY was already described); doctor-dictation/.env.production.example lists COUNT_GUARD_URL and CG_SYNC_TOKEN. | `.env.example; count-guard/backend/app/journey/switches.py:1-6; doctor-dictation/doctor_dictation/api/admit.py:7` |
 | P3 | Architecture | Count Guard has no deployment assets; the DD → CG link assumes both apps on one machine (COUNT_GUARD_URL default 127.0.0.1:8100). | `doctor-dictation/doctor_dictation/api/admit.py:30` |
 | P3 | Validation | No DOM/component tests for the Count Guard UI; end-to-end coverage is the two-app demo-check only. | `count-guard/frontend/scripts/demo/` |
 | P3 | Architecture | doctor-dictation/frontend/app.js is 1,406 lines, breaking the repo's 500-line rule; persistence.py is at 484. | `doctor-dictation/frontend/app.js` |
@@ -209,7 +209,7 @@
 ## Areas requiring human validation
 
 - Is the live camera good enough to film? Live SAM found 0 swabs on drawn media; the video script recommends a filmed prop tray (spec U14). Confirm before recording.
-- Should CG_SYNC_TOKEN be set for every demo, given that without it /journey/intake and /api/v1/admissions accept any local caller?
+- Should CG_SYNC_TOKEN be set for every demo? /journey/intake and /api/v1/admissions accept loopback only when no token is set (any process on the machine) and refuse other hosts with 403.
 - Is the Doctor Dictation pilot at the documented domain live with real patients? If so, consent, retention and the default-mode exposure need review — and Save & admit must stay off there (it is single-clinic only).
 - Which repo is canonical for Doctor Dictation deploys: this monorepo or the upstream that 02-deploy.sh clones?
 - Do the default model names resolve with live vendors for DD (default 'gpt-6-luna')? The CG Meta models answered on 2 Nov.

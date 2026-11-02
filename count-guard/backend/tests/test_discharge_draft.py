@@ -151,7 +151,7 @@ def test_discharge_wording_live_and_template_fallback(tmp_path, monkeypatch):
     prompts = []
     reply = {"text": "M. Fernandes had a hernia repair. Lignocaine 5 ml was given in theatre. The swab count was 20 of 20."}
     monkeypatch.setattr(SparkAdapter, "write", lambda self, prompt: prompts.append(prompt) or reply["text"])
-    live = TestClient(create_app(_keyed(tmp_path / "on")))
+    live = TestClient(create_app(_keyed(tmp_path / "on")), client=("127.0.0.1", 50000))   # loopback: intake
     eid = _stay(live)
     got = _ok(_draft(live, eid)).json()["drafts"]["discharge"]
     assert len(prompts) == 1 and "Do not add any fact" in prompts[0]

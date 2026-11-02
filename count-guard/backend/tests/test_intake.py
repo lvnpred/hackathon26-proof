@@ -7,6 +7,8 @@ import json
 import threading
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
 from app.journey import intake, seed
 from app.ops import run as ops_run
 from tests.test_care_demo import _client
@@ -183,7 +185,31 @@ def test_token_required_when_set(tmp_path, monkeypatch):
 
 def test_no_token_needed_when_unset(tmp_path, monkeypatch):
     monkeypatch.delenv("CG_SYNC_TOKEN", raising=False)
-    assert _post(_client(tmp_path)).status_code == 201
+    assert _post(_client(tmp_path)).status_code == 201          # _client connects from 127.0.0.1
+
+
+def test_whitespace_token_reads_as_unset(tmp_path, monkeypatch):
+    monkeypatch.setenv("CG_SYNC_TOKEN", "  \t ")
+    assert _post(_client(tmp_path)).status_code == 201          # no header needed: the token is unset
+    far = TestClient(_client(tmp_path).app, client=("10.0.0.5", 1234))
+    assert _post(far).status_code == 403
+
+
+def test_unset_token_refuses_other_hosts(tmp_path, monkeypatch):
+    monkeypatch.delenv("CG_SYNC_TOKEN", raising=False)
+    far = TestClient(_client(tmp_path).app, client=("10.0.0.5", 1234))
+    res = _post(far)
+    assert res.status_code == 403 and res.json() == {"error": "set CG_SYNC_TOKEN to accept other hosts"}
+    assert _post(TestClient(far.app)).status_code == 403        # TestClient's default host "testclient" is not loopback
+    for host in ("127.0.0.1", "::1"):
+        assert _post(TestClient(far.app, client=(host, 1234))).status_code in (200, 201)
+
+
+def test_set_token_lets_other_hosts_in(tmp_path, monkeypatch):
+    monkeypatch.setenv("CG_SYNC_TOKEN", "t")
+    far = TestClient(_client(tmp_path).app, client=("10.0.0.5", 1234))
+    assert _post(far).status_code == 401
+    assert _post(far, headers={"X-CG-Sync-Token": "t"}).status_code == 201
 
 
 def test_new_patient_starts_in_clinic(tmp_path):

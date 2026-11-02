@@ -46,7 +46,7 @@ def client(monkeypatch):
     monkeypatch.delenv("CG_SYNC_TOKEN", raising=False)
     monkeypatch.setenv("COUNT_GUARD_URL", "http://cg.test:8200")
     _fake_pdf(monkeypatch)
-    with TestClient(create_app()) as c:
+    with TestClient(create_app(), client=("127.0.0.1", 50000)) as c:    # loopback: the admissions list needs it
         yield c
 
 
@@ -106,11 +106,12 @@ def test_after_save_only_queues_push(client, monkeypatch):
     assert tasks.tasks[0].args[0]["status"] == "admit"
 
 
-def test_push_to_blackholed_cg_is_fast_and_records_error(client, pushed):
+def test_push_to_blackholed_cg_is_fast_and_records_error(client, pushed, monkeypatch):
     doc_id = client.post("/api/v1/documents", json=ADMIT).json()["document_id"]
+    monkeypatch.setattr(admit, "_sleep", lambda s: None)               # backoff skipped; 3 attempts, 1 s connect each
     start = time.monotonic()
     assert _ORIGINAL_PUSH(pushed[0][0], "http://10.255.255.1:9", "", dbmod.db_path()) is None
-    assert time.monotonic() - start < 1.5
+    assert time.monotonic() - start < 3 * 1.5
     [row] = _rows()
     assert row["document_id"] == doc_id and row["last_error"] and row["pushed_at"] is None
 
@@ -193,3 +194,68 @@ def test_admissions_404_in_multi_clinic(world):
 def test_admission_status_404_in_multi_clinic(world):
     with _signed_in("dr.rao") as (rao,):
         assert rao.get("/api/v1/documents/1/admission").status_code == 404
+
+
+def test_admissions_unset_token_refuses_other_hosts(client, pushed):
+    client.post("/api/v1/documents", json=ADMIT)
+    assert client.get("/api/v1/admissions").status_code == 200          # the fixture connects from 127.0.0.1
+    assert TestClient(client.app).get("/api/v1/admissions").status_code == 403   # default host "testclient"
+    far = TestClient(client.app, client=("10.0.0.5", 1234))
+    r = far.get("/api/v1/admissions")
+    assert r.status_code == 403 and r.json() == {"error": "set CG_SYNC_TOKEN to accept other hosts"}
+    for host in ("127.0.0.1", "::1"):
+        assert TestClient(client.app, client=(host, 1234)).get("/api/v1/admissions").status_code == 200
+
+
+def test_admissions_set_token_lets_other_hosts_in(client, pushed, monkeypatch):
+    client.post("/api/v1/documents", json=ADMIT)
+    monkeypatch.setenv("CG_SYNC_TOKEN", "secret-for-cg")
+    far = TestClient(client.app, client=("10.0.0.5", 1234))
+    assert far.get("/api/v1/admissions").status_code == 401
+    assert far.get("/api/v1/admissions", headers={"X-CG-Sync-Token": "secret-for-cg"}).status_code == 200
+
+
+def _scripted_post(monkeypatch, outcomes):
+    """httpx.post answers each outcome in turn: an int is a status code, an exception is raised. Sleeps are skipped."""
+    calls, slept = [], []
+
+    class Res:
+        def __init__(self, code):
+            self.status_code = code
+
+    def fake_post(url, json, headers, timeout):
+        calls.append(timeout)
+        out = outcomes[len(calls) - 1]
+        if isinstance(out, Exception):
+            raise out
+        return Res(out)
+    monkeypatch.setattr(admit.httpx, "post", fake_post)
+    monkeypatch.setattr(admit, "_sleep", slept.append, raising=False)
+    return calls, slept
+
+
+def test_push_retries_5xx_then_succeeds(client, pushed, monkeypatch):
+    client.post("/api/v1/documents", json=ADMIT)
+    calls, slept = _scripted_post(monkeypatch, [503, 201])
+    _ORIGINAL_PUSH(pushed[0][0], "http://cg.test:8200", "", dbmod.db_path())
+    assert len(calls) == 2 and slept == [0.5] and all(t.connect == 1.0 and t.read == 3.0 for t in calls)
+    [row] = _rows()
+    assert row["pushed_at"] and row["last_error"] is None
+
+
+def test_push_4xx_is_final(client, pushed, monkeypatch):
+    client.post("/api/v1/documents", json=ADMIT)
+    calls, slept = _scripted_post(monkeypatch, [422, 201, 201])
+    _ORIGINAL_PUSH(pushed[0][0], "http://cg.test:8200", "", dbmod.db_path())
+    assert len(calls) == 1 and slept == []
+    [row] = _rows()
+    assert row["pushed_at"] is None and row["last_error"] == "Count Guard answered 422"
+
+
+def test_push_gives_up_after_three_connect_errors(client, pushed, monkeypatch):
+    client.post("/api/v1/documents", json=ADMIT)
+    calls, slept = _scripted_post(monkeypatch, [admit.httpx.ConnectError("refused")] * 3)
+    assert _ORIGINAL_PUSH(pushed[0][0], "http://cg.test:8200", "", dbmod.db_path()) is None
+    assert len(calls) == 3 and slept == [0.5, 1.5]
+    [row] = _rows()
+    assert row["pushed_at"] is None and row["last_error"] == "Count Guard not reached (ConnectError)"

@@ -1,7 +1,8 @@
 """Save & admit to ward: record the admission after the save commits, then push it to Count Guard (spec §6.1, §7.1).
 
-The push runs in a background task with a 1 s connect / 3 s total timeout, so a slow or absent Count Guard never
-undoes or slows the save; a failure is stored in ``admissions.last_error`` and Count Guard's Sync pulls the same
+The push runs in a background task with a 1 s connect / 3 s total timeout per attempt (up to 3 attempts for a
+connection error or 5xx), so a slow or absent Count Guard never undoes or slows the save; a failure
+is stored in ``admissions.last_error`` and Count Guard's Sync pulls the same
 payload later through ``GET /api/v1/admissions`` (§7.3). Intake is single-clinic only (§7.4).
 
 ``COUNT_GUARD_URL`` and ``CG_SYNC_TOKEN`` are read from the environment at call time; the token is never logged.
@@ -11,6 +12,7 @@ import json
 import logging
 import os
 import re
+import time
 from pathlib import Path
 
 import httpx
@@ -29,6 +31,11 @@ SOURCE = "doctor-dictation"
 TIMEOUT = httpx.Timeout(3.0, connect=1.0)
 DEFAULT_COUNT_GUARD_URL = "http://127.0.0.1:8100"      # Count Guard's dev API port (count-guard/Makefile CG_API_PORT)
 TOKEN_HEADER = "X-CG-Sync-Token"
+BACKOFF = (0.5, 1.5)                                   # seconds before the 2nd and 3rd push attempt
+_sleep = time.sleep                                    # tests replace this
+# Hosts counted as this machine when CG_SYNC_TOKEN is unset. Tests pass client=("127.0.0.1", 50000) to TestClient,
+# whose default host "testclient" is refused like any other.
+LOOPBACK = frozenset({"127.0.0.1", "::1"})
 _SINCE = re.compile(r"\d{4}-\d{2}-\d{2}([T ][0-9:.]+Z?)?")
 
 
@@ -118,17 +125,31 @@ def after_save(request: Request | None, background_tasks: BackgroundTasks, *, do
 
 
 def push(payload: dict, url: str, token: str, db: Path) -> None:
-    """POST the admission to Count Guard and store the outcome in ``db``. Never raises."""
+    """POST the admission to Count Guard and store the outcome in ``db``. Never raises.
+
+    Up to len(BACKOFF) + 1 attempts, each with TIMEOUT. Only a refused/timed-out connection or a 5xx is retried;
+    a 4xx is final (a 422 send_home for a never-admitted patient will not change). ``last_error`` holds the last
+    attempt's reason; ``pushed_at`` is set on the first 200/201."""
     pushed_at = last_error = None
-    try:
-        headers = {TOKEN_HEADER: token} if token else {}
-        r = httpx.post(url.rstrip("/") + "/journey/intake", json=payload, headers=headers, timeout=TIMEOUT)
-        if r.status_code in (200, 201):
-            pushed_at = dbmod._utcnow()
-        else:
+    headers = {TOKEN_HEADER: token} if token else {}
+    for attempt in range(len(BACKOFF) + 1):
+        if attempt:
+            _sleep(BACKOFF[attempt - 1])
+        retry = False
+        try:
+            r = httpx.post(url.rstrip("/") + "/journey/intake", json=payload, headers=headers, timeout=TIMEOUT)
+            if r.status_code in (200, 201):
+                pushed_at, last_error = dbmod._utcnow(), None
+                break
             last_error = f"Count Guard answered {r.status_code}"
-    except Exception as exc:                          # timeout, refused, DNS: the reason only, never the token
-        last_error = f"Count Guard not reached ({type(exc).__name__})"
+            retry = r.status_code >= 500
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:   # refused, unreachable, DNS failure: retried
+            last_error = f"Count Guard not reached ({type(exc).__name__})"
+            retry = True
+        except Exception as exc:                      # read timeout or anything else: final; the reason only, never the token
+            last_error = f"Count Guard not reached ({type(exc).__name__})"
+        if not retry:
+            break
     try:
         conn = dbmod.get_conn(db)
         try:
@@ -158,11 +179,14 @@ def admission_status(document_id: int):
 
 
 @router.get("/api/v1/admissions")
-def list_admissions(since: str | None = None, x_cg_sync_token: str | None = Header(default=None)):
-    """Count Guard's Sync: every admission whose document was saved at or after ``since`` (all when absent)."""
+def list_admissions(request: Request, since: str | None = None, x_cg_sync_token: str | None = Header(default=None)):
+    """Count Guard's Sync: every admission whose document was saved at or after ``since`` (all when absent).
+    With CG_SYNC_TOKEN unset only this machine may ask; any other host gets 403."""
     if multi_clinic_enabled():
         return JSONResponse(status_code=404, content={"error": "not found"})
     expected = sync_token()
+    if not expected and (request.client.host if request.client else "") not in LOOPBACK:
+        return JSONResponse(status_code=403, content={"error": "set CG_SYNC_TOKEN to accept other hosts"})
     if expected and not hmac.compare_digest((x_cg_sync_token or "").encode(), expected.encode()):
         return JSONResponse(status_code=401, content={"error": "sync token missing or wrong"})
     if since is not None and not _SINCE.fullmatch(since.strip()):

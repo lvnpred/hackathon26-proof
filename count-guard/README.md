@@ -236,7 +236,8 @@ The last line prints the timeline, waits 5 seconds for new events, then stops. T
 
 What was live and what was replayed:
 
-- SAM 3.1, Muse Voice Transcribe, Muse Spark Open and Muse Spark 1.3 were never called with a real key. Without a key, `GET /health` shows `"configured": false` for all four and no adapter makes a call.
+- `make live-check` on 2 Nov 2026 made one real call per model, and each answered: Voice Transcribe 2.80 s, Spark 1.3 text 7.16 s, Spark 1.3 vision 4.80 s, SAM 3.1 2.18 s. SAM 3.1 found 0 swabs on the drawn swab-tray image. live-check does not call Muse Spark Open. Without a key, `GET /health` shows `"configured": false` and no adapter makes a call.
+- The patient flow from Doctor Dictation (Save & admit) into the ward, theatre and discharge is filmed from `docs/demo/dd-cg-flow-video-script.md` at the workspace root.
 - Every count shown is scripted replay. The detections come from `backend/app/scenarios.py`, not from a camera.
 - Spoken lines in the demo are typed or scripted text. Voice Transcribe did not hear them.
 
@@ -256,7 +257,7 @@ Which model worded the text:
 - Do not commit `.env`. `backend/tests/test_repo_hygiene.py` fails if `.env`, a key, or a media file is tracked.
 - Record the five prop-tray clips, then replace this table with the measured one, including misses.
 - Set a spend limit on the Meta billing page before the first SAM video call.
-- The 3-minute video and the X post are still to be made.
+- The 3-minute video (script: `docs/demo/dd-cg-flow-video-script.md`) and the X post are still to be made.
 
 The build list is [docs/new-work.md](docs/new-work.md).
 

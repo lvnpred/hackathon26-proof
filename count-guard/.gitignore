@@ -15,4 +15,8 @@ eval/p4/*.png
 eval/p3/*.mp4
 eval/p3/*.png
 eval/p3/real/
+eval/media/**/*.png
+eval/media/**/*.jpg
+eval/media/**/*.mp4
+eval/media/**/*.wav
 demo-shots/

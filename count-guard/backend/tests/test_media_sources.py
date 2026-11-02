@@ -38,8 +38,10 @@ def test_every_media_file_has_a_source_row():
             assert url == licence == RECORDED, f"{rel}: both URL and licence must say '{RECORDED}'"
         else:
             assert url.startswith("https://"), f"{rel}: needs the file's page URL"
-    for rel in rows:
-        assert (MEDIA / rel).is_file(), f"SOURCES.md lists {rel} but the file is missing"
+    for rel, cells in rows.items():
+        # Stand-in downloads are git-ignored and optional (eval/fetch_media.py); demo files are drawn by the conftest fixture.
+        if cells[-1] == "demo":
+            assert (MEDIA / rel).is_file(), f"demo file {rel} is missing after eval/make_media.py"
 
 
 def test_media_files_are_within_size_limits():

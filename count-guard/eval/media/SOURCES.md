@@ -2,6 +2,8 @@
 
 Every file under `eval/media/` has one row. Downloaded files come from Wikimedia Commons (the file's page is the source URL). Files marked "recorded for this project" were made by `eval/make_media.py` and carry no third-party rights. Forms and cards say "SAMPLE — synthetic" and use the made-up patient "M. Fernandes, 52 F (synthetic)". No faces, no real patients.
 
+All files are git-ignored. `eval/make_media.py` draws every "recorded for this project" file (also run by `make demo-check` and by the test session). `eval/fetch_media.py` re-downloads the Commons files from the URLs below and re-applies the recorded changes; it needs network and is optional.
+
 Role: `demo` = the file the demo and the model checks use; `stand-in` = a downloaded real photo kept for variety, too weak for a model to judge (reason given).
 
 CC BY-SA files must be credited and shared alike when redistributed.
@@ -11,7 +13,7 @@ CC BY-SA files must be credited and shared alike when redistributed.
 | wristband/wristband-synthetic.png | Patient wristband, synthetic patient | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |
 | wrong-photo/wrong-photo-tray.jpg | Steel tray with IV bag, chart, cuff (no wristband) | https://commons.wikimedia.org/wiki/File:Medical_tray_on_a_trolley.jpg | CC BY-SA 4.0 | Ibrahim Achiri | resized to 1600 px, re-encoded JPEG | stand-in: busy scene, sideways tray; a model cannot judge it cleanly |
 | consent/consent-form.png | Consent form, synthetic | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |
-| monitor/monitor.jpg | Patient monitor screen (ECG, SpO2, BP) | https://commons.wikimedia.org/wiki/File:Vital_signs_monitor_display.jpg | Public domain (US Navy) | Petty Officer 1st Class James Stenberg, US Navy | resized to 1600 px, re-encoded JPEG | demo |
+| monitor/monitor.jpg | Patient monitor screen (ECG, SpO2, BP) | https://commons.wikimedia.org/wiki/File:Vital_signs_monitor_display.jpg | Public domain (US Navy) | Petty Officer 1st Class James Stenberg, US Navy | resized to 1600 px, re-encoded JPEG | stand-in: real screen, but small numbers and clutter; demo uses monitor-synthetic.png |
 | medicine-bag/medicine-bag.jpg | Pharmacy paper bag | https://commons.wikimedia.org/wiki/File:Service_Apotheek_paper_bag,_Oude_Pekela_(2019).jpg | CC BY-SA 4.0 | Donald Trung Quoc Don | resized to 1600 px, re-encoded JPEG | stand-in: crumpled bag, no readable medicine list |
 | discharge/discharge-card.png | Discharge card, synthetic | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |
 | saline-setup/iv-bag.jpg | Hanging 1000 ml IV fluid bag | https://commons.wikimedia.org/wiki/File:Intravenous_therapy_oxcytocin.jpg | CC BY-SA 4.0 | Eliran t | resized to 1600 px, re-encoded JPEG | stand-in: oxytocin label, not 0.9% sodium chloride |
@@ -26,3 +28,5 @@ CC BY-SA files must be credited and shared alike when redistributed.
 | saline-setup/saline-setup-synthetic.png | 0.9% Sodium Chloride 1000 ml bag, giving set, drip chamber, roller clamp | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |
 | swab-tray/swab-tray-synthetic.png | Tray with exactly 20 separated swabs, labelled pack of 20 | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |
 | home-medicines/strips-metoprolol-amlodipine-synthetic.png | Two strips labelled Metoprolol 25 mg and Amlodipine 5 mg | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |
+
+| monitor/monitor-synthetic.png | Monitor screen reading HR 72, SpO2 98, NIBP 118/76, RR 16 | recorded for this project | recorded for this project | Count Guard project | drawn with Pillow | demo |

@@ -43,6 +43,7 @@ dev:
 # Offline run of the demo script in a headless browser; starts its own servers on 8200 and 5273.
 demo-check:
 	$(PY)/python eval/p2/make_media.py
+	$(PY)/python eval/make_media.py
 	$(PY)/python eval/p3/make_clips.py
 	$(PY)/python eval/p4/make_photos.py
 	cd frontend && node --test 'scripts/demo/*.test.mjs' && node scripts/demo/run.mjs

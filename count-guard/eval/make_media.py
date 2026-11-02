@@ -210,7 +210,23 @@ def wrong_photo() -> None:
     image.save(_out("wrong-photo", "wrong-photo-bed-rail-synthetic.png"))
 
 
-if __name__ == "__main__":
+def monitor() -> None:
+    image = Image.new("RGB", (1200, 800), (8, 10, 12))
+    pen = ImageDraw.Draw(image)
+    _tag(pen, (20, 12), color=(255, 120, 120))
+    pen.text((900, 14), "Adult  Bed 3", fill=(180, 180, 180), font=_font(26))
+    rows = [("HR", "bpm", "72", (60, 230, 90), 70), ("SpO2", "%", "98", (90, 200, 255), 250),
+            ("NIBP", "mmHg", "118/76", (255, 90, 90), 430), ("RR", "/min", "16", (255, 255, 255), 610)]
+    for label, unit, value, color, y in rows:
+        pen.text((40, y), f"{label} {unit}", fill=color, font=_font(34))
+        pen.text((300, y - 20), value, fill=color, font=_font(120))
+        trace = [(640 + i * 10, y + 70 - int(40 * (1 if i % 9 == 4 else 0.15 * (i % 3)))) for i in range(50)]
+        pen.line(trace, fill=color, width=3)
+    image.save(_out("monitor", "monitor-synthetic.png"))
+
+
+def make_all() -> None:
+    """Write every project-made file (deterministic: the same bytes on each run, on the same machine)."""
     wristband()
     forms()
     swab_clip()
@@ -220,3 +236,8 @@ if __name__ == "__main__":
     swab_tray()
     home_strips()
     wrong_photo()
+    monitor()
+
+
+if __name__ == "__main__":
+    make_all()

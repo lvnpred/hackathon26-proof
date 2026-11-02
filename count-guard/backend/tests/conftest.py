@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import re
 import zlib
+from pathlib import Path
+
+import pytest
 
 # A stream dictionary, then "stream" and its line ending. The data is read by its /Length, not
 # up to "endstream": compressed bytes that end in 0x0D would otherwise lose that byte.
@@ -46,3 +50,13 @@ def pdf_text(raw: bytes) -> str:
         for literal in _LITERAL.findall(content):
             lines.append(_unescape(literal).decode("latin-1"))
     return "\n".join(lines)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def project_made_media():
+    """Write the project-made sample media (git-ignored) so tests that read them pass on a clean checkout."""
+    path = Path(__file__).resolve().parents[2] / "eval" / "make_media.py"
+    spec = importlib.util.spec_from_file_location("make_media", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.make_all()

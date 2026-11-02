@@ -227,7 +227,8 @@ CAMERA_BY = "Count Guard AI"  # the swab camera and its rules (journey/advice.py
 
 
 # Cyrillic and Greek letters that look like the Latin ones in the AI labels (after casefold), so "AІ" is still "ai".
-_LOOKALIKE = str.maketrans("асеіјорхуԁһӏսոαεικνορτυ", "aceijopxydhlunaeikvoptu")
+# Palochka (ӏ, Ӏ once casefolded) and the click letter ǀ look like a capital I, so they fold to "i", not "l".
+_LOOKALIKE = str.maketrans("асеіјорхуԁһӏǀսոαɑεικνορτυ", "aceijopxydhiiunaaeikvoptu")
 
 
 def _plain(text: str) -> str:

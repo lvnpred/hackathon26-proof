@@ -283,7 +283,8 @@ def test_a_non_extra_re_entry_before_incision_still_replaces(tmp_path):
 # Final fix m1: punctuation, zero-width and homoglyph spellings of the AI label are still the AI.
 AI_SPELLINGS = ["Count Guard AI.", "Count-Guard AI", "CountGuard AI", "​Count Guard AI", "Count Guard AІ",
                 "AI(on behalf of Ward 4)", "A.I. (on behalf of Ward 4)", "Ｃount Guard AI", "Count Guard AΙ",
-                "AI", "a.i.", "Camera", " camera ", "Count Guard AI (camera)"]
+                "AI", "a.i.", "Camera", " camera ", "Count Guard AI (camera)",
+                "Count Guard Aӏ", "Count Guard AӀ", "Count Guard Aǀ", "Count Guard ɑI"]
 PEOPLE = ["Nurse Meena (synthetic)", "Dr. A. Rao (synthetic)", NURSE, "Sister M. Thomas (synthetic)", "Aisha K.",
           "Cameron (synthetic)", "Dr. Ai Tanaka (synthetic)"]
 

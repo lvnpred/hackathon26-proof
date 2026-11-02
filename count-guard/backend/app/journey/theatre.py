@@ -9,6 +9,7 @@ Hard stop (§6.5): a heard pack is `count.pack_heard`, a draft. Only a person's 
 from __future__ import annotations
 
 from app.journey import states
+from app.journey.placed import in_place
 from app.morning.druglog import parse_drug_phrase
 from app.morning.intents import parse_pack
 from app.morning.vitals import Reading, collect_facts, demo_readings, evaluate, template_card
@@ -18,10 +19,16 @@ DRUG_HEARD, DRUG_GIVEN = "druglog.parsed", "drug.given"
 PACK_HEARD, PACK_OPENED = "count.pack_heard", "count.pack_opened"
 READING, CARD = "vitals.reading", "vitals.card"
 SIMULATED = "simulated"
+DOSE = ("strength", "amount", "unit", "route")
 CARD_PROMPT = (
     "Reword this theatre context line in one or two plain sentences. Keep every number and name. "
     "Add no advice, no new numbers and no new drug names:\n"
 )
+
+
+def placed_stay(events: list[dict]) -> list[dict]:
+    """This stay's visible events, a corrected drug line standing where its original stood (journey/placed.py)."""
+    return states.stay_events(in_place(events))
 
 
 def heard(text: str) -> tuple[str, dict]:
@@ -79,7 +86,7 @@ def facts(events: list[dict], stay: list[dict], now_ms: int) -> list[str]:
 
 def card_payload(events: list[dict], now_ms: int, reword) -> dict | None:
     """The context card for this stay's BP drop, or None. `reword(template) -> (text, wording, source, calls)`."""
-    stay = states.stay_events(events)
+    stay = placed_stay(events)
     fire = drop(stay)
     if fire is None or any(e["event_type"] == CARD for e in stay):
         return None
@@ -92,14 +99,15 @@ def card_payload(events: list[dict], now_ms: int, reword) -> dict | None:
 
 def panel(events: list[dict], tier: bool) -> dict:
     """What the three theatre panels show for this stay."""
-    stay = states.stay_events(events)
+    stay = placed_stay(events)
     drugs = []
     for e in stay:
         if e["event_type"] != DRUG_HEARD:
             continue
         given = confirmed(stay, DRUG_GIVEN, e["id"])
-        drugs.append({**e["payload"], "id": e["id"], "at_ms": e["ts_ms"],
-                      "given": {"by": given["payload"]["by"], "at_ms": given["ts_ms"]} if given else None})
+        dose = {k: given["payload"].get(k) for k in DOSE} if given else {}  # a corrected drug given shows its dose
+        drugs.append({**e["payload"], **dose, "id": e["id"], "at_ms": e["ts_ms"],
+                      "given": {"by": given["payload"]["by"], "at_ms": given["ts_ms"], "id": given["id"]} if given else None})
     packs = []
     for e in stay:
         if e["event_type"] != PACK_HEARD:

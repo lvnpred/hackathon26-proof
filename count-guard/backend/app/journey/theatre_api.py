@@ -114,7 +114,7 @@ def hear_drug(
 
 def _confirm(request: Request, episode_id: str, draft_id: str, kinds: tuple[str, str], missing: str) -> dict:
     heard_kind, done_kind = kinds
-    stay = states.stay_events(_events(request, episode_id))
+    stay = theatre.placed_stay(_events(request, episode_id))  # a corrected heard line is confirmed in place
     found = theatre.draft(stay, heard_kind, draft_id)
     if found is None:
         raise HTTPException(status_code=404, detail=missing)

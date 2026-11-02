@@ -125,7 +125,7 @@ export default function CareShell({ ward, children }) {
       {alerts > 0 && alertsOpen && <Strip mine={mine} others={others} />}
       {ward.role !== "patient" && <PausedBanner ops={ops} nowMs={ward.nowMs} />}
       <main className="page">
-        {(pathname === "/patients" || pathname === "/queue") && <WardActions role={ward.role} />}
+        {(pathname === "/patients" || pathname === "/queue") && <WardActions role={ward.role} onChanged={ward.reload} />}
         {children}
         <Inspector ward={ward} />
       </main>

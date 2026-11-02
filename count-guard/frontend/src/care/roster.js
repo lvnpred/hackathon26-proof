@@ -13,5 +13,8 @@ export function rosterFrom(ward) {
   return { nowMs: Number(ward?.now_ms) || 0, board: ward?.board || "", patients };
 }
 
-// How often the ward list is read again while the page is visible.
-export const wardPollIntervalMs = () => 1000;
+// The ward list follows this stream for changes (spec §8): any patient's record, a new patient, the clock.
+export const WARD_STREAM = "/journey/ward/stream";
+
+// The fallback: how often the ward list is read again while the page is visible, stream or not.
+export const wardPollIntervalMs = () => 3000;

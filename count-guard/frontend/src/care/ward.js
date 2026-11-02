@@ -5,6 +5,7 @@ import { CLOCK, STATUS, makeFault } from "./faults";
 import { displayName, displayView } from "./names";
 import { rosterFrom, wardPollIntervalMs } from "./roster";
 import { statusBody, statusQuery } from "./status";
+import { followWard } from "./wardStream";
 
 // The roster and the clock live on the server (GET /journey/ward). Only the screen's own choices stay here.
 const ROLE = "cg-role";
@@ -113,10 +114,16 @@ export function useWard() {
     refresh(loadWard)
       .catch((exc) => setLoadError(exc.message))
       .finally(() => { busyRef.current = false; });
-    const timer = setInterval(() => {
+    const poll = () => {
       if (visible() && !busyRef.current) refresh().catch(() => {}); // a missed read waits for the next one
-    }, wardPollIntervalMs());
-    return () => clearInterval(timer);
+    };
+    // The stream brings a change at once; the 3 s refresh catches anything it missed or a browser without it.
+    const timer = setInterval(poll, wardPollIntervalMs());
+    const stop = followWard(poll);
+    return () => {
+      clearInterval(timer);
+      stop();
+    };
   }, []);
 
   // The chip follows the ward: ask again whenever a record or the clock changes. An error keeps the last status.
@@ -252,5 +259,8 @@ export function useWard() {
 
   const find = (id) => patients.find((p) => p.id === id);
 
-  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, fault, loadError, clearFault, act, upload, markSeen, ask, jump, reset, find };
+  // Read the ward now, e.g. right after Sync or New patient (spec §8). A failed read waits for the next one.
+  const reload = () => refresh().catch(() => {});
+
+  return { patients, board, doctorStatus, setDoctorStatus: chooseDoctorStatus, nowMs, role, setRole, patientBed, setPatientBed, busy, fault, loadError, clearFault, act, upload, markSeen, ask, jump, reset, find, reload };
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useMatch, useSearchParams } from "react-router-dom";
+import Correct from "./Correct.jsx";
 import Fault from "./Fault";
+import { canCorrect } from "./correct.js";
 import { modelChip, findingFor } from "./moments.js";
 import { findingPill } from "./finding.js";
 import StatusPill from "./StatusPill.jsx";
@@ -68,7 +70,7 @@ function ModelTab({ moment, episodeId }) {
 }
 
 // A plain audit trail: "09:20 · Nurse Asha logged BP 88/60." with no event names; a line links to the chart only when it can.
-function HistoryTab({ moment, episodeId, nowMs }) {
+function HistoryTab({ moment, episodeId, nowMs, role, lens, act, busy, fault }) {
   const [copied, setCopied] = useState("");
   const written = moment.written || [];
   const copy = () => {
@@ -86,6 +88,7 @@ function HistoryTab({ moment, episodeId, nowMs }) {
             <li key={w.event_id}>
               {episodeId ? <Link className="history-line" to={`/chart/${episodeId}?line=${w.event_id}`}>{text}</Link> : text}
               {fix && <span className="muted"> · {fix}</span>}
+              {episodeId && lens !== "patient" && role !== "patient" && canCorrect(w) && <Correct written={w} role={role} episodeId={episodeId} act={act} busy={busy} fault={fault} />}
             </li>
           );
         })}
@@ -101,7 +104,7 @@ function Body({ moment, tab, episodeId, view, role, lens, initialFocus, act, now
   const views = KIND_VIEWS[moment.kind];
   const props = { moment, episodeId, view, role, lens, focus, setFocus, act, nowMs, busy, fault };
   const finding = <p>{findingFor(moment, lens)}</p>;
-  if (tab === "history") return <HistoryTab moment={moment} episodeId={episodeId} nowMs={nowMs} />;
+  if (tab === "history") return <HistoryTab moment={moment} episodeId={episodeId} nowMs={nowMs} role={role} lens={lens} act={act} busy={busy} fault={fault} />;
   if (tab === "model") return <ModelTab moment={moment} episodeId={episodeId} />;
   const View = views?.[tab === "evidence" ? "Input" : "Found"];
   return View ? <View {...props} /> : finding;

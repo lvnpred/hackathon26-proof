@@ -147,6 +147,27 @@ class MorningStore:
             items.append(item)
         return items
 
+    def timeline_after(self, after_id: str | None) -> list[dict]:
+        """Every event on every episode written after `after_id`, in write order (the ward stream).
+
+        None reads the whole timeline; an id this store never wrote reads nothing.
+        """
+        with self._lock:
+            if after_id is None:
+                rows = self._conn.execute("SELECT * FROM timeline ORDER BY rowid").fetchall()
+            else:
+                mark = self._conn.execute("SELECT rowid FROM timeline WHERE id = ?", (after_id,)).fetchone()
+                rows = [] if mark is None else self._conn.execute(
+                    "SELECT * FROM timeline WHERE rowid > ? ORDER BY rowid", (mark[0],)
+                ).fetchall()
+        return [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]
+
+    def tail_id(self) -> str | None:
+        """The id of the newest event on any episode, or None for an empty timeline."""
+        with self._lock:
+            row = self._conn.execute("SELECT id FROM timeline ORDER BY rowid DESC LIMIT 1").fetchone()
+        return row["id"] if row else None
+
     def get_event(self, event_id: str) -> dict | None:
         with self._lock:
             row = self._conn.execute("SELECT * FROM timeline WHERE id = ?", (event_id,)).fetchone()

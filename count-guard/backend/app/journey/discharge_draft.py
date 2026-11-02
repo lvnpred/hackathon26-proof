@@ -13,6 +13,7 @@ from datetime import date, datetime, time as clock_time, timedelta, timezone
 from app.journey import handover, switches
 from app.journey.clocktext import DAY0, when_text
 from app.journey.live import call_of
+from app.journey.placed import in_place
 from app.journey.states import PROCEDURES, stay_events
 from app.journey.stories import by_ai
 from app.morning.discharge import fold, visible_events
@@ -113,7 +114,7 @@ def build(events: list[dict]) -> dict:
     due = follow_up_date(at_ms)
     return {
         "prescription": prescription,
-        "drugs_given": [_drug(e) for e in shown if e["event_type"] == "drug.given"],
+        "drugs_given": [_drug(e) for e in in_place(events) if e["event_type"] == "drug.given"],  # corrections in place
         "count": _count(events),
         "events": [_move(e) for e in shown if e["event_type"] == "patient.state"],
         "follow_up": {"date": due.isoformat(), "when": f"{due:%a} {due.day} {due:%b}",

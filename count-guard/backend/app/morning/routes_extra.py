@@ -8,6 +8,7 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.ledger import ledger_rows, open_discrepancies
+from app.journey import correction
 from app.journey.camera_api import manual_out as write_manual_out, observe_frame
 from app.morning.camera_file import camera_count_events
 from app.morning.care_guard import refuse_care
@@ -177,12 +178,9 @@ def correct_event(episode_id: str, event_id: str, body: CorrectIn, request: Requ
         raise HTTPException(status_code=404, detail="Event not found")
     # A replacement is appended at the end of the event order, so correcting an event that marks a stay or the
     # start of surgery here would move which packs and closings belong to it (spec 5.3 hard stop).
-    if old["event_type"].startswith("count."):
-        raise HTTPException(status_code=409, detail="A swab count is corrected on the count form, not here.")
-    if old["event_type"].startswith("surgery."):
-        raise HTTPException(status_code=409, detail="A surgery step is recorded on the theatre steps, not corrected here.")
-    if old["event_type"] == "patient.state":
-        raise HTTPException(status_code=409, detail="A patient move is recorded as a new move, not corrected here.")
+    refused = correction.protected(old["event_type"])
+    if refused:
+        raise HTTPException(status_code=409, detail=refused)
     store.append(
         episode_id,
         old["event_type"],

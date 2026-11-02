@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rosterFrom, wardPollIntervalMs } from "./roster.js";
+import { WARD_STREAM, rosterFrom, wardPollIntervalMs } from "./roster.js";
 
 test("rosterFrom takes the server clock and sorts patients by bed number", () => {
   const got = rosterFrom({
@@ -24,6 +24,7 @@ test("rosterFrom with one patient keeps that patient", () => {
   assert.deepEqual(got.patients, [{ id: "a", bed: "4" }]);
 });
 
-test("the ward refreshes every second until the live stream lands", () => {
-  assert.equal(wardPollIntervalMs(), 1000);
+test("the ward follows the live stream and falls back to a 3 s refresh (spec §8)", () => {
+  assert.equal(wardPollIntervalMs(), 3000);
+  assert.equal(WARD_STREAM, "/journey/ward/stream");
 });

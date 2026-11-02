@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Correct from "./Correct.jsx";
 import Dictate from "./Dictate.jsx";
 import Source from "./Source.jsx";
 import { FROM_VOICE, isPrepared } from "./source.js";
@@ -38,6 +39,8 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload }
                   Confirm given
                 </button>
               )}
+              <Correct written={row.given ? { event_id: row.given.id, type: "drug.given" } : { event_id: row.id, type: "druglog.parsed" }}
+                by={by} episodeId={episodeId} act={act} busy={busy} />
             </li>
           ))}
         </ul>

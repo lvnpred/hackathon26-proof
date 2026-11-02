@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
-import json
-import time
-
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import BANNER
+from app.journey import sse
 from app.morning.brownbag import duplicate_generics, read_strip
 from app.morning.discharge import fold
 from app.morning.guide import PATIENT_RULE, build_guide, explain_event
@@ -22,9 +19,6 @@ from app.morning.script import play
 from app.morning.vitals import collect_facts, demo_readings, evaluate, template_card
 
 router = APIRouter()
-
-FOLLOW_POLL_S = 0.25
-FOLLOW_MAX_S = 30.0
 
 
 class Strict(BaseModel):
@@ -110,40 +104,30 @@ def stream_episode(
     episode_id: str,
     request: Request,
     follow: bool = False,
-    timeout_s: float = Query(default=FOLLOW_MAX_S, gt=0),
+    timeout_s: float = Query(default=sse.FOLLOW_MAX_S, gt=0),
 ):
     _require(request, episode_id)
     store = _store(request)
     after = request.headers.get("last-event-id")
     rows = store.events(episode_id, after_id=after)
+    last = {"id": rows[-1]["id"] if rows else after}
 
-    def frame(event: dict) -> str:
-        return f"id: {event['id']}\ndata: {json.dumps(event)}\n\n"
+    def read() -> list[str]:
+        new = store.events(episode_id, after_id=last["id"])
+        if new:
+            last["id"] = new[-1]["id"]
+        return [sse.event_frame(event) for event in new]
 
-    def generate():
+    async def body():
         for event in rows:
-            yield frame(event)
+            yield sse.event_frame(event)
         if not rows:
             yield ": idle\n\n"
+        if follow:
+            async for text in sse.follow(request, read, timeout_s):
+                yield text
 
-    async def follow_events():
-        # Poll the store and send new rows until the timeout or a disconnect.
-        last = rows[-1]["id"] if rows else after
-        for event in rows:
-            yield frame(event)
-        if not rows:
-            yield ": idle\n\n"
-        deadline = time.monotonic() + min(timeout_s, FOLLOW_MAX_S)
-        while time.monotonic() < deadline:
-            await asyncio.sleep(FOLLOW_POLL_S)
-            if await request.is_disconnected():
-                return
-            for event in store.events(episode_id, after_id=last):
-                last = event["id"]
-                yield frame(event)
-
-    body = follow_events() if follow else generate()
-    return StreamingResponse(body, media_type="text/event-stream")
+    return sse.response(body())
 
 
 @router.post("/morning/episodes/{episode_id}/play")

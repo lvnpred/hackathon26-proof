@@ -2,8 +2,8 @@ import { useState } from "react";
 import { newPatient, syncWard } from "../journey";
 import { newPatientError, syncSummary } from "./wardForm";
 
-// Sync and New patient sit above the ward list, for staff only. The ward poll shows the result.
-export default function WardActions({ role }) {
+// Sync and New patient sit above the ward list, for staff only. The ward is read again right after either.
+export default function WardActions({ role, onChanged = () => {} }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(null);
@@ -16,6 +16,7 @@ export default function WardActions({ role }) {
     try {
       const got = await syncWard();
       setMessage(got.error || syncSummary(got));
+      onChanged();
     } catch (exc) {
       setMessage(exc.message);
     } finally {
@@ -33,6 +34,7 @@ export default function WardActions({ role }) {
       await newPatient(form);
       setForm(null);
       setMessage("Patient added.");
+      onChanged();
     } catch (exc) {
       setError(exc.message);
     } finally {

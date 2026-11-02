@@ -16,6 +16,8 @@ from app.journey.api import demo_router, router as journey_router
 from app.journey.flow_api import flow_router
 from app.journey.intake_api import intake_router
 from app.journey.ask_api import ask_router
+from app.journey.camera_api import camera_router
+from app.journey.camera_extra_api import camera_live_router
 from app.journey.count_api import count_router
 from app.journey.staff_api import staff_router
 from app.journey.theatre_api import NotInTheatre, not_in_theatre, theatre_router
@@ -26,6 +28,7 @@ from app.journey.ward_api import ward_router
 from app.ops.api import ops_site_router, router as ops_router
 from app.morning.api import router as morning_router
 from app.morning.routes_extra import router as morning_extra_router
+from app.morning.care_guard import CareEpisode, care_episode
 from app.morning.store import MorningStore
 from app.site import router as site_router
 from app.store import Store
@@ -58,8 +61,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(site_router)
     app.include_router(journey_router)
     app.include_router(count_router)
+    app.include_router(camera_router)
+    app.include_router(camera_live_router)
     app.include_router(theatre_router)
     app.add_exception_handler(NotInTheatre, not_in_theatre)
+    app.add_exception_handler(CareEpisode, care_episode)
     app.include_router(demo_router)
     app.include_router(ward_router)
     app.include_router(intake_router)

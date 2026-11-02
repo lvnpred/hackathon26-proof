@@ -94,6 +94,15 @@ def explain_event(event: dict) -> str:
         return payload.get("text") or "Fact card."
     if kind == "discharge.drafted":
         return "Discharge sheet written from the timeline."
+    if kind == "camera.linked":
+        return "Swab camera started for this theatre stay. It advises; the count a person saves decides."
+    if kind == "camera.ran":
+        return "Swab camera read the clip" + (" · Prepared." if payload.get("source") == "prepared" else ".")
+    if kind == "camera.advice":
+        return f"Camera advice: {payload.get('text')}"
+    if kind == "camera.ack":
+        reason = (payload.get("reason") or "").strip()
+        return f"{payload.get('by')} acknowledged the camera advice." + (f" Reason: {reason}" if reason else "")
     return kind.replace(".", " ").replace("_", " ")
 
 

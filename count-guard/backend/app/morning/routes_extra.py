@@ -8,8 +8,10 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.ledger import ledger_rows, open_discrepancies
+from app.journey.camera_api import manual_out as write_manual_out, observe_frame
 from app.morning.camera_file import camera_count_events
-from app.morning.count_rules import demo_frames, fresh_state, observe, replay
+from app.morning.care_guard import refuse_care
+from app.morning.count_rules import demo_frames, replay
 from app.morning.discharge import fold
 from app.morning.guide import build_guide, explain_event
 from app.morning.druglog import parse_drug_phrase
@@ -89,6 +91,7 @@ def _next_ts(store, episode_id: str) -> int:
 @router.post("/morning/episodes/{episode_id}/hear")
 def hear(episode_id: str, body: HearIn, request: Request) -> dict:
     _require(request, episode_id)
+    refuse_care(_store(request), episode_id)
     pack = parse_pack(body.text)
     store = _store(request)
     ts = _next_ts(store, episode_id)
@@ -103,6 +106,7 @@ def hear(episode_id: str, body: HearIn, request: Request) -> dict:
 @router.post("/morning/episodes/{episode_id}/count/replay")
 def replay_count(episode_id: str, request: Request) -> dict:
     _require(request, episode_id)
+    refuse_care(_store(request), episode_id)
     store = _store(request)
     for event in replay(demo_frames(), opened=20):
         store.append(
@@ -119,6 +123,7 @@ def replay_count(episode_id: str, request: Request) -> dict:
 def file_camera_count(episode_id: str, body: CaseLink, request: Request) -> dict:
     """Write the camera ledger onto this patient. A second click does not add a second count."""
     _require(request, episode_id)
+    refuse_care(_store(request), episode_id)
     case = request.app.state.store.get_case(body.case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Camera case not found")
@@ -151,12 +156,7 @@ def file_camera_count(episode_id: str, body: CaseLink, request: Request) -> dict
 def manual_out(episode_id: str, body: ManualIn, request: Request) -> dict:
     _require(request, episode_id)
     store = _store(request)
-    store.append(
-        episode_id,
-        "count.item_out",
-        {"track_id": body.track_id, "frame_id": None, "source": "manual"},
-        ts_ms=_next_ts(store, episode_id),
-    )
+    write_manual_out(store, episode_id, body.track_id, _next_ts(store, episode_id))
     return _view(request, episode_id)
 
 
@@ -164,19 +164,8 @@ def manual_out(episode_id: str, body: ManualIn, request: Request) -> dict:
 def count_frame(episode_id: str, body: FrameIn, request: Request) -> dict:
     """One camera frame. The dwell counter lives on the episode sim bag."""
     _require(request, episode_id)
-    store = _store(request)
-    bag = store.sim_state(episode_id)
-    state = bag.setdefault("count", fresh_state())
-    drafted = observe(
-        state,
-        {"track_id": body.track_id, "zone": body.zone, "frame_id": body.frame_id, "t_ms": body.t_ms},
-    )
-    written = []
-    for event in drafted:
-        written.append(
-            store.append(episode_id, event["event_type"], event["payload"], ts_ms=event["ts_ms"])
-        )
-    return {"emitted": written, "out": sorted(state["out"])}
+    frame = {"track_id": body.track_id, "zone": body.zone, "frame_id": body.frame_id, "t_ms": body.t_ms}
+    return observe_frame(_store(request), episode_id, frame)
 
 
 @router.post("/morning/episodes/{episode_id}/events/{event_id}/correct")

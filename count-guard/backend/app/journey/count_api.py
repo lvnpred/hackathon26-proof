@@ -9,10 +9,12 @@ from pydantic import Field, model_validator
 
 from app.journey import states
 from app.journey.api import At, _act, _require, _store
+from app.journey.stories import by_ai
 
 count_router = APIRouter(prefix="/journey/episodes/{episode_id}")
 NEEDS_REASON = "Say what the team did: the count does not match."
 NOT_THIS_STAY = "That camera count is not from this patient's theatre stay."
+A_PERSON = "A person saves the swab count; the camera and the AI only advise."
 ONLY_UP = "The pack count can only go up once surgery has begun. Record an extra pack instead."
 
 
@@ -64,6 +66,8 @@ def _pack_quantity(events: list[dict], body: CountIn) -> int:
 def count(episode_id: str, body: CountIn, request: Request) -> dict:
     """The theatre nurse's swab count at the demo time. A corrected closing replaces the one it names."""
     _require(request, episode_id)
+    if by_ai({"by": body.by}):  # U10: an AI or camera `by` never saves a pack or a closing
+        raise HTTPException(status_code=422, detail=A_PERSON)
     store = _store(request)
     old = None
     if body.supersedes_id:

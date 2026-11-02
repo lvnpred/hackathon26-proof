@@ -219,15 +219,17 @@ PATIENT_STATE = {"admitting": "You were admitted.", "theatre": "You went to thea
 
 
 AI_PREFIX = "AI (on behalf of"  # the start of ops.policy.AI_BY; ops imports this module, so it cannot be imported here
+CAMERA_BY = "Count Guard AI"  # the swab camera and its rules (journey/advice.py): advice only, never a count
 
 
 def by_ai(payload: dict) -> bool:
     """True when the AI wrote the event (its `by` is the AI label)."""
-    return str(payload.get("by") or "").startswith(AI_PREFIX)
+    by = " ".join(str(payload.get("by") or "").split()).casefold()  # spacing and case never hide the AI
+    return by.startswith(AI_PREFIX.casefold()) or by == CAMERA_BY.casefold()
 
 
 STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd", "check.photo", "check.override", "druglog.parsed",
-              "count.pack_heard", "vitals.card")
+              "count.pack_heard", "vitals.card", "camera.ack")
 HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted", "patient.registered")  # bookkeeping, not care
 
 

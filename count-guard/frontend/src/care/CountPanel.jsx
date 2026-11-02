@@ -4,6 +4,7 @@ import AiMark from "./AiMark.jsx";
 import { displayName } from "./names";
 import { afterBegan, countReconciled, packLine, reasonNeeded, savedLine, swabFigures, theatreSteps } from "./theatre";
 import VideoCheck from "./VideoCheck";
+import CameraAdvice from "./CameraAdvice.jsx";
 import { momentFor } from "./moments.js";
 import { latestCheck, swabTotal } from "./video";
 
@@ -132,6 +133,9 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
           busy={busy}
           onFile={(file) => upload("/video", file, { check: "swabs", by })}
         />
+      )}
+      {packed && (
+        <CameraAdvice episodeId={episodeId} version={view.timeline?.length} busy={busy} act={act} upload={upload} by={by} />
       )}
     </section>
   );

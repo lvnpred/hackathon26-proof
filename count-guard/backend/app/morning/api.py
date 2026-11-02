@@ -17,6 +17,7 @@ from app.morning.guide import PATIENT_RULE, build_guide, explain_event
 from app.morning.druglog import parse_drug_phrase
 from app.morning.ics import follow_up_ics
 from app.morning.pdf import write_discharge
+from app.morning.care_guard import refuse_care
 from app.morning.script import play
 from app.morning.vitals import collect_facts, demo_readings, evaluate, template_card
 
@@ -148,6 +149,7 @@ def stream_episode(
 @router.post("/morning/episodes/{episode_id}/play")
 def play_episode(episode_id: str, request: Request) -> dict:
     _require(request, episode_id)
+    refuse_care(_store(request), episode_id)
     try:
         result = play(_store(request), episode_id, decision_tier=_tier(request))
     except KeyError as exc:

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { parseStrips } from "../journey";
-import Fault from "../care/Fault";
+import { parseStrips } from "../../journey";
+import Fault from "../Fault";
 
 const SLOTS = [
   ["morning", "Morning"],

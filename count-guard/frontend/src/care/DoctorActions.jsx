@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RxImport, RxTable } from "../screens/ClinicPanel";
+import { RxImport, RxTable } from "./legacy/Rx";
 import { answerHow } from "./askText";
 import ActionBar from "./ActionBar";
 import { IconMic } from "./icons.jsx";

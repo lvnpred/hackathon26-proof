@@ -66,7 +66,7 @@ test("the safety strip is first in the shell, in the product and not in the dock
   assert.doesNotMatch(shell, /care-foot/);
   for (const link of ['to="/guide">Guide<', 'to="/older">Older screens<']) assert.ok(dock.includes(link));
   assert.ok(dock.includes("Use the demo prescription"));
-  assert.doesNotMatch(read("../screens/ClinicPanel.jsx"), /Use the demo prescription/);
+  assert.doesNotMatch(read("./legacy/Rx.jsx"), /Use the demo prescription/);
 });
 
 test("the paused banner names who paused and when, for staff only", async () => {

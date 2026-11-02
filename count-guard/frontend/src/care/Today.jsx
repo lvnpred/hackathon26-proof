@@ -7,8 +7,8 @@ import { greeting, todayFolds, whereWords } from "./today.js";
 import NextUp from "./NextUp.jsx";
 import { displayName } from "./names";
 import { checkinStatusLine, readOpened, unreadLine } from "./thread.js";
-import { CheckIn, MyCard, NeedHelp } from "../screens/PatientCard";
-import { Nudges, Reminders, Strips } from "../screens/TodayPanel";
+import { CheckIn, MyCard, NeedHelp } from "./legacy/PatientCard";
+import { Nudges, Reminders, Strips } from "./legacy/TodayPanel";
 import DayPlan from "./DayPlan.jsx";
 import { dayPlanMoment } from "./moments.js";
 

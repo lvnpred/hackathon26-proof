@@ -4,6 +4,7 @@ import { PageLead } from "../App";
 import { PIPELINES, PIPELINE_KIND, STAFF_ONLY, activityRows, canSeeAi, emptyLine, storyCounts, storyLine } from "./ai.js";
 import { shortName } from "./names.js";
 import { useCareWard } from "./CareShell";
+import AiAudit from "./AiAudit.jsx";
 import AiFeed from "./AiFeed.jsx";
 import ActivityList from "./ActivityList.jsx";
 import ModelCards from "./ModelCards.jsx";
@@ -39,6 +40,7 @@ export default function AiDashboard() {
         </ol>
         <ActivityList rows={shown} role={ward.role} empty={rows.length === 0 ? empty : "Nothing here for this filter."} />
         <AiFeed ids={ids} nowMs={ward.nowMs} ward={ward} />
+        <AiAudit patients={ward.patients} />
       </section>
       <section aria-label="How it works">
         <h2>How it works</h2>

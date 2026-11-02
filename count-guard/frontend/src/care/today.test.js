@@ -31,7 +31,7 @@ test("Today keeps its panel state per patient and closes check-in after a save",
   const today = fs.readFileSync(new URL("./Today.jsx", import.meta.url), "utf8");
   assert.match(today, /<TodayBody key=\{patient\.id\}/);
   assert.match(today, /onDone=\{\(\) => setCheckingIn\(false\)\}/);
-  const card = fs.readFileSync(new URL("../screens/PatientCard.jsx", import.meta.url), "utf8");
+  const card = fs.readFileSync(new URL("./legacy/PatientCard.jsx", import.meta.url), "utf8");
   assert.match(card, /onDone\?\.\(\)/);
   // The form unmounts on save, so Today shows the check-in's status line from the record (PF-2).
   assert.match(today, /checkinStatusLine\(view, ward\.nowMs\)/);

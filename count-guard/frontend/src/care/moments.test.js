@@ -149,7 +149,7 @@ test("capabilities in the flow: sources use the new components", () => {
   const doctor = read("DoctorActions.jsx");
   assert.doesNotMatch(doctor, /One medicine per line: name then strength/);
   assert.match(doctor, /<HomeMedicines /);
-  assert.match(read("NurseActions.jsx"), /<HandoverCard /);
+  assert.match(read("NurseActions.jsx"), /<Handover /);
   assert.match(read("DayPlan.jsx"), /openInspector\(/);
   assert.match(read("AlertBanner.jsx"), /<AlertCard /);
   assert.match(read("AlertBanner.jsx"), /<AiMoment /);
@@ -159,7 +159,7 @@ test("capabilities in the flow: sources use the new components", () => {
   assert.match(read("Queue.jsx"), /open \? "Close" : "Save response"/, "spec 5.11: the demo toggle is named Save response");
   assert.doesNotMatch(read("Queue.jsx"), /"Answer"/);
   assert.doesNotMatch(read("drafts.js"), /Rules \(no model\)|Prepared demo result/);
-  const handover = read("HandoverCard.jsx");
+  const handover = read("Handover.jsx");
   for (const text of ["Shift handover", "Let the AI word it", "Draft handover", "Accept as {taker}"]) assert.ok(handover.includes(text), text);
   assert.match(handover, /\/handover\/\$\{handover\.id\}\/accept/);
 });
@@ -171,7 +171,7 @@ test("new copy has no advice words", () => {
 test("the nurse sees tasks before the handover card, and no copy says 'at Yesterday'", () => {
   const read = (name) => fs.readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
   const src = read("NurseActions.jsx");
-  assert.ok(src.indexOf("<NurseTasks ") < src.indexOf("<HandoverCard "));
+  assert.ok(src.indexOf("<NurseTasks ") < src.indexOf("<Handover "));
   for (const f of ["MyCare.jsx", "AskInbox.jsx", "dock.js"]) assert.doesNotMatch(read(f), /\bat \$?\{(whenText|atText)/);
   assert.match(read("DayPlan.jsx"), />Details</);
   assert.doesNotMatch(read("DayPlan.jsx"), /Inspect </);

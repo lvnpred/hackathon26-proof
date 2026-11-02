@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Fold from "./Fold.jsx";
-import { AuditTable } from "../screens/Audit";
+import { AuditTable } from "./legacy/AuditTable";
 import { foldLines, lensLines } from "./journey";
 import { lensFor } from "./lens";
 import Timeline, { LENSES } from "./Timeline";

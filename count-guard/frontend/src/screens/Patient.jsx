@@ -1,7 +1,7 @@
 import { PageLead, Shell } from "../App";
 import { subtitle, uploadJourney, useJourney } from "../journey";
-import { Medicines, Nudges, Reminders, Strips } from "./TodayPanel";
-import { CheckIn, MyCard, NeedHelp } from "./PatientCard";
+import { Medicines, Nudges, Reminders, Strips } from "../care/legacy/TodayPanel";
+import { CheckIn, MyCard, NeedHelp } from "../care/legacy/PatientCard";
 
 export default function Patient() {
   const { view, setView, error, setError, busy, setBusy, act } = useJourney();

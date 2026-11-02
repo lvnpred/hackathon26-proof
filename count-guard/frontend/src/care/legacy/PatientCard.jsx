@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Fault from "../care/Fault";
-import { dischargeLinks } from "../care/dischargeDraft.js";
+import Fault from "../Fault";
+import { dischargeLinks } from "../dischargeDraft.js";
 
 // The signed discharge card in plain words. With an episode id it links the follow-up visit for a calendar.
 export function MyCard({ card, episodeId }) {

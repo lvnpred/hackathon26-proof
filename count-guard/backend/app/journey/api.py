@@ -18,6 +18,7 @@ from app.journey.play import play_journey
 from app.journey.rx import document_for, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
 from app.journey.seed import card_payload, seed_ward
+from app.journey.clock import stamp
 from app.journey.clocktext import latest_ms, when_text
 from app.journey.states import flow_view
 from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, timeline_items
@@ -136,10 +137,7 @@ def _require(request: Request, episode_id: str) -> dict:
 
 
 def _at(store, episode_id: str, at_ms: int | None) -> int:
-    if at_ms is not None:
-        return at_ms
-    rows = store.events(episode_id)
-    return max((row["ts_ms"] for row in rows), default=-1000) + 1000
+    return stamp(store, episode_id, at_ms)
 
 
 def raise_nudges(store, episode_id: str, at_ms: int) -> list[dict]:

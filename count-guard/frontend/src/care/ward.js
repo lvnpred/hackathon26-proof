@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { call, getJourney, postJourney, uploadJourney } from "../journey";
+import { call, getJourney, getWard, postClock, postJourney, uploadJourney } from "../journey";
 import { afterRun } from "./clock";
 import { CLOCK, STATUS, makeFault } from "./faults";
 import { displayName, displayView } from "./names";
+import { rosterFrom, wardPollIntervalMs } from "./roster";
 import { statusBody, statusQuery } from "./status";
 
-const ROSTER = "cg-ward-roster";
-const NOW = "cg-ward-now";
+// The roster and the clock live on the server (GET /journey/ward). Only the screen's own choices stay here.
 const ROLE = "cg-role";
 const PATIENT = "cg-patient";
 
@@ -27,29 +27,22 @@ function write(key, value) {
   }
 }
 
-function savedRoster() {
-  try {
-    const roster = JSON.parse(read(ROSTER));
-    // A roster saved before the staff board existed is dropped, so the ward reseeds once.
-    return Array.isArray(roster?.patients) && typeof roster.board === "string" ? roster : null;
-  } catch {
-    return null;
-  }
-}
-
 // What the screen shows: names and every view string lose " (synthetic)". The record on the server keeps it.
 const shown = (p) => ({ ...p, name: displayName(p.name), view: displayView(p.view) });
 
 async function withViews(roster) {
   const views = await Promise.all(roster.patients.map((p) => getJourney(p.id)));
-  return roster.patients.map((p, i) => ({ ...p, view: views[i] }));
+  return { ...roster, patients: roster.patients.map((p, i) => ({ ...p, view: views[i] })) };
 }
 
+async function readWard() {
+  return withViews(rosterFrom(await getWard()));
+}
+
+// A seed is a fresh ward: the server clears the beds and the clock, then registers three patients.
 async function seed() {
-  const roster = await call("/journey/demo/seed", { method: "POST" });
-  write(ROSTER, JSON.stringify(roster));
-  write(NOW, "0");
-  return { patients: await withViews(roster), board: roster.board, nowMs: 0 };
+  await call("/journey/demo/seed", { method: "POST" });
+  return readWard();
 }
 
 // StrictMode runs effects twice in dev, and two screens can mount at once.
@@ -61,18 +54,13 @@ export function loadWard() {
   return pending;
 }
 
+// An empty server (first start) is seeded once; otherwise every tab shows the same ward.
 async function fetchWard() {
-  const roster = savedRoster();
-  if (roster) {
-    try {
-      const nowMs = Number(read(NOW)) || 0;
-      return { patients: await withViews(roster), board: roster.board, nowMs };
-    } catch (exc) {
-      if (exc.status !== 404) throw exc;
-    }
-  }
-  return seed();
+  const ward = await readWard();
+  return ward.patients.length || ward.board ? ward : seed();
 }
+
+const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
 
 // One view per patient. act() and upload() swap in the returned view; jump() ticks everyone.
 export function useWard() {
@@ -86,15 +74,49 @@ export function useWard() {
   const [loadError, setLoadError] = useState("");
   const [doctorStatus, setDoctorStatus] = useState(null);
   const statusSeq = useRef(0); // a reply to a read that began before a newer one or a POST is dropped
+  const wardSeq = useRef(0); // the same for the ward list: a write makes older reads stale
+  const busyRef = useRef(false); // no poll while a write or the first load runs
+  const lastWard = useRef("");
+
+  // A poll that brings back the same ward changes nothing, so the screens and the status chip stay still.
+  function apply(ward) {
+    const text = JSON.stringify(ward);
+    if (text === lastWard.current) return;
+    lastWard.current = text;
+    setPatients(ward.patients.map(shown));
+    setNowMs(ward.nowMs);
+    setBoard(ward.board);
+  }
+
+  // Read the ward again; the reply is dropped if a write began meanwhile.
+  async function refresh(load = readWard) {
+    const mine = ++wardSeq.current;
+    const ward = await load();
+    if (mine === wardSeq.current) apply(ward);
+    return ward;
+  }
+
+  function startWrite() {
+    wardSeq.current += 1;
+    lastWard.current = ""; // the screen may now differ from the last read, so the next read always lands
+    busyRef.current = true;
+    setBusy(true);
+  }
+
+  function endWrite() {
+    busyRef.current = false;
+    setBusy(false);
+  }
 
   useEffect(() => {
-    loadWard()
-      .then((ward) => {
-        setPatients(ward.patients.map(shown));
-        setNowMs(ward.nowMs);
-        setBoard(ward.board);
-      })
-      .catch((exc) => setLoadError(exc.message));
+    busyRef.current = true; // no poll before the first load (it may be seeding the ward)
+    refresh(loadWard)
+      .catch((exc) => setLoadError(exc.message))
+      .finally(() => { busyRef.current = false; });
+    const timer = setInterval(() => {
+      if (visible() && !busyRef.current) refresh().catch(() => {}); // a missed read waits for the next one
+    }, wardPollIntervalMs());
+    return () => clearInterval(timer);
   }, []);
 
   // The chip follows the ward: ask again whenever a record or the clock changes. An error keeps the last status.
@@ -141,19 +163,25 @@ export function useWard() {
 
   async function run(id, send, scope) {
     setFault(null);
-    setBusy(true);
+    startWrite();
     try {
       const next = await send();
       swap(id, next);
+      // Each recorded action takes a step of demo time; the server clock moves with it for every patient.
       const stepped = afterRun(nowMs, next);
       setNowMs(stepped);
-      write(NOW, String(stepped));
+      try {
+        await postClock(stepped);
+        await refresh();
+      } catch (exc) {
+        setFault(makeFault(null, CLOCK, `Saved, but the time did not move: ${exc.message}`));
+      }
       return next;
     } catch (exc) {
       setFault(makeFault(id, scope, exc.message));
       return null;
     } finally {
-      setBusy(false);
+      endWrite();
     }
   }
 
@@ -189,10 +217,10 @@ export function useWard() {
   async function jump(ms) {
     if (ms <= nowMs || !patients.length) return;
     setNowMs(ms);
-    write(NOW, String(ms));
     setFault(null);
-    setBusy(true);
+    startWrite();
     try {
+      await postClock(ms);
       const results = await Promise.allSettled(patients.map((p) => postJourney(p.id, "/tick", { at_ms: ms })));
       const views = new Map();
       const failed = [];
@@ -202,23 +230,23 @@ export function useWard() {
       });
       setPatients((list) => list.map((p) => (views.has(p.id) ? shown({ ...p, view: views.get(p.id) }) : p)));
       if (failed.length) setFault(makeFault(null, CLOCK, `The time moved, but ${failed.join("; ")}`));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function reset() {
-    setFault(null);
-    setBusy(true);
-    try {
-      const ward = await seed();
-      setPatients(ward.patients.map(shown));
-      setNowMs(ward.nowMs);
-      setBoard(ward.board);
     } catch (exc) {
       setFault(makeFault(null, CLOCK, exc.message));
     } finally {
-      setBusy(false);
+      endWrite();
+    }
+  }
+
+  // Reset reseeds the ward; the server puts its clock back to Day 0 09:00.
+  async function reset() {
+    setFault(null);
+    startWrite();
+    try {
+      apply(await seed());
+    } catch (exc) {
+      setFault(makeFault(null, CLOCK, exc.message));
+    } finally {
+      endWrite();
     }
   }
 

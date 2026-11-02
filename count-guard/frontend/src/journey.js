@@ -45,6 +45,19 @@ export function uploadJourney(id, path, file, fields = {}) {
   return call(`${base(id)}${path}`, { method: "POST", body: form });
 }
 
+// The ward list and the shared demo clock live on the server (spec §8).
+export function getWard() {
+  return call("/journey/ward");
+}
+
+export function postClock(ms) {
+  return call("/journey/clock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ms }),
+  });
+}
+
 export function getAudit(id) {
   return call(`${base(id)}/audit`);
 }

@@ -25,6 +25,14 @@ CREATE TABLE IF NOT EXISTS timeline (
   supersedes_id TEXT,
   tier TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS episode_beds (
+  episode_id TEXT PRIMARY KEY,
+  bed TEXT UNIQUE
+);
+CREATE TABLE IF NOT EXISTS clock (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  now_ms INTEGER
+);
 """
 
 
@@ -132,3 +140,54 @@ class MorningStore:
         item = dict(row)
         item["payload"] = json.loads(item["payload"])
         return item
+
+    # The ward list (spec §8): one bed per patient episode. The staff board never gets a bed.
+    def beds(self) -> dict[str, str]:
+        """{episode_id: bed} for every patient on the ward."""
+        with self._lock:
+            rows = self._conn.execute("SELECT episode_id, bed FROM episode_beds").fetchall()
+        return {row["episode_id"]: row["bed"] for row in rows}
+
+    def set_bed(self, episode_id: str, bed: str) -> None:
+        """Give an episode its bed. A bed held by another episode raises sqlite3.IntegrityError."""
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO episode_beds (episode_id, bed) VALUES (?, ?) "
+                "ON CONFLICT(episode_id) DO UPDATE SET bed = excluded.bed",
+                (episode_id, bed),
+            )
+            self._conn.commit()
+
+    def clear_beds(self) -> None:
+        """Empty the ward list. The episodes and their events stay."""
+        with self._lock:
+            self._conn.execute("DELETE FROM episode_beds")
+            self._conn.commit()
+
+    # The demo clock: one row, unset until POST /journey/clock sets it.
+    def get_clock(self) -> int | None:
+        with self._lock:
+            row = self._conn.execute("SELECT now_ms FROM clock WHERE id = 1").fetchone()
+        return None if row is None else int(row["now_ms"])
+
+    def set_clock(self, ms: int) -> int:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO clock (id, now_ms) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET now_ms = excluded.now_ms",
+                (int(ms),),
+            )
+            self._conn.commit()
+        return int(ms)
+
+    def clear_clock(self) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM clock")
+            self._conn.commit()
+
+    def latest_ts(self, episode_id: str) -> int | None:
+        """The latest ts_ms on an episode, or None when it has no events."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT MAX(ts_ms) AS ts FROM timeline WHERE episode_id = ?", (episode_id,)
+            ).fetchone()
+        return None if row["ts"] is None else int(row["ts"])

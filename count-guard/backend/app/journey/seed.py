@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from app.journey import tasks
+from app.journey import tasks, ward_api
 from app.journey.rx import IYER_DOCUMENT, from_document
 from app.journey.schedule import build as build_schedule
 from app.journey.stories import CARE_TEMPLATES
@@ -45,11 +45,16 @@ def card_payload(template_key: str, rx_payload: dict | None, by: str) -> dict:
 def seed_ward(store, raise_nudges: Callable) -> dict:
     """Create the three episodes and the staff board; Iyer gets her ward history.
 
+    A seed is a fresh ward: earlier episodes keep their records but leave the ward list, and the demo
+    clock goes back to unset (Day 0 09:00).
     Returns {"patients": id, bed and name in bed order, "board": the staff board's episode id}.
     """
+    store.clear_beds()
+    store.clear_clock()
     made = []
     for bed, name in PATIENTS:
         episode_id = store.create_episode(name)["id"]
+        ward_api.register(store, episode_id, bed=bed, source="seed", document_id=None, ts_ms=0)
         made.append({"id": episode_id, "bed": bed, "name": name})
     board = store.create_episode(BOARD_LABEL)["id"]
 

@@ -19,7 +19,7 @@ from pydantic import Field
 
 from app.core.ledger import ledger_rows
 from app.core.tracker import Tracker
-from app.journey import advice, live, states, switches
+from app.journey import advice, camera_extras, live, states, switches
 from app.journey.api import At, _at, _require, _store, settle, view
 from app.journey.stories import CAMERA_BY, by_ai
 from app.media_pipeline import SamCallFailed, run_recorded_video
@@ -122,6 +122,7 @@ def camera_state(request: Request, episode_id: str) -> dict:
         "ledger": ledger_rows(store.events(case_id)) if case_id else [],
         "advice": advice.advice_view(episode_id, events),
         "live": switches.is_live(request.app.state.settings, "swabs"),
+        **camera_extras.view(episode_id, events),
     }
 
 

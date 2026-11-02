@@ -195,3 +195,28 @@ def test_ai_label_variants_never_pass_as_a_person(tmp_path):
         )
         assert states.count_gate(_events(client, eid)) == "none", by
     assert _end(client, eid).status_code == 409
+
+
+def test_replay_resolve_and_close_never_make_the_gate_ok(tmp_path):
+    """A6 for the count extras: replay, the dwell counter, resolve and close never move the opened count or the gate."""
+    client, eid = _new_patient(tmp_path)
+    _begin_with_pack(client, eid)
+    body = _camera(client, eid, "clip2")
+    before = _events(client, eid)
+    opened, gate = states.stay_opened(before), states.count_gate(before)
+    assert (opened, gate) == (10, "none")
+    assert _post_json(client, eid, "/camera/replay", {"by": NURSE}).status_code == 200
+    for t in (0, 100, 200):
+        assert _post_json(client, eid, "/camera/dwell", {"track_id": "swab-1", "zone": "bucket", "t_ms": t}).status_code == 200
+    for row in body["camera"]["advice"]:
+        r = _post_json(client, eid, f"/camera/advice/{row['id']}/resolve", {"by": NURSE, "reason": "Counted by hand"})
+        assert r.status_code == 200, r.text
+    assert _post_json(client, eid, "/camera/close", {"by": NURSE}).status_code == 200
+    after = _events(client, eid)
+    assert (states.stay_opened(after), states.count_gate(after)) == (opened, "none")
+    assert [e["id"] for e in after if e["event_type"] in ("count.closing", "count.pack_opened")] == \
+        [e["id"] for e in before if e["event_type"] in ("count.closing", "count.pack_opened")]
+    r = _end(client, eid)
+    assert r.status_code == 409 and r.json()["detail"] == SAVE_FIRST  # resolved advice and a closed case are not a count
+    assert _post_json(client, eid, "/count", {"step": "closing", "returned": 10, "by": NURSE}).status_code == 200
+    assert _end(client, eid).status_code == 200

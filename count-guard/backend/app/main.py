@@ -17,6 +17,7 @@ from app.journey.flow_api import flow_router
 from app.journey.intake_api import intake_router
 from app.journey.ask_api import ask_router
 from app.journey.camera_api import camera_router
+from app.journey.camera_close_api import camera_close_router
 from app.journey.camera_extra_api import camera_live_router
 from app.journey.count_api import count_router
 from app.journey.discharge_api import discharge_router
@@ -64,6 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(count_router)
     app.include_router(camera_router)
     app.include_router(camera_live_router)
+    app.include_router(camera_close_router)
     app.include_router(theatre_router)
     app.add_exception_handler(NotInTheatre, not_in_theatre)
     app.add_exception_handler(CareEpisode, care_episode)

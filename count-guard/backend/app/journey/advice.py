@@ -84,9 +84,10 @@ def linked_case(events: list[dict]) -> str | None:
 
 
 def advice_view(episode_id: str, events: list[dict]) -> list[dict]:
-    """This stay's advice, oldest first, each with its acknowledgement (or None) and its frame link."""
+    """This stay's advice, oldest first, each with its acknowledgement and its resolve (or None) and its frame link."""
     stay = states.stay_events(events)
     acks = {e["payload"]["advice_id"]: e["payload"] for e in stay if e["event_type"] == "camera.ack"}
+    resolved = {e["payload"]["advice_id"]: e["payload"] for e in stay if e["event_type"] == "camera.resolved"}
     out = []
     for e in stay:
         if e["event_type"] != "camera.advice":
@@ -98,5 +99,6 @@ def advice_view(episode_id: str, events: list[dict]) -> list[dict]:
             "frame_id": p.get("frame_id"), "source": p.get("source"),
             "frame_url": f"/journey/episodes/{episode_id}/camera/frame?item={quote(p['item'])}" if p.get("frame_id") else None,
             "acked": {"by": ack["by"], "reason": ack.get("reason", "")} if ack else None,
+            "resolved": {"by": resolved[e["id"]]["by"], "reason": resolved[e["id"]]["reason"]} if e["id"] in resolved else None,
         })
     return out

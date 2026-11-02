@@ -231,7 +231,7 @@ def by_ai(payload: dict) -> bool:
 
 
 STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd", "check.photo", "check.override", "druglog.parsed",
-              "count.pack_heard", "vitals.card", "camera.ack")
+              "count.pack_heard", "vitals.card", "camera.ack", "camera.resolved")
 HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted", "patient.registered")  # bookkeeping, not care
 
 

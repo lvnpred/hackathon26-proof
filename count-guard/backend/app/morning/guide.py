@@ -103,6 +103,15 @@ def explain_event(event: dict) -> str:
     if kind == "camera.ack":
         reason = (payload.get("reason") or "").strip()
         return f"{payload.get('by')} acknowledged the camera advice." + (f" Reason: {reason}" if reason else "")
+    if kind == "camera.resolved":
+        return f"{payload.get('by')} resolved the camera advice. Reason: {payload.get('reason')}"
+    if kind == "camera.replayed":
+        return f"Swab camera replay: {payload.get('returned')} of {payload.get('opened')} seen back · Prepared."
+    if kind == "camera.item_out":
+        return "Swab camera saw a swab rest in the bucket."
+    if kind == "camera.closed":
+        prepared = " · Prepared" if payload.get("source") == "prepared" else ""
+        return f"Camera case closed. Count sheet written{prepared}."
     return kind.replace(".", " ").replace("_", " ")
 
 

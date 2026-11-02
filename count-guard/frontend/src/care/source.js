@@ -1,5 +1,7 @@
 // Staff source words: how a reading was made, in plain words. Never a model name (those live in the Inspector and on the AI page).
 export const FROM_CAMERA = "Read by camera";
+export const FROM_REPLAY = "Replayed camera recording";
+export const DRAFTED_FROM_CAMERA = "Drafted from the camera case";
 export const FROM_PHOTO = "Read from photo";
 export const FROM_ORDER = "Checked against the order";
 export const DRAFTED_FROM_VOICE = "Drafted from voice";

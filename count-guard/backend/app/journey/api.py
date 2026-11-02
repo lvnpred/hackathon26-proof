@@ -76,6 +76,7 @@ class Strip(Strict):
 
 
 class StripsIn(At):
+    by: str = Field(default="patient", min_length=1, max_length=80)  # the doctor types when the photo cannot be read
     strips: list[Strip] = Field(min_length=1, max_length=20)
 
 
@@ -263,7 +264,7 @@ def scan_strips(episode_id: str, body: StripsIn, request: Request) -> dict:
     store = _store(request)
     ts = _at(store, episode_id, body.at_ms)
     for offset, strip in enumerate(body.strips):
-        found = {**read_strip(strip.name, strip.strength), "by": "patient", "source": "typed"}
+        found = {**read_strip(strip.name, strip.strength), "by": body.by, "source": "typed"}
         store.append(episode_id, "brownbag.med_found", found, ts_ms=ts + offset)
     settle(request, episode_id, ts + len(body.strips))
     return view(request, episode_id)

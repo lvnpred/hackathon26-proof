@@ -112,3 +112,18 @@ def test_demo_photo_hash_is_pinned():
     import hashlib
 
     assert hashlib.sha256(DEMO.read_bytes()).hexdigest() == home_medicines.DEMO_SHA256
+
+
+def test_typed_home_medicines_grounded(tmp_path):
+    client = _client(tmp_path)
+    eid = _seed(client)[2]["id"]
+    assert client.post(_url(eid, "rx/demo"), json={"at_ms": 0}).status_code == 200
+    r = client.post(_url(eid, "strips"), json={"by": RAO, "strips": [{"name": "Metoprolol", "strength": "25 mg"}, {"name": "Zzzquil", "strength": ""}]})
+    assert r.status_code == 200, r.text
+    rows = _found(client, eid)
+    assert [p["payload"]["generic"] for p in rows] == ["metoprolol", None]
+    assert [p["payload"]["grounded"] for p in rows] == [True, False]
+    assert all(p["payload"]["source"] == "typed" and p["payload"]["by"] == RAO for p in rows)
+    listed = r.json()["strips"]
+    assert listed[0]["drug_class"] and listed[0]["match"]["text"]
+    assert not any("Prepared" in str(s) for s in listed)

@@ -16,10 +16,10 @@ import { useWard } from "./ward";
 import WardActions from "./WardActions";
 
 const STAFF_TABS = {
-  doctor: [["/patients", "My patients"], ["/ai", "AI activity"]],
-  nurse: [["/queue", "My queue"], ["/patients", "Patients"], ["/ai", "AI activity"]],
+  doctor: [["/patients", "My patients"], ["/ai", "AI activity"], ["/help", "Help"]],
+  nurse: [["/queue", "My queue"], ["/patients", "Patients"], ["/ai", "AI activity"], ["/help", "Help"]],
 };
-const PATIENT_TABS = [["/today", "Today"], ["/my-care", "My care"], ["/ask", "Ask"]];
+const PATIENT_TABS = [["/today", "Today"], ["/my-care", "My care"], ["/ask", "Ask"], ["/help", "Help"]];
 
 export const DEMO = import.meta.env.VITE_DEMO !== "0";
 

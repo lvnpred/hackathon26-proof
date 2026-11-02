@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useMatch, useSearchParams } from "react-router-dom";
+import CameraEvidence from "./CameraEvidence.jsx";
 import Correct from "./Correct.jsx";
 import Fault from "./Fault";
 import { canCorrect } from "./correct.js";
@@ -152,6 +153,7 @@ export default function Inspector({ ward }) {
           </div>
           <div role="tabpanel" className="inspector-panel">
             <Body key={moment.id} initialFocus={urlFocus} moment={moment} tab={tab} episodeId={episodeId} view={patient.view} role={ward.role} lens={lens} nowMs={ward.nowMs} busy={ward.busy} fault={ward.fault} act={(path, body, scope) => ward.act(episodeId, path, body, scope)} />
+            {lens !== "patient" && tab === "evidence" && moment.capability === "swabs" && <CameraEvidence episodeId={episodeId} />}
           </div>
         </>
       )}

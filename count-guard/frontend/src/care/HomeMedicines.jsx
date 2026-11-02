@@ -26,7 +26,7 @@ export default function HomeMedicines({ view, busy, upload, act }) {
             One medicine per line: name then strength
             <textarea rows={3} value={lines} onChange={(e) => setLines(e.target.value)} />
           </label>
-          <button type="button" disabled={busy || !lines.trim()} onClick={() => act("/strips", { strips: parseStrips(lines) })}>
+          <button type="button" disabled={busy || !lines.trim()} onClick={() => act("/strips", { strips: parseStrips(lines), by: DOCTOR })}>
             Check these medicines
           </button>
         </>

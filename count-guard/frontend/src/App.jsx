@@ -1,6 +1,7 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { CareHome, CareRoutes } from "./care/CareShell";
 import AiDashboard from "./care/AiDashboard.jsx";
+import Help from "./care/Help.jsx";
 import Chart from "./care/Chart";
 import Ask from "./care/Ask";
 import MyCare from "./care/MyCare";
@@ -9,7 +10,6 @@ import Today from "./care/Today.jsx";
 import Audit from "./screens/Audit";
 import Close from "./screens/Close";
 import Doctor from "./screens/Doctor";
-import Guide from "./screens/Guide";
 import Home from "./screens/Home";
 import Journey from "./screens/Journey";
 import Live from "./screens/Live";
@@ -176,10 +176,11 @@ export default function App() {
         <Route path="/my-care" element={<MyCare />} />
         <Route path="/ask" element={<Ask />} />
         <Route path="/ai" element={<AiDashboard />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/guide" element={<Help />} />
       </Route>
       <Route path="/steps" element={<Home />} />
       <Route path="/older" element={<Older />} />
-      <Route path="/guide" element={<Guide />} />
       <Route path="/count" element={<Setup />} />
       <Route path="/morning" element={<Morning />} />
       <Route path="/opd" element={<Opd />} />

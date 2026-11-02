@@ -19,6 +19,7 @@ from app.journey.ask_api import ask_router
 from app.journey.count_api import count_router
 from app.journey.staff_api import staff_router
 from app.journey.media_api import media_router, models_router
+from app.journey.verdict_api import verdict_router
 from app.journey.video_api import video_router
 from app.journey.ward_api import ward_router
 from app.ops.api import ops_site_router, router as ops_router
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(intake_router)
     app.include_router(flow_router)
     app.include_router(media_router)
+    app.include_router(verdict_router)
     app.include_router(ask_router)
     app.include_router(staff_router)
     app.include_router(video_router)

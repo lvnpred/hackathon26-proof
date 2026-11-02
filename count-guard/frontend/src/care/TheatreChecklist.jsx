@@ -7,8 +7,12 @@ import AiMoment from "./AiMoment.jsx";
 import { momentFor } from "./moments.js";
 import { pickedUpload } from "./video";
 import PhotoInput from "./PhotoInput.jsx";
+import ProofItem from "./ProofItem.jsx";
+import { checkFor } from "./verdict.js";
 
 const NURSE = "Nurse Asha (synthetic)";
+// Theatre-step photo proofs (spec §6.6). They keep only their own item open: never surgery ended, never a move.
+const STEP_PROOF = { tray: ["theatre:swab_tray", "Swab tray before incision"], count: ["theatre:closing_tray", "Swab tray at closing"] };
 const DOCTOR = "Dr. A. Rao (synthetic)";
 
 function Line({ step }) {
@@ -95,6 +99,11 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
             ))}
             {canRecord(view, step.key) && step.key !== "ward" && (
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} primary={primary} />
+            )}
+            {role === "nurse" && STEP_PROOF[step.key] && canRecord(view, step.key) && (
+              <ProofItem check={checkFor(view, STEP_PROOF[step.key][0])} label={STEP_PROOF[step.key][1]} busy={busy}
+                onPhoto={(file) => upload(`/checks/${STEP_PROOF[step.key][0]}/photo`, file, { by })}
+                onOverride={(reason) => act(`/checks/${STEP_PROOF[step.key][0]}/override`, { reason, by })} />
             )}
           </li>
         ))}

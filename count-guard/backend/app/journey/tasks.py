@@ -8,7 +8,7 @@ runs `raise_nudges` after a write, using the ts the helper returns.
 
 from __future__ import annotations
 
-from app.journey import proof
+from app.journey import proof, verdict
 from app.journey.dictation import draft_refusal
 from app.journey.live import HEARERS
 from app.journey.procedures import setup_for
@@ -278,6 +278,8 @@ def complete_task(
     _refuse_if_closed(view)
     if view["status"] == "done":
         raise TaskError(409, "This task is already done.")
+    if verdict.item_open(store.events(episode_id), f"task:{task_id}"):  # U9: until a retake or an override
+        raise TaskError(409, verdict.TASK_OPEN)
     if payload["mode"] == "start_end" and view["status"] != "running":
         raise TaskError(409, "Begin the task before marking it done.")
     if payload["kind"] == "obs" and not values:

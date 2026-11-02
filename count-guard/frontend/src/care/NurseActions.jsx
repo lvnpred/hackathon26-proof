@@ -3,7 +3,9 @@ import Checklist from "./Checklist";
 import HandoverCard from "./HandoverCard.jsx";
 import NowCard from "./NowCard";
 import NurseTasks from "./NurseTasks";
+import ProofItem from "./ProofItem.jsx";
 import TheatreChecklist from "./TheatreChecklist";
+import { checkFor } from "./verdict.js";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
 const THEATRE_NURSE = "Nurse Asha (synthetic)";
@@ -31,6 +33,18 @@ function Orders({ orders, by, busy, act, primary }) {
   ));
 }
 
+// The photo check under one checklist item: take or retake the photo, or override an open one with a reason.
+export function proofFor({ view, step, by, busy, act, upload }) {
+  return function proof(key, label) {
+    const item = `${step}:${key}`;
+    return (
+      <ProofItem check={checkFor(view, item)} label={label} busy={busy}
+        onPhoto={(file) => upload(`/checks/${item}/photo`, file, { by })}
+        onOverride={(reason) => act(`/checks/${item}/override`, { reason, by })} />
+    );
+  };
+}
+
 // The nurse's actions for the patient's current state: the card holds the step, the ward tasks follow.
 export default function NurseActions({ state, card, pick, control, view, act, upload, ask, busy, nowMs, episodeId, replaced, afterNow = null }) {
   const by = state === "theatre" ? THEATRE_NURSE : WARD_NURSE;
@@ -41,14 +55,16 @@ export default function NurseActions({ state, card, pick, control, view, act, up
     admission: (
       <div key="admission">
         <p className="label">Admission checklist</p>
-        <Checklist items={ADMISSION} busy={busy} button="Complete admission" primary={nowStep} onDone={(c) => move("ward", c)} />
+        <Checklist items={ADMISSION} busy={busy} button="Complete admission" primary={nowStep} onDone={(c) => move("ward", c)}
+          proof={proofFor({ view, step: "admission", by, busy, act, upload })} />
       </div>
     ),
     theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} nowMs={nowMs} primary={nowStep} />,
     discharge: (
       <div key="discharge">
         <p className="label">Discharge checklist</p>
-        <Checklist items={DISCHARGE} busy={busy} button="Complete discharge" primary={nowStep} onDone={(c) => move("home", c)} />
+        <Checklist items={DISCHARGE} busy={busy} button="Complete discharge" primary={nowStep} onDone={(c) => move("home", c)}
+          proof={proofFor({ view, step: "discharge", by, busy, act, upload })} />
       </div>
     ),
   };

@@ -188,6 +188,14 @@ def plain(event: dict) -> str:
         return f"{p.get('by')} added a {p.get('purpose')} photo."
     if kind == "proof.checked":
         return f"Photo check: {p.get('why')}"
+    if kind in ("check.photo", "check.override"):
+        from app.journey.expected import label  # expected imports states, which imports this module
+        from app.journey.verdict import view_text
+
+        if kind == "check.override":
+            return f"{p.get('by')} overrode the photo check of the {label(p.get('item', ''))}. Reason: {p.get('reason')}"
+        said = view_text(p.get('verdict'), p.get('why', ''))
+        return f"Photo of the {label(p.get('item', ''))}: {said}" + (" · Prepared" if p.get("source") == "prepared" else "")
     if kind == "order.acknowledged":
         return f"{p.get('by')} acknowledged the orders."
     if kind == "task.created":
@@ -218,7 +226,7 @@ def by_ai(payload: dict) -> bool:
     return str(payload.get("by") or "").startswith(AI_PREFIX)
 
 
-STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd")
+STAFF_ONLY = ("order.drafted", "discharge.drafted", "notice.dd", "check.photo", "check.override")
 HIDDEN_FROM_TIMELINE = ("work.opened", "work.reverted", "patient.registered")  # bookkeeping, not care
 
 

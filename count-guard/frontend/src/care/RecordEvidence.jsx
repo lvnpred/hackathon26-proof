@@ -2,6 +2,21 @@ import { useId, useState } from "react";
 import AiMoment from "./AiMoment.jsx";
 import { FILTERS, filterMoments } from "./moments.js";
 import { orderDetail } from "./tasklist.js";
+import StatusPill from "./StatusPill.jsx";
+import { proofLabel, proofTone } from "./verdict.js";
+
+// Staff only: every photo check on the chart with its verdict, "No photo" included, so a missing proof shows.
+function PhotoChecks({ checks }) {
+  if (!checks.length) return null;
+  return (
+    <div aria-label="Photo checks">
+      <p className="label">Photo checks</p>
+      <ul className="task-list">
+        {checks.map((c) => <li key={c.item}>{c.label}: <StatusPill role={proofTone(c)} text={proofLabel(c)} /></li>)}
+      </ul>
+    </div>
+  );
+}
 
 // The one list of every AI result and kept record on a chart (R17). The patient lens drops the chips.
 export default function RecordEvidence({ view, role, lens = "staff", episodeId, nowMs }) {
@@ -20,6 +35,7 @@ export default function RecordEvidence({ view, role, lens = "staff", episodeId, 
           </select>
         </div>
       )}
+      {!patient && <PhotoChecks checks={view.photo_checks || []} />}
       {rows.length === 0 && <p className="empty small">Nothing here for this filter.</p>}
       <ul className="task-list">
         {rows.map((moment) => {

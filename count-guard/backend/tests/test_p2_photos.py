@@ -156,6 +156,8 @@ def test_photo_on_running_task_keeps_it_running(tmp_path):
 
 def test_live_reader_faked(tmp_path, monkeypatch):
     monkeypatch.setattr(SamAdapter, "segment_images", lambda self, urls, concepts: [])
+    # A task proof photo also gets a verdict (U9, test_verdict.py); faked here so no call leaves the test.
+    monkeypatch.setattr(SparkAdapter, "check_photo", lambda self, raw, kind, expect: {"verdict": "accepted", "why": "A strip."})
     client = TestClient(create_app(_keyed(tmp_path)))
     eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     task = _ward(client, eid, [DOSE])[0]

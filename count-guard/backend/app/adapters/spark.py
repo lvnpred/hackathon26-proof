@@ -1,6 +1,11 @@
-"""Muse Spark 1.3: names a crop (second look), reads strip labels, or rewords a handover. It decides nothing."""
+"""Muse Spark 1.3: names a crop (second look), reads strip labels, rewords a handover, or says whether a proof
+photo shows what it should (a person can override that verdict). It decides nothing else."""
 
 from __future__ import annotations
+
+import base64
+import json
+import re
 
 import httpx
 
@@ -46,6 +51,31 @@ MONITOR_PROMPT = (
 )
 
 
+VERDICTS = ("accepted", "not_accepted")
+_FENCE = re.compile(r"^```[a-z]*\s*|\s*```$", re.I)
+
+
+def check_photo_prompt(expect: str) -> str:
+    return (
+        "A nurse took this photo as proof of a care step. "
+        f"The photo should show: {expect}. "
+        "Accept it only if that is clearly in the photo. "
+        'Reply with JSON only: {"verdict": "accepted" or "not_accepted", "why": "one short sentence on what the photo shows"}. '
+        "Do not give medical advice."
+    )
+
+
+def parse_check_photo(text: str) -> dict:
+    """The verdict and a one-line reason from the model's reply, or ValueError when it is not that."""
+    payload = json.loads(_FENCE.sub("", (text or "").strip()))  # json.JSONDecodeError is a ValueError
+    if not isinstance(payload, dict) or payload.get("verdict") not in VERDICTS:
+        raise ValueError("the photo check reply has no verdict")
+    why = " ".join(str(payload.get("why") or "").split())[:200]
+    if not why:
+        raise ValueError("the photo check reply has no reason")
+    return {"verdict": payload["verdict"], "why": why}
+
+
 class SparkAdapter:
     """Called when rule R5 fires, a patient photographs strips, or a nurse drafts a handover. Only with a key."""
 
@@ -62,6 +92,12 @@ class SparkAdapter:
     def read_monitor(self, image_data_url: str) -> str:
         """Raw model text for a monitor photo."""
         return self._ask(MONITOR_PROMPT, image_data_url)
+
+    def check_photo(self, raw: bytes, content_type: str, expect: str) -> dict:
+        """{verdict: accepted|not_accepted, why} for a proof photo against what it should show. ValueError when the reply does not parse."""
+        kind = content_type if (content_type or "").startswith("image/") else "image/jpeg"
+        data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
+        return parse_check_photo(self._ask(check_photo_prompt(expect), data_url))
 
     def write(self, prompt: str) -> str:
         """Text in, text out. The caller checks the wording before it is shown."""

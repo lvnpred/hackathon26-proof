@@ -1,6 +1,7 @@
 """Proof checks for photos. Pure: a strip is matched to a dose task by medicine name, a monitor to the stated values.
 
-A mismatch is flagged and never blocks anything (D9). Strength is shown, never compared.
+A mismatch is flagged and never blocks anything (D9). D9 now covers these strip and monitor reads only: a proof
+photo's verdict (Accepted / Not accepted / Not checked) follows U9 in `verdict.py`. Strength is shown, never compared.
 """
 
 from __future__ import annotations

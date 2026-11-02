@@ -8,11 +8,14 @@ import { momentFor } from "./moments.js";
 import { FROM_VOICE, isPrepared, sourceWords } from "./source.js";
 import Source from "./Source.jsx";
 import { obsValues } from "./tasklist";
+import ProofItem from "./ProofItem.jsx";
+import { checkFor } from "./verdict.js";
 
 const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v)]));
 
 // Confirm one task: the words said, the values, a photo, then Confirm. Nothing is saved until Confirm.
-// A photo that does not match is flagged and Confirm stays on (D9).
+// A strip or monitor read that does not match is flagged and Confirm stays on (D9). The photo's verdict is U9:
+// Not accepted or Not checked refuses Confirm until a new photo is accepted or the nurse overrides with a reason.
 // session: { proposal: { candidates: [task], values }, via, transcript, source, heardBy }.
 export default function TaskProof({ view, task, session, by, busy, act, upload, onClear }) {
   const [form, setForm] = useState(() => strings(session.proposal.values));
@@ -61,6 +64,10 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
           <Source words={sourceWords(photoMoment)} prepared={isPrepared(photoMoment || photo.check)} />{" "}
           {photo.check?.why}
         </p>
+      )}
+      {photo && (
+        <ProofItem check={checkFor(view, `task:${task.id}`)} label={task.title} busy={busy}
+          onOverride={(reason) => act(`/checks/task:${task.id}/override`, { reason, by })} />
       )}
       {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} version={view.timeline?.length} fallback={<img src={photo.url} alt="Proof photo" width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />} />}
       {error && <p className="error small" role="alert">{error}</p>}

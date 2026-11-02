@@ -22,6 +22,7 @@ from app.journey.seed import card_payload, seed_ward
 from app.journey.clock import stamp
 from app.journey.clocktext import latest_ms, when_text
 from app.journey.states import flow_view
+from app.journey.verdict import checks_view
 from app.journey.stories import CARE_TEMPLATES, audit_rows, build_stories, timeline_items
 from app.morning.brownbag import read_strip
 from app.morning.discharge import visible_events
@@ -198,6 +199,7 @@ def view(request: Request, episode_id: str) -> dict:
         "ops": ops_view(events, paused=ops_site.paused(store)[0], now_ms=now),
         "templates": {key: value["title"] for key, value in CARE_TEMPLATES.items()},
         **flow_view(events, now),
+        "photo_checks": checks_view(events),
         # Present once reminders were added, so a reload keeps the download link without a second post.
         "ics_url": f"/journey/episodes/{episode_id}/reminders.ics"
         if any(e["event_type"] == "reminders.added" for e in events)

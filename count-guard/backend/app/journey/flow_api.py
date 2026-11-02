@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import Field, field_validator, model_validator
 
-from app.journey import live, states, tasks
+from app.journey import check_gate, live, states, tasks
 from app.journey.api import At, Limits, Strict, _act, _at, _latest, _require, _store, settle, view
 from app.journey.dictation import draft_refusal
 from app.journey.doctor_status import theatre_payload
@@ -42,6 +43,8 @@ class SurgeryIn(At):
 def move(episode_id: str, body: StateIn, request: Request) -> dict:
     _require(request, episode_id)
     events = _store(request).events(episode_id)
+    if photos_open := check_gate.refusal(events, body.to):  # U9: admitting->ward and discharging->home only
+        return JSONResponse(status_code=409, content=photos_open)
     try:
         payload = states.move_payload(events, body.to, body.model_dump())
     except states.MoveRefused as exc:

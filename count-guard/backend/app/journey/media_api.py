@@ -9,7 +9,7 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.journey import dictation, evidence, live, proof, spoken, states, switches, tasks
+from app.journey import dictation, evidence, expected, live, proof, spoken, states, switches, tasks, verdict
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, settle, view
 from app.journey.regions import strips_from
 from app.journey.rx import key_of
@@ -248,6 +248,9 @@ def add_photo(
         stated = {k: v for k, v in (("sbp", sbp), ("dbp", dbp), ("hr", hr)) if v is not None}
         checked = _check_photo(settings, episode_id, photo["id"], task, raw, file.filename or "", kind, stated)
         store.append(episode_id, "proof.checked", {"photo_id": photo["id"], "task_id": task_id, **checked}, ts_ms=ts)
+        item = f"task:{task_id}"  # U9: the verdict keeps only this task open, never a move
+        judged = verdict.check(settings, item=item, raw=raw, content_type=kind, expect=expected.expect_for(item, task["kind"]))
+        store.append(episode_id, "check.photo", {"item": item, "photo_id": photo["id"], "by": by, **judged}, ts_ms=ts)
     return view(request, episode_id)
 
 

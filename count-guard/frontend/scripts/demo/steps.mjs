@@ -7,6 +7,22 @@ const ADMISSION = ["Wristband on", "Allergies checked", "Baseline observations t
 const DISCHARGE = ["Discharge card given", "Medicines handed over", "Reminders set"];
 const KUMAR = "R. Kumar";
 const IYER = "S. Iyer";
+// Photo proofs for checklist items (spec §6.6): [checklist label, demo photo, words the prepared verdict shows].
+// Each upload is a recorded action (2 demo minutes), so admission takes one photo: more would close the undo
+// window of the AI's order acknowledgement that this beat shows. Items without a photo show "No photo".
+const ADMISSION_PHOTOS = [
+  ["Wristband on", "eval/media/wristband/wristband-synthetic.png", "shows a patient wristband"],
+];
+const DISCHARGE_PHOTOS = [
+  ["Discharge card given", "eval/media/discharge/discharge-card.png", "shows the discharge card"],
+  ["Medicines handed over", "eval/media/medicine-bag/medicine-bag-synthetic.png", "shows a medicine bag"],
+];
+const photos = async (H, rows) => {
+  for (const [label, file, seen] of rows) {
+    await H.file(`Photo check: ${label}`, file);
+    await H.waitText(seen);
+  }
+};
 // A beat's "seen before" strings, asserted before the click that would change them.
 const before = async (H, id) => { for (const s of BEATS.find((b) => b.id === id).before) await H.waitText(s); };
 
@@ -56,6 +72,7 @@ export const STEPS = {
     await H.tab("My queue");
     await H.chart(KUMAR);
     await before(H, "kumar-admission");
+    await photos(H, ADMISSION_PHOTOS);
     await H.tick(...ADMISSION);
     await H.click("Complete admission");
   },
@@ -126,6 +143,7 @@ export const STEPS = {
   async "kumar-home"(H) {
     await H.role("Nurse");
     await H.chart(KUMAR);
+    await photos(H, DISCHARGE_PHOTOS);
     await H.tick(...DISCHARGE);
     await H.click("Complete discharge");
   },

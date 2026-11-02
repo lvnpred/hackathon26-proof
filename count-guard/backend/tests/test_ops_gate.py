@@ -138,10 +138,9 @@ def test_l1_proposes_and_caps_at_three(tmp_path):
     assert len(_of(client, eid, "question.routed")) == 4
 
 
-def test_seed_and_play_stay_quiet(tmp_path):
+def test_seed_stays_quiet(tmp_path):  # the scripted play this also ran is archived (Task 16, U13)
     client = _ops_client(tmp_path)
     patients = _seed(client)
-    assert client.post(_url(patients[0]["id"], "play")).status_code == 200
     for p in patients:
         assert not [e for e in _events(client, p["id"]) if e["event_type"].startswith("work.")]
 

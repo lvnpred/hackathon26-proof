@@ -159,7 +159,7 @@ def vitals_step(episode_id: str, body: At, request: Request) -> dict:
 
 @theatre_router.post("/tier")
 def set_tier(episode_id: str, body: TierIn, request: Request) -> dict:
-    """The decision tier (CG-24), shared with the morning screens. Turned on after a drop, it writes the card then."""
+    """The decision tier (CG-24). Turned on after a drop, it writes the card then."""
     _events(request, episode_id)
     request.app.state.decision_tier = body.on
     if body.on:

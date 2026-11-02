@@ -38,7 +38,7 @@ def _client(tmp_path, *, dd_base="http://127.0.0.1:9"):
 
 def _episode_with_orders(tmp_path):
     client = _client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     base = f"/journey/episodes/{eid}"
     client.post(f"{base}/orders", json={**ORDERS, "at_ms": 0})
     client.post(f"{base}/obs", json={"sbp": 120, "dbp": 80, "hr": 70, "by": "Nurse A", "at_ms": 0})
@@ -95,7 +95,7 @@ def _count(client, eid, **body):
 
 
 def _new_episode(client):
-    return client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    return client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
 
 
 def _short_count(client, eid):

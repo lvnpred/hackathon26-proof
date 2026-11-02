@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from app.journey.placed import DRUG_KINDS
 
-# Refused on both correction routes (the morning one keeps these three until Task 16 archives it).
+# Refused on every correction (the archived morning route refused these three too).
 COUNT = "A swab count is corrected on the count form, not here."
 SURGERY = "A surgery step is recorded on the theatre steps, not corrected here."
 MOVE = "A patient move is recorded as a new move, not corrected here."

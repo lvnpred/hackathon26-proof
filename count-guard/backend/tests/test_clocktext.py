@@ -48,7 +48,7 @@ def test_view_has_no_day_n_text(tmp_path):
     """No product text carries 'Day N HH:MM'. A 'Day 3 check-in' line has no time after it, so it is allowed."""
     client = _client(tmp_path)
     views = [client.get(f"/journey/episodes/{p['id']}").json() for p in _seed(client)]
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     base = f"/journey/episodes/{eid}"
     client.post(f"{base}/orders", json={**ORDERS, "at_ms": 0})
     client.post(f"{base}/obs", json={"sbp": 120, "dbp": 80, "hr": 70, "by": "Nurse A", "at_ms": 0})

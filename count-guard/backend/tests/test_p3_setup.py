@@ -127,7 +127,7 @@ def test_setup_mismatch_never_blocks(tmp_path, monkeypatch):
     monkeypatch.setattr(live, "clip_seconds", lambda p: 6)
     monkeypatch.setattr(live, "to_sam_clip", lambda src, out, fps: None)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
     task = _ward(client, eid, [SALINE])[SALINE["text"]]
     video = _row(_setup(client, eid, task).json(), task)["video"]
     assert video["match"] == "mismatch" and "iv cannula" in video["why"]
@@ -142,7 +142,7 @@ def test_setup_live_cut_switch(tmp_path, monkeypatch):
     monkeypatch.setattr(SamAdapter, "segment_video", boom)
     monkeypatch.setattr(switches, "SETUP_LIVE", False)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
     task = _ward(client, eid, [SALINE])[SALINE["text"]]
     assert _setup(client, eid, task).status_code == 200
     stored = next(e for e in _events(client, eid) if e["event_type"] == "setup.checked")["payload"]

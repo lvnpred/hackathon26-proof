@@ -1,4 +1,6 @@
-"""Send the five scripted clips through the upload path and print the measured table.
+"""Send the five scripted clips through the engine's replay and print the measured table.
+
+The old `POST /cases/{id}/upload` route is archived (Task 16); it called this same `Engine.replay`.
 
 This does not measure SAM 3.1. Perception is scripted on purpose until a
 recorded tray clip exists. Ground truth is read from eval/ground_truth/,
@@ -27,6 +29,7 @@ from app.config import Settings  # noqa: E402
 from app.engine import id_switch_count  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.report.count_sheet import write_count_sheet  # noqa: E402
+from app.scenarios import get_scenario  # noqa: E402
 
 
 def settings(tmp: Path) -> Settings:
@@ -67,14 +70,10 @@ def main() -> int:
     rows = []
     report_ms = None
     for truth in ground_truth():
-        created = client.post("/cases", json={"label": truth["clip"], "item_types": truth["item_types"]})
-        created.raise_for_status()
-        case = created.json()
+        case = app.create_case(truth["clip"], truth["item_types"])
         started = time.perf_counter()
-        response = client.post(f"/cases/{case['id']}/upload", params={"scenario": truth["scenario"]})
+        result = app.replay(case["id"], get_scenario(truth["scenario"]))
         pipeline_ms = (time.perf_counter() - started) * 1000
-        response.raise_for_status()
-        result = response.json()
         expected = set(map(tuple, truth["rules"]))
         observed = {
             (row["rule_id"], row["item_type"])

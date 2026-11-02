@@ -152,7 +152,7 @@ GOOD_REPLY = {
 def test_model_reply_used_when_grounded(tmp_path, monkeypatch):
     monkeypatch.setattr(live, "spark_text", lambda s, prompt: json.dumps(GOOD_REPLY))
     client = _keyed_client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     draft = _typed(client, eid, "dictate/orders", ORDERS_TEXT).json()["drafts"]["order"]
     assert draft["source"] == "muse-spark-1.3"
     assert draft["items"][0] == {"kind": "dose", "text": "Paracetamol 1 g every 6 hours", "mode": "tick", "proof": "photo",
@@ -169,7 +169,7 @@ def test_model_reply_used_when_grounded(tmp_path, monkeypatch):
 def test_model_reply_with_invented_content_falls_back(tmp_path, monkeypatch, reply):
     monkeypatch.setattr(live, "spark_text", lambda s, prompt: reply)
     client = _keyed_client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     draft = _typed(client, eid, "dictate/orders", ORDERS_TEXT).json()["drafts"]["order"]
     assert draft["source"] == "rules (model reply not usable)"
     assert len(draft["items"]) == 2 and not any("ondansetron" in i["text"].lower() for i in draft["items"])
@@ -187,7 +187,7 @@ def _with_item(item):
 def test_digit_free_invention_falls_back(tmp_path, monkeypatch, item):
     monkeypatch.setattr(live, "spark_text", lambda s, prompt: _with_item(item))
     client = _keyed_client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "x"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "x"}).json()["id"]
     draft = _typed(client, eid, "dictate/orders", ORDERS_TEXT).json()["drafts"]["order"]
     assert draft["source"] == "rules (model reply not usable)" and len(draft["items"]) == 2
 
@@ -283,7 +283,7 @@ def test_empty_transcript_is_not_parsed_as_orders(tmp_path, monkeypatch):
     monkeypatch.setattr(live, "to_wav", lambda raw, content_type: raw)
     monkeypatch.setattr(VoiceAdapter, "transcribe", lambda self, path, offset_ms=0, content_type="audio/wav": [])
     client = _keyed_client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "x"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "x"}).json()["id"]
     res = _upload(client, eid, "dictate/orders", "a.wav")
     assert res.status_code == 409 and "Type what was said" in res.json()["detail"]
 

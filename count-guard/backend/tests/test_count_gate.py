@@ -94,13 +94,6 @@ def _store(client):
     return client.app.state.morning
 
 
-def test_replay_route_closing_without_a_person_does_not_end_surgery(tmp_path):
-    client, eid = _begun(tmp_path)
-    client.post(f"/morning/episodes/{eid}/count/replay")
-    r = _surgery(client, eid, "ended")
-    assert r.status_code == 409 and r.json()["detail"] in (SAVE_FIRST, NOT_ADDING_UP)
-
-
 def test_ai_closing_does_not_end_surgery(tmp_path):
     from app.journey.stories import AI_PREFIX
     client, eid = _begun(tmp_path)
@@ -114,8 +107,9 @@ def test_generic_correct_route_refuses_count_events(tmp_path):
     _count(client, eid, "opened", quantity=20)
     _count(client, eid, "closing", returned=19, detail="Searching.")
     cid = [e for e in _store(client).events(eid) if e["event_type"] == "count.closing"][-1]["id"]
-    r = client.post(f"/morning/episodes/{eid}/events/{cid}/correct",
-                    json={"payload": {"opened": 20, "returned": 19, "unaccounted": 0, "detail": "", "by": "x"}})
+    r = client.post(f"/journey/episodes/{eid}/correct", json={
+        "event_id": cid, "by": "Nurse Asha (synthetic)", "at_ms": 0,
+        "payload": {"opened": 20, "returned": 19, "unaccounted": 0, "detail": "", "by": "x"}})
     assert r.status_code == 409
 
 
@@ -218,9 +212,10 @@ def test_closing_before_surgery_began_does_not_count(tmp_path):
 
 
 def _correct(client, eid, kind):
-    """The morning correct route on this episode's latest `kind` event, with its own payload."""
+    """The care correct route on this episode's latest `kind` event, with its own payload (the morning route is archived)."""
     old = [e for e in _store(client).events(eid) if e["event_type"] == kind][-1]
-    return client.post(f"/morning/episodes/{eid}/events/{old['id']}/correct", json={"payload": old["payload"]})
+    body = {"event_id": old["id"], "payload": old["payload"], "by": "Nurse Asha (synthetic)", "at_ms": 0}
+    return client.post(f"/journey/episodes/{eid}/correct", json=body)
 
 
 def test_correcting_surgery_began_cannot_drop_packs_from_the_count(tmp_path):

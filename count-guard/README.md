@@ -29,7 +29,7 @@ The **Demo** dock at the bottom of the screen (dashed edge, dark) holds the cont
 | Reset | Starts the ward again from the seeded data |
 | Use the demo prescription | Loads the prepared prescription |
 | Pause AI / Resume AI (demo shortcut) | Same switch as Pause in the product header |
-| Guide, Older screens | The feature map and the screens built before the care app |
+| Guide | The Help page: what each part of the care app does |
 
 ### What each role sees
 
@@ -118,27 +118,9 @@ make demo-check                 # the filmed demo, headless, on ports 8200/5273
 
 The design behind this section is `docs/superpowers/specs/2026-11-01-count-guard-product-design-design.md` at the workspace root.
 
-## Older screens
+## Archived screens
 
-The running map is the guide. With the app open, start at [the guide](http://127.0.0.1:5173/guide). The same list is `GET /product`, defined in `backend/app/site.py`. Change a feature there and the page follows.
-
-| Feature | Where you use it | Where a developer edits it | Built |
-| --- | --- | --- | --- |
-| One patient, six steps | [Home](http://127.0.0.1:5173/) | `frontend/src/screens/Home.jsx` | [2026-10-27](docs/new-work.md) |
-| Medicine strips | [Before the operation](http://127.0.0.1:5173/opd) | `backend/app/morning/lexicon.py` | [2026-10-27](docs/new-work.md) |
-| Swab count and drug line | [In the room](http://127.0.0.1:5173/ot) | `backend/app/morning/count_rules.py` | [2026-10-27](docs/new-work.md) |
-| Discharge sheet | [After the room](http://127.0.0.1:5173/ward) | `backend/app/morning/discharge.py` | [2026-10-27](docs/new-work.md) |
-| Camera count | [Video check](http://127.0.0.1:5173/count) | `backend/app/core/rules.py` | [2026-10-27](docs/new-work.md) |
-| One patient, three people | [Journey](http://127.0.0.1:5173/journey) | `backend/app/journey/nudges.py` | [2026-10-28](docs/new-work.md) |
-| Prescription, orders, discharge card | [Doctor](http://127.0.0.1:5173/doctor) | `backend/app/journey/rx.py` | [2026-10-28](docs/new-work.md) |
-| Doses, observations, nudge inbox | [Nurse](http://127.0.0.1:5173/nurse) | `backend/app/journey/api.py` | [2026-10-28](docs/new-work.md) |
-| Schedule, strips, check-in | [Patient](http://127.0.0.1:5173/patient) | `backend/app/journey/schedule.py` | [2026-10-28](docs/new-work.md) |
-| Audit trail | [Audit](http://127.0.0.1:5173/audit) | `backend/app/journey/stories.py` | [2026-10-28](docs/new-work.md) |
-| This map | [Guide](http://127.0.0.1:5173/guide) | `backend/app/site.py` | [2026-10-27](docs/new-work.md) |
-
-Every module and its date is in [docs/new-work.md](docs/new-work.md). That list also names the changes made overnight on 27–28 Oct, committed as e36cd87.
-
-These six steps are for this patient only. The next patient starts a new morning. Records are not mixed.
+The screens and routes built before the care app (the camera counter, the morning screens and the first journey screens) are in `archive/`, moved with `git mv` and not deleted. Every feature they held now lives in the care app (spec §9 in `docs/superpowers/specs/2026-11-02-dd-to-count-guard-patient-flow-design.md` at the workspace root), and the scripted plays are retired. Nothing in the app imports `archive/`, and pytest does not collect `archive/tests/`. `scripts/archive_set.py` lists any file under `backend/app` or `frontend/src` that the app no longer reaches.
 
 This repository was started on 27 Oct 2026. It does not reuse Doctor Dictation or OPD Companion code.
 The prescription comes from a running Doctor Dictation over HTTP (`GET /api/v1/documents/{id}`), so the two apps stay separate. The plan is `docs/hackathon/07-care-journey.md` at the workspace root.
@@ -153,13 +135,13 @@ make dev
 
 Open http://127.0.0.1:5173. The API is http://127.0.0.1:8100. `GET /product` is the feature map. `GET /health` names the four models and whether a key is set.
 
-The fact card is off by default. To start with it on, for the card scene on the OT screen:
+The fact card is off by default. To start with it on, for the card in the theatre view:
 
 ```bash
 DECISION_TIER=1 make dev
 ```
 
-The OT screen also has a "Fact card on/off" button. It sets the same switch until the backend restarts.
+`POST /journey/episodes/{id}/theatre/tier` sets the same switch until the backend restarts.
 
 ```bash
 make test
@@ -184,7 +166,7 @@ strips, speech, frames
 
 The fact card, which restates recorded facts, is off until it is turned on. Its route is 404 while it is off. Decision events are left off the discharge PDF.
 
-`GET /morning/episodes/{id}/stream` sends the timeline as server-sent events and stops. Add `?follow=1` to keep the stream open and send new events as they arrive. It stops after `timeout_s` seconds (at most 30) or when the client leaves.
+`GET /journey/episodes/{id}/stream` sends the timeline as server-sent events and keeps the stream open for new events. It stops after `timeout_s` seconds or when the client leaves.
 
 ## Models
 
@@ -222,7 +204,7 @@ On the theatre replay, a swab counts as back only after it stays in the bucket f
 
 ## What the scripted clips measured
 
-`make eval` sends each scripted clip through the same upload route the app uses (`POST /cases/{id}/upload?scenario=clipN`). The expected results are in `eval/ground_truth/clip1.json` to `clip5.json`. SAM 3.1 was not called. There is no tray video yet, so this table measures the rule engine.
+`make eval` sends each scripted clip through the engine's replay (`Engine.replay`, which the archived `POST /cases/{id}/upload?scenario=clipN` route called). The expected results are in `eval/ground_truth/clip1.json` to `clip5.json`. SAM 3.1 was not called. There is no tray video yet, so this table measures the rule engine.
 
 | Clip | What was planted | What the rules raised | Missed | False alarms | Ledger exact | ID switches | ID switches/min | Gate | Pipeline |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -240,39 +222,15 @@ The Pipeline column and the count-sheet time change from run to run. The other c
 
 Start the backend with `make backend`. Then paste these lines into the shell. The URLs with `?` or `&` are quoted, so zsh does not read them as file patterns.
 
-Camera path, on scripted perception:
-
 ```bash
 curl -s localhost:8100/health
-CASE_ID=$(curl -s -X POST localhost:8100/cases -H 'content-type: application/json' \
-  -d '{"label":"Prop tray demo","item_types":["lap sponge"]}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
-curl -s -X POST localhost:8100/cases/$CASE_ID'/upload?scenario=demo'
-curl -s localhost:8100/cases/$CASE_ID/discrepancies
+EPISODE_ID=$(curl -s -X POST localhost:8100/journey/episodes -H 'content-type: application/json' \
+  -d '{"label":"Synthetic demo, R. Kumar"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+curl -s localhost:8100/journey/episodes/$EPISODE_ID
+curl -sN localhost:8100/journey/episodes/$EPISODE_ID'/stream?timeout_s=5'
 ```
 
-The Live screen does the same. On a case with no playback, it offers "Run the scripted demo on this case" or a file upload. The demo replaces the drawn zones with its own.
-
-A video upload uses the same route, with `-F file=@clip.mp4`. Without `MODEL_API_KEY` it returns 400 and names SAM 3.1. It does not invent detections. Other upload errors are short too:
-
-| Case | Status |
-| --- | --- |
-| Unknown scenario, unreadable JSON, no file | 400 |
-| No key, or zones not saved, before a video | 400, and the clip is not kept |
-| ffmpeg missing, or a clip it cannot read | 400, and the clip is not kept |
-| SAM 3.1 call fails | 502, and the clip is not kept |
-
-One morning, with the fact card on:
-
-```bash
-curl -s -X POST localhost:8100/morning/tier -H 'content-type: application/json' -d '{"enabled":true}'
-EPISODE_ID=$(curl -s -X POST localhost:8100/morning/episodes -H 'content-type: application/json' \
-  -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
-curl -s -X POST localhost:8100/morning/episodes/$EPISODE_ID/play -o /dev/null -w '%{http_code}\n'
-curl -s localhost:8100/morning/episodes/$EPISODE_ID/card
-curl -sN localhost:8100/morning/episodes/$EPISODE_ID'/stream?follow=1&timeout_s=5'
-```
-
-The last line prints the timeline, waits 5 seconds for new events, then stops.
+The last line prints the timeline, waits 5 seconds for new events, then stops. The older camera-case (`/cases`) and morning (`/morning`) routes are archived; the theatre count panel and the swab camera in the care app do that work now.
 
 ## Submission notes
 

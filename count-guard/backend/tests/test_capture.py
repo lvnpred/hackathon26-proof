@@ -96,7 +96,7 @@ def test_typed_closing_has_no_evidence(tmp_path):
 
 def test_closing_refuses_foreign_evidence(tmp_path):
     client, eid = _new(tmp_path)
-    other = client.post("/morning/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
+    other = client.post("/journey/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
     ev_other = _counted(client, other)["evidence_id"]
     _to_theatre(client, eid)
     assert _upload(client, eid).status_code == 200  # a tray check, before surgery begins

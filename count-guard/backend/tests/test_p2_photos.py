@@ -159,7 +159,7 @@ def test_live_reader_faked(tmp_path, monkeypatch):
     # A task proof photo also gets a verdict (U9, test_verdict.py); faked here so no call leaves the test.
     monkeypatch.setattr(SparkAdapter, "check_photo", lambda self, raw, kind, expect: {"verdict": "accepted", "why": "A strip."})
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     task = _ward(client, eid, [DOSE])[0]
     monkeypatch.setattr(SparkAdapter, "read_strips", lambda self, url: '{"strips": [{"name": "Paracetamol", "strength": "500 mg"}]}')
     check = _last(_photo(client, eid, "IMG_3.jpg", kind="image/jpeg", task_id=task["id"]).json())["check"]

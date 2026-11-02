@@ -1,15 +1,28 @@
 """The guide tells the screen the next plain-language step."""
 
+import re
+from pathlib import Path
+
 from app.morning.guide import build_guide, explain_event
 from app.site import catalog
+from tests.test_care_demo import _client
+
+CG = Path(__file__).resolve().parents[2]
 
 
-def test_product_map_links_every_feature_to_a_screen():
+def test_product_map_links_every_feature_to_a_care_page(tmp_path):
+    """Task 16: the older screens are archived, so every link is a care route and every API a mounted one."""
     product = catalog()
-    hrefs = {feature["href"] for feature in product["features"]}
-    assert {"/steps", "/opd", "/ot", "/ward", "/count", "/guide"} <= hrefs
+    app_jsx = (CG / "frontend" / "src" / "App.jsx").read_text(encoding="utf8")
+    routes = set(re.findall(r'path="(/[a-z-]*)"', app_jsx))
+    assert {f["href"] for f in product["features"]} | {a["start"] for a in product["audiences"]} <= routes
     assert product["banner"].startswith("Research demo")
-    assert all(feature["code"] and feature["api"] for feature in product["features"])
+    paths = _client(tmp_path).app.openapi()["paths"]
+    for feature in product["features"]:
+        assert (CG / feature["code"]).is_file(), feature["code"]
+        method, path = feature["api"].split()
+        path = path.replace("{id}", "{episode_id}")
+        assert method.lower() in paths.get(path, {}), feature["api"]
 
 
 def test_empty_morning_starts_at_the_strips():

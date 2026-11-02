@@ -38,7 +38,7 @@ def test_camera_case_created_and_linked(tmp_path):
 
 def test_camera_case_links_an_existing_case(tmp_path):
     client, eid = _new_patient(tmp_path)
-    case_id = client.post("/cases", json={"label": "Theatre 2", "item_types": ["lap sponge"]}).json()["id"]
+    case_id = client.app.state.engine.create_case("Theatre 2", ["lap sponge"])["id"]  # POST /cases is archived
     r = _post_json(client, eid, "/camera/case", {"by": NURSE, "case_id": case_id})
     assert r.status_code == 200 and r.json()["camera"]["case_id"] == case_id
     assert _post_json(client, eid, "/camera/case", {"by": NURSE, "case_id": "nope"}).status_code == 404
@@ -189,18 +189,3 @@ def test_without_a_key_a_clip_uses_the_prepared_result(tmp_path):
     assert r.status_code == 200, r.text
     assert r.json()["camera"]["source"] == "prepared"
     assert r.json()["camera"]["fixture"] == switches.PREPARED_BY_CHECK["swabs"]
-
-
-def test_morning_routes_still_call_the_moved_bodies(tmp_path):
-    client = _client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
-    r = client.post(f"/morning/episodes/{eid}/count/manual", json={"track_id": "swab-3"})
-    assert r.status_code == 200, r.text
-    assert [e["payload"] for e in _kinds(client, eid, "count.item_out")] == [
-        {"track_id": "swab-3", "frame_id": None, "source": "manual"}
-    ]
-    for t in range(3):
-        r = client.post(f"/morning/episodes/{eid}/count/frame",
-                        json={"track_id": "swab-1", "zone": "bucket", "frame_id": f"f{t}", "t_ms": t * 100})
-        assert r.status_code == 200, r.text
-    assert r.json()["out"] == ["swab-1"] and len(r.json()["emitted"]) == 1

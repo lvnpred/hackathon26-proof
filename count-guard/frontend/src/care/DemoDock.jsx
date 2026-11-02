@@ -4,6 +4,7 @@ import { call } from "../journey";
 import { label, skipTargets } from "./clock";
 import { ROLE_NAME, aiChip, dockPauseLabel, modelsText } from "./dock";
 import Fault from "./Fault";
+import { MENU } from "./menu";
 import { CLOCK } from "./faults";
 import { findPatient } from "./Patients";
 
@@ -82,8 +83,7 @@ export default function DemoDock({ ward, showClock, pick, ops, demoRx }) {
             </>
           )}
           <span>{modelsText(live)}</span>
-          <Link to="/guide">Guide</Link>
-          <Link to="/older">Older screens</Link>
+          {MENU.map(([to, name]) => <Link key={to} to={to}>{name}</Link>)}
         </div>
       </section>
     </>

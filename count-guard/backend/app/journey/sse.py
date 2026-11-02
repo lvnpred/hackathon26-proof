@@ -1,7 +1,6 @@
 """Server-sent events: one frame format and one follow loop.
 
-The care app's streams (`journey/stream_api.py`) and the morning stream (`morning/api.py`, until Task 16 archives
-its routes) both use these, so the two never drift apart.
+The care app's streams (`journey/stream_api.py`) use these: the ward list and one episode's timeline.
 """
 
 from __future__ import annotations

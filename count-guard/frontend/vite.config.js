@@ -6,14 +6,8 @@ export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, "../..", ""), ...process.env };
   const apiTarget = `http://127.0.0.1:${env.CG_API_PORT || 8100}`;
   const api = { target: apiTarget, ws: true };
-  const morning = {
-    target: apiTarget,
-    bypass(req) {
-      if ((req.headers.accept || "").includes("text/html")) return "/index.html";
-    },
-  };
 
-  // "/journey" is also a screen; only the API paths below go to the backend.
+  // Only the API paths below go to the backend; any other /journey URL is the app's own page.
   const journeyApi = ["/journey/episodes", "/journey/demo", "/journey/models", "/journey/staff", "/journey/ai", "/journey/ops", "/journey/ward", "/journey/clock", "/journey/sync", "/journey/patients"];
   const journey = {
     target: apiTarget,
@@ -29,13 +23,8 @@ export default defineConfig(({ mode }) => {
       port: Number(env.CG_WEB_PORT || 5173),
       strictPort: true,
       proxy: {
-        "/cases": api,
-        "/frames": api,
-        "/tracks": api,
-        "/discrepancies": api,
         "/health": api,
         "/product": api,
-        "/morning": morning,
         "/journey": journey,
       },
     },

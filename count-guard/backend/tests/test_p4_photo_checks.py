@@ -146,7 +146,7 @@ def test_keyed_live_takes_the_max_per_concept_over_photos(tmp_path, monkeypatch)
     calls: list = []
     monkeypatch.setattr(SamAdapter, "_stream", _seen_by_photo(calls))
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)
     files = [("files", ("one.png", PNG, "image/png")), ("files", ("two.png", PNG + b"x", "image/png"))]
     r = client.post(f"/journey/episodes/{eid}/video", files=files, data={"check": "tray", "by": NURSE, "at_ms": "0"})
@@ -165,7 +165,7 @@ def test_keyed_failure_falls_back_to_prepared(tmp_path, monkeypatch, exc):
 
     monkeypatch.setattr(SamAdapter, "_stream", boom)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)
     # Any upload name gets the tray kind's prepared result, labelled prepared (spec §6.7).
     for names in (("tray-hernia.png",), ("unknown-photo.png",), ("swabs-closing.png",)):
@@ -182,7 +182,7 @@ def test_cut_switch_off_uses_prepared_even_with_a_key(tmp_path, monkeypatch):
     monkeypatch.setattr(SamAdapter, "_stream", boom)
     monkeypatch.setattr(switches, "TRAY_LIVE", False)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)
     assert _photos(client, eid).json()["tray"]["latest"]["source"] == "prepared"
 
@@ -245,7 +245,7 @@ def test_keyed_reply_without_frame_marker_still_counts(tmp_path, monkeypatch):
 
     monkeypatch.setattr(SamAdapter, "_stream", stream)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)
     latest = _photos(client, eid).json()["tray"]["latest"]
     assert latest["source"] == "sam-3.1"

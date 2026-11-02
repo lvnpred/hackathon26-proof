@@ -125,18 +125,6 @@ def test_correct_needs_the_event_on_this_episode(tmp_path):
     assert _correct(client, "nope", old["id"], {"sbp": 118}).status_code == 404
 
 
-def test_morning_route_keeps_its_three_refusals(tmp_path):
-    """Until Task 16 archives it, the morning route asks the same shared helper."""
-    client = _client(tmp_path)
-    eid = client.post("/morning/episodes", json={}).json()["id"]
-    for kind in ("count.closing", "surgery.began", "patient.state"):
-        old = _store(client).append(eid, kind, {"by": NURSE}, ts_ms=1)
-        r = client.post(f"/morning/episodes/{eid}/events/{old['id']}/correct", json={"payload": {}})
-        assert r.status_code == 409
-    fine = _store(client).append(eid, "druglog.parsed", {"text": "x"}, ts_ms=1)
-    assert client.post(f"/morning/episodes/{eid}/events/{fine['id']}/correct", json={"payload": {"text": "y"}}).status_code == 200
-
-
 def test_correct_takes_the_demo_time_like_every_care_action(tmp_path):
     client = _client(tmp_path)
     eid = _patient(client)

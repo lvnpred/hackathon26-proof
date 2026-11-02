@@ -13,7 +13,7 @@ DISCHARGE_CHECKS = {"card_given": True, "medicines_handed": True, "reminders_set
 
 def _new(tmp_path):
     client = _client(tmp_path)
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     return client, eid
 
 
@@ -367,7 +367,7 @@ def test_next_role_follows_the_next_sentence(tmp_path):
     assert _view(client, eid)["now_next"]["next_role"] == "nurse"
     _move(client, eid, "ward", checklist=ADMIT_CHECKS)
     assert _view(client, eid)["now_next"]["next_role"] == "doctor"
-    das = client.post("/morning/episodes", json={"label": "Synthetic demo, A. Das"}).json()["id"]
+    das = client.post("/journey/episodes", json={"label": "Synthetic demo, A. Das"}).json()["id"]
     _move(client, das, "clinic_done")
     assert _view(client, das)["now_next"]["next_role"] is None
 

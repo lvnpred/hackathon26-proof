@@ -160,12 +160,12 @@ def test_camera_never_writes_pack_opened(tmp_path):
     assert camera and all(e["payload"]["by"] == CAMERA_BY for e in camera)
 
 
-def test_morning_count_routes_refuse_a_care_theatre_stay(tmp_path):
-    """The older morning routes write a pack and a closing with no `by`; on a care stay they would move the count."""
+def test_archived_morning_count_routes_cannot_touch_a_care_theatre_stay(tmp_path):
+    """The older morning routes wrote a pack and a closing with no `by`; they are archived (Task 16), so they 404."""
     client, eid = _new_patient(tmp_path)
     _begin_with_pack(client, eid)
     assert _post_json(client, eid, "/count", {"step": "closing", "returned": 10, "by": NURSE}).status_code == 200
-    case_id = client.post("/cases", json={"label": "Old camera", "item_types": ["lap sponge"]}).json()["id"]
+    case_id = client.app.state.engine.create_case("Old camera", ["lap sponge"])["id"]
     before = _events(client, eid)
     opened, gate = states.stay_opened(before), states.count_gate(before)
     assert (opened, gate) == (10, "ok")
@@ -176,7 +176,7 @@ def test_morning_count_routes_refuse_a_care_theatre_stay(tmp_path):
         client.post(f"{base}/hear", json={"text": "opening twenty swabs"}),
         client.post(f"{base}/play"),
     ):
-        assert r.status_code == 409 and r.json() == {"error": "use the theatre count panel"}, r.text
+        assert r.status_code == 404, r.text
     after = _events(client, eid)
     assert len(after) == len(before)
     assert (states.stay_opened(after), states.count_gate(after)) == (opened, gate)

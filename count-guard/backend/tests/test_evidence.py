@@ -65,7 +65,7 @@ def test_evidence_get_404s(tmp_path, fake_frames):
     client, eid = _new(tmp_path); _to_theatre(client, eid)
     _upload(client, eid)
     good = [e for e in _events(client, eid) if e["event_type"] == "tray.checked"][-1]["payload"]["evidence_id"]
-    other = client.post("/morning/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
+    other = client.post("/journey/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
     assert client.get(f"/journey/episodes/{eid}/evidence/{good}").status_code == 200
     for path in (f"{eid}/evidence/..%2Fx", f"{eid}/evidence/{'0' * 32}", f"{other}/evidence/{good}",
                  f"{eid}/evidence/{good.upper()}", f"{eid}/evidence/{good[:31]}", f"{eid}/evidence/{good}0", f"{eid}/evidence/{good}%0A"):

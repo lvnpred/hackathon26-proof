@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
-import { detailMessage } from "./api";
-import { loadEpisode } from "./episode";
+// FastAPI's 422 list or a plain detail, as one readable line.
+export function detailMessage(detail) {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = (item.loc || []).filter((part) => part !== "body").join(".");
+        return field ? `${field}: ${item.msg}` : item.msg;
+      })
+      .join("; ");
+  }
+  return detail?.message || detail;
+}
 
-// The care journey sits on the same morning episode. Every POST returns the whole journey view.
+// Every journey POST returns the whole journey view of one episode.
 export async function call(path, options) {
   const response = await fetch(path, options);
   const text = await response.text();
@@ -62,44 +71,6 @@ export function getAudit(id) {
   return call(`${base(id)}/audit`);
 }
 
-export function loadJourney() {
-  return loadEpisode().then((morning) => getJourney(morning.episode.id));
-}
-
-// One view per screen; act() posts, swaps in the returned view, and keeps the error readable.
-export function useJourney() {
-  const [view, setView] = useState(null);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    loadJourney().then(setView).catch((exc) => setError(exc.message));
-  }, []);
-
-  async function act(path, body) {
-    if (!view) return null;
-    setError("");
-    setBusy(true);
-    try {
-      const next = await postJourney(view.episode.id, path, body);
-      setView(next);
-      return next;
-    } catch (exc) {
-      setError(exc.message);
-      return null;
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return { view, setView, error, setError, busy, setBusy, act };
-}
-
-export function subtitle(view) {
-  return view ? `${view.episode.label} · care journey` : "Care journey · records only, no medical advice";
-}
-
-// "amlodipine 10 mg" -> { name, strength }, the same split the strips screen uses.
 export function parseStrips(text) {
   return text
     .split("\n")

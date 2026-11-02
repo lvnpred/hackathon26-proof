@@ -36,8 +36,9 @@ test("help keeps the behaviour notes and the who-starts-where block", () => {
   assert.doesNotMatch(AUDIENCES.map((a) => a.does).join(" "), ADVICE);
 });
 
-test("/guide shows Help and the old Guide screen stays importable", () => {
+test("/guide shows Help and the old Guide screen is archived, not deleted", () => {
   const app = fs.readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
   assert.match(app, /path="\/guide" element=\{<Help \/>\}/);
-  assert.ok(fs.existsSync(new URL("../screens/Guide.jsx", import.meta.url)));
+  assert.ok(!fs.existsSync(new URL("../screens/Guide.jsx", import.meta.url)));
+  assert.ok(fs.existsSync(new URL("../../../archive/frontend/src/screens/Guide.jsx", import.meta.url)));
 });

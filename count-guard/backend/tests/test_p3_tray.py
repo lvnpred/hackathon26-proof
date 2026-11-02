@@ -174,7 +174,7 @@ def test_live_tray_faked(tmp_path, monkeypatch):
     monkeypatch.setattr(live, "clip_seconds", lambda p: 6)
     monkeypatch.setattr(live, "to_sam_clip", lambda src, out, fps: None)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     _to_theatre(client, eid)
     latest = _upload(client, eid).json()["tray"]["latest"]
     assert latest["source"] == "sam-3.1" and latest["match"] == "mismatch"
@@ -233,7 +233,7 @@ def test_tray_live_cut_switch(tmp_path, monkeypatch):
     monkeypatch.setattr(SamAdapter, "segment_video", boom)
     monkeypatch.setattr(switches, "TRAY_LIVE", False)
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Iyer"}).json()["id"]
     _to_theatre(client, eid)
     assert _upload(client, eid).status_code == 200
     stored = next(e for e in _events(client, eid) if e["event_type"] == "tray.checked")["payload"]

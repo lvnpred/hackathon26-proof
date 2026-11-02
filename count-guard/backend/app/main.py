@@ -7,8 +7,6 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import router
-from app.api.ws import router as ws_router
 from app.config import BANNER, Settings, get_settings
 from app.engine import Engine
 from app.journey.ai_api import ai_router, evidence_router
@@ -21,6 +19,7 @@ from app.journey.camera_close_api import camera_close_router
 from app.journey.camera_extra_api import camera_live_router
 from app.journey.camera_evidence_api import camera_evidence_router
 from app.journey.correct_api import correct_router
+from app.journey.episode_api import episode_router
 from app.journey.count_api import count_router
 from app.journey.discharge_api import discharge_router
 from app.journey.staff_api import staff_router
@@ -31,9 +30,6 @@ from app.journey.verdict_api import verdict_router
 from app.journey.video_api import video_router
 from app.journey.ward_api import ward_router
 from app.ops.api import ops_site_router, router as ops_router
-from app.morning.api import router as morning_router
-from app.morning.routes_extra import router as morning_extra_router
-from app.morning.care_guard import CareEpisode, care_episode
 from app.morning.store import MorningStore
 from app.site import router as site_router
 from app.store import Store
@@ -59,11 +55,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(router)
-    app.include_router(ws_router)
-    app.include_router(morning_router)
-    app.include_router(morning_extra_router)
     app.include_router(site_router)
+    app.include_router(episode_router)
     app.include_router(journey_router)
     app.include_router(count_router)
     app.include_router(camera_router)
@@ -72,7 +65,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(camera_evidence_router)
     app.include_router(theatre_router)
     app.add_exception_handler(NotInTheatre, not_in_theatre)
-    app.add_exception_handler(CareEpisode, care_episode)
     app.include_router(demo_router)
     app.include_router(stream_router)  # before ward_router: nothing there may shadow /journey/ward/stream
     app.include_router(ward_router)

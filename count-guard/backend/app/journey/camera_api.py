@@ -51,7 +51,7 @@ class ManualIn(At):
     by: str = Field(min_length=1, max_length=80)
 
 
-# ---- moved bodies (the morning routes call these until Task 16 archives them) ----
+# ---- count bodies (moved here from the morning routes, now archived) ----
 
 def manual_out(store, episode_id: str, track_id: str, ts: int, by: str | None = None) -> dict:
     """A person says this swab is out (morning `count/manual`). Counted back by hand, never a closing."""

@@ -15,7 +15,6 @@ from app.journey.ai_moments import moments
 from app.journey.handover import draft as draft_handover
 from app.journey.intake import chart_header
 from app.journey.medicines import day_plan
-from app.journey.play import play_journey
 from app.journey.rx import document_for, fetch_document, from_document, key_of
 from app.journey.schedule import build as build_schedule, reminders_ics
 from app.journey.seed import card_payload, seed_ward
@@ -399,14 +398,6 @@ def check_in(episode_id: str, body: CheckinIn, request: Request) -> dict:
 def audit(episode_id: str, request: Request) -> dict:
     episode = _require(request, episode_id)
     return {"episode": episode, "banner": BANNER, "rows": audit_rows(_store(request).events(episode_id))}
-
-
-@router.post("/play")
-def play(episode_id: str, request: Request) -> dict:
-    """The three-act demo on this episode: doctor, nurse, patient."""
-    _require(request, episode_id)
-    play_journey(_store(request), episode_id, raise_nudges)
-    return view(request, episode_id)
 
 
 @demo_router.post("/seed")

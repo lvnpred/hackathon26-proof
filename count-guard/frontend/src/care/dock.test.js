@@ -64,7 +64,7 @@ test("the safety strip is first in the shell, in the product and not in the dock
   const dock = read("./DemoDock.jsx");
   assert.doesNotMatch(dock, /Research demo|Banner|Synthetic data/);
   assert.doesNotMatch(shell, /care-foot/);
-  for (const link of ['to="/guide">Guide<', 'to="/older">Older screens<']) assert.ok(dock.includes(link));
+  assert.ok(dock.includes("MENU.map(") && !dock.includes('to="/older"'));
   assert.ok(dock.includes("Use the demo prescription"));
   assert.doesNotMatch(read("./legacy/Rx.jsx"), /Use the demo prescription/);
 });

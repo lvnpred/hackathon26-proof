@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import re
-
 from fastapi.testclient import TestClient
 
-from app.agent.verifier import ADVICE
 from app.config import Settings
 from app.journey import nudges as rules
 from app.journey import rx as rxmod
@@ -21,8 +18,6 @@ ORDERS = {
     "limits": {"sbp_min": 90, "hr_max": 110},
     "by": "Dr. Test",
 }
-# Words that would turn a nudge into an instruction about care.
-INSTRUCTION = re.compile(r"\b(give|take|stop|increase|reduce|start|administer|consider)\b", re.I)
 
 
 def _client(tmp_path, *, dd_base="http://127.0.0.1:9"):
@@ -46,7 +41,7 @@ def _client(tmp_path, *, dd_base="http://127.0.0.1:9"):
 
 
 def _episode(api) -> str:
-    return api.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    return api.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
 
 
 def _kinds(view: dict) -> list[str]:
@@ -164,33 +159,6 @@ def test_answering_a_nudge_closes_it_and_keeps_it_in_the_audit(tmp_path):
     assert api.post(f"{base}/nudges/nope/seen", json={"by": "x"}).status_code == 404
 
 
-def test_no_nudge_in_the_demo_tells_anyone_what_to_do_clinically(tmp_path):
-    api = _client(tmp_path)
-    eid = _episode(api)
-    api.post(f"/journey/episodes/{eid}/play")
-    rows = api.get(f"/journey/episodes/{eid}/audit").json()["rows"]
-    raised = [row["what"] for row in rows if row["type"] == "nudge.raised"]
-    assert len(raised) == 8  # strip, count, BP, early dose, overdue dose, obs round, sign, help
-    for text in raised:
-        assert not ADVICE.search(text), text
-        assert not INSTRUCTION.search(text), text
-
-
-def test_the_demo_completes_all_three_stories_with_corrections_kept(tmp_path):
-    api = _client(tmp_path)
-    eid = _episode(api)
-    view = api.post(f"/journey/episodes/{eid}/play").json()
-    assert [(s["who"], s["done"], s["total"]) for s in view["stories"]] == [
-        ("Doctor", 4, 4), ("Nurse", 5, 5), ("Patient", 4, 4),
-    ]
-    assert sorted(_kinds(view)) == ["help_requested", "warning_sign_ticked"]
-    assert view["ics_url"] == f"/journey/episodes/{eid}/reminders.ics"  # kept after a reload
-    assert [s["strength"] for s in view["strips"] if s["generic"] == "amlodipine"] == ["5 mg"]
-    rows = api.get(f"/journey/episodes/{eid}/audit").json()["rows"]
-    replaced = [row for row in rows if row["replaced_by"]]
-    assert {row["type"] for row in replaced} == {"brownbag.med_found", "count.closing"}
-
-
 # --- option A: Doctor Dictation stays its own app -----------------------------
 
 DD_DOCUMENT = {
@@ -273,7 +241,6 @@ def test_inputs_are_checked_at_the_boundary(tmp_path):
     assert api.post(f"{base}/strips", json={"strips": []}).status_code == 422
     assert api.post(f"{base}/discharge-card", json={"template": "nope", "by": "x"}).status_code == 404
     assert api.post(f"{base}/reminders", json={}).status_code == 409
-    assert api.post("/journey/episodes/missing/play").status_code == 404
 
 
 def test_strip_photo_that_is_not_an_image_is_refused(tmp_path):

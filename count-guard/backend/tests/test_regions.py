@@ -105,7 +105,7 @@ def test_read_photo_sam_fails_values_kept(tmp_path, monkeypatch):
 
 def _obs_client(tmp_path):
     client = TestClient(create_app(_no_key(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, B"}).json()["id"]
     _to_ward(client, eid)
     order = _sign(client, eid, [DOSE, OBS]).json()["order_list"][0]
     view = _ack(client, eid, order["id"]).json()

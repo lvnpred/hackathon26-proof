@@ -70,12 +70,12 @@ def test_schedule_text():
 def test_demo_rx_names_the_episode(tmp_path):
     client = _client(tmp_path)
     label = "A. Das, 47 M (synthetic)"
-    eid = client.post("/morning/episodes", json={"label": label}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": label}).json()["id"]
     view = client.post(_url(eid, "rx/demo"), json={"at_ms": 0}).json()
     assert view["rx"]["patient"] == label
     assert view["rx"]["advice"] == [] and view["rx"]["review"] == ""
     assert not any("hernia" in d.lower() for d in view["rx"]["diagnosis"])
-    kumar = client.post("/morning/episodes", json={"label": "R. Kumar, 58 M (synthetic)"}).json()["id"]
+    kumar = client.post("/journey/episodes", json={"label": "R. Kumar, 58 M (synthetic)"}).json()["id"]
     own = client.post(_url(kumar, "rx/demo"), json={"at_ms": 0}).json()["rx"]
     assert own["advice"] and own["review"] and any("hernia" in d.lower() for d in own["diagnosis"])
 

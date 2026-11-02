@@ -112,7 +112,7 @@ def test_done_task_is_not_offered_and_wrong_state_is_409(tmp_path):
 
 def test_model_ids_and_values_are_grounded(tmp_path, monkeypatch):
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     dose, obs = _ward(client, eid, [PARA, OBS])
     assert _done(client, eid, dose["id"]).status_code == 200
     reply = json.dumps({"task_ids": [dose["id"], obs["id"]], "values": {"hr": 130}})
@@ -125,7 +125,7 @@ def test_model_ids_and_values_are_grounded(tmp_path, monkeypatch):
 
 def test_model_reply_used_when_grounded(tmp_path, monkeypatch):
     client = TestClient(create_app(_keyed(tmp_path)))
-    eid = client.post("/morning/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
     obs = _ward(client, eid, [OBS])[0]
     seen = []
     reply = json.dumps({"task_ids": [obs["id"]], "values": {"sbp": 82, "dbp": 54, "hr": 112}})

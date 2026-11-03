@@ -123,7 +123,8 @@ def close(episode_id: str, body: ByIn, request: Request) -> dict:
     store = _store(request)
     ts = _at(store, episode_id, body.at_ms)
     payload = {"case_id": case_id, "text": explained["text"], "narrative": explained["narrative"],
-               "source": explained["source"], "model": explained["model"], "closed_by": body.by, "by": CAMERA_BY}
+               "source": explained["source"], "model": explained["model"], "closed_by": body.by, "by": CAMERA_BY,
+               "evidence": camera_explain.evidence(explained, case_id)}
     store.append(episode_id, "camera.closed", payload, ts_ms=ts)
     settle(request, episode_id, ts)
     return _with_camera(request, episode_id)

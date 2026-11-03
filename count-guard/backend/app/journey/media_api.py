@@ -9,7 +9,8 @@ from typing import Literal
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.journey import dictation, evidence, expected, home_medicines, live, proof, spoken, states, switches, tasks, verdict
+from app.journey import audio_api, dictation, evidence, expected, home_medicines, live, proof, spoken, states, switches, tasks, verdict
+from app.journey.evidence_payload import evidence_of, fallback, heard_inputs
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, settle, view
 from app.journey.regions import strips_from
 from app.journey.rx import key_of
@@ -40,6 +41,9 @@ def models(request: Request) -> dict:
 def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = "") -> dict:
     """What was said, as {"text", "source", "calls"}: typed text, or a recording heard or prepared.
 
+    A recording that was heard also carries its bytes under "recording"; `keep_recording` keeps it once the route
+    has passed its refusals, and drops the bytes (§4.2).
+
     Text the page took from an earlier hearing keeps that hearer, if it is one the server names. Else it is typed.
     Such text records the voice call with no time: the hearing was in an earlier request (R4)."""
     if (file is None) == (text is None):
@@ -62,11 +66,24 @@ def _heard(settings, file: UploadFile | None, text: str | None, heard_by: str = 
         raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
     if heard["source"] == switches.UNAVAILABLE:
         raise HTTPException(status_code=502, detail=heard["why"])  # §6.7: an error to retry, nothing prepared
-    return heard
+    return {**heard, "recording": (raw, kind)}
+
+
+def keep_recording(settings, episode_id: str, heard: dict) -> dict:
+    """The heard line with `audio_id`: the recording kept for playback (None when typed), its bytes dropped."""
+    recording = heard.get("recording")
+    kept = {k: v for k, v in heard.items() if k != "recording"}
+    audio_id = audio_api.save(settings, episode_id, *recording, kept) if recording else None
+    return {**kept, "audio_id": audio_id}
 
 
 def _structure(settings, prompt: str, transcript: str, from_reply, from_rules):
-    """Model first, rules as the fallback. Returns (result, source, calls). One place for the source wording.
+    """Model first, rules as the fallback. Returns (result, source, calls). One place for the source wording."""
+    return _structure_reply(settings, prompt, transcript, from_reply, from_rules)[:3]
+
+
+def _structure_reply(settings, prompt: str, transcript: str, from_reply, from_rules):
+    """`_structure` and the model's raw reply (None when no model was asked): (result, source, calls, reply).
 
     `rules` (no key) is no model call; a reply that could not be used is a failed Spark call (R5)."""
     start = time.monotonic()
@@ -74,25 +91,33 @@ def _structure(settings, prompt: str, transcript: str, from_reply, from_rules):
     ms = round((time.monotonic() - start) * 1000)
     got = from_reply(reply, transcript)
     if got is not None:
-        return got, SPARK, [live.call_of("spark", settings, SPARK, ms)]
+        return got, SPARK, [live.call_of("spark", settings, SPARK, ms)], reply
     if switches.is_live(settings, "spark"):
         source = "rules (model reply not usable)"
-        return from_rules(transcript), source, [live.call_of("spark", settings, source, ms)]
-    return from_rules(transcript), "rules", []
+        return from_rules(transcript), source, [live.call_of("spark", settings, source, ms)], reply
+    return from_rules(transcript), "rules", [], None
 
 
 def _dictate(request, episode_id, allowed, refusal, file, text, prompt, from_reply, from_rules, what, empty, heard_by=""):
-    """Shared by both routes: state check, what was heard, then the draft content. Returns (result, meta)."""
+    """Shared by the dictate routes: state check, what was heard, then the draft content. Returns (result, meta).
+
+    meta carries `evidence` (§4.2): the recording and transcript, Spark's raw reply, and what was drafted."""
     _require(request, episode_id)
     state = states.current_state(_store(request).events(episode_id))
     if state not in allowed:
         raise HTTPException(status_code=409, detail=refusal.format(state=state))
     settings = request.app.state.settings
     heard = _heard(settings, file, text, heard_by)
-    result, source, structure_calls = _structure(settings, prompt, heard["text"], from_reply, from_rules)
+    result, source, structure_calls, reply = _structure_reply(settings, prompt, heard["text"], from_reply, from_rules)
     if empty(result):
         raise HTTPException(status_code=422, detail=NOTHING.format(what=what))
-    return result, {"transcript": heard["text"], "heard_by": heard["source"], "source": source, "calls": heard["calls"] + structure_calls}
+    heard = keep_recording(settings, episode_id, heard)  # kept only once the draft is not refused
+    calls = heard["calls"] + structure_calls
+    used = {**(result if isinstance(result, dict) else {"sections": result}), "fallback": fallback(source)}
+    if not structure_calls and heard["calls"]:
+        reply = heard["text"]  # no Spark call: the last model reply is what Muse Voice heard
+    found = evidence_of(f"dictate.{what.split()[0]}", inputs=heard_inputs(heard), reply=reply, used=used, calls=calls)
+    return result, {"transcript": heard["text"], "heard_by": heard["source"], "source": source, "calls": calls, "evidence": found}
 
 
 @media_router.post("/dictate/orders")
@@ -254,7 +279,8 @@ def add_photo(
         checked = _check_photo(settings, episode_id, photo["id"], task, raw, file.filename or "", kind, stated)
         store.append(episode_id, "proof.checked", {"photo_id": photo["id"], "task_id": task_id, **checked}, ts_ms=ts)
         item = f"task:{task_id}"  # U9: the verdict keeps only this task open, never a move
-        judged = verdict.check(settings, item=item, raw=raw, content_type=kind, expect=expected.expect_for(item, task["kind"]))
+        judged = verdict.check(settings, item=item, raw=raw, content_type=kind, expect=expected.expect_for(item, task["kind"]),
+                               photo_id=photo["id"])
         store.append(episode_id, "check.photo", {"item": item, "photo_id": photo["id"], "by": by, **judged}, ts_ms=ts)
     return view(request, episode_id)
 

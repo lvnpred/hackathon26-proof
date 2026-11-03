@@ -171,7 +171,9 @@ def test_hear_writes_nothing(tmp_path):
     before = len(_events(client, kumar))
     r = client.post(_url(kumar, "ask/hear"), data={"by": DOC}, files={"file": ("rao-answer.wav", b"RIFF", "audio/wav")})
     assert r.status_code == 200
-    assert r.json() == {"text": live.prepared("rao-answer.wav")["transcript"], "heard_by": "prepared"}
+    heard = r.json()
+    assert {k: heard[k] for k in ("text", "heard_by")} == {"text": live.prepared("rao-answer.wav")["transcript"], "heard_by": "prepared"}
+    assert set(heard) == {"text", "heard_by", "audio_id", "evidence"}  # the kept recording, for Expand (§4.2)
     assert len(_events(client, kumar)) == before
     r = client.post(_url(kumar, "ask/hear"), data={"by": DOC}, files={"file": ("IMG_0001.webm", b"RIFF", "audio/webm")})
     assert r.status_code == 409 and len(_events(client, kumar)) == before

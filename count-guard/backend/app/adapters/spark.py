@@ -94,10 +94,15 @@ class SparkAdapter:
         return self._ask(MONITOR_PROMPT, image_data_url)
 
     def check_photo(self, raw: bytes, content_type: str, expect: str) -> dict:
-        """{verdict: accepted|not_accepted, why} for a proof photo against what it should show. ValueError when the reply does not parse."""
+        """{verdict: accepted|not_accepted, why, raw} for a proof photo against what it should show. ValueError when the reply does not parse."""
         kind = content_type if (content_type or "").startswith("image/") else "image/jpeg"
         data_url = f"data:{kind};base64,{base64.b64encode(raw).decode()}"
-        return parse_check_photo(self._ask(check_photo_prompt(expect), data_url))
+        reply = self._ask(check_photo_prompt(expect), data_url)
+        try:
+            return {**parse_check_photo(reply), "raw": reply}
+        except ValueError as exc:
+            exc.raw = reply  # the evidence keeps the reply that did not parse
+            raise
 
     def write(self, prompt: str) -> str:
         """Text in, text out. The caller checks the wording before it is shown."""

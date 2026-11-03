@@ -37,7 +37,7 @@ UNREACHABLE = "The transcriber did not answer. Type what was said in the box."
 
 
 MODEL_IDS = {"voice": "voice_model", "spark": "spark_model", "sam": "sam_model", "spark-open": "spark_open_model"}
-_LIVE = ("muse-voice-transcribe", "muse-spark-1.3", "sam-3.1")
+_LIVE = ("muse-voice-transcribe", "muse-spark-1.3", "sam-3.1", "muse-spark-open")
 _FAILED = (FALLBACK, "failed", "unreadable", "rules (model reply not usable)", "unavailable")
 
 

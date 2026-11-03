@@ -148,15 +148,21 @@ def wording(draft: dict, patient: str, settings, write=None) -> dict:
     template = lines(draft, patient)
     plain = "\n".join(line["text"] for line in template)
     if not switches.is_live(settings, "spark"):
-        return {"summary": plain, "lines": template, "wording": "template", "source": PREPARED, "model_note": "", "calls": []}
+        found = handover.wording_evidence("discharge.wording", template, PROMPT, None, False, "", [], {"summary": plain})
+        return {"summary": plain, "lines": template, "wording": "template", "source": PREPARED, "model_note": "", "calls": [],
+                "evidence": found}
     start = time.monotonic()
     text, why = handover.reword(template, settings, write, prompt=PROMPT)
     ms = round((time.monotonic() - start) * 1000)
     ok, problem = handover.checked(text, template) if text else (False, why)
     call = [call_of("spark", settings, SPARK if ok else "failed", ms)]
+    found = handover.wording_evidence("discharge.wording", template, PROMPT, text, ok, problem, call,
+                                      {"summary": text if ok else plain})
     if ok:
-        return {"summary": text, "lines": template, "wording": SPARK, "source": SPARK, "model_note": "", "calls": call}
-    return {"summary": plain, "lines": template, "wording": "template", "source": PREPARED, "model_note": problem, "calls": call}
+        return {"summary": text, "lines": template, "wording": SPARK, "source": SPARK, "model_note": "", "calls": call,
+                "evidence": found}
+    return {"summary": plain, "lines": template, "wording": "template", "source": PREPARED, "model_note": problem, "calls": call,
+            "evidence": found}
 
 
 def sheet(events: list[dict], summary: str, source: dict) -> dict:

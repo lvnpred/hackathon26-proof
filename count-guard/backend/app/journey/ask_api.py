@@ -13,9 +13,10 @@ from pydantic import Field
 
 from app.journey import states
 from app.journey.api import At, _at, _require, _store, settle, view
-from app.journey import live, switches
+from app.journey import audio_api, live, switches
 from app.journey.ask import ANSWERED, DECISIONS, PHOTO_STATES
-from app.journey.media_api import _heard, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
+from app.journey.evidence_payload import evidence_of, heard_inputs
+from app.journey.media_api import _heard, keep_recording, _structure, keep_photo_evidence, read_upload_photo, strips_from, write_photo
 from app.journey.medicines import dose_rows, match_medicines, record_holds
 from app.journey.tasks import orders_list
 from app.journey.record import BOT, answer_from_reply, bot_prompt, medicine_answer, record_lines, rules_answer
@@ -40,6 +41,7 @@ class AnswerIn(At):
     by: str = Field(min_length=1, max_length=80)
     via: Literal["text", "voice"] = "text"
     heard_by: str = Field(default="", max_length=40)
+    audio_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")  # the recording /ask/hear kept
 
 
 class DecisionIn(At):
@@ -109,10 +111,13 @@ def hear_answer(
     file: UploadFile = File(...),
     at_ms: int | None = Form(None, ge=0),
 ) -> dict:
-    """What was said, as text to check. Any role. Writes nothing."""
+    """What was said, as text to check. Any role. Writes nothing; the recording is kept for playback (§4.2)."""
     _require(request, episode_id)
-    heard = _heard(request.app.state.settings, file, None)
-    return {"text": heard["text"], "heard_by": heard["source"]}
+    settings = request.app.state.settings
+    heard = keep_recording(settings, episode_id, _heard(settings, file, None))
+    found = evidence_of("ask.hear", inputs=heard_inputs(heard), reply=heard["text"], used={"text": heard["text"]},
+                        calls=heard["calls"])
+    return {"text": heard["text"], "heard_by": heard["source"], "audio_id": heard["audio_id"], "evidence": found}
 
 
 def _find(request: Request, episode_id: str, kind: str, found: str, missing: str) -> tuple[dict, list[dict]]:
@@ -137,6 +142,15 @@ def answer_question(episode_id: str, question_id: str, body: AnswerIn, request: 
         "heard_by": body.heard_by, "sources": [], "found": True, "source": "doctor",
         "calls": live.spoken_calls(request.app.state.settings, body.via, body.heard_by),
     }
+    if body.via == "voice" and body.audio_id:
+        heard = audio_api.heard_of(request.app.state.settings, episode_id, body.audio_id)
+        if heard is None:
+            raise HTTPException(status_code=422, detail="That recording is not on this patient's record.")
+        # What Muse Voice heard, beside the words the doctor confirmed (they may have edited it).
+        inputs = {"audio_id": body.audio_id, "transcript": heard["transcript"], "answer": body.text, "typed": False}
+        answer["evidence"] = evidence_of("ask.answer", inputs=inputs, reply=heard["transcript"],
+                                         used={"answer": body.text, "edited": body.text.strip() != heard["transcript"].strip()},
+                                         calls=heard["calls"])
     return _write(request, episode_id, [("question.answered", answer)], _at(_store(request), episode_id, body.at_ms))
 
 

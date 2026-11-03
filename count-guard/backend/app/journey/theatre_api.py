@@ -14,8 +14,9 @@ from fastapi.responses import JSONResponse
 from pydantic import Field, field_validator
 
 from app.journey import live, states, switches, theatre
+from app.journey.evidence_payload import evidence_of, heard_inputs
 from app.journey.api import At, _act, _at, _require, _store, settle, view
-from app.journey.media_api import SPARK, _heard
+from app.journey.media_api import SPARK, _heard, keep_recording
 from app.journey.stories import by_ai
 from app.journey.theatre import DRUG_GIVEN, DRUG_HEARD, PACK_HEARD, PACK_OPENED
 from app.morning.vitals import choose_wording
@@ -61,15 +62,16 @@ def _tier(request: Request) -> bool:
     return bool(request.app.state.decision_tier)
 
 
-def _reword(request: Request):
-    """Spec §6.7: SPARK_LIVE on asks Spark to reword, kept only if the wording check passes; off, the template."""
+def _reword(request: Request, seen: dict):
+    """Spec §6.7: SPARK_LIVE on asks Spark to reword, kept only if the wording check passes; off, the template.
+    Spark's raw reply is left in `seen["reply"]` for the card's evidence."""
     settings = request.app.state.settings
 
     def reword(template: str) -> tuple[str, str, str, list[dict]]:
         if not switches.is_live(settings, "spark"):
             return template, "template", "prepared", []
         start = time.monotonic()
-        reply = live.spark_text(settings, theatre.CARD_PROMPT + template)
+        reply = seen["reply"] = live.spark_text(settings, theatre.CARD_PROMPT + template)
         ms = round((time.monotonic() - start) * 1000)
         text, wording = choose_wording(template, reply)
         source = SPARK if wording == "llm" else "template (model reply not used)"
@@ -83,8 +85,13 @@ def _write_card(request: Request, episode_id: str, ts: int) -> None:
     if not _tier(request):
         return
     store = _store(request)
-    card = theatre.card_payload(store.events(episode_id), ts, _reword(request))
+    seen: dict = {}
+    card = theatre.card_payload(store.events(episode_id), ts, _reword(request, seen))
     if card is not None:
+        used = {"text": card["text"], "fallback": "template" if card["wording"] == "template" else None}
+        inputs = {"template": card["template"], "facts": card["facts"], "rule_id": card["rule_id"],
+                  "text": theatre.CARD_PROMPT + card["template"]}
+        card["evidence"] = evidence_of("theatre.card", inputs=inputs, reply=seen.get("reply"), used=used, calls=card["calls"])
         store.append(episode_id, theatre.CARD, card, ts_ms=ts, tier="decision")
 
 
@@ -110,7 +117,12 @@ def hear_drug(
     kind, payload = theatre.heard(said["text"])
     if kind == DRUG_HEARD and not (payload["name_as_heard"] or "").strip():
         raise HTTPException(status_code=422, detail="No medicine name was heard. Say or type the drug again.")
-    payload = {**payload, "by": by, "source": said["source"], "heard_by": said["source"], "calls": said["calls"]}
+    said = keep_recording(request.app.state.settings, episode_id, said)  # kept only once the line is not refused
+    used = {"heard_as": "pack" if kind == PACK_HEARD else "drug", "row": dict(payload), "read_by": "rules"}
+    found = evidence_of(kind, inputs=heard_inputs(said), reply=said["text"] if said["calls"] else None, used=used,
+                        calls=said["calls"])
+    payload = {**payload, "by": by, "source": said["source"], "heard_by": said["source"], "calls": said["calls"],
+               "evidence": found}
     return _act(request, episode_id, kind, payload, at_ms)
 
 
@@ -131,7 +143,7 @@ def _confirm(request: Request, episode_id: str, draft_id: str, kinds: tuple[str,
 def confirm_drug(episode_id: str, draft_id: str, body: ConfirmIn, request: Request) -> dict:
     """A person's tap: the heard row becomes a drug given, by them."""
     found = _confirm(request, episode_id, draft_id, (DRUG_HEARD, DRUG_GIVEN), "Heard drug line not found.", body.by)
-    keep = {k: v for k, v in found["payload"].items() if k not in ("by", "calls")}
+    keep = {k: v for k, v in found["payload"].items() if k not in ("by", "calls", "evidence")}  # the draft keeps the evidence
     payload = {**keep, "confirmed": True, "by": body.by, "draft_id": draft_id}
     return _act(request, episode_id, DRUG_GIVEN, payload, body.at_ms)
 

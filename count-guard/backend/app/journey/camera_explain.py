@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import time
 from pathlib import Path
 
 import httpx
@@ -19,9 +20,12 @@ from app.agent.reconciler import explain_case
 from app.config import Settings
 from app.core.ledger import open_discrepancies
 from app.journey import switches
+from app.journey.live import call_of
+from app.journey.evidence_payload import evidence_of
 from app.report.count_sheet import write_count_sheet
 
 _EVIDENCE = re.compile(r"\s*Evidence [^.]*(?:\.|$)")
+_LIVE_WORD = {"spark": "muse-spark-1.3", "spark-open": "muse-spark-open"}  # the source words live.mode_of knows
 _FAILED = (httpx.HTTPError, RuntimeError, ValueError, KeyError, TypeError)
 
 
@@ -48,26 +52,44 @@ def staff_text(narrative: str) -> str:
 
 
 def explain(store, settings: Settings, case_id: str) -> dict:
-    """{narrative, text, source ("spark" | "prepared"), model, trace}. Never a count."""
+    """{narrative, text, source ("spark" | "prepared"), model, trace, calls, why}. Never a count.
+
+    `calls` is the writer's one call: live with its own source word, or failed when it raised or its sentences did
+    not pass the check (the template then stands in, and `source` stays "prepared" as the page labels it)."""
     no_open = dataclasses.replace(settings, baseten_api_key="")  # the reconciler then uses only what is passed in
     writer = _writer(settings)
-    out = None
+    out, why, ms = None, "", None
     if writer != "prepared":
+        start = time.monotonic()
         try:
             if writer == "spark-open":
                 out = explain_case(store, settings, case_id)
             else:
                 out = explain_case(store, no_open, case_id, complete=_spark13(settings))
                 out["model"] = out["model"].replace(settings.spark_open_model, settings.spark_model)
-        except _FAILED:
-            out = None
+        except _FAILED as exc:
+            out, why = None, f"model call failed ({type(exc).__name__})"
+        ms = round((time.monotonic() - start) * 1000)
+        if out is not None and out["model"] == "template":
+            why = "model reply not usable"
     if out is None or out["model"] == "template":
         out = explain_case(store, no_open, case_id)
         source = "prepared"
     else:
         source = "spark"
+    calls = [] if writer == "prepared" else [call_of(writer, settings, _LIVE_WORD[writer] if source == "spark" else "failed", ms)]
     return {"narrative": out["narrative"], "text": staff_text(out["narrative"]), "source": source,
-            "model": out["model"], "trace": out["trace"]}
+            "model": out["model"], "trace": out["trace"], "calls": calls, "why": why}
+
+
+def evidence(explained: dict, case_id: str) -> dict:
+    """The explanation's evidence (§4.2): the case it read, the writer's call (live or failed, with why), the text
+    staff see. No writer configured: no model was used, the template wrote it."""
+    calls = explained["calls"]
+    live_reply = bool(calls) and explained["source"] == "spark"
+    used = {"text": explained["text"], "fallback": None if live_reply else "template", "why": explained["why"]}
+    return evidence_of("camera.explain", inputs={"case_id": case_id}, reply=explained["narrative"] if live_reply else None,
+                       used=used, calls=calls)
 
 
 def write_sheet(store, settings: Settings, case_id: str, explained: dict, ledger: list[dict]) -> Path:

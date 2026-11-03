@@ -56,7 +56,7 @@ def check_photo(
     raw, kind = read_upload_photo(file)
     ts = _at(store, episode_id, at_ms)
     photo = write_photo(settings, store, episode_id, raw, kind, {"purpose": "check", "item": item, "by": by}, ts)
-    judged = verdict.check(settings, item=item, raw=raw, content_type=kind, expect=expect)
+    judged = verdict.check(settings, item=item, raw=raw, content_type=kind, expect=expect, photo_id=photo["id"])
     store.append(episode_id, "check.photo", {"item": item, "photo_id": photo["id"], "by": by, **judged}, ts_ms=ts)
     settle(request, episode_id, ts)
     return view(request, episode_id)

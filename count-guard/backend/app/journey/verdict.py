@@ -16,9 +16,10 @@ import time
 
 import httpx
 
-from app.adapters.spark import SparkAdapter
+from app.adapters.spark import SparkAdapter, check_photo_prompt
 from app.config import Settings
 from app.journey import expected, switches
+from app.journey.evidence_payload import evidence_of
 from app.journey.live import call_of
 
 log = logging.getLogger(__name__)
@@ -36,14 +37,23 @@ def _prepared(raw: bytes, expect: str) -> dict:
     return {"verdict": "accepted", "why": f"The photo shows {expect}."}
 
 
-def check(settings: Settings, *, item: str, raw: bytes, content_type: str, expect: str | None = None) -> dict:
-    """{verdict, why, source, calls} for one proof photo. `expect` defaults to the item's expected line.
+def check(settings: Settings, *, item: str, raw: bytes, content_type: str, expect: str | None = None,
+          photo_id: str | None = None) -> dict:
+    """{verdict, why, source, calls, evidence} for one proof photo. `expect` defaults to the item's expected line.
 
     source is live, prepared or unavailable. A live call that fails, or a reply that does not parse, is
     not_checked with the fixed reason; it never falls back to a prepared verdict."""
     expect = expect or expected.expect_for(item)
+    judged, reply = _judge(settings, item, raw, content_type, expect)
+    inputs = {"photo_id": photo_id, "item": item, "expect": expect, "text": check_photo_prompt(expect)}
+    used = {"verdict": judged["verdict"], "why": judged["why"]}
+    return {**judged, "evidence": evidence_of("check.photo", inputs=inputs, reply=reply, used=used, calls=judged["calls"])}
+
+
+def _judge(settings: Settings, item: str, raw: bytes, content_type: str, expect: str) -> tuple[dict, str | None]:
+    """The verdict and the model's raw reply (None when prepared or when the call itself failed)."""
     if not switches.is_live(settings, "proof"):
-        return {**_prepared(raw, expect), "source": "prepared", "calls": [call_of("spark", settings, "prepared", None)]}
+        return {**_prepared(raw, expect), "source": "prepared", "calls": [call_of("spark", settings, "prepared", None)]}, None
     start = time.monotonic()
     try:
         found = SparkAdapter(settings).check_photo(raw, content_type, expect)
@@ -51,10 +61,10 @@ def check(settings: Settings, *, item: str, raw: bytes, content_type: str, expec
         log.warning("Photo check for %s failed: %s", item, type(exc).__name__)
         ms = round((time.monotonic() - start) * 1000)
         return {"verdict": "not_checked", **switches.unavailable(switches.NOT_CHECKED),
-                "calls": [call_of("spark", settings, switches.UNAVAILABLE, ms)]}
+                "calls": [call_of("spark", settings, switches.UNAVAILABLE, ms)]}, getattr(exc, "raw", None)
     ms = round((time.monotonic() - start) * 1000)
     return {"verdict": found["verdict"], "why": found["why"], "source": "live",
-            "calls": [call_of("spark", settings, "muse-spark-1.3", ms)]}
+            "calls": [call_of("spark", settings, "muse-spark-1.3", ms)]}, found.get("raw")
 
 
 def _last(events: list[dict], item: str) -> tuple[dict | None, dict | None]:

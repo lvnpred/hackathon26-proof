@@ -14,6 +14,7 @@ import httpx
 from app.adapters.spark import SparkAdapter
 from app.agent.verifier import ADVICE
 from app.journey import switches
+from app.journey.evidence_payload import evidence_of
 from app.journey.live import call_of
 from app.journey.nudges import HOUR_MS, hours, open_nudges
 from app.journey.clocktext import when_text
@@ -120,6 +121,15 @@ def checked(text: str | None, lines: list[dict]) -> tuple[bool, str]:
     return True, ""
 
 
+def wording_evidence(kind: str, lines: list[dict], prompt: str, reply: str | None, ok: bool, problem: str, calls: list[dict],
+                     used: dict) -> dict:
+    """The evidence of a reworded draft (§4.2): the facts sent, Spark's raw reply, and whether the template stood in."""
+    facts = [line["text"] for line in lines]
+    inputs = {"facts": facts, "text": prompt + "\n".join(f"{n}. {f}" for n, f in enumerate(facts, 1))}
+    used = {**used, "fallback": None if ok else "template", "why": "" if ok else problem}
+    return evidence_of(kind, inputs=inputs, reply=reply, used=used, calls=calls)
+
+
 def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, use_model=True, write=None) -> dict:
     lines = template_lines(events, since_ms=since_ms, at_ms=at_ms, patient=patient)
     text, why = (None, "model not asked")
@@ -142,4 +152,6 @@ def draft(events, *, patient, since_ms, at_ms, from_nurse, to_nurse, settings, u
         "model_note": "" if ok else problem,
         "by": from_nurse,
         "calls": calls,
+        "evidence": wording_evidence("handover", lines, PROMPT, text, ok, problem, calls,
+                                     {"text": text if ok else None, "lines": len(lines)}),
     }

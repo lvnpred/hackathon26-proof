@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Dictate from "./Dictate";
 import ObsForm from "./ObsForm";
+import Opens from "./Opens.jsx";
 import AiMoment from "./AiMoment.jsx";
 import Provenance from "./Provenance.jsx";
 import TaskProof from "./TaskProof";
@@ -113,7 +114,9 @@ function Group({ title, empty, rows, micId, setMicId, ...rest }) {
 }
 
 // The nurse's one task list. A mic on each row opens a Dictate there; Confirm task is the one panel for all rows.
-export default function NurseTasks({ view, nowMs, state, by, busy, act, upload, ask }) {
+// Outside an admitted state the list stays, its buttons disabled, and says when it opens (clarity §4.4).
+export default function NurseTasks({ view, nowMs, state, by, busy: working, act, upload, ask, reason = "" }) {
+  const busy = working || Boolean(reason);
   const [micId, setMicId] = useState(null);
   const [confirm, setConfirm] = useState(null); // { task, session }
   const groups = taskGroups(view.tasks || [], nowMs, state);
@@ -127,6 +130,7 @@ export default function NurseTasks({ view, nowMs, state, by, busy, act, upload, 
     <>
       {confirm && <TaskProof key={`${confirm.task.id}:${confirm.session.transcript}`} view={view} task={confirm.task} session={confirm.session} by={by} busy={busy} act={act} upload={upload} onClear={close} />}
       <section className="card" aria-label="Tasks">
+        <Opens reason={reason} />
         <Group title="Due now" empty="Nothing due now." rows={groups.now} micId={micId} setMicId={setMicId} {...rest} />
         <Group title="Later today" empty="Nothing later today." rows={groups.later} micId={micId} setMicId={setMicId} {...rest} />
       </section>

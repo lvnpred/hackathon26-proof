@@ -42,7 +42,6 @@ function TodayBody({ ward, patient }) {
   const navigate = useNavigate();
   const { view } = patient;
   const read = (view.ask?.medicines || []).at(-1);
-  const home = view.state === "home";
   const common = {
     view,
     busy: ward.busy,
@@ -82,31 +81,26 @@ function TodayBody({ ward, patient }) {
         {sent && <p className="note" role="status">{sent}</p>}
       </section>
       <Nudges {...common} />
-      {home ? (
-        <>
-          {checkingIn ? (
-            <CheckIn card={view.card} {...common} onDone={() => setCheckingIn(false)} />
-          ) : (
-            <button onClick={() => setCheckingIn(true)}>Open check-in</button>
-          )}
-          {todayFolds(view).map(({ key, title }) => (
-            <details className="card fold" key={key}>
-              <summary>{title}</summary>
-              {folds[key]}
-            </details>
-          ))}
-          <div className="help-bar" role="region" aria-label="Need help">
-            <span>Feeling worse?</span>
-            <button aria-expanded={helpOpen} onClick={() => setHelpOpen(!helpOpen)}>Need help now</button>
-          </div>
-          {helpOpen && (
-            <section className="card help-sheet" aria-label="Need help sheet">
-              <NeedHelp {...common} />
-            </section>
-          )}
-        </>
+      {/* Check-in, the folds and Need help show in every state (clarity §4.4); the server takes them in any state. */}
+      {checkingIn ? (
+        <CheckIn card={view.card} {...common} onDone={() => setCheckingIn(false)} />
       ) : (
-        <p className="empty small">Check-ins and Need help open once you are home.</p>
+        <button onClick={() => setCheckingIn(true)}>Open check-in</button>
+      )}
+      {todayFolds(view).map(({ key, title }) => (
+        <details className="card fold" key={key}>
+          <summary>{title}</summary>
+          {folds[key]}
+        </details>
+      ))}
+      <div className="help-bar" role="region" aria-label="Need help">
+        <span>Feeling worse?</span>
+        <button aria-expanded={helpOpen} onClick={() => setHelpOpen(!helpOpen)}>Need help now</button>
+      </div>
+      {helpOpen && (
+        <section className="card help-sheet" aria-label="Need help sheet">
+          <NeedHelp {...common} />
+        </section>
       )}
     </>
   );

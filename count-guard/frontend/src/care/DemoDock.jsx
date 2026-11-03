@@ -34,7 +34,7 @@ function useDockSpace(ref, open) {
 }
 
 // Demo tools, set apart from the product: role, patient, clock, AI shortcut and the demo prescription.
-// demoRx is a function while the doctor has a clinic patient open, else null.
+// demoRx is a function while the doctor has a patient's chart open, else null.
 export default function DemoDock({ ward, showClock, pick, ops, demoRx }) {
   const [open, setOpen] = useState(false);
   const live = useModelsLive();

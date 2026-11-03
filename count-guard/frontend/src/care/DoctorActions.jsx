@@ -25,6 +25,8 @@ import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
 import { ExpandButton } from "./ModelExpand.jsx";
+import Opens from "./Opens.jsx";
+import { gate } from "./visibility.js";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
 
@@ -52,12 +54,16 @@ function PhotoCard({ title, busy, upload }) {
 
 // Dictation, the order form that loads its draft, and the reference photo input. While a draft waits to be signed the
 // order form sits under the Next card (OrderDraft) and the finished dictation box folds away (spec P3).
-function OrderDraft({ view, busy, signOrders }) {
+// Outside the order states the draft stays but Sign orders is disabled and says when it opens (clarity §4.4).
+function OrderDraft({ view, busy, signOrders, said = false }) {
   const draft = view.drafts?.order;
-  return <OrderForm busy={busy} onSign={signOrders} draft={draft} moment={momentFor(view, draft?.id)} episodeId={view.episode?.id} acts={view.acts} />;
+  const shut = gate("orders", view.state).reason;
+  return <>{!said && <Opens reason={shut} />}<OrderForm busy={busy || Boolean(shut)} onSign={signOrders} draft={draft} moment={momentFor(view, draft?.id)} episodeId={view.episode?.id} acts={view.acts} /></>;
 }
 
-function OrdersDictation({ view, busy, upload, ask, signOrders }) {
+function OrdersDictation({ view, busy: working, upload, ask, signOrders }) {
+  const { reason } = gate("orders", view.state);
+  const busy = working || Boolean(reason); // outside the order states the card stays and says when it opens
   const draft = view.drafts?.order;
   const signed = draft ? null : lastSigned(view.ai_moments, "orders");
   // The drafting step lives here, not in the Dictate box: once the draft exists the box moves into the fold and
@@ -66,20 +72,23 @@ function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   const dictate = <Dictate label="Dictate orders" capability="orders" verb="Draft orders" busy={busy} view={view} sendStep={drafting} sendOutcome={draftOutcome("order")} sendRecord={draftRecord("order")} onHear={hearing(ask, "/dictate/orders")} onSend={draftFrom(upload, "/dictate/orders")} />;
   const line = <div aria-busy={busyOf(drafting.step)}><ModelStep busy={busy} step={drafting.step} onRetry={drafting.retry} expand={{ view, title: "Order draft" }} /></div>;
   const more = draft && <p className="small"><ExpandButton record={{ eventId: draft.id }} view={view} title="Order draft" label="Expand the draft" /></p>;
-  if (draft) return <>{line}{more}<details className="fold"><summary>Dictate again</summary>{dictate}</details></>;
+  if (draft) return <>{line}{more}<details className="fold"><summary>Dictate again</summary><Opens reason={reason} />{dictate}</details></>;
   return (
     <>
+      <Opens reason={reason} />
       {dictate}
       {line}
       {signed && <AiMoment moment={signed} role="doctor" episodeId={view.episode?.id} />}
       {signed && <p className="small"><Provenance item={{ id: signed.id, value: signed.refs?.items, same: sameOrders, ai: madeByModel(signed) }} events={view.acts} /> <ExpandButton record={{ eventId: signed.id }} view={view} title="Signed orders" /></p>}
-      <OrderDraft view={view} busy={busy} signOrders={signOrders} />
+      <OrderDraft view={view} busy={busy} signOrders={signOrders} said />
     </>
   );
 }
 
 // Action for the clinic card: admit the patient (primary while it is Now) or close the visit.
-function Admit({ view, busy, act, primary }) {
+function Admit({ view, busy: working, act, primary }) {
+  const shut = gate("admit", view.state).reason;
+  const busy = working || Boolean(shut);
   const [reason, setReason] = useState("");
   const [reasonDraftId, setReasonDraftId] = useState(null);
   const draft = view.drafts?.order;
@@ -97,6 +106,7 @@ function Admit({ view, busy, act, primary }) {
         <button type="button" className={primary ? "primary" : undefined} disabled={busy || !reason.trim()} onClick={() => act("/state", { to: "admitting", by: DOCTOR, reason: reason.trim() })}>Admit</button>
         <button type="button" disabled={busy} onClick={() => act("/state", { to: "clinic_done", by: DOCTOR })}>Close visit</button>
       </div>
+      <Opens reason={shut} />
     </>
   );
 }
@@ -128,6 +138,8 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
     setSummary(draftSummary(draft));
   }
   const templates = Object.entries(view.templates || {});
+  // Drafting and signing run on the ward; dictating runs in every admitted state (clarity §4.4).
+  const shut = { draft: gate("dischargeDraft", view.state).reason, dictate: gate("dischargeDictate", view.state).reason, sign: gate("dischargeSign", view.state).reason };
   const drafter = useModelStep({ capability: "discharge" });
   const draftFromRecord = () => drafter.run((o) => act("/discharge/draft", { by: DOCTOR }, undefined, own(o)), { outcome: draftOutcome("discharge"), record: draftRecord("discharge") });
   async function signDischarge() {
@@ -141,11 +153,13 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   }
   return (
     <>
-      <button type="button" className={primary && !draft ? "primary" : undefined} disabled={busy} onClick={draftFromRecord}>Draft discharge</button>
+      <button type="button" className={primary && !draft && !shut.draft ? "primary" : undefined} disabled={busy || Boolean(shut.draft)} onClick={draftFromRecord}>Draft discharge</button>
+      <Opens reason={shut.draft} />
       <div aria-busy={busyOf(drafter.step)}><ModelStep busy={busy} step={drafter.step} onRetry={drafter.retry} expand={{ view, title: "Discharge draft" }} /></div>
-      <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
+      <button type="button" aria-expanded={open} disabled={Boolean(shut.dictate)} onClick={onToggle}><IconMic />Dictate discharge</button>
+      <Opens reason={shut.dictate} />
       {signedDraft && <p className="small">Discharge signed <Provenance item={{ id: signedDraft.ref }} events={view.acts} /> <ExpandButton record={{ eventId: signedDraft.ref }} view={view} title="Signed discharge" /></p>}
-      {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} view={view} sendCapability="discharge" sendOutcome={draftOutcome("discharge")} sendRecord={draftRecord("discharge")} onHear={hearing(ask, "/dictate/discharge")} onSend={draftFrom(upload, "/dictate/discharge")} />}
+      {open && !shut.dictate && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} view={view} sendCapability="discharge" sendOutcome={draftOutcome("discharge")} sendRecord={draftRecord("discharge")} onHear={hearing(ask, "/dictate/discharge")} onSend={draftFrom(upload, "/dictate/discharge")} />}
       {(open || draft) && (
         <>
           <DischargeDraft draft={draft} episodeId={view.episode?.id} acts={view.acts} />
@@ -169,7 +183,8 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
                 {templates.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
               </select>
             </label>
-            <button type="button" className={primary && (draft || summary.trim()) ? "primary" : undefined} disabled={busy || !summary.trim()} onClick={signDischarge}>Sign discharge</button>
+            <button type="button" className={primary && (draft || summary.trim()) && !shut.sign ? "primary" : undefined} disabled={busy || !summary.trim() || Boolean(shut.sign)} onClick={signDischarge}>Sign discharge</button>
+            <Opens reason={shut.sign} />
           </div>
         </>
       )}
@@ -178,7 +193,9 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
 }
 
 // Primary action for the ward card: pick the procedure and send the patient to theatre.
-function SendToTheatre({ view, busy, act, primary }) {
+function SendToTheatre({ view, busy: working, act, primary }) {
+  const { reason } = gate("theatre", view.state);
+  const busy = working || Boolean(reason);
   const [procedure, setProcedure] = useState("");
   const procedures = Object.entries(view.procedures || {});
   return (
@@ -191,12 +208,20 @@ function SendToTheatre({ view, busy, act, primary }) {
         </select>
       </label>
       <TrayPreview plan={view.tray_templates?.[procedure]} />
-      <button type="button" className={primary ? "primary" : undefined} disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
+      <button type="button" className={primary && !reason ? "primary" : undefined} disabled={busy || !procedure} onClick={() => act("/state", { to: "theatre", by: DOCTOR, procedure })}>Send to theatre</button>
+      <Opens reason={reason} />
     </div>
   );
 }
 
+// Outside theatre the card stays and says when it opens; its checklist reads the theatre record, so it waits.
 function Theatre({ view, busy, act, upload, ask, nowMs }) {
+  const shut = gate("theatreRoom", view.state).reason;
+  if (shut) return <section className="card" aria-label="Theatre"><p className="label">Theatre checklist</p><Opens reason={shut} /></section>;
+  return <TheatreOpen view={view} busy={busy} act={act} upload={upload} ask={ask} nowMs={nowMs} />;
+}
+
+function TheatreOpen({ view, busy, act, upload, ask, nowMs }) {
   const [reason, setReason] = useState("");
   const ended = theatreSteps(view)[3].done;
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
@@ -225,6 +250,7 @@ function Theatre({ view, busy, act, upload, ask, nowMs }) {
   );
 }
 
+const BLOCK_TITLE = { admit: "Admission", theatre: "Send to theatre", discharge: "Discharge" };
 const sign = (act) => (items, draftId) => act("/orders/sign", { items, by: DOCTOR, draft_id: draftId || undefined });
 
 // The doctor's actions for the patient's current state: the card, the quiet row, the open panels, the rest.
@@ -249,9 +275,9 @@ export default function DoctorActions({ state, card, pick, control, view, act, u
       {afterNow}
       {open("orders") && <OrdersDictation view={view} busy={busy} upload={upload} ask={ask} signOrders={signOrders} />}
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
-      {below.map((key) => blocks(false)[key])}
-      {state === "clinic" && <Clinic view={view} busy={busy} act={act} upload={upload} />}
-      {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} ask={ask} nowMs={nowMs} />}
+      {below.map((key) => <section className="card" key={key} aria-label={BLOCK_TITLE[key]}><p className="label">{BLOCK_TITLE[key]}</p>{blocks(false)[key]}</section>)}
+      <Clinic view={view} busy={busy} act={act} upload={upload} />
+      <Theatre view={view} busy={busy} act={act} upload={upload} ask={ask} nowMs={nowMs} />
     </>
   );
 }

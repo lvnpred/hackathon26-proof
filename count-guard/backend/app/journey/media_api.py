@@ -98,6 +98,11 @@ def _structure_reply(settings, prompt: str, transcript: str, from_reply, from_ru
     return from_rules(transcript), "rules", [], None
 
 
+# Dictation attaches to a stay: every state where the patient is admitted (clarity §4.4). Clinic, clinic_done and home
+# have nothing to attach the words to, so they stay 409 with the reason.
+ADMITTED = ("admitting", "ward", "theatre", "discharging")
+
+
 def _dictate(request, episode_id, allowed, refusal, file, text, prompt, from_reply, from_rules, what, empty, heard_by=""):
     """Shared by the dictate routes: state check, what was heard, then the draft content. Returns (result, meta).
 
@@ -151,8 +156,8 @@ def dictate_discharge(
     file: UploadFile | None = File(None),
 ) -> dict:
     result, meta = _dictate(
-        request, episode_id, ("ward",),
-        "The discharge is dictated while the patient is on the ward. The patient is in {state}.",
+        request, episode_id, ADMITTED,
+        "The discharge is dictated once the patient is admitted. The patient is in {state}.",
         file, text, dictation.DISCHARGE_PROMPT, dictation.sections_from_reply, dictation.discharge_sections,
         "discharge summary", lambda r: not r, heard_by,
     )
@@ -177,8 +182,8 @@ def dictate_task(
     _require(request, episode_id)
     open_tasks = [t for t in tasks.task_list(_store(request).events(episode_id)) if t["status"] in spoken.OPEN]
     result, meta = _dictate(
-        request, episode_id, ("ward",),
-        "A finished task is spoken in the ward. The patient is in {state}.",
+        request, episode_id, ADMITTED,
+        "A finished task is spoken once the patient is admitted. The patient is in {state}.",
         file, text, spoken.task_prompt(open_tasks), lambda reply, said: spoken.completion_from_reply(reply, open_tasks, said),
         lambda said: {"task_ids": spoken.match_tasks(said, open_tasks), "values": spoken.parse_values(said)},
         "task", lambda r: False, heard_by,

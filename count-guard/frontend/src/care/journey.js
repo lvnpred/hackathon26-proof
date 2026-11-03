@@ -50,21 +50,18 @@ export function cardActions(state, role, view) {
   return [];
 }
 
-// Where the doctor's primary blocks render. The card holds them only while the doctor owns the step;
-// on the ward they stay reachable below the quiet row when the nurse owns it (a dictated draft is never hidden).
+// Where the doctor's primary blocks render. The card holds them only while the doctor owns the step; every other
+// block sits below the quiet row in every state, open or saying when it opens (clarity §4.4).
+const DOCTOR_BLOCKS = ["admit", "theatre", "discharge"];
 export function doctorBlocks(state, card) {
-  if (card.mine) return { inside: card.actions, below: [] };
-  return { inside: [], below: state === "ward" ? ["theatre", "discharge"] : [] };
+  const inside = card.mine ? card.actions : [];
+  return { inside, below: DOCTOR_BLOCKS.filter((key) => !inside.includes(key)) };
 }
 
-const QUIET = {
-  clinic: [["orders", "Dictate orders"], ["photo", "Reference photo"]],
-  ward: [["orders", "Dictate orders"], ["photo", "Wound photo"]],
-  admitting: [["orders", "Dictate orders"]],
-};
-
-// Secondary doctor actions that sit in a quiet bar, never on the card.
-export const quietActions = (state, role) => (role === "doctor" ? QUIET[state] || [] : []);
+// Secondary doctor actions that sit in a quiet bar, never on the card. Both are there in every state; a panel that
+// cannot run now says why when opened.
+export const quietActions = (state, role) =>
+  role === "doctor" ? [["orders", "Dictate orders"], ["photo", state === "ward" ? "Wound photo" : "Reference photo"]] : [];
 
 const titled = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 

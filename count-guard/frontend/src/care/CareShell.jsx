@@ -108,7 +108,8 @@ export default function CareShell({ ward, children }) {
   }
 
   const ops = useOpsPaused(ward.role, ward.nowMs);
-  const clinicChart = ward.role === "doctor" && ward.patients.find((p) => p.id === chartId)?.view.state === "clinic";
+  // The demo prescription is offered on every doctor chart, whatever the state (clarity §4.4).
+  const doctorChart = ward.role === "doctor" && ward.patients.some((p) => p.id === chartId);
 
   return (
     <div className="app">
@@ -129,7 +130,7 @@ export default function CareShell({ ward, children }) {
         {children}
         <Inspector ward={ward} />
       </main>
-      <DemoDock ward={ward} showClock={DEMO} pick={pick} ops={ops} demoRx={clinicChart ? () => ward.act(chartId, "/rx/demo", {}) : null} />
+      <DemoDock ward={ward} showClock={DEMO} pick={pick} ops={ops} demoRx={doctorChart ? () => ward.act(chartId, "/rx/demo", {}) : null} />
     </div>
   );
 }

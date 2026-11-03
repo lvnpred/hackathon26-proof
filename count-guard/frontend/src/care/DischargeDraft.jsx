@@ -5,7 +5,12 @@ import { dischargeLinks, draftSections, FROM_TIMELINE } from "./dischargeDraft.j
 
 // The discharge draft written from the record: five sections, the wording's source, and the PDF and calendar links.
 export default function DischargeDraft({ draft, episodeId, acts = [] }) {
-  if (!draft?.timeline) return null;
+  if (!draft?.timeline) return (
+    <section className="card" aria-label="Discharge draft">
+      <p className="label">Discharge draft</p>
+      <p className="empty small">{draft ? "This draft is from dictation; its summary is below." : "No draft from the record yet."}</p>
+    </section>
+  );
   const links = dischargeLinks(episodeId);
   return (
     <section className="card" aria-label="Discharge draft">

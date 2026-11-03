@@ -5,6 +5,7 @@ import ContextCard from "./ContextCard.jsx";
 import { call } from "../journey.js";
 import { own } from "./stepOutcome.js";
 
+export const NO_PANEL = "No theatre record for this patient yet.";
 const base = (id) => `/journey/episodes/${id}/theatre`;
 const getTheatre = (id) => call(base(id));
 const setTier = (id, on, opts) => call(`${base(id)}/tier`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on }) }, opts);
@@ -25,6 +26,7 @@ export default function TheatrePanels({ episodeId, view, role, by, busy, act, up
   const [card, setCard] = useState(null);
   const [problem, setProblem] = useState("");
   const [seq, setSeq] = useState(0);
+  const [read, setRead] = useState(false); // the first read answered: a missing panel then says so, never "Reading…"
   const version = view.timeline?.length || 0;
 
   useEffect(() => {
@@ -35,11 +37,14 @@ export default function TheatrePanels({ episodeId, view, role, by, busy, act, up
         const next = await getTheatre(episodeId);
         const shown = next.tier ? await getCard(episodeId) : null;
         if (!live) return;
-        setPanel(next);
+        setPanel(next || null);
         setCard(shown);
         setProblem("");
       } catch (exc) {
-        if (live) setProblem(exc.message);
+        if (live && exc.status !== 404) setProblem(exc.message);
+        if (live && exc.status === 404) setPanel(null);
+      } finally {
+        if (live) setRead(true);
       }
     })();
     return () => { live = false; };
@@ -67,7 +72,8 @@ export default function TheatrePanels({ episodeId, view, role, by, busy, act, up
     return { view, card: shown && shown.id !== card?.id ? shown : null };
   }
 
-  if (!panel) return problem ? <p className="note small" role="alert">{problem}</p> : null;
+  if (problem && !panel) return <p className="note small" role="alert">{problem}</p>;
+  if (!panel) return <p className="empty small">{read || !episodeId ? NO_PANEL : "Reading the theatre record…"}</p>;
   return (
     <>
       <TheatreDrugs episodeId={episodeId} panel={panel} role={role} by={by} busy={busy} act={act} upload={upload} ask={ask} acts={view?.acts} />

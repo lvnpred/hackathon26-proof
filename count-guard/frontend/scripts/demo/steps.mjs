@@ -144,6 +144,8 @@ export const STEPS = {
     const row = H.page.locator(".alert-card").filter({ hasText: MISSING });
     await row.getByLabel("If you disagree, say why").fill(FOUND);
     await row.getByRole("button", { name: "Acknowledge", exact: true }).click();
+    // The noted reason shows on the advice row; saving the count folds that panel away, so it is checked first.
+    await H.waitText(FOUND);
     await H.fill("Closing count (returned)", "15");
     await H.click("Save count as Nurse Asha");
     await before(H, "theatre-reconcile");

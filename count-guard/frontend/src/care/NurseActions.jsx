@@ -8,6 +8,8 @@ import ProofItem from "./ProofItem.jsx";
 import TheatreChecklist from "./TheatreChecklist";
 import { own } from "./stepOutcome.js";
 import { checkFor } from "./verdict.js";
+import Opens from "./Opens.jsx";
+import { gate } from "./visibility.js";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
 const THEATRE_NURSE = "Nurse Asha (synthetic)";
@@ -47,6 +49,12 @@ export function proofFor({ view, step, by, busy, act, upload }) {
   };
 }
 
+// A checklist that is not on the Now card stays as a card and says when it opens (clarity §4.4).
+const STEPS = [["admission", "admission", "Admission checklist"], ["theatre", "theatreChecklist", "Theatre checklist"], ["discharge", "dischargeChecklist", "Discharge checklist"]];
+function Waiting({ title, reason }) {
+  return <section className="card" aria-label={title}><p className="label">{title}</p><Opens reason={reason} /></section>;
+}
+
 // The nurse's actions for the patient's current state: the card holds the step, the ward tasks follow.
 export default function NurseActions({ state, card, pick, control, view, act, upload, ask, busy, nowMs, episodeId, replaced, afterNow = null }) {
   const by = state === "theatre" ? THEATRE_NURSE : WARD_NURSE;
@@ -74,10 +82,10 @@ export default function NurseActions({ state, card, pick, control, view, act, up
     <>
       <NowCard pick={pick} card={card} control={control}>{card.actions.map((key) => primary[key])}</NowCard>
       {afterNow}
-      {(state === "ward" || state === "theatre") && <NurseTasks view={view} nowMs={nowMs} state={state} by={by} busy={busy} act={act} upload={upload} ask={ask} />}
-      {state === "ward" && <DoseGiven by={by} busy={busy} act={act} />}
-      {state === "ward" && <Handover view={view} busy={busy} act={act} />}
-      {!["admitting", "ward", "theatre", "discharging"].includes(state) && <p className="empty small">Nothing for the nurse to do from this state.</p>}
+      <NurseTasks view={view} nowMs={nowMs} state={state} by={by} busy={busy} act={act} upload={upload} ask={ask} reason={gate("tasks", state).reason} />
+      <DoseGiven by={by} busy={busy} act={act} reason={gate("dose", state).reason} />
+      <Handover view={view} busy={busy} act={act} reason={gate("handover", state).reason} />
+      {STEPS.filter(([key]) => !card.actions.includes(key)).filter(([, gateKey]) => gate(gateKey, state).reason).map(([key, gateKey, title]) => <Waiting key={key} title={title} reason={gate(gateKey, state).reason} />)}
     </>
   );
 }

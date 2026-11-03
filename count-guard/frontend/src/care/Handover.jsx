@@ -10,13 +10,16 @@ import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
 import { ExpandButton } from "./ModelExpand.jsx";
+import Opens from "./Opens.jsx";
 
 // R21: the day and night nurses of the demo ward.
 const FROM = "Nurse Meena (synthetic)";
 const TO = "Nurse Kavya (synthetic)";
 
 // The shift handover on the care chart: draft it, read it as one AI moment, then the next nurse accepts it.
-export default function Handover({ view, busy, act }) {
+// Outside an admitted state the card stays, its buttons disabled, and says when it opens (clarity §4.4).
+export default function Handover({ view, busy: working, act, reason = "" }) {
+  const busy = working || Boolean(reason);
   const [from, setFrom] = useState(FROM);
   const [to, setTo] = useState(TO);
   const [useModel, setUseModel] = useState(false); // the model takes 30-50 s, so it is opt-in
@@ -48,6 +51,7 @@ export default function Handover({ view, busy, act }) {
           Draft handover
         </button>
       </div>
+      <Opens reason={reason} />
       <ModelStep busy={busy} step={step.step} onRetry={step.retry} expand={{ view, title: "Shift handover" }} />
       {moment && <AiMoment moment={moment} role="nurse" episodeId={view.episode?.id} />}
       {handover && (

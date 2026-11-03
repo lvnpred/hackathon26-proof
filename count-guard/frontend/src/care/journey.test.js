@@ -46,8 +46,8 @@ test("quiet actions belong to the doctor", () => {
   assert.deepEqual(quietActions("ward", "nurse"), []);
   assert.deepEqual(quietActions("clinic", "doctor").map(([, l]) => l), ["Dictate orders", "Reference photo"]);
   assert.deepEqual(quietActions("ward", "doctor").map(([, l]) => l), ["Dictate orders", "Wound photo"]);
-  assert.deepEqual(quietActions("admitting", "doctor").map(([id]) => id), ["orders"]);
-  assert.deepEqual(quietActions("theatre", "doctor"), []);
+  assert.deepEqual(quietActions("admitting", "doctor").map(([id]) => id), ["orders", "photo"]);
+  assert.deepEqual(quietActions("theatre", "doctor").map(([, l]) => l), ["Dictate orders", "Reference photo"]); // never hidden (clarity §4.4)
 });
 test("history folds to the last 3 lines; a deep link opens it", () => {
   const lines = ["a", "b", "c", "d", "e"].map((id) => ({ id }));
@@ -70,9 +70,9 @@ test("new copy has no advice words", () => {
 test("doctorBlocks keeps the ward actions reachable when the nurse owns the step", () => {
   const mine = { mine: true, actions: ["theatre", "discharge"] };
   const theirs = { mine: false, actions: [] };
-  assert.deepEqual(doctorBlocks("ward", mine), { inside: ["theatre", "discharge"], below: [] });
-  assert.deepEqual(doctorBlocks("ward", theirs), { inside: [], below: ["theatre", "discharge"] });
-  assert.deepEqual(doctorBlocks("clinic", theirs), { inside: [], below: [] });
+  assert.deepEqual(doctorBlocks("ward", mine), { inside: ["theatre", "discharge"], below: ["admit"] });
+  assert.deepEqual(doctorBlocks("ward", theirs), { inside: [], below: ["admit", "theatre", "discharge"] });
+  assert.deepEqual(doctorBlocks("clinic", theirs), { inside: [], below: ["admit", "theatre", "discharge"] }); // never hidden (clarity §4.4)
 });
 
 test("the owner reads the owner's sentence, others the staff one", () => {

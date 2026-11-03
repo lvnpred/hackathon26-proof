@@ -25,8 +25,9 @@ HINTS = {"name": "L. Rao (synthetic)", "text": "closing count twenty swabs, all 
 PNG = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
        b"\x00\x0cIDAT\x08\xd7c\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef\x00\x00\x00\x00IEND\xaeB`\x82")
 E = "/journey/episodes/{episode_id}"
-# Pinned: the 39 write routes that accept the built body on this stay. Among them every count-adjacent route:
-# camera case, clip, manual, replay, dwell, close, advice ack and resolve, heard drug and pack confirm.
+# Pinned: the 41 write routes that accept the built body on this stay. Among them every count-adjacent route:
+# camera case, clip, manual, replay, dwell, close, advice ack and resolve, heard drug and pack confirm. Discharge and
+# task dictation take any admitted state, theatre included (clarity §4.4); neither writes a count.
 ACCEPTED = {
     "/journey/episodes", f"{E}/rx/demo", f"{E}/orders", f"{E}/strips", f"{E}/reminders", f"{E}/dose", f"{E}/obs",
     f"{E}/tick", f"{E}/handover", f"{E}/discharge-card", f"{E}/help", f"{E}/checkin", f"{E}/camera/case",
@@ -37,7 +38,7 @@ ACCEPTED = {
     f"{E}/handover/{{handover_id}}/accept", f"{E}/camera/advice/{{advice_id}}/ack",
     f"{E}/camera/advice/{{advice_id}}/resolve", f"{E}/theatre/drug/{{draft_id}}/confirm",
     f"{E}/theatre/pack/{{draft_id}}/confirm", f"{E}/questions/{{question_id}}/answer",
-    f"{E}/checkins/{{checkin_id}}/seen",
+    f"{E}/checkins/{{checkin_id}}/seen", f"{E}/dictate/discharge", f"{E}/dictate/task",
 }
 # Refused here, and why. A stay in surgery: ward, clinic and discharge steps are 409. No reachable id: tasks, orders,
 # reviews, medicine reads, ops work, check items, models. Others need inputs a generic body cannot give (a DD on
@@ -45,8 +46,8 @@ ACCEPTED = {
 # separately below with every event id this stay has.
 REFUSED_HERE = {
     f"{E}/rx/import", f"{E}/correct", f"{E}/bed", f"{E}/state", f"{E}/surgery", f"{E}/orders/sign",
-    f"{E}/discharge/sign", f"{E}/discharge/draft", f"{E}/dictate/orders", f"{E}/dictate/discharge",
-    f"{E}/dictate/task", f"{E}/strips/photo", f"{E}/ask/hear", f"{E}/ask/review", f"{E}/ask/medicines",
+    f"{E}/discharge/sign", f"{E}/discharge/draft", f"{E}/dictate/orders",
+    f"{E}/strips/photo", f"{E}/ask/hear", f"{E}/ask/review", f"{E}/ask/medicines",
     "/journey/staff/doctor", f"{E}/video", f"{E}/orders/{{order_id}}/ack", f"{E}/tasks/{{task_id}}/begin",
     f"{E}/tasks/{{task_id}}/done", f"{E}/checks/{{item}}/photo", f"{E}/checks/{{item}}/override",
     f"{E}/reviews/{{review_id}}/answer", f"{E}/medicines/{{read_id}}/mark", "/journey/ai/try/{model}",

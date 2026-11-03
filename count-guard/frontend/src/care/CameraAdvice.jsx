@@ -56,7 +56,13 @@ export default function CameraAdvice({ episodeId, version = 0, busy, act, upload
     else if (file) setProblem("Send one video to the swab camera.");
   }
 
-  if (!camera) return null;
+  if (!camera) return (
+    <section className="card" aria-label="Swab camera advice">
+      <p className="label">Swab camera</p>
+      <p className="small muted">{ADVICE_ONLY}</p>
+      <p className="empty small">No swab camera reading yet.</p>
+    </section>
+  );
   const expandView = { episode: { id: episodeId }, acts };
   const advice = camera.advice || [];
   return (

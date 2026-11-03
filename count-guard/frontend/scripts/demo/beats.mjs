@@ -137,7 +137,7 @@ export const BEATS = [
     say: "The sponge is found under the drape; she notes it on the advice, saves 15 of 15, and surgery ends.",
     clicks: ['Field "If you disagree, say why" on the missing sponge <- Found under the drape, counted by hand', 'Button "Acknowledge"', 'Field "Closing count (returned)" <- 15', 'Button "Save count as Nurse Asha"', 'Button "Surgery ended"', 'Button "Back to ward"'],
     expect: ["Ward · back from theatre"],
-    before: ["Found under the drape, counted by hand", "Count complete"],
+    before: ["Count complete"], // the noted reason is checked on the advice row before the save folds it (steps.mjs)
     keyed: "No model call.",
   },
   {

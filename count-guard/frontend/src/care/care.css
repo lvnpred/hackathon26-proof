@@ -74,6 +74,19 @@ button.pill[aria-pressed="true"] { background: var(--sun-soft); color: var(--sun
 .photo-input:hover { background: var(--surface-sunk); }
 .photo-input:focus-within { outline: 2px solid var(--action); outline-offset: 2px; }
 .proof-item { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px 24px; }
+.photo-sheet-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; padding: 16px; }
+.photo-sheet { width: min(440px, 100%); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 12px; margin: 0; }
+.photo-sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.photo-sheet-head p { margin: 0; }
+.photo-sheet-choices { display: grid; gap: 10px; }
+.photo-choice { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 12px 16px; text-align: left; justify-content: flex-start; }
+.photo-choice .icon { width: 28px; height: 28px; flex: none; }
+.photo-sheet-note { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--status-alert-soft, var(--surface-sunk)); color: var(--ink); font-size: 14px; }
+.photo-sheet-view { position: relative; background: #000; border-radius: 10px; overflow: hidden; aspect-ratio: 4 / 3; display: grid; place-items: center; }
+.photo-sheet-view video { width: 100%; height: 100%; object-fit: cover; }
+.photo-sheet-wait { position: absolute; margin: 0; color: #fff; }
+.photo-sheet .row { display: flex; gap: 8px; justify-content: flex-end; }
+@media (max-width: 480px) { .photo-sheet-backdrop { place-items: end center; padding: 0; } .photo-sheet { border-radius: 14px 14px 0 0; width: 100%; } }
 .photo-input.disabled { border-color: var(--line); color: var(--ink-muted); background: transparent; cursor: not-allowed; }
 .dictate-mic.recording { background: var(--action); border-color: var(--action); color: var(--on-action); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -303,3 +316,5 @@ button.moment-row:hover { background: var(--surface-sunk) }
 /* Chart header: what Doctor Dictation sent about the patient. */
 .state-facts { margin: 0; gap: 4px 20px; }
 .state-facts dd { margin: 0; color: var(--ink); }
+.photo-capture { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 700; min-width: 120px; }
+.photo-capture:disabled { background: transparent; border-color: var(--line); color: var(--ink-muted); }

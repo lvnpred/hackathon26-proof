@@ -10,6 +10,7 @@ import Source from "./Source.jsx";
 import { isPrepared } from "./source.js";
 import { answerHow, answerSourceLine, checkinLine, inboxGroups, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
 import { own } from "./stepOutcome.js";
+import { ExpandButton } from "./ModelExpand.jsx";
 
 // The three fixed review decisions, as the server names them.
 const DECISIONS = [["no_visit", "No visit needed"], ["come_in", "Come in to the clinic"], ["call", "The doctor will call you"]];
@@ -26,10 +27,14 @@ function Answered({ answer, text, nowMs }) {
   );
 }
 
-function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
+function QuestionCard({ q, item, role, name, nowMs, busy, act, ask, view }) {
   const path = `/questions/${q.id}/answer`;
   const hear = (file, o) => ask("/ask/hear", file, { by: DOCTOR }, path, own(o)); // the Dictate box's voice step owns the fault
-  const send = ({ text, heard }) => act(path, { text, by: DOCTOR, ...answerHow(heard?.text, text, heard?.by) });
+  // A voice answer names its recording, so the chart keeps what was heard beside what was sent (clarity §4.2).
+  const send = ({ text, heard }) => {
+    const how = answerHow(heard?.text, text, heard?.by);
+    return act(path, { text, by: DOCTOR, ...how, ...(how.via === "voice" && heard?.audio_id ? { audio_id: heard.audio_id } : {}) });
+  };
   return (
     <article className="card inbox-card" data-line={q.id}>
       <p className="small muted">{q.by} · {whenText(q.at_ms, nowMs)} <Waited item={item} /></p>
@@ -37,7 +42,7 @@ function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
       {q.answer && <Answered answer={q.answer} text={q.answer.text} nowMs={nowMs} />}
       {!q.answer && role === "doctor" && (
         <section aria-label={`Your answer to ${q.by} ${atText(q.at_ms, nowMs)}`}>
-          <Dictate bare capability="answer_voice" label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} onHear={hear} onSend={send} />
+          <Dictate bare capability="answer_voice" label="Your answer" field="Your answer (check it before sending)" placeholder="Type or say your answer" verb={sendVerb(name)} maxLength={1000} busy={busy} view={view} onHear={hear} onSend={send} />
         </section>
       )}
     </article>
@@ -45,13 +50,14 @@ function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
 }
 
 // A question the record bot already answered, shown to staff with its answer as one AI moment.
-function RecordBotItem({ q, moment, role, episodeId, nowMs }) {
+function RecordBotItem({ q, moment, role, episodeId, nowMs, view }) {
   return (
     <article className="card inbox-card" data-line={q.id}>
       <p className="label">Answered by record bot</p>
       <p className="small muted">{q.by} · {whenText(q.at_ms, nowMs)}</p>
       <p className="quote">{"\u201c"}{questionText(role, q)}{"\u201d"}</p>
       {moment && <AiMoment moment={moment} role={role} episodeId={episodeId} />}
+      {moment && <p className="small"><ExpandButton record={{ ...moment, eventId: moment.id }} view={view} title="Record bot answer" /></p>}
     </article>
   );
 }
@@ -108,9 +114,9 @@ export default function AskInbox({ view, role, name, nowMs, busy, act, ask, faul
   const reference = references[references.length - 1];
   const { open, answered } = inboxGroups(items);
   const card = (item) => (item.kind === "bot"
-    ? <RecordBotItem key={item.id} q={questions.get(item.id)} moment={botMoment(view, item.id)} role={role} episodeId={episodeId} nowMs={nowMs} />
+    ? <RecordBotItem key={item.id} q={questions.get(item.id)} moment={botMoment(view, item.id)} role={role} episodeId={episodeId} nowMs={nowMs} view={view} />
     : item.kind === "question"
-    ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} nowMs={nowMs} busy={busy} act={act} ask={ask} />
+    ? <QuestionCard key={item.id} q={questions.get(item.id)} item={item} role={role} name={name} nowMs={nowMs} busy={busy} act={act} ask={ask} view={view} />
     : <ReviewCard key={item.id} r={reviews.get(item.id)} item={item} role={role} nowMs={nowMs} busy={busy} act={act} reference={reference} />);
   return (
     <section aria-label="Ask inbox">

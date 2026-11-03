@@ -397,7 +397,7 @@ def theatre_count(events: list[dict]) -> dict:
         "closed_via": closing["payload"].get("via") if closing else None,
         "closed_at_ms": closing["ts_ms"] if closing else None,
         "closed_after_began": closing is not None and began is not None and stay.index(closing) > stay.index(began),
-        "camera": {"count": camera["payload"]["count"], "evidence_id": camera["payload"].get("evidence_id"),
+        "camera": {"id": camera["id"], "count": camera["payload"]["count"], "evidence_id": camera["payload"].get("evidence_id"),
                    "at_ms": camera["ts_ms"], "source": camera["payload"].get("source")} if newer else None,
     }
 

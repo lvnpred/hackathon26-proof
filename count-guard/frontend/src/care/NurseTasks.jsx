@@ -11,6 +11,7 @@ import { rowMark, taskGroups } from "./tasklist";
 import { momentFor } from "./moments.js";
 import { latestCheck, taskVideoLabel } from "./video";
 import { own } from "./stepOutcome.js";
+import { ExpandButton } from "./ModelExpand.jsx";
 
 function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProof, onSession }) {
   const { task, due, status } = row;
@@ -21,7 +22,8 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
   const proofMoment = momentFor(view, last?.evidenceId);
   // The last save was from what was heard: the same predicate as the server's acts (acts.py), so the mark has an act.
   const lastAt = (task.done || []).slice(-1)[0]?.at_ms;
-  const heardLast = (view.acts || []).some((a) => a.type === "task.done" && a.ref === task.id && a.at_ms === lastAt);
+  const heardAct = (view.acts || []).find((a) => a.type === "task.done" && a.ref === task.id && a.at_ms === lastAt);
+  const heardLast = Boolean(heardAct);
   const video = task.proof === "video" && task.has_setup;
 
   // The proposal comes back with its evidence, so the Dictate step says how Spark did; `o` is that step's opts.
@@ -46,7 +48,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
         <p className="small muted">
           {last.text}
           {last.match && <> · <span className={`pill ${last.flagged ? "sun" : "info"}`}>{last.match}</span></>}
-          {heardLast && <> <Provenance item={{ id: task.id }} events={view.acts} /></>}
+          {heardLast && <> <Provenance item={{ id: task.id }} events={view.acts} /> <ExpandButton record={{ eventId: heardAct.id, ref: task.id }} view={view} title={`Said: ${task.title}`} /></>}
         </p>
       )}
       {proofMoment && <AiMoment moment={proofMoment} role="nurse" episodeId={view.episode?.id} />}
@@ -57,6 +59,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           verb="Use this"
           busy={busy}
           sendCapability="wording"
+          view={view}
           onHear={(file, o) => ask("/ask/hear", file, { by }, "/dictate/task", own(o))}
           onSend={send}
         />

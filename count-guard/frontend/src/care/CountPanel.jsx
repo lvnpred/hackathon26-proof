@@ -10,6 +10,7 @@ import { latestCheck, swabTotal } from "./video";
 import Source from "./Source.jsx";
 import { isPrepared } from "./source.js";
 import { own } from "./stepOutcome.js";
+import { ExpandButton } from "./ModelExpand.jsx";
 
 const NURSE = "Nurse Asha (synthetic)";
 
@@ -114,7 +115,8 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
           Closing count (returned)
           <input inputMode="numeric" value={returned} onChange={(event) => setReturned(event.target.value)} />
         </label>
-        {camera != null && <p className="small" style={{ flex: "1 1 120px" }}><AiMark /> Camera read {camera} <Source prepared={isPrepared(count.camera)} /></p>}
+        {camera != null && <p className="small" style={{ flex: "1 1 120px" }}><AiMark /> Camera read {camera} <Source prepared={isPrepared(count.camera)} />{" "}
+          <ExpandButton record={{ ...count.camera, type: "count.camera", eventId: count.camera.id, calls: count.camera.source ? [{ model: "sam", source: count.camera.source }] : [] }} view={view} title="Camera count read" /></p>}
         <label className="field" style={{ flex: "2 1 220px" }}>
           What did the team do?{needsReason ? " (required)" : ""}
           <input value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Found under the drape" />
@@ -124,7 +126,14 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
           <button disabled={!canSave} onClick={() => save(open.fact_id)}>Correct the count</button>
         )}
       </div>
-      {savedLine(count) && <p className="small" role="status">{savedLine(count)}</p>}
+      {savedLine(count) && (
+        <p className="small" role="status">
+          {savedLine(count)}
+          {/* Saved from the camera's read: Expand shows the read beside the count a person saved (clarity §4.2). */}
+          {count.closed_via === "camera" && thisStay && <>{" "}<ExpandButton record={{ type: "count.camera", eventId: thisStay.id,
+            savedCount: { returned: count.returned, by: count.closed_by, at_ms: count.closed_at_ms } }} view={view} title="Camera count read" /></>}
+        </p>
+      )}
       {packed && (
         <VideoCheck
           title="Swab camera count"

@@ -14,6 +14,7 @@ import ModelStep from "./ModelStep.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, latestVideo, outcomeOf, own } from "./stepOutcome.js";
+import { videoRecord } from "./VideoCheck";
 
 const NURSE = "Nurse Asha (synthetic)";
 // Theatre-step photo proofs (spec §6.6). They keep only their own item open: never surgery ended, never a move.
@@ -26,20 +27,21 @@ function Line({ step }) {
 }
 
 // A compact way to film the tray again while the tray can still be recorded (R18). Its SAM step shows here.
-function TrayAgain({ busy, onFile }) {
+function TrayAgain({ busy, onFile, episodeId }) {
   const [problem, setProblem] = useState("");
   const step = useModelStep({ capability: "tray" });
   async function pick(files) {
     const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
     if (upload) {
-      await step.run((o) => onFile(upload, o), { what: Array.isArray(upload) ? "photos" : "video", outcome: (v) => outcomeOf(latestVideo(v, "tray")) || UNKNOWN });
+      await step.run((o) => onFile(upload, o), { what: Array.isArray(upload) ? "photos" : "video", outcome: (v) => outcomeOf(latestVideo(v, "tray")) || UNKNOWN,
+        record: (v) => videoRecord(latestVideo(v, "tray")) });
     }
   }
   return (
     <div aria-busy={busyOf(step.step)}>
       <PhotoInput label="Check the tray again" accept="video/*,image/*" capture={false} multiple disabled={busy} onFiles={pick} />
-      <ModelStep busy={busy} step={step.step} onRetry={step.retry} />
+      <ModelStep busy={busy} step={step.step} onRetry={step.retry} expand={{ view: { episode: { id: episodeId } }, title: "Tray check" }} />
       {problem && <p className="note" role="alert">{problem}</p>}
     </div>
   );
@@ -52,7 +54,7 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
     const onFile = (file, o) => upload("/video", file, { check: "tray", by }, undefined, own(o));
     if (!nurse) return step.done ? null : <p className="small muted">The theatre nurse records the tray check.</p>;
     return step.done
-      ? <TrayAgain busy={busy} onFile={onFile} />
+      ? <TrayAgain busy={busy} onFile={onFile} episodeId={episodeId} />
       : <VideoCheck title="Tray check" kind="tray" episodeId={episodeId} version={view.timeline?.length} check={null} busy={busy} onFile={onFile} />;
   }
   if (step.key === "count") {
@@ -111,7 +113,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} primary={primary} />
             )}
             {role === "nurse" && STEP_PROOF[step.key] && canRecord(view, step.key) && (
-              <ProofItem check={checkFor(view, STEP_PROOF[step.key][0])} label={STEP_PROOF[step.key][1]} busy={busy} acts={view.acts}
+              <ProofItem view={view} check={checkFor(view, STEP_PROOF[step.key][0])} label={STEP_PROOF[step.key][1]} busy={busy} acts={view.acts}
                 onPhoto={(file, o) => upload(`/checks/${STEP_PROOF[step.key][0]}/photo`, file, { by }, undefined, own(o))}
                 onOverride={(reason) => act(`/checks/${STEP_PROOF[step.key][0]}/override`, { reason, by })} />
             )}

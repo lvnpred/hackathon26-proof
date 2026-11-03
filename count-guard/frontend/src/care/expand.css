@@ -1,0 +1,12 @@
+/* The Expand view of one model result (clarity §4.2): four parts, one under the other. Shares .ev-modal's overlay. */
+.mx-body { width: min(760px, 100%); }
+.mx-part { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line-control); }
+.mx-part:first-of-type { border-top: 0; }
+.mx-part h3 { margin: 0; font-size: 1em; }
+.mx-part p, .mx-part ul { margin: 0; }
+.mx-part audio { width: 100%; max-width: 420px; }
+.mx-part img.mx-photo { max-width: 100%; max-height: 320px; border-radius: 8px; object-fit: contain; }
+.mx-part pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; font-size: 0.85em; }
+.mx-change { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; }
+.mx-change dt { color: var(--ink-muted); }
+.mx-change dd { margin: 0; overflow-wrap: anywhere; }

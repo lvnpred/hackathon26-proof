@@ -132,5 +132,6 @@ def checks_view(events: list[dict]) -> list[dict]:
             "photo_id": p.get("photo_id"), "reason": o.get("reason", ""), "overridden_by": o.get("by"),
             "text": view_text(state, p.get("why", ""), o.get("reason", "")),
             "photo_url": f"/journey/episodes/{photo['episode_id']}/photos/{p['photo_id']}" if photo else None,
+            "event_id": photo["id"] if photo else None,  # the check.photo event, read back by the Expand view (§4.2)
         })
     return rows

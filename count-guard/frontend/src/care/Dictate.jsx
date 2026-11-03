@@ -19,8 +19,10 @@ const MIC = (
 // onSend({ text, heard }, opts) -> truthy when done. With `sendCapability` the send is a model step of its own
 // (drafting with Spark): its line shows under the button and `sendOutcome(result)` says how the model did.
 // `sendStep` (a useModelStep from the caller) runs the send instead; the caller then shows its line.
+// Expand (clarity §4.2): the heard line opens what was recorded and heard; the send line opens `sendRecord(result)`.
+// `view` (the chart view) gives the Expand its episode and the person acts.
 // Each step line sits in this box (spec §4.1): recording timer, upload, checking, done or Didn't work + Retry.
-export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, lens = "staff", sendCapability, sendStep, sendOutcome, onHear, onSend }) {
+export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, lens = "staff", sendCapability, sendStep, sendOutcome, sendRecord, view, onHear, onSend }) {
   const boxId = useId();
   const [recording, setRecording] = useState(false);
   const [text, setText] = useState("");
@@ -53,7 +55,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
     if (!mounted.current) return;
     if (!result) return;
     setText(result.text);
-    setHeard({ text: result.text, by: result.heard_by });
+    setHeard({ text: result.text, by: result.heard_by, audio_id: result.audio_id });
   }
   const hear = async (file) => heardIt(await hearWith(hearing, (f, opts) => hearRef.current(f, opts), file));
 
@@ -102,7 +104,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
   async function send() {
     const said = { text: text.trim(), heard };
     if (!sendCapability && !sendStep) return sent(await onSend(said));
-    const outcome = sendOutcome ? { outcome: sendOutcome } : {};
+    const outcome = { ...(sendOutcome ? { outcome: sendOutcome } : {}), ...(sendRecord ? { record: sendRecord } : {}) };
     return sent(await sending.run((opts) => onSend(said, opts), outcome));
   }
 
@@ -127,7 +129,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
         </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
-      <ModelStep busy={busy} step={hearing.step} lens={lens} onRetry={async () => heardIt(await hearing.retry())} />
+      <ModelStep busy={busy} step={hearing.step} lens={lens} onRetry={async () => heardIt(await hearing.retry())} expand={{ view, title: "Recording heard" }} />
       {/* The From voice mark stays while the heard text is edited, until it is sent (clarity §4.3). */}
       {heard && text.trim() && <p className="small"><Source words={heardWords(sourceWords({ kind: "voice", capability }), heard.text, text)} prepared={isPrepared({ heard_by: heard.by })} /></p>}
       <label className={`dictate-upload${busy || recording || working ? " disabled" : ""}`}>
@@ -135,7 +137,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording || working} onChange={chooseFile} />
       </label>
       <button type="button" disabled={busy || recording || working || !text.trim()} onClick={send}>{verb}</button>
-      {!sendStep && <ModelStep busy={busy} step={sending.step} lens={lens} onRetry={async () => sent(await sending.retry())} />}
+      {!sendStep && <ModelStep busy={busy} step={sending.step} lens={lens} onRetry={async () => sent(await sending.retry())} expand={{ view, title: label }} />}
     </Wrap>
   );
 }

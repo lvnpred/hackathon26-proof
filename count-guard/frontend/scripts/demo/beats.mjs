@@ -98,7 +98,7 @@ export const BEATS = [
   {
     id: "theatre-drug", scene: "theatre", app: "cg", role: "nurse", seconds: 10, film: true,
     say: "In theatre the local anaesthetic is said aloud; the heard line is drafted, and the nurse confirms it was given.",
-    clicks: ["Role Nurse", 'File eval/media/drug-phrases/drug-lignocaine.wav into "Upload audio" in "Drug given"', 'Button "Add heard line"', 'Button "Confirm given"'],
+    clicks: ["Role Nurse", 'File eval/media/drug-phrases/drug-lignocaine.wav into "Upload audio" in "Drug given"', 'Button "Add heard line"', 'Button "Expand" on the heard row (Captured shows), then "Close"', 'Button "Confirm given"'],
     expect: ["lignocaine 2% 5 ml local infiltration", "From voice", "Accepted by Nurse Asha"],
     before: ["Heard, not confirmed"],
     files: ["drug-lignocaine.wav"],

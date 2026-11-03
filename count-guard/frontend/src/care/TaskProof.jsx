@@ -12,9 +12,14 @@ import { obsValues } from "./tasklist";
 import ProofItem from "./ProofItem.jsx";
 import { checkFor } from "./verdict.js";
 import ModelStep from "./ModelStep.jsx";
+import { ExpandButton } from "./ModelExpand.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
+
+// The read of one proof photo (a monitor or a strip), for the Expand view: the photo, the kept boxes, the values read.
+// The task answers it: a verdict override on task:{id}, else the done act Confirm writes.
+const photoRecord = (photo, taskId) => (photo?.check ? { ...photo.check, photo_id: photo.id, ref: null, taskId: taskId } : null);
 
 const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v)]));
 
@@ -35,7 +40,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
     const stated = task.kind === "obs" ? obsValues(form).values || {} : {};
     const fields = { purpose: "proof", task_id: task.id, by, sbp: stated.sbp, dbp: stated.dbp, hr: stated.hr };
     took(await photoStep.run((o) => upload("/photos", file, fields, undefined, own(o)),
-      { what: "photo", outcome: (v) => outcomeOf(newestPhoto(v, task.id)?.check) || UNKNOWN }));
+      { what: "photo", outcome: (v) => outcomeOf(newestPhoto(v, task.id)?.check) || UNKNOWN, record: (v) => photoRecord(newestPhoto(v, task.id), task.id) }));
   }
 
   function took(next) {
@@ -61,6 +66,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
   }
 
   const photoMoment = momentFor(view, photo?.check?.evidence_id);
+  const readTitle = task.kind === "obs" ? "Monitor photo read" : "Proof photo read";
   return (
     <section className="card" aria-label="Confirm task" aria-busy={busyOf(photoStep.step)}>
       <p className="label">Confirm task</p>
@@ -74,16 +80,17 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       )}
       {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}
       <PhotoInput disabled={busy} onFiles={addPhoto} />
-      <ModelStep busy={busy} step={photoStep.step} onRetry={async () => took(await photoStep.retry())} />
+      <ModelStep busy={busy} step={photoStep.step} onRetry={async () => took(await photoStep.retry())} expand={{ view, title: readTitle }} />
       {photo && (
         <p className="small">
           <span className={`pill ${photo.check?.match === "mismatch" ? "sun" : "info"}`}>{MATCH_LABEL[photo.check?.match] || MATCH_LABEL.none}</span>{" "}
           <Source words={sourceWords(photoMoment)} prepared={isPrepared(photoMoment || photo.check)} />{" "}
-          {photo.check?.why}
+          {photo.check?.why}{" "}
+          <ExpandButton record={photoRecord(photo, task.id)} view={view} title={readTitle} />
         </p>
       )}
       {photo && (
-        <ProofItem check={checkFor(view, `task:${task.id}`)} label={task.title} busy={busy} acts={view.acts}
+        <ProofItem view={view} check={checkFor(view, `task:${task.id}`)} label={task.title} busy={busy} acts={view.acts}
           onOverride={(reason) => act(`/checks/task:${task.id}/override`, { reason, by })} />
       )}
       {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} version={view.timeline?.length} fallback={<img src={photo.url} alt="Proof photo" width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />} />}

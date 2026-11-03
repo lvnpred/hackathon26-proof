@@ -102,6 +102,13 @@ export const STEPS = {
     await H.page.waitForFunction(() => document.querySelector("[aria-label='Drug given'] textarea")?.value.includes("lignocaine"));
     await drug.getByRole("button", { name: "Add heard line", exact: true }).click();
     await before(H, "theatre-drug");
+    // Expand on the heard row (clarity §4.2): the open view shows what was captured, then closes before the scan.
+    await drug.locator('[data-expand="closed"]').last().click();
+    const open = H.page.locator('[data-expand="open"]');
+    await open.getByRole("heading", { name: "Captured" }).waitFor({ timeout: 10000 });
+    await open.getByText("lignocaine").first().waitFor({ timeout: 10000 });
+    await open.getByRole("button", { name: "Close ✕" }).click();
+    await open.waitFor({ state: "detached", timeout: 5000 });
     await drug.getByRole("button", { name: "Confirm given", exact: true }).click();
   },
   async "theatre-card"(H) {

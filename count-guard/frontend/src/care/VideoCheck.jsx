@@ -6,9 +6,13 @@ import PhotoInput from "./PhotoInput.jsx";
 import { Evidence } from "./Evidence.jsx";
 import { seenCell } from "./evidence.js";
 import ModelStep from "./ModelStep.jsx";
+import { ExpandButton } from "./ModelExpand.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, latestVideo, outcomeOf } from "./stepOutcome.js";
+
+// A camera check as an Expand record: its event read back by id, the kept frames shown with their boxes (clarity §4.2).
+export const videoRecord = (check) => (check ? { ...check, eventId: check.id } : null);
 
 // A tray, set-up or swab clip: pick it, and the result shows beside the planned list. A flag never blocks.
 // onFile(file, opts) gets the SAM step's opts; the step line (upload %, checking, done or Didn't work) sits in this card.
@@ -19,26 +23,28 @@ export default function VideoCheck({ title, kind, check, busy, onFile, step = ""
     const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
     if (!upload) return;
-    await sam.run((o) => onFile(upload, o), { what: Array.isArray(upload) ? "photos" : "video", outcome: (v) => outcomeOf(latestVideo(v, kind)) || UNKNOWN });
+    await sam.run((o) => onFile(upload, o), { what: Array.isArray(upload) ? "photos" : "video", outcome: (v) => outcomeOf(latestVideo(v, kind)) || UNKNOWN,
+      record: (v) => videoRecord(latestVideo(v, kind)) });
   }
   return (
     <section className="card" aria-label={title} aria-busy={busyOf(sam.step)}>
       <p className="label">{step && `${step} `}{title}</p>
       <PhotoInput label="Add video or photos" accept="video/*,image/*" capture={false} multiple disabled={busy} onFiles={pick} />
-      <ModelStep busy={busy} step={sam.step} onRetry={sam.retry} />
+      <ModelStep busy={busy} step={sam.step} onRetry={sam.retry} expand={{ view: { episode: { id: episodeId } }, title }} />
       {problem && <p className="note" role="alert">{problem}</p>}
-      {check && <CheckResult check={check} episodeId={episodeId} version={version} moment={moment} />}
+      {check && <CheckResult check={check} episodeId={episodeId} version={version} moment={moment} title={title} />}
     </section>
   );
 }
 
-function CheckResult({ check, episodeId, version, moment }) {
+function CheckResult({ check, episodeId, version, moment, title }) {
   const proved = Boolean(check.evidence_id && episodeId);
   return (
     <div>
       <p className="small">
         <span className={`pill ${check.match === "mismatch" ? "sun" : "info"}`}>{checkLabel(check)}</span>{" "}
-        <Source words={sourceWords(moment)} prepared={isPrepared(moment || check)} />{" "}{check.why}
+        <Source words={sourceWords(moment)} prepared={isPrepared(moment || check)} />{" "}{check.why}{" "}
+        {episodeId && <ExpandButton record={videoRecord(check)} view={{ episode: { id: episodeId } }} title={title} />}
       </p>
       {proved && <Evidence episodeId={episodeId} evidenceId={check.evidence_id} check={check} version={version} />}
       {!proved && (check.rows || []).length > 0 && (

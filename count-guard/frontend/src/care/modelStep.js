@@ -94,6 +94,9 @@ export function stepText(step, { lens = "staff" } = {}) {
 
 export const IDLE = Object.freeze({ stage: "idle" });
 
+// The default Expand record of a finished step: a reply that carries its own evidence, calls or hearing.
+export const recordOf = (result) => (result && typeof result === "object" && (result.evidence || result.heard_by || Array.isArray(result.calls)) ? result : null);
+
 const realClock = {
   now: () => Date.now(),
   setTimeout: (fn, ms) => setTimeout(fn, ms),
@@ -141,8 +144,10 @@ export function createStepRunner({ capability, clock = realClock, onChange = () 
   // "Uploading {what}… 0%"; pass `upload: false` for a JSON call that still names its `what`. `outcome(result)`
   // (stepOutcome.js) says how the model did when the result is a view; by default the result's own evidence, calls or
   // source word says. A result that proves nothing is UNKNOWN ("Done"), never "live" without proof.
-  async function run(fn, { what, upload = Boolean(what), outcome = outcomeOf } = {}) {
-    last = { fn, what, upload, outcome };
+  // `record(result)` picks what the done line's Expand shows (expandModel.js); by default a result carrying its own
+  // evidence or hearing, else nothing to expand.
+  async function run(fn, { what, upload = Boolean(what), outcome = outcomeOf, record = recordOf } = {}) {
+    last = { fn, what, upload, outcome, record };
     ctl?.abort();
     stopTimers();
     const mine = ++token;
@@ -179,7 +184,7 @@ export function createStepRunner({ capability, clock = realClock, onChange = () 
       const seconds = (clock.now() - checkedAt) / 1000;
       const named = out?.model || model;
       if (mode === "failed") set({ stage: "failed", what, model: named, reason: result ? MODEL_UNAVAILABLE : "no answer" });
-      else set({ stage: "done", what, model: named, mode, seconds, rules, ...(out?.fallback ? { fallback: out.fallback } : {}) });
+      else set({ stage: "done", what, model: named, mode, seconds, rules, ...(out?.fallback ? { fallback: out.fallback } : {}), record: (result && record(result)) || null });
       finish();
       return result;
     } catch (exc) {

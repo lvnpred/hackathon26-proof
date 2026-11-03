@@ -24,6 +24,7 @@ import ModelStep from "./ModelStep.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
+import { ExpandButton } from "./ModelExpand.jsx";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
 
@@ -37,6 +38,8 @@ const draftOutcome = (kind) => (view) => {
   const draft = view?.drafts?.[kind];
   return outcomeOf(draft?.evidence ? draft : null) || outcomeOf(momentFor(view, draft?.id)) || UNKNOWN;
 };
+// The Expand record of a draft step: the open draft, read back by its event id (clarity §4.2).
+const draftRecord = (kind) => (view) => (view?.drafts?.[kind] ? { ...view.drafts[kind], eventId: view.drafts[kind].id } : null);
 
 function PhotoCard({ title, busy, upload }) {
   return (
@@ -60,15 +63,16 @@ function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   // The drafting step lives here, not in the Dictate box: once the draft exists the box moves into the fold and
   // remounts, and the done line (or a failure) must stay in sight.
   const drafting = useModelStep({ capability: "orders" });
-  const dictate = <Dictate label="Dictate orders" capability="orders" verb="Draft orders" busy={busy} sendStep={drafting} sendOutcome={draftOutcome("order")} onHear={hearing(ask, "/dictate/orders")} onSend={draftFrom(upload, "/dictate/orders")} />;
-  const line = <div aria-busy={busyOf(drafting.step)}><ModelStep busy={busy} step={drafting.step} onRetry={drafting.retry} /></div>;
-  if (draft) return <>{line}<details className="fold"><summary>Dictate again</summary>{dictate}</details></>;
+  const dictate = <Dictate label="Dictate orders" capability="orders" verb="Draft orders" busy={busy} view={view} sendStep={drafting} sendOutcome={draftOutcome("order")} sendRecord={draftRecord("order")} onHear={hearing(ask, "/dictate/orders")} onSend={draftFrom(upload, "/dictate/orders")} />;
+  const line = <div aria-busy={busyOf(drafting.step)}><ModelStep busy={busy} step={drafting.step} onRetry={drafting.retry} expand={{ view, title: "Order draft" }} /></div>;
+  const more = draft && <p className="small"><ExpandButton record={{ eventId: draft.id }} view={view} title="Order draft" label="Expand the draft" /></p>;
+  if (draft) return <>{line}{more}<details className="fold"><summary>Dictate again</summary>{dictate}</details></>;
   return (
     <>
       {dictate}
       {line}
       {signed && <AiMoment moment={signed} role="doctor" episodeId={view.episode?.id} />}
-      {signed && <p className="small"><Provenance item={{ id: signed.id, value: signed.refs?.items, same: sameOrders, ai: madeByModel(signed) }} events={view.acts} /></p>}
+      {signed && <p className="small"><Provenance item={{ id: signed.id, value: signed.refs?.items, same: sameOrders, ai: madeByModel(signed) }} events={view.acts} /> <ExpandButton record={{ eventId: signed.id }} view={view} title="Signed orders" /></p>}
       <OrderDraft view={view} busy={busy} signOrders={signOrders} />
     </>
   );
@@ -125,7 +129,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   }
   const templates = Object.entries(view.templates || {});
   const drafter = useModelStep({ capability: "discharge" });
-  const draftFromRecord = () => drafter.run((o) => act("/discharge/draft", { by: DOCTOR }, undefined, own(o)), { outcome: draftOutcome("discharge") });
+  const draftFromRecord = () => drafter.run((o) => act("/discharge/draft", { by: DOCTOR }, undefined, own(o)), { outcome: draftOutcome("discharge"), record: draftRecord("discharge") });
   async function signDischarge() {
     // The draft's summary as proposed goes with the signing, so an edited summary reads "Changed by" (clarity §4.3).
     const proposed = summaryDraftId && draft ? { proposed_summary: draftSummary(draft) } : {};
@@ -138,10 +142,10 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   return (
     <>
       <button type="button" className={primary && !draft ? "primary" : undefined} disabled={busy} onClick={draftFromRecord}>Draft discharge</button>
-      <div aria-busy={busyOf(drafter.step)}><ModelStep busy={busy} step={drafter.step} onRetry={drafter.retry} /></div>
+      <div aria-busy={busyOf(drafter.step)}><ModelStep busy={busy} step={drafter.step} onRetry={drafter.retry} expand={{ view, title: "Discharge draft" }} /></div>
       <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
-      {signedDraft && <p className="small">Discharge signed <Provenance item={{ id: signedDraft.ref }} events={view.acts} /></p>}
-      {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} sendCapability="discharge" sendOutcome={draftOutcome("discharge")} onHear={hearing(ask, "/dictate/discharge")} onSend={draftFrom(upload, "/dictate/discharge")} />}
+      {signedDraft && <p className="small">Discharge signed <Provenance item={{ id: signedDraft.ref }} events={view.acts} /> <ExpandButton record={{ eventId: signedDraft.ref }} view={view} title="Signed discharge" /></p>}
+      {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} view={view} sendCapability="discharge" sendOutcome={draftOutcome("discharge")} sendRecord={draftRecord("discharge")} onHear={hearing(ask, "/dictate/discharge")} onSend={draftFrom(upload, "/dictate/discharge")} />}
       {(open || draft) && (
         <>
           <DischargeDraft draft={draft} episodeId={view.episode?.id} acts={view.acts} />
@@ -151,7 +155,7 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
               <>
                 {momentFor(view, draft?.id) && <AiMoment moment={momentFor(view, draft.id)} role="doctor" episodeId={view.episode?.id} />}
                 <p className="note small" role="status">{draft?.timeline ? "Draft from the record." : "Draft from dictation."} Check the summary, then sign.</p>
-                <p className="small"><Provenance item={{ id: summaryDraftId, ai: madeByModel(draft) }} events={view.acts} /></p>
+                <p className="small"><Provenance item={{ id: summaryDraftId, ai: madeByModel(draft) }} events={view.acts} /> <ExpandButton record={{ eventId: summaryDraftId }} view={view} title="Discharge draft" /></p>
               </>
             )}
             <label className="field">

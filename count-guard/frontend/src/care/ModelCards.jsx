@@ -7,6 +7,7 @@ import ModelStep from "./ModelStep.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN } from "./stepOutcome.js";
+import { tryRecord } from "./expandModel.js";
 
 // A sample try's mode -> the step's outcome. "Sample" (a bundled text, no model call) proves nothing: plain Done.
 const TRIED = { live: { mode: "live" }, prepared: { mode: "prepared" }, failed: { mode: "fallback", fallback: "prepared result" } };
@@ -26,8 +27,8 @@ export function ModelCard({ model, busy, text, onTry }) {
       {last && <p className="small">{displayName(last.text)}</p>}
       {last?.evidence_id && <EvidenceThumb episodeId={last.episode_id} evidenceId={last.evidence_id} model={model.key} />}
       {text && <p className="small"><span className="pill">{modeLabel(text.mode)}</span> {text.text}</p>}
-      <button type="button" className="quiet" disabled={busy} onClick={() => step.run((o) => onTry(o), { outcome: tried })}>Try sample</button>
-      <ModelStep busy={busy} step={step.step} onRetry={step.retry} />
+      <button type="button" className="quiet" disabled={busy} onClick={() => step.run((o) => onTry(o), { outcome: tried, record: tryRecord(model.key) })}>Try sample</button>
+      <ModelStep busy={busy} step={step.step} onRetry={step.retry} expand={{ title: `${model.name}: sample` }} />
     </section>
   );
 }

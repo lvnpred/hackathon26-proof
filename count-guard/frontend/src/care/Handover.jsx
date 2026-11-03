@@ -9,6 +9,7 @@ import ModelStep from "./ModelStep.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
+import { ExpandButton } from "./ModelExpand.jsx";
 
 // R21: the day and night nurses of the demo ward.
 const FROM = "Nurse Meena (synthetic)";
@@ -25,7 +26,7 @@ export default function Handover({ view, busy, act }) {
   // The draft's evidence says whether Spark worded it, the template stood in, or no model was asked.
   const step = useModelStep({ capability: "handover" });
   const draft = () => step.run((o) => act("/handover", { from_nurse: from.trim(), to_nurse: taker, use_model: useModel }, undefined, own(o)),
-    { outcome: (v) => outcomeOf(v?.handover) || UNKNOWN });
+    { outcome: (v) => outcomeOf(v?.handover) || UNKNOWN, record: (v) => (v?.handover ? { ...v.handover, eventId: v.handover.id } : null) });
   return (
     <section className="card" aria-label="Shift handover" aria-busy={busyOf(step.step)}>
       <p className="label">Shift handover</p>
@@ -47,7 +48,7 @@ export default function Handover({ view, busy, act }) {
           Draft handover
         </button>
       </div>
-      <ModelStep busy={busy} step={step.step} onRetry={step.retry} />
+      <ModelStep busy={busy} step={step.step} onRetry={step.retry} expand={{ view, title: "Shift handover" }} />
       {moment && <AiMoment moment={moment} role="nurse" episodeId={view.episode?.id} />}
       {handover && (
         <div className="stack" aria-label="Handover text">
@@ -61,6 +62,7 @@ export default function Handover({ view, busy, act }) {
           )}
           <ol className="small">{(handover.lines || []).map((line, i) => <li key={i}>{line.text}</li>)}</ol>
           </Provenance>
+          <p className="small"><ExpandButton record={{ eventId: handover.id }} view={view} title="Shift handover" /></p>
         </div>
       )}
       {handover && !handover.accepted_by && (

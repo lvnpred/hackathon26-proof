@@ -7,6 +7,7 @@ import Source from "./Source.jsx";
 import { FROM_VOICE, isPrepared } from "./source.js";
 import { own } from "./stepOutcome.js";
 import { drugLine, drugStatus, heardPackLine } from "./theatreLive.js";
+import { ExpandButton } from "./ModelExpand.jsx";
 
 // Drug given by voice (spec §6.4): say or type the line, check the heard row, then a person taps to confirm.
 // A pack line ("opening twenty swabs") is only heard here: the swab count changes when a person confirms the pack.
@@ -19,10 +20,11 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, 
     return upload("/theatre/drug", null, { text, by, heard_by: how.heard_by, ...(how.edited ? { heard_text: how.heard_text } : {}) }, "/theatre/drug");
   };
   const open = panel.packs.filter((pack) => !pack.confirmed_by);
+  const view = { episode: { id: episodeId }, acts }; // what the Expand view needs: the episode and the person acts
   return (
     <section className="card" aria-label="Drug given">
       <Dictate bare label="Drug given" field="Drug, strength, amount, route" verb="Add heard line" capability="task_voice"
-        placeholder="e.g. lignocaine two percent, five ml, local infiltration" maxLength={400} busy={busy} onHear={hear} onSend={send} />
+        placeholder="e.g. lignocaine two percent, five ml, local infiltration" maxLength={400} busy={busy} view={view} onHear={hear} onSend={send} />
       {panel.drugs.length > 0 && (
         <ul className="plain-list">
           {panel.drugs.map((row) => (
@@ -30,7 +32,8 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, 
               <strong>{drugLine(row)}</strong>{" "}
               {row.source !== "typed" && <Source words={FROM_VOICE} prepared={isPrepared(row)} />}
               {/* Who confirmed shows on every confirmed row; only a heard row was the AI's proposal. */}
-              <Provenance item={{ id: row.id, at_ms: row.at_ms, ai: row.source !== "typed" && madeByModel(row) }} events={acts} />
+              <Provenance item={{ id: row.id, at_ms: row.at_ms, ai: row.source !== "typed" && madeByModel(row) }} events={acts} />{" "}
+              <ExpandButton record={{ eventId: row.id }} view={view} title={`Heard: ${drugLine(row)}`} />
               <p className="small muted">{drugStatus(row)}</p>
               {!row.given && (
                 <button type="button" disabled={busy} onClick={() => act(`/theatre/drug/${row.id}/confirm`, { by })}>
@@ -49,7 +52,8 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, 
             <li key={pack.id}>
               <span className="small">{heardPackLine(pack)}</span>{" "}
               {pack.source !== "typed" && <Source words={FROM_VOICE} prepared={isPrepared(pack)} />}
-              <Provenance item={{ id: pack.id, at_ms: pack.at_ms, ai: pack.source !== "typed" && madeByModel(pack) }} events={acts} />
+              <Provenance item={{ id: pack.id, at_ms: pack.at_ms, ai: pack.source !== "typed" && madeByModel(pack) }} events={acts} />{" "}
+              <ExpandButton record={{ eventId: pack.id }} view={view} title="Heard pack" />
               {!pack.confirmed_by && (
                 <button type="button" disabled={busy} onClick={() => act(`/theatre/pack/${pack.id}/confirm`, { by })}>
                   Confirm pack of {pack.n}

@@ -463,6 +463,7 @@ async function onRecordingStop() {
   const snap = DictGuard.capture();
   if (!chunks.length) { showError("No audio was captured — check your microphone and try again."); setStep("failed-listening", { reason: "No audio captured" }); return; }
   const blob = new Blob(chunks, { type: (mr && mr.mimeType) || "audio/webm" });
+  if (typeof DDExpand !== "undefined") DDExpand.keepAudio(blob);   // Expand on the draft plays it back (expand.js)
   chunks = [];
   setStep("transcribing", { recorded: timerEl.textContent });
   try {
@@ -532,6 +533,7 @@ async function transcribe(blob) {
     const r = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal });
     const j = await safeJson(r);
     if (!r.ok) throw new Error(j.hint || j.error || ("Transcription failed (" + r.status + ")"));
+    if (typeof DDExpand !== "undefined") DDExpand.heard(j);   // the words and engine, paired with the recording (expand.js)
     return String(j.transcript || "").trim();
   } catch (e) {
     if (e && e.name === "AbortError") {
@@ -578,6 +580,7 @@ async function formatTranscript(transcript, snap) {
     state.transcriptSha = j.transcript_sha256 || "";
     state.engine = j.engine || "";
     state.structured = j.structured || {};
+    if (typeof DDExpand !== "undefined") DDExpand.drafted(transcript, j);   // the draft as first produced, for Expand (expand.js)
     state.dirty = false; // documentId is null here, so the sheet still counts as unsaved
     state.retry = null;
     if (snap) DictGuard.keep(snap);
@@ -620,6 +623,7 @@ async function applyCorrection(transcript, snap) {
     const kept = j.other_patient ? DictGuard.keptNote(j.structured || current, current) : "";
     if (j.other_patient) j.structured = DictGuard.keepIdentity(j.structured || current, current);   // "Apply": the sheet keeps its own patient
     state.structured = j.structured || current;
+    if (typeof DDExpand !== "undefined") DDExpand.drafted(transcript, { ...j, structured: state.structured });   // the corrected draft is the new base
     const carry = RxState.carryRowids(before.indexToRowid, current.rx, (state.structured || {}).rx, j.changed_rows);
     markDirty();
     // A correction re-grounds the rows it changed; confirmations stay on the rest (changed_rows).

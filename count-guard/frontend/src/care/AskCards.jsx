@@ -6,6 +6,16 @@ import ModelStep from "./ModelStep.jsx";
 import { useModelStep } from "./useModelStep.js";
 import { busyOf } from "./modelStep.js";
 import { own, viewOutcome } from "./stepOutcome.js";
+import { momentRecord, newMomentRecord } from "./expandModel.js";
+import { ExpandButton } from "./ModelExpand.jsx";
+
+// The newest read of one capability stays on the card with its Expand (patient lens: plain words, no raw reply).
+const latestOf = (view, cap) => (view?.ai_moments || []).find((m) => m.capability === cap) || null;
+function LastRead({ view, cap, title }) {
+  const m = latestOf(view, cap);
+  if (!m) return null;
+  return <p className="small">{m.patient_finding || "Your last photo was read."} <ExpandButton record={momentRecord(m)} view={view} lens="patient" title={title} /></p>;
+}
 
 function QuestionForm({ title, button, busy, text, setText, onSend, hint }) {
   const problem = text ? questionProblem(text) : "";
@@ -28,7 +38,7 @@ export function BotCard({ view, busy, act, fault, episodeId }) {
   const [text, setText] = useState("");
   const step = useModelStep({ capability: "wording", lens: "patient" });
   async function send() {
-    const next = await step.run((o) => act("/ask/bot", { text: text.trim() }, undefined, own(o)), { what: "question", upload: false, outcome: viewOutcome(view) });
+    const next = await step.run((o) => act("/ask/bot", { text: text.trim() }, undefined, own(o)), { what: "question", upload: false, outcome: viewOutcome(view), record: newMomentRecord(view, ["record_bot"]) });
     if (next) setText("");
   }
   return (
@@ -37,7 +47,7 @@ export function BotCard({ view, busy, act, fault, episodeId }) {
         title="Ask your record" button="Ask the record" busy={busy} text={text} setText={setText} onSend={send}
         hint="The record bot quotes lines from your own record."
       />
-      <ModelStep busy={busy} step={step.step} lens={step.lens} onRetry={step.retry} />
+      <ModelStep busy={busy} step={step.step} lens={step.lens} onRetry={step.retry} expand={{ view, title: "Your record's answer" }} />
       <Fault fault={fault} episodeId={episodeId} only={["/ask/bot"]} />
     </section>
   );
@@ -66,7 +76,7 @@ export function ReviewCard({ view, busy, upload, fault, episodeId }) {
   const [note, setNote] = useState("");
   const step = useModelStep({ capability: "review", lens: "patient" });
   async function send(file) {
-    const next = await step.run((o) => upload("/ask/review", file, { note: note.trim() }, undefined, own(o)), { what: "photo", outcome: viewOutcome(view) });
+    const next = await step.run((o) => upload("/ask/review", file, { note: note.trim() }, undefined, own(o)), { what: "photo", outcome: viewOutcome(view), record: newMomentRecord(view, ["healing_photo"]) });
     if (next) setNote("");
   }
   return (
@@ -80,16 +90,17 @@ export function ReviewCard({ view, busy, upload, fault, episodeId }) {
             <input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} />
           </label>
           <PhotoInput label="Take photo" accept={PHOTO_TYPES} disabled={busy} onFiles={([file]) => send(file)} />
-          <ModelStep busy={busy} step={step.step} lens={step.lens} onRetry={step.retry} />
+          <ModelStep busy={busy} step={step.step} lens={step.lens} onRetry={step.retry} expand={{ view, title: "Healing photo" }} />
         </>
       ) : <p className="empty small">{PHOTO_CLOSED}</p>}
+      <LastRead view={view} cap="healing_photo" title="Healing photo" />
     </section>
   );
 }
 
 export function MedicinesCard({ view, busy, upload, fault, episodeId }) {
   const step = useModelStep({ capability: "medicines", lens: "patient" });
-  const send = (file) => step.run((o) => upload("/ask/medicines", file, undefined, undefined, own(o)), { what: "photo", outcome: viewOutcome(view, ["medicines"]) });
+  const send = (file) => step.run((o) => upload("/ask/medicines", file, undefined, undefined, own(o)), { what: "photo", outcome: viewOutcome(view, ["medicines"]), record: newMomentRecord(view, ["medicines"]) });
   return (
     <section className="card" aria-label="Medicines photo" aria-busy={busyOf(step.step)}>
       <p className="label">Medicines photo</p>
@@ -97,7 +108,8 @@ export function MedicinesCard({ view, busy, upload, fault, episodeId }) {
       {photoAskOpen(view.state)
         ? <PhotoInput label="Take photo" accept={PHOTO_TYPES} disabled={busy} onFiles={([file]) => send(file)} />
         : <p className="empty small">{PHOTO_CLOSED}</p>}
-      <ModelStep busy={busy} step={step.step} lens={step.lens} onRetry={step.retry} />
+      <ModelStep busy={busy} step={step.step} lens={step.lens} onRetry={step.retry} expand={{ view, title: "Medicines photo" }} />
+      <LastRead view={view} cap="medicines" title="Medicines photo" />
     </section>
   );
 }

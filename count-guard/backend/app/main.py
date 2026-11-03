@@ -26,6 +26,7 @@ from app.journey.staff_api import staff_router
 from app.journey.stream_api import stream_router
 from app.journey.theatre_api import NotInTheatre, not_in_theatre, theatre_router
 from app.journey.audio_api import audio_router
+from app.journey.model_record_api import model_record_router
 from app.journey.media_api import media_router, models_router
 from app.journey.verdict_api import verdict_router
 from app.journey.video_api import video_router
@@ -75,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(discharge_router)
     app.include_router(media_router)
     app.include_router(audio_router)
+    app.include_router(model_record_router)
     app.include_router(verdict_router)
     app.include_router(ask_router)
     app.include_router(staff_router)

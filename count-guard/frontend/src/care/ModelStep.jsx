@@ -1,4 +1,6 @@
+import { useCallback, useState } from "react";
 import { stepText } from "./modelStep.js";
+import { ModelExpand } from "./ModelExpand.jsx";
 
 export { useModelStep } from "./useModelStep.js";
 
@@ -9,9 +11,15 @@ export { useModelStep } from "./useModelStep.js";
 // and (2) inside an Expand view's root element while it is open, marked `data-expand="open"` (Task 4's view sets
 // `data-expand="closed"` or drops the attribute when folded). Anything else naming a model fails the demo check.
 // `busy` (the ward's write in flight) holds Retry back so the same card cannot submit twice.
-export default function ModelStep({ step, lens = "staff", busy = false, onRetry, onExpand }) {
+// Expand (clarity §4.2): `onExpand` opens the caller's own view; else `expand` ({ view, title }) opens ModelExpand on the
+// done step's `record` (useModelStep's run(fn, { record })). The button is data-expand="closed"; the open view is "open".
+export default function ModelStep({ step, lens = "staff", busy = false, onRetry, onExpand, expand }) {
+  const [open, setOpen] = useState(false);
+  const shut = useCallback(() => setOpen(false), []);
   const stage = step?.stage || "idle";
   if (stage === "idle") return null;
+  const record = stage === "done" && step.record ? step.record : null;
+  const opens = onExpand || (expand && record ? () => setOpen(true) : null);
   const text = stepText(step, { lens });
   const moving = stage === "uploading" || stage === "checking";
   return (
@@ -24,11 +32,12 @@ export default function ModelStep({ step, lens = "staff", busy = false, onRetry,
           Retry
         </button>
       )}
-      {stage === "done" && onExpand && (
-        <button type="button" className="quiet" onClick={onExpand}>
+      {stage === "done" && opens && (
+        <button type="button" className="quiet" data-expand="closed" aria-haspopup="dialog" onClick={opens}>
           Expand
         </button>
       )}
+      {open && record && <ModelExpand record={record} view={expand?.view} lens={lens} title={expand?.title} onClose={shut} />}
       {moving && (
         <span className={`bar${stage === "checking" ? " indeterminate" : ""}`} aria-hidden="true">
           <span style={stage === "uploading" ? { width: `${step.percent || 0}%` } : undefined} />

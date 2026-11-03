@@ -40,7 +40,7 @@ export function proofFor({ view, step, by, busy, act, upload }) {
   return function proof(key, label) {
     const item = `${step}:${key}`;
     return (
-      <ProofItem check={checkFor(view, item)} label={label} busy={busy} acts={view.acts}
+      <ProofItem view={view} check={checkFor(view, item)} label={label} busy={busy} acts={view.acts}
         onPhoto={(file, o) => upload(`/checks/${item}/photo`, file, { by }, undefined, own(o))}
         onOverride={(reason) => act(`/checks/${item}/override`, { reason, by })} />
     );

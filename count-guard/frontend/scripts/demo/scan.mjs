@@ -37,10 +37,12 @@ export function scanText(text, role, { models = false, modelText = text } = {}) 
 
 // Spec §4.1 (C2): on a staff screen a model may be named only in a model step line and in an open Expand view.
 // A `.model-step` counts only when its text is a step line that names a model; an Expand view counts only while
-// it is open (`[data-expand="open"]`, the contract ModelStep and the Expand view keep).
+// it is open (`[data-expand="open"]`, the contract ModelStep and the Expand view keep). The step lines that name a
+// model: "Checking with X… n s", "Done · live (X, t s)" and "Done · X reply not usable — rules|template|prepared result used".
 const STEP_MODEL = "(?:SAM 3\\.1|Spark 1\\.3|Spark Open|Muse Voice)";
 export const STEP_LINE = new RegExp(
-  `^(?:✓\\s*)?(?:Checking with ${STEP_MODEL}… \\d+ s|Done · live \\(${STEP_MODEL}, \\d+(?:\\.\\d+)? s\\))(?:\\s*Expand)?$`,
+  `^(?:✓\\s*)?(?:Checking with ${STEP_MODEL}… \\d+ s|Done · live \\(${STEP_MODEL}, \\d+(?:\\.\\d+)? s\\)` +
+    `|Done · ${STEP_MODEL} reply not usable — (?:rules|template|prepared result) used)(?:\\s*Expand)?$`,
 );
 export const ALLOWED_SELECTOR = '.model-step, [data-expand="open"]';
 

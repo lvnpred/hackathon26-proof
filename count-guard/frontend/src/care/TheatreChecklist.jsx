@@ -10,6 +10,10 @@ import PhotoInput from "./PhotoInput.jsx";
 import ProofItem from "./ProofItem.jsx";
 import { checkFor } from "./verdict.js";
 import TheatrePanels from "./TheatrePanels.jsx";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { UNKNOWN, latestVideo, outcomeOf, own } from "./stepOutcome.js";
 
 const NURSE = "Nurse Asha (synthetic)";
 // Theatre-step photo proofs (spec §6.6). They keep only their own item open: never surgery ended, never a move.
@@ -21,19 +25,23 @@ function Line({ step }) {
   return <p className="step-line">✓ {parts.join(" · ")}</p>;
 }
 
-// A compact way to film the tray again while the tray can still be recorded (R18).
+// A compact way to film the tray again while the tray can still be recorded (R18). Its SAM step shows here.
 function TrayAgain({ busy, onFile }) {
   const [problem, setProblem] = useState("");
+  const step = useModelStep({ capability: "tray" });
   async function pick(files) {
     const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
-    if (upload) await onFile(upload);
+    if (upload) {
+      await step.run((o) => onFile(upload, o), { what: Array.isArray(upload) ? "photos" : "video", outcome: (v) => outcomeOf(latestVideo(v, "tray")) || UNKNOWN });
+    }
   }
   return (
-    <>
+    <div aria-busy={busyOf(step.step)}>
       <PhotoInput label="Check the tray again" accept="video/*,image/*" capture={false} multiple disabled={busy} onFiles={pick} />
+      <ModelStep busy={busy} step={step.step} onRetry={step.retry} />
       {problem && <p className="note" role="alert">{problem}</p>}
-    </>
+    </div>
   );
 }
 
@@ -41,7 +49,7 @@ function TrayAgain({ busy, onFile }) {
 function Controls({ step, role, view, episodeId, busy, act, upload, replaced, onNote, by, primary }) {
   const nurse = role === "nurse";
   if (step.key === "tray") {
-    const onFile = (file) => upload("/video", file, { check: "tray", by });
+    const onFile = (file, o) => upload("/video", file, { check: "tray", by }, undefined, own(o));
     if (!nurse) return step.done ? null : <p className="small muted">The theatre nurse records the tray check.</p>;
     return step.done
       ? <TrayAgain busy={busy} onFile={onFile} />
@@ -62,7 +70,7 @@ function Controls({ step, role, view, episodeId, busy, act, upload, replaced, on
 }
 
 // One vertical list of the five theatre steps: done ones fold to a line, the current one opens.
-export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, replaced, nowMs, primary = false }) {
+export default function TheatreChecklist({ role, view, episodeId, busy, act, upload, ask, replaced, nowMs, primary = false }) {
   const [note, setNote] = useState("");
   const by = role === "nurse" ? NURSE : DOCTOR;
   const steps = checklistState(theatreSteps(view, nowMs));
@@ -104,7 +112,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
             )}
             {role === "nurse" && STEP_PROOF[step.key] && canRecord(view, step.key) && (
               <ProofItem check={checkFor(view, STEP_PROOF[step.key][0])} label={STEP_PROOF[step.key][1]} busy={busy} acts={view.acts}
-                onPhoto={(file) => upload(`/checks/${STEP_PROOF[step.key][0]}/photo`, file, { by })}
+                onPhoto={(file, o) => upload(`/checks/${STEP_PROOF[step.key][0]}/photo`, file, { by }, undefined, own(o))}
                 onOverride={(reason) => act(`/checks/${STEP_PROOF[step.key][0]}/override`, { reason, by })} />
             )}
           </li>
@@ -113,7 +121,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
       {note && <p className="note" role="status">{note}</p>}
     </section>
     {/* Drug given by voice, the simulated vitals strip and the context card (spec §6.4). */}
-    <TheatrePanels episodeId={episodeId || view.episode?.id} view={view} role={role} by={by} busy={busy} act={act} upload={upload} />
+    <TheatrePanels episodeId={episodeId || view.episode?.id} view={view} role={role} by={by} busy={busy} act={act} upload={upload} ask={ask} />
     </>
   );
 }

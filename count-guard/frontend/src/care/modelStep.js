@@ -1,4 +1,5 @@
 import { isPrepared } from "./source.js";
+import { UNKNOWN, outcomeOf } from "./stepOutcome.js";
 
 // One model step (spec §4.1): recording, uploading, checking, done or failed, in one plain line.
 // The copy here is exact (Global Constraints). Model names show only in the staff lens; the patient lens never names one.
@@ -14,7 +15,14 @@ const MODEL = {
   photo: SPARK, verdict: SPARK, strips: SPARK, medicines: SPARK, monitor: SPARK, review: SPARK,
   wording: SPARK, card: SPARK, handover: SPARK, discharge: SPARK, orders: SPARK,
   reconciler: SPARK_OPEN,
+  sam: SAM, spark: SPARK, "spark-open": SPARK_OPEN, // the AI page's sample tries, by model key
 };
+
+// Capabilities that check or read (photo, camera): with no model behind the result, the rules checked it. The rest draft.
+const CHECKS = new Set(["tray", "setup", "swabs", "camera", "sam", "photo", "verdict", "strips", "medicines", "monitor", "review"]);
+
+// A card is busy (aria-busy) while its step uploads or checks.
+export const busyOf = (step) => step?.stage === "uploading" || step?.stage === "checking";
 
 // A capability -> the model's display name, or null when no model stands behind it.
 export function modelOf(capability) {
@@ -52,6 +60,7 @@ const tenths = (seconds) => (Math.round((seconds || 0) * 10) / 10).toFixed(1);
 const AUDIO = new Set(["recording", "audio"]);
 
 function patientChecking(step) {
+  if (step.what === "question") return "Looking in your record…"; // the record bot (ruling P9)
   const listening = AUDIO.has(step.what) || step.model === VOICE;
   return listening ? "Listening to your recording…" : "Reading your photo…";
 }
@@ -71,7 +80,10 @@ export function stepText(step, { lens = "staff" } = {}) {
       return step.model ? `Checking with ${step.model}… ${whole(step.seconds)} s` : `Checking… ${whole(step.seconds)} s`;
     case "done":
       if (step.mode === "prepared") return "Done · Prepared (no live model)";
-      if (patient || !step.model) return "Done";
+      if (patient) return "Done";
+      if (step.mode === "none") return `Done · No model used — ${step.rules === "check" ? "rules check" : "drafted by rules"}`;
+      if (step.mode === "fallback") return `Done · ${step.model ? `${step.model} reply` : "Reply"} not usable — ${step.fallback || "rules"} used`;
+      if (step.mode !== "live" || !step.model) return "Done";
       return `Done · live (${step.model}, ${tenths(step.seconds)} s)`;
     case "failed":
       return `Didn't work: ${step.reason || "no answer"}`;
@@ -95,6 +107,7 @@ const realClock = {
 // `capability` is read once: a card whose capability changes gets a new runner (useModelStep does that).
 export function createStepRunner({ capability, clock = realClock, onChange = () => {} } = {}) {
   const model = modelOf(capability);
+  const rules = CHECKS.has(capability) ? "check" : "draft";
   let step = IDLE;
   let gone = false;
   let ticker = null;
@@ -123,11 +136,13 @@ export function createStepRunner({ capability, clock = realClock, onChange = () 
     ctl = null;
   };
 
-  // run(fn, { what, upload }): `what` names the thing sent ("photo", "recording") for the wording and the timeout.
-  // `upload` (default: true when `what` is given) means fn reports upload progress, so the step starts at
-  // "Uploading {what}… 0%"; pass `upload: false` for a JSON call that still names its `what`.
-  async function run(fn, { what, upload = Boolean(what) } = {}) {
-    last = { fn, what, upload };
+  // run(fn, { what, upload, outcome }): `what` names the thing sent ("photo", "recording") for the wording and the
+  // timeout. `upload` (default: true when `what` is given) means fn reports upload progress, so the step starts at
+  // "Uploading {what}… 0%"; pass `upload: false` for a JSON call that still names its `what`. `outcome(result)`
+  // (stepOutcome.js) says how the model did when the result is a view; by default the result's own evidence, calls or
+  // source word says. A result that proves nothing is UNKNOWN ("Done"), never "live" without proof.
+  async function run(fn, { what, upload = Boolean(what), outcome = outcomeOf } = {}) {
+    last = { fn, what, upload, outcome };
     ctl?.abort();
     stopTimers();
     const mine = ++token;
@@ -159,10 +174,12 @@ export function createStepRunner({ capability, clock = realClock, onChange = () 
       const result = await Promise.race([fn({ onProgress, signal: here.signal, timeoutMs }), expired]);
       if (mine !== token || gone) return null;
       if (timedOut) throw new Error(`no answer in ${timeoutMs / 1000} s`);
-      const mode = modeFrom(result);
+      const out = result ? outcome(result) || UNKNOWN : null;
+      const mode = out?.mode || modeFrom(result);
       const seconds = (clock.now() - checkedAt) / 1000;
-      if (mode === "failed") set({ stage: "failed", what, model, reason: result ? MODEL_UNAVAILABLE : "no answer" });
-      else set({ stage: "done", what, model, mode, seconds });
+      const named = out?.model || model;
+      if (mode === "failed") set({ stage: "failed", what, model: named, reason: result ? MODEL_UNAVAILABLE : "no answer" });
+      else set({ stage: "done", what, model: named, mode, seconds, rules, ...(out?.fallback ? { fallback: out.fallback } : {}) });
       finish();
       return result;
     } catch (exc) {
@@ -182,7 +199,7 @@ export function createStepRunner({ capability, clock = realClock, onChange = () 
     get step() { return step; },
     get disposed() { return gone; },
     run,
-    retry: () => (last ? run(last.fn, { what: last.what, upload: last.upload }) : Promise.resolve(null)),
+    retry: () => (last ? run(last.fn, last) : Promise.resolve(null)),
     startRecording() {
       token += 1; // a call still in flight is dropped
       ctl?.abort();

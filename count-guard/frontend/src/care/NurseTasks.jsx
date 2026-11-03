@@ -10,6 +10,7 @@ import { lastDoneLine, rowSession } from "./drafts";
 import { rowMark, taskGroups } from "./tasklist";
 import { momentFor } from "./moments.js";
 import { latestCheck, taskVideoLabel } from "./video";
+import { own } from "./stepOutcome.js";
 
 function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProof, onSession }) {
   const { task, due, status } = row;
@@ -23,12 +24,13 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
   const heardLast = (view.acts || []).some((a) => a.type === "task.done" && a.ref === task.id && a.at_ms === lastAt);
   const video = task.proof === "video" && task.has_setup;
 
-  const send = async ({ text, heard }) => {
+  // The proposal comes back with its evidence, so the Dictate step says how Spark did; `o` is that step's opts.
+  const send = async ({ text, heard }, o) => {
     const how = heardHow(heard?.text, text, heard?.by); // edited heard words stay heard (clarity §4.3)
-    const proposal = await ask("/dictate/task", undefined, { text, by, heard_by: how.heard_by });
-    if (!proposal) return false;
+    const proposal = await ask("/dictate/task", undefined, { text, by, heard_by: how.heard_by }, "/dictate/task", own(o));
+    if (!proposal) return null;
     onSession({ ...rowSession(proposal, task), edited: Boolean(how.edited), heardText: how.heard_text || "" }, task);
-    return true;
+    return proposal;
   };
 
   return (
@@ -54,7 +56,8 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           label={`Say it: ${task.title}`}
           verb="Use this"
           busy={busy}
-          onHear={(file) => ask("/ask/hear", file, { by }, "/dictate/task")}
+          sendCapability="wording"
+          onHear={(file, o) => ask("/ask/hear", file, { by }, "/dictate/task", own(o))}
           onSend={send}
         />
       )}
@@ -69,7 +72,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           check={latestCheck(view, "setup", task.id)}
           moment={momentFor(view, latestCheck(view, "setup", task.id)?.id)}
           busy={busy}
-          onFile={(file) => upload("/video", file, { check: "setup", task_id: task.id, by })}
+          onFile={(file, o) => upload("/video", file, { check: "setup", task_id: task.id, by }, undefined, own(o))}
         />
       )}
       {live && task.kind === "obs" && <button type="button" className="quiet" disabled={busy} onClick={() => onProof(task)}>Read from monitor photo</button>}

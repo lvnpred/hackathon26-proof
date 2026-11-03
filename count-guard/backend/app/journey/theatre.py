@@ -84,6 +84,22 @@ def facts(events: list[dict], stay: list[dict], now_ms: int) -> list[str]:
     return out
 
 
+def _card_waits(stay: list[dict]) -> bool:
+    """card_payload's rule: a BP drop on the strip and no card yet this stay."""
+    return drop(stay) is not None and not any(e["event_type"] == CARD for e in stay)
+
+
+def card_due(stay: list[dict], tier: bool, spark: bool) -> dict:
+    """Before a click, whether it writes the card and who words it ("spark" or "rules"), else None (clarity §4.1).
+
+    `card_due`: the next strip reading, with the tier as it is. `card_on_tier`: turning the tier on now."""
+    who = "spark" if spark else "rules"
+    upcoming = next_reading(stay)
+    after = stay + [{"event_type": READING, "payload": upcoming}] if upcoming else None
+    return {"card_due": who if tier and after and _card_waits(after) else None,
+            "card_on_tier": who if not tier and _card_waits(stay) else None}
+
+
 def card_payload(events: list[dict], now_ms: int, reword) -> dict | None:
     """The context card for this stay's BP drop, or None. `reword(template) -> (text, wording, source, calls)`."""
     stay = placed_stay(events)
@@ -97,8 +113,8 @@ def card_payload(events: list[dict], now_ms: int, reword) -> dict | None:
             "facts": found, "rule_id": fire["rule_id"]}
 
 
-def panel(events: list[dict], tier: bool) -> dict:
-    """What the three theatre panels show for this stay."""
+def panel(events: list[dict], tier: bool, spark: bool = False) -> dict:
+    """What the three theatre panels show for this stay. `spark`: Spark is live, so a card written now is worded by it."""
     stay = placed_stay(events)
     drugs = []
     for e in stay:
@@ -117,4 +133,4 @@ def panel(events: list[dict], tier: bool) -> dict:
                       "confirmed_by": opened["payload"]["by"] if opened else None})
     shown = [{**e["payload"], "id": e["id"], "at_ms": e["ts_ms"]} for e in readings(stay)]
     return {"banner": RESEARCH_BANNER, "tier": tier, "drugs": drugs, "packs": packs, "readings": shown,
-            "strip_done": next_reading(stay) is None, "strip_total": len(demo_readings())}
+            "strip_done": next_reading(stay) is None, "strip_total": len(demo_readings()), **card_due(stay, tier, spark)}

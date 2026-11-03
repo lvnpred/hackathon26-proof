@@ -2,6 +2,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { isPrepared, sourceWords } from "./source.js";
 import Source from "./Source.jsx";
 import { audioName, micStatus, pickMime } from "./recorder";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { hearWith, heardWords } from "./dictateFlow.js";
 
 const MIC = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -11,8 +14,13 @@ const MIC = (
 );
 
 // One voice-first box: record with the mic, upload audio, or type. A recording is heard first and its text
-// fills the box to check. bare: no card or region of its own (the caller supplies them). onHear(file) -> { text, heard_by } | null. onSend({ text, heard }) -> truthy when done.
-export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, onHear, onSend }) {
+// fills the box to check. bare: no card or region of its own (the caller supplies them).
+// onHear(file, opts) -> { text, heard_by } | null, where opts is the voice step's { onProgress, signal, timeoutMs }.
+// onSend({ text, heard }, opts) -> truthy when done. With `sendCapability` the send is a model step of its own
+// (drafting with Spark): its line shows under the button and `sendOutcome(result)` says how the model did.
+// `sendStep` (a useModelStep from the caller) runs the send instead; the caller then shows its line.
+// Each step line sits in this box (spec §4.1): recording timer, upload, checking, done or Didn't work + Retry.
+export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, lens = "staff", sendCapability, sendStep, sendOutcome, onHear, onSend }) {
   const boxId = useId();
   const [recording, setRecording] = useState(false);
   const [text, setText] = useState("");
@@ -22,6 +30,15 @@ export default function Dictate({ label, field = "What was said", verb, capabili
   const stream = useRef(null);
   const hearRef = useRef(onHear);
   hearRef.current = onHear;
+  const mounted = useRef(true); // a step can finish after this box unmounted (the "Dictate again" fold remounts it)
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const hearing = useModelStep({ capability: "voice", lens });
+  const ownSend = useModelStep({ capability: sendCapability, lens });
+  const sending = sendStep || ownSend; // a caller's step (its line shown by the caller) outlives this box
+  const working = [hearing.step, sending.step].some((s) => s.stage === "uploading" || s.stage === "checking");
 
   const release = () => {
     stream.current?.getTracks().forEach((track) => track.stop());
@@ -32,12 +49,13 @@ export default function Dictate({ label, field = "What was said", verb, capabili
     release();
   }, []);
 
-  async function hear(file) {
-    const result = await hearRef.current(file);
+  function heardIt(result) {
+    if (!mounted.current) return;
     if (!result) return;
     setText(result.text);
     setHeard({ text: result.text, by: result.heard_by });
   }
+  const hear = async (file) => heardIt(await hearWith(hearing, (f, opts) => hearRef.current(f, opts), file));
 
   async function start() {
     const hasMediaDevices = Boolean(navigator.mediaDevices?.getUserMedia);
@@ -56,12 +74,14 @@ export default function Dictate({ label, field = "What was said", verb, capabili
     rec.onstop = () => {
       release();
       setRecording(false);
+      hearing.stopRecording();
       hear(new File(chunks, audioName(mime), { type: mime }));
     };
     recorder.current = rec;
     rec.start();
     setMessage("");
     setRecording(true);
+    hearing.startRecording();
   }
 
   const finish = () => recorder.current?.stop();
@@ -72,17 +92,24 @@ export default function Dictate({ label, field = "What was said", verb, capabili
     if (file) await hear(file);
   }
 
+  function sent(done) {
+    if (!mounted.current) return;
+    if (!done) return;
+    setText("");
+    setHeard(null);
+    hearing.reset();
+  }
   async function send() {
-    if (await onSend({ text: text.trim(), heard })) {
-      setText("");
-      setHeard(null);
-    }
+    const said = { text: text.trim(), heard };
+    if (!sendCapability && !sendStep) return sent(await onSend(said));
+    const outcome = sendOutcome ? { outcome: sendOutcome } : {};
+    return sent(await sending.run((opts) => onSend(said, opts), outcome));
   }
 
   const Wrap = bare ? "div" : "section";
   const wrapProps = bare ? { className: "stack" } : { className: "card", "aria-label": label };
   return (
-    <Wrap {...wrapProps}>
+    <Wrap {...wrapProps} aria-busy={working}>
       <p className="label">{label}</p>
       <div className="field">
         <label htmlFor={boxId}>{field}</label>
@@ -92,7 +119,7 @@ export default function Dictate({ label, field = "What was said", verb, capabili
             type="button"
             className={`dictate-mic${recording ? " recording" : ""}`}
             aria-label={recording ? "Finish recording" : "Record"}
-            disabled={busy && !recording}
+            disabled={(busy || working) && !recording}
             onClick={recording ? finish : start}
           >
             {MIC}
@@ -100,13 +127,15 @@ export default function Dictate({ label, field = "What was said", verb, capabili
         </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
+      <ModelStep busy={busy} step={hearing.step} lens={lens} onRetry={async () => heardIt(await hearing.retry())} />
       {/* The From voice mark stays while the heard text is edited, until it is sent (clarity §4.3). */}
-      {heard && text.trim() && <p className="small"><Source words={sourceWords({ kind: "voice", capability })} prepared={isPrepared({ heard_by: heard.by })} /></p>}
-      <label className={`dictate-upload${busy || recording ? " disabled" : ""}`}>
+      {heard && text.trim() && <p className="small"><Source words={heardWords(sourceWords({ kind: "voice", capability }), heard.text, text)} prepared={isPrepared({ heard_by: heard.by })} /></p>}
+      <label className={`dictate-upload${busy || recording || working ? " disabled" : ""}`}>
         Upload audio
-        <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />
+        <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording || working} onChange={chooseFile} />
       </label>
-      <button type="button" disabled={busy || recording || !text.trim()} onClick={send}>{verb}</button>
+      <button type="button" disabled={busy || recording || working || !text.trim()} onClick={send}>{verb}</button>
+      {!sendStep && <ModelStep busy={busy} step={sending.step} lens={lens} onRetry={async () => sent(await sending.retry())} />}
     </Wrap>
   );
 }

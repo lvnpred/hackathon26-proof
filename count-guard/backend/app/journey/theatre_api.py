@@ -97,7 +97,8 @@ def _write_card(request: Request, episode_id: str, ts: int) -> None:
 
 @theatre_router.get("")
 def theatre_panel(episode_id: str, request: Request) -> dict:
-    return theatre.panel(_events(request, episode_id), _tier(request))
+    spark = switches.is_live(request.app.state.settings, "spark")  # the same switch _reword reads
+    return theatre.panel(_events(request, episode_id), _tier(request), spark)
 
 
 @theatre_router.post("/drug")

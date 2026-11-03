@@ -70,9 +70,10 @@ export default function Chart() {
   }
 
   const pick = withAdmitHeading(pickNow(view, { role: ward.role, name: SIGNED_IN[ward.role]?.name }, ward.nowMs), view, ward.role, patient.name);
-  const act = (path, body, scope) => ward.act(episodeId, path, body, scope);
-  const upload = (path, file, fields, scope) => ward.upload(episodeId, path, file, fields, scope);
-  const ask = (path, file, fields, scope) => ward.ask(episodeId, path, file, fields, scope);
+  // `opts` carries a card's model step (signal, progress, timeout, ownFault) to the ward (spec §4.1).
+  const act = (path, body, scope, opts) => ward.act(episodeId, path, body, scope, opts);
+  const upload = (path, file, fields, scope, opts) => ward.upload(episodeId, path, file, fields, scope, opts);
+  const ask = (path, file, fields, scope, opts) => ward.ask(episodeId, path, file, fields, scope, opts);
   const replaced = new Set(rows.filter((row) => row.replaced_by).map((row) => row.id));
   const lens = ward.role === "patient" ? "patient" : "staff";
 

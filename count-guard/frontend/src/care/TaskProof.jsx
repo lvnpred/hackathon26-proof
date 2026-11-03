@@ -11,6 +11,10 @@ import Source from "./Source.jsx";
 import { obsValues } from "./tasklist";
 import ProofItem from "./ProofItem.jsx";
 import { checkFor } from "./verdict.js";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
 
 const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(([k, v]) => [k, String(v)]));
 
@@ -24,10 +28,17 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
   const [photo, setPhoto] = useState(null);
   const [filled, setFilled] = useState(0); // bumps when a photo fills the form, so ObsForm shows it
   const [error, setError] = useState("");
+  // A monitor photo is read by Spark; a proof photo is checked by Spark. The step line sits in this card.
+  const photoStep = useModelStep({ capability: task.kind === "obs" ? "monitor" : "photo" });
 
   async function addPhoto([file]) {
     const stated = task.kind === "obs" ? obsValues(form).values || {} : {};
-    const next = await upload("/photos", file, { purpose: "proof", task_id: task.id, by, sbp: stated.sbp, dbp: stated.dbp, hr: stated.hr });
+    const fields = { purpose: "proof", task_id: task.id, by, sbp: stated.sbp, dbp: stated.dbp, hr: stated.hr };
+    took(await photoStep.run((o) => upload("/photos", file, fields, undefined, own(o)),
+      { what: "photo", outcome: (v) => outcomeOf(newestPhoto(v, task.id)?.check) || UNKNOWN }));
+  }
+
+  function took(next) {
     if (!next) return;
     const added = newestPhoto(next, task.id);
     setPhoto(added);
@@ -51,7 +62,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
 
   const photoMoment = momentFor(view, photo?.check?.evidence_id);
   return (
-    <section className="card" aria-label="Confirm task">
+    <section className="card" aria-label="Confirm task" aria-busy={busyOf(photoStep.step)}>
       <p className="label">Confirm task</p>
       <p className="small">{task.title}</p>
       {session.transcript && (
@@ -63,6 +74,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       )}
       {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}
       <PhotoInput disabled={busy} onFiles={addPhoto} />
+      <ModelStep busy={busy} step={photoStep.step} onRetry={async () => took(await photoStep.retry())} />
       {photo && (
         <p className="small">
           <span className={`pill ${photo.check?.match === "mismatch" ? "sun" : "info"}`}>{MATCH_LABEL[photo.check?.match] || MATCH_LABEL.none}</span>{" "}

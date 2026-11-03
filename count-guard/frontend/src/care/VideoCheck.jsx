@@ -5,19 +5,27 @@ import { useState } from "react";
 import PhotoInput from "./PhotoInput.jsx";
 import { Evidence } from "./Evidence.jsx";
 import { seenCell } from "./evidence.js";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { UNKNOWN, latestVideo, outcomeOf } from "./stepOutcome.js";
 
 // A tray, set-up or swab clip: pick it, and the result shows beside the planned list. A flag never blocks.
+// onFile(file, opts) gets the SAM step's opts; the step line (upload %, checking, done or Didn't work) sits in this card.
 export default function VideoCheck({ title, kind, check, busy, onFile, step = "", episodeId, version = 0, moment = null }) {
   const [problem, setProblem] = useState("");
+  const sam = useModelStep({ capability: kind });
   async function pick(files) {
     const { problem: bad, upload } = pickedUpload(files);
     setProblem(bad);
-    if (upload) await onFile(upload);
+    if (!upload) return;
+    await sam.run((o) => onFile(upload, o), { what: Array.isArray(upload) ? "photos" : "video", outcome: (v) => outcomeOf(latestVideo(v, kind)) || UNKNOWN });
   }
   return (
-    <section className="card" aria-label={title}>
+    <section className="card" aria-label={title} aria-busy={busyOf(sam.step)}>
       <p className="label">{step && `${step} `}{title}</p>
       <PhotoInput label="Add video or photos" accept="video/*,image/*" capture={false} multiple disabled={busy} onFiles={pick} />
+      <ModelStep busy={busy} step={sam.step} onRetry={sam.retry} />
       {problem && <p className="note" role="alert">{problem}</p>}
       {check && <CheckResult check={check} episodeId={episodeId} version={version} moment={moment} />}
     </section>

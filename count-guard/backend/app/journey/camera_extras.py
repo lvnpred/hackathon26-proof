@@ -73,7 +73,8 @@ def closed_view(episode_id: str, event: dict | None) -> dict | None:
         return None
     p = event["payload"]
     return {"text": p["text"], "source": p["source"], "by": p["closed_by"], "case_id": p["case_id"],
-            "count_sheet_url": f"/journey/episodes/{episode_id}/camera/count-sheet.pdf"}
+            "count_sheet_url": f"/journey/episodes/{episode_id}/camera/count-sheet.pdf",
+            "evidence": p.get("evidence")}  # how the explanation was written, for the step line (clarity §4.1)
 
 
 def view(episode_id: str, events: list[dict]) -> dict:

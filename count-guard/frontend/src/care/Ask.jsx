@@ -14,8 +14,8 @@ function AskBody({ ward, patient }) {
   const props = {
     view: patient.view,
     busy: ward.busy,
-    act: (path, body, scope) => ward.act(patient.id, path, body, scope),
-    upload: (path, file, fields, scope) => ward.upload(patient.id, path, file, fields, scope),
+    act: (path, body, scope, opts) => ward.act(patient.id, path, body, scope, opts),
+    upload: (path, file, fields, scope, opts) => ward.upload(patient.id, path, file, fields, scope, opts),
     fault: ward.fault,
     episodeId: patient.id,
   };

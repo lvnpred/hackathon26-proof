@@ -107,3 +107,20 @@ test("run.mjs reads the model text with the allowed regions hidden, open Expand 
   assert.match(src, /setProperty\("display", "none", "important"\)/);
   assert.equal(ALLOWED_SELECTOR, '.model-step, [data-expand="open"]');
 });
+
+test("a step line may name the model whose reply was not usable, and nothing else after it", () => {
+  for (const t of ["Done · Spark 1.3 reply not usable — rules used", "✓ Done · Spark Open reply not usable — template used Expand",
+    "Done · Muse Voice reply not usable — prepared result used"]) assert.ok(isStepLine(t), t);
+  for (const t of ["Done · Spark 1.3 reply not usable — Spark 1.3 used", "Done · SAM 3.1 reply was great", "Done · No model used — drafted by rules SAM 3.1"]) {
+    assert.ok(!isStepLine(t), t);
+  }
+  assert.deepEqual(scanBeat({ text: "Handover Done · Spark 1.3 reply not usable — template used",
+    allowed: [{ kind: "step", text: "Done · Spark 1.3 reply not usable — template used" }], role: "nurse", beat: "x" }), []);
+});
+
+test("the rules-only and record-bot lines name no model, so they need no allowance", () => {
+  for (const t of ["Done · No model used — rules check", "Done · No model used — drafted by rules", "Looking in your record… 3 s"]) {
+    assert.deepEqual(scanBeat({ text: `Card\n${t}`, role: "nurse", beat: "x" }), [], t);
+    assert.ok(!isStepLine(t), t);
+  }
+});

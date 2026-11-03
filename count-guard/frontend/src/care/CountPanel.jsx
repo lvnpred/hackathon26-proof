@@ -7,6 +7,9 @@ import VideoCheck from "./VideoCheck";
 import CameraAdvice from "./CameraAdvice.jsx";
 import { momentFor } from "./moments.js";
 import { latestCheck, swabTotal } from "./video";
+import Source from "./Source.jsx";
+import { isPrepared } from "./source.js";
+import { own } from "./stepOutcome.js";
 
 const NURSE = "Nurse Asha (synthetic)";
 
@@ -111,7 +114,7 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
           Closing count (returned)
           <input inputMode="numeric" value={returned} onChange={(event) => setReturned(event.target.value)} />
         </label>
-        {camera != null && <p className="small" style={{ flex: "1 1 120px" }}><AiMark /> Camera read {camera}</p>}
+        {camera != null && <p className="small" style={{ flex: "1 1 120px" }}><AiMark /> Camera read {camera} <Source prepared={isPrepared(count.camera)} /></p>}
         <label className="field" style={{ flex: "2 1 220px" }}>
           What did the team do?{needsReason ? " (required)" : ""}
           <input value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Found under the drape" />
@@ -131,7 +134,7 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
           check={thisStay}
           moment={momentFor(view, thisStay?.id)}
           busy={busy}
-          onFile={(file) => upload("/video", file, { check: "swabs", by })}
+          onFile={(file, o) => upload("/video", file, { check: "swabs", by }, undefined, own(o))}
         />
       )}
       {packed && (

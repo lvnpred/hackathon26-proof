@@ -30,9 +30,9 @@ test("resolve needs a typed reason and posts it with the person; it is shown onc
 });
 
 test("the replay is labelled Prepared and the closed case shows its explanation and the count sheet", () => {
-  assert.match(src, /act\("\/camera\/replay", \{ by \}\)/);
+  assert.match(src, /act\("\/camera\/replay", \{ by \}, undefined, own\(o\)\)/);
   assert.match(src, /<Source words=\{FROM_REPLAY\} prepared=\{camera\.replay\.source === "prepared"\} \/>/);
-  assert.match(src, /act\("\/camera\/close", \{ by \}\)/);
+  assert.match(src, /act\("\/camera\/close", \{ by \}, undefined, own\(o\)\)/);
   assert.match(src, /<Source words=\{DRAFTED_FROM_CAMERA\} prepared=\{camera\.closed\.source === "prepared"\} \/>/);
   assert.match(src, /\{camera\.closed\.text\}/);
   assert.match(src, /href=\{camera\.closed\.count_sheet_url\}/);

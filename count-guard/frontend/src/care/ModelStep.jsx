@@ -8,7 +8,8 @@ export { useModelStep } from "./useModelStep.js";
 // `.model-step` while its text is a step line ("Checking with SAM 3.1… 3 s", "Done · live (SAM 3.1, 2.1 s)"),
 // and (2) inside an Expand view's root element while it is open, marked `data-expand="open"` (Task 4's view sets
 // `data-expand="closed"` or drops the attribute when folded). Anything else naming a model fails the demo check.
-export default function ModelStep({ step, lens = "staff", onRetry, onExpand }) {
+// `busy` (the ward's write in flight) holds Retry back so the same card cannot submit twice.
+export default function ModelStep({ step, lens = "staff", busy = false, onRetry, onExpand }) {
   const stage = step?.stage || "idle";
   if (stage === "idle") return null;
   const text = stepText(step, { lens });
@@ -19,7 +20,7 @@ export default function ModelStep({ step, lens = "staff", onRetry, onExpand }) {
       {stage === "done" && <span className="tick" aria-hidden="true">✓</span>}
       <span className="text">{text}</span>
       {stage === "failed" && onRetry && (
-        <button type="button" className="quiet" onClick={onRetry}>
+        <button type="button" className="quiet" onClick={onRetry} disabled={busy}>
           Retry
         </button>
       )}

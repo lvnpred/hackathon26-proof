@@ -6,16 +6,32 @@ import { adviceByModel } from "./provenance.js";
 import Source from "./Source.jsx";
 import { DRAFTED_FROM_CAMERA, FROM_CAMERA, FROM_REPLAY } from "./source.js";
 import { pickedUpload } from "./video";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
+
+// Each camera write returns the view with `camera` (camera_api._with_camera); its source words say how SAM did.
+const seenBy = (v) => outcomeOf(v?.camera?.source ? { source: v.camera.source } : null) || UNKNOWN;
+const replayedBy = (v) => outcomeOf(v?.camera?.replay) || UNKNOWN;
+const explainedBy = (v) => outcomeOf(v?.camera?.closed) || UNKNOWN;
 
 export const ADVICE_ONLY = "Advice only. The count a person saves decides.";
 
 // The swab camera on the count panel (spec §6.4, U10): what the rules found, in plain words, with the last frame of
 // a missing swab as proof. A person acknowledges each finding, or resolves it with a reason. The recorded replay is
 // labelled Prepared. Closing the camera case drafts an explanation and the count sheet. Nothing here saves or blocks
-// the count.
+// the count. SAM's reads (clip, recorded clip, replay) show one step line; the closing explanation (Spark Open) another.
 export default function CameraAdvice({ episodeId, version = 0, busy, act, upload, by, acts = [] }) {
   const [camera, setCamera] = useState(null);
   const [problem, setProblem] = useState("");
+  const sam = useModelStep({ capability: "camera" });
+  const closer = useModelStep({ capability: "reconciler" });
+  const seen = (v) => { if (v?.camera) setCamera(v.camera); return v; };
+  const clip = (file) => sam.run(async (o) => seen(await upload("/camera/clip", file, { by }, undefined, own(o))), { what: "video", outcome: seenBy });
+  const demoClip = () => sam.run(async (o) => seen(await upload("/camera/clip", null, { scenario: "demo", by }, undefined, own(o))), { outcome: seenBy });
+  const replay = () => sam.run(async (o) => seen(await act("/camera/replay", { by }, undefined, own(o))), { outcome: replayedBy });
+  const close = () => closer.run(async (o) => seen(await act("/camera/close", { by }, undefined, own(o))), { outcome: explainedBy });
   useEffect(() => {
     let live = true;
     call(`/journey/episodes/${episodeId}/camera`).then((got) => live && setCamera(got)).catch(() => live && setCamera(null));
@@ -25,14 +41,14 @@ export default function CameraAdvice({ episodeId, version = 0, busy, act, upload
   async function pick(files) {
     const { problem: bad, upload: file } = pickedUpload(files);
     setProblem(bad);
-    if (file && !Array.isArray(file)) await upload("/camera/clip", file, { by });
+    if (file && !Array.isArray(file)) await clip(file);
     else if (file) setProblem("Send one video to the swab camera.");
   }
 
   if (!camera) return null;
   const advice = camera.advice || [];
   return (
-    <section className="card" aria-label="Swab camera advice">
+    <section className="card" aria-label="Swab camera advice" aria-busy={busyOf(sam.step) || busyOf(closer.step)}>
       <p className="label">Swab camera</p>
       <p className="small muted">{ADVICE_ONLY}</p>
       {!camera.case_id ? (
@@ -40,14 +56,15 @@ export default function CameraAdvice({ episodeId, version = 0, busy, act, upload
       ) : (
         <div className="row">
           <PhotoInput label="Add theatre video" accept="video/*" capture={false} disabled={busy} onFiles={pick} />
-          <button type="button" className="quiet" disabled={busy} onClick={() => upload("/camera/clip", null, { scenario: "demo", by })}>
+          <button type="button" className="quiet" disabled={busy} onClick={demoClip}>
             Play the recorded theatre clip
           </button>
-          <button type="button" className="quiet" disabled={busy} onClick={() => act("/camera/replay", { by })}>
+          <button type="button" className="quiet" disabled={busy} onClick={replay}>
             Replay the recorded swab count
           </button>
         </div>
       )}
+      <ModelStep busy={busy} step={sam.step} onRetry={sam.retry} />
       {camera.replay && (
         <p className="small">
           <Source words={FROM_REPLAY} prepared={camera.replay.source === "prepared"} />{" "}
@@ -60,11 +77,12 @@ export default function CameraAdvice({ episodeId, version = 0, busy, act, upload
       {advice.map((row) => <AdviceRow key={row.id} row={row} busy={busy} act={act} by={by} acts={acts} />)}
       {camera.case_id && (
         <div className="row">
-          <button type="button" disabled={busy} onClick={() => act("/camera/close", { by })}>
+          <button type="button" disabled={busy} onClick={close}>
             {camera.closed ? "Close the camera case again" : "Close the camera case"}
           </button>
         </div>
       )}
+      <ModelStep busy={busy} step={closer.step} onRetry={closer.retry} />
       {camera.closed && (
         <div className="note" role="status">
           <p className="small"><Source words={DRAFTED_FROM_CAMERA} prepared={camera.closed.source === "prepared"} /></p>

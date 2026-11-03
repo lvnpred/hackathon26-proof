@@ -9,6 +9,7 @@ import { botMoment } from "./moments.js";
 import Source from "./Source.jsx";
 import { isPrepared } from "./source.js";
 import { answerHow, answerSourceLine, checkinLine, inboxGroups, inboxHeader, inboxItems, noteText, photoDay, questionText, sendVerb } from "./askText";
+import { own } from "./stepOutcome.js";
 
 // The three fixed review decisions, as the server names them.
 const DECISIONS = [["no_visit", "No visit needed"], ["come_in", "Come in to the clinic"], ["call", "The doctor will call you"]];
@@ -27,7 +28,7 @@ function Answered({ answer, text, nowMs }) {
 
 function QuestionCard({ q, item, role, name, nowMs, busy, act, ask }) {
   const path = `/questions/${q.id}/answer`;
-  const hear = (file) => ask("/ask/hear", file, { by: DOCTOR }, path);
+  const hear = (file, o) => ask("/ask/hear", file, { by: DOCTOR }, path, own(o)); // the Dictate box's voice step owns the fault
   const send = ({ text, heard }) => act(path, { text, by: DOCTOR, ...answerHow(heard?.text, text, heard?.by) });
   return (
     <article className="card inbox-card" data-line={q.id}>

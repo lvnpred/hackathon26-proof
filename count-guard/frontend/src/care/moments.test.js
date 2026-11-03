@@ -144,7 +144,7 @@ test("capabilities in the flow: sources use the new components", () => {
   assert.match(strip, /Type instead/);
   assert.match(strip, /aria-expanded=\{typing\}/);
   assert.match(strip, /<PhotoInput /);
-  assert.match(strip, /upload\("\/strips\/photo", file, \{ by: DOCTOR \}\)/);
+  assert.match(strip, /upload\("\/strips\/photo", file, \{ by: DOCTOR \}, undefined, own\(o\)\)/);
   assert.match(strip, /Check these medicines/);
   const doctor = read("DoctorActions.jsx");
   assert.doesNotMatch(doctor, /One medicine per line: name then strength/);

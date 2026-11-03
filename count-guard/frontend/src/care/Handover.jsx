@@ -5,6 +5,10 @@ import { madeByModel } from "./provenance.js";
 import Source from "./Source.jsx";
 import { isPrepared } from "./source.js";
 import { momentFor } from "./moments.js";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
 
 // R21: the day and night nurses of the demo ward.
 const FROM = "Nurse Meena (synthetic)";
@@ -18,8 +22,12 @@ export default function Handover({ view, busy, act }) {
   const handover = view.handover;
   const moment = momentFor(view, handover?.id);
   const taker = to.trim();
+  // The draft's evidence says whether Spark worded it, the template stood in, or no model was asked.
+  const step = useModelStep({ capability: "handover" });
+  const draft = () => step.run((o) => act("/handover", { from_nurse: from.trim(), to_nurse: taker, use_model: useModel }, undefined, own(o)),
+    { outcome: (v) => outcomeOf(v?.handover) || UNKNOWN });
   return (
-    <section className="card" aria-label="Shift handover">
+    <section className="card" aria-label="Shift handover" aria-busy={busyOf(step.step)}>
       <p className="label">Shift handover</p>
       <div className="row">
         <label className="field" style={{ flex: "1 1 160px" }}>
@@ -35,10 +43,11 @@ export default function Handover({ view, busy, act }) {
         <input type="checkbox" checked={useModel} onChange={(e) => setUseModel(e.target.checked)} /> Let the AI word it
       </label>
       <div className="row">
-        <button type="button" disabled={busy || !from.trim() || !taker} onClick={() => act("/handover", { from_nurse: from.trim(), to_nurse: taker, use_model: useModel })}>
+        <button type="button" disabled={busy || !from.trim() || !taker} onClick={draft}>
           Draft handover
         </button>
       </div>
+      <ModelStep busy={busy} step={step.step} onRetry={step.retry} />
       {moment && <AiMoment moment={moment} role="nurse" episodeId={view.episode?.id} />}
       {handover && (
         <div className="stack" aria-label="Handover text">

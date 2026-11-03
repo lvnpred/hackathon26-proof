@@ -98,6 +98,7 @@ export function uploadJourney(id, path, file, fields = {}, { onProgress, signal,
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
       };
+      xhr.upload.onload = () => onProgress(100); // the file is sent: the server is now working on it
     }
     xhr.onload = () => {
       try {

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Correct from "./Correct.jsx";
 import Dictate from "./Dictate.jsx";
 import Provenance from "./Provenance.jsx";
@@ -6,22 +5,14 @@ import { madeByModel } from "./provenance.js";
 import { heardHow } from "./askText.js";
 import Source from "./Source.jsx";
 import { FROM_VOICE, isPrepared } from "./source.js";
-import { uploadJourney } from "../journey.js";
+import { own } from "./stepOutcome.js";
 import { drugLine, drugStatus, heardPackLine } from "./theatreLive.js";
 
 // Drug given by voice (spec §6.4): say or type the line, check the heard row, then a person taps to confirm.
 // A pack line ("opening twenty swabs") is only heard here: the swab count changes when a person confirms the pack.
-export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, acts = [] }) {
-  const [problem, setProblem] = useState("");
-  async function hear(file) {
-    setProblem("");
-    try {
-      return await uploadJourney(episodeId, "/ask/hear", file, { by });
-    } catch (exc) {
-      setProblem(exc.message);
-      return null;
-    }
-  }
+// Hearing goes through ward.ask with the Dictate box's voice step, so its upload, checking and any failure show there.
+export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, ask, acts = [] }) {
+  const hear = (file, o) => ask("/ask/hear", file, { by }, "/theatre/drug", own(o));
   // Heard words the person edited stay heard, with the words as heard, so the confirmed row can read "Changed by".
   const send = ({ text, heard }) => {
     const how = heardHow(heard?.text, text, heard?.by);
@@ -32,7 +23,6 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, 
     <section className="card" aria-label="Drug given">
       <Dictate bare label="Drug given" field="Drug, strength, amount, route" verb="Add heard line" capability="task_voice"
         placeholder="e.g. lignocaine two percent, five ml, local infiltration" maxLength={400} busy={busy} onHear={hear} onSend={send} />
-      {problem && <p className="note small" role="alert">{problem}</p>}
       {panel.drugs.length > 0 && (
         <ul className="plain-list">
           {panel.drugs.map((row) => (

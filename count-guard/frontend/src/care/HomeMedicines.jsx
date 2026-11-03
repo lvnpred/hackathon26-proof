@@ -6,6 +6,10 @@ import { stripMoments } from "./moments.js";
 import PhotoInput from "./PhotoInput.jsx";
 import Source from "./Source.jsx";
 import { FROM_PHOTO, isPrepared } from "./source.js";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { own, viewOutcome } from "./stepOutcome.js";
 
 // One doctor action for the medicines a patient takes at home: a photo first, typing as the quiet way out (R11).
 // Each medicine shows its match to the prescription. A photo that reads nothing says so in the fault line.
@@ -14,11 +18,14 @@ export default function HomeMedicines({ view, busy, upload, act }) {
   const [lines, setLines] = useState("");
   const { strips, nudges } = stripMoments(view);
   const episodeId = view.episode?.id;
+  const step = useModelStep({ capability: "strips" });
+  const readPhoto = (file) => step.run((o) => upload("/strips/photo", file, { by: DOCTOR }, undefined, own(o)), { what: "photo", outcome: viewOutcome(view, ["strips"]) });
 
   return (
-    <section className="card" aria-label="Photo of medicines from home">
+    <section className="card" aria-label="Photo of medicines from home" aria-busy={busyOf(step.step)}>
       <p className="label">Photo of medicines from home</p>
-      <PhotoInput disabled={busy} onFiles={([file]) => upload("/strips/photo", file, { by: DOCTOR })} />
+      <PhotoInput disabled={busy} onFiles={([file]) => readPhoto(file)} />
+      <ModelStep busy={busy} step={step.step} onRetry={step.retry} />
       <button type="button" className="quiet" aria-expanded={typing} onClick={() => setTyping(!typing)}>Type instead</button>
       {typing && (
         <>

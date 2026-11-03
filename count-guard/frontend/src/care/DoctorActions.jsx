@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { RxImport, RxTable } from "./legacy/Rx";
-import { answerHow } from "./askText";
+import { heardHow } from "./askText";
 import ActionBar from "./ActionBar";
 import { IconMic } from "./icons.jsx";
 import { panelOpen, toggled } from "./actions";
@@ -20,13 +20,23 @@ import { theatreSteps } from "./theatre";
 import PhotoInput from "./PhotoInput.jsx";
 import HomeMedicines from "./HomeMedicines.jsx";
 import { TrayPreview } from "./VideoCheck";
+import ModelStep from "./ModelStep.jsx";
+import { useModelStep } from "./useModelStep.js";
+import { busyOf } from "./modelStep.js";
+import { UNKNOWN, outcomeOf, own } from "./stepOutcome.js";
 
 export const DOCTOR = "Dr. A. Rao (synthetic)";
 
-// Hear a recording as text to check, then draft from that text. heard_by keeps who heard it.
-const hearing = (ask, path) => (file) => ask("/ask/hear", file, { by: DOCTOR }, path);
-const drafting = (upload, path) => ({ text, heard }) =>
-  upload(path, undefined, { text, by: DOCTOR, heard_by: answerHow(heard?.text, text, heard?.by).heard_by });
+// Hear a recording as text to check, then draft from that text. heard_by keeps who heard it; heard words the doctor
+// edited stay voice (ruling P8), so the draft keeps its voice origin. `o` is the card's step opts: its fault is its own.
+const hearing = (ask, path) => (file, o) => ask("/ask/hear", file, { by: DOCTOR }, path, own(o));
+const draftFrom = (upload, path) => ({ text, heard }, o) =>
+  upload(path, undefined, { text, by: DOCTOR, heard_by: heardHow(heard?.text, text, heard?.by).heard_by }, undefined, own(o));
+// How Spark did on a draft: the open draft's evidence, else its moment; plain "Done" when neither says.
+const draftOutcome = (kind) => (view) => {
+  const draft = view?.drafts?.[kind];
+  return outcomeOf(draft?.evidence ? draft : null) || outcomeOf(momentFor(view, draft?.id)) || UNKNOWN;
+};
 
 function PhotoCard({ title, busy, upload }) {
   return (
@@ -47,11 +57,16 @@ function OrderDraft({ view, busy, signOrders }) {
 function OrdersDictation({ view, busy, upload, ask, signOrders }) {
   const draft = view.drafts?.order;
   const signed = draft ? null : lastSigned(view.ai_moments, "orders");
-  const dictate = <Dictate label="Dictate orders" capability="orders" verb="Draft orders" busy={busy} onHear={hearing(ask, "/dictate/orders")} onSend={drafting(upload, "/dictate/orders")} />;
-  if (draft) return <details className="fold"><summary>Dictate again</summary>{dictate}</details>;
+  // The drafting step lives here, not in the Dictate box: once the draft exists the box moves into the fold and
+  // remounts, and the done line (or a failure) must stay in sight.
+  const drafting = useModelStep({ capability: "orders" });
+  const dictate = <Dictate label="Dictate orders" capability="orders" verb="Draft orders" busy={busy} sendStep={drafting} sendOutcome={draftOutcome("order")} onHear={hearing(ask, "/dictate/orders")} onSend={draftFrom(upload, "/dictate/orders")} />;
+  const line = <div aria-busy={busyOf(drafting.step)}><ModelStep busy={busy} step={drafting.step} onRetry={drafting.retry} /></div>;
+  if (draft) return <>{line}<details className="fold"><summary>Dictate again</summary>{dictate}</details></>;
   return (
     <>
       {dictate}
+      {line}
       {signed && <AiMoment moment={signed} role="doctor" episodeId={view.episode?.id} />}
       {signed && <p className="small"><Provenance item={{ id: signed.id, value: signed.refs?.items, same: sameOrders, ai: madeByModel(signed) }} events={view.acts} /></p>}
       <OrderDraft view={view} busy={busy} signOrders={signOrders} />
@@ -109,6 +124,8 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
     setSummary(draftSummary(draft));
   }
   const templates = Object.entries(view.templates || {});
+  const drafter = useModelStep({ capability: "discharge" });
+  const draftFromRecord = () => drafter.run((o) => act("/discharge/draft", { by: DOCTOR }, undefined, own(o)), { outcome: draftOutcome("discharge") });
   async function signDischarge() {
     // The draft's summary as proposed goes with the signing, so an edited summary reads "Changed by" (clarity §4.3).
     const proposed = summaryDraftId && draft ? { proposed_summary: draftSummary(draft) } : {};
@@ -120,10 +137,11 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   }
   return (
     <>
-      <button type="button" className={primary && !draft ? "primary" : undefined} disabled={busy} onClick={() => act("/discharge/draft", { by: DOCTOR })}>Draft discharge</button>
+      <button type="button" className={primary && !draft ? "primary" : undefined} disabled={busy} onClick={draftFromRecord}>Draft discharge</button>
+      <div aria-busy={busyOf(drafter.step)}><ModelStep busy={busy} step={drafter.step} onRetry={drafter.retry} /></div>
       <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
       {signedDraft && <p className="small">Discharge signed <Provenance item={{ id: signedDraft.ref }} events={view.acts} /></p>}
-      {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />}
+      {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} sendCapability="discharge" sendOutcome={draftOutcome("discharge")} onHear={hearing(ask, "/dictate/discharge")} onSend={draftFrom(upload, "/dictate/discharge")} />}
       {(open || draft) && (
         <>
           <DischargeDraft draft={draft} episodeId={view.episode?.id} acts={view.acts} />
@@ -174,13 +192,13 @@ function SendToTheatre({ view, busy, act, primary }) {
   );
 }
 
-function Theatre({ view, busy, act, upload, nowMs }) {
+function Theatre({ view, busy, act, upload, ask, nowMs }) {
   const [reason, setReason] = useState("");
   const ended = theatreSteps(view)[3].done;
   const move = (view.allowed || []).find((m) => m.to === "ward" && m.role === "doctor");
   return (
     <>
-      <TheatreChecklist role="doctor" view={view} busy={busy} act={act} upload={upload} nowMs={nowMs} />
+      <TheatreChecklist role="doctor" view={view} busy={busy} act={act} upload={upload} ask={ask} nowMs={nowMs} />
       {move && (
         <section className="card">
           <label className="field">
@@ -229,7 +247,7 @@ export default function DoctorActions({ state, card, pick, control, view, act, u
       {open("photo") && <PhotoCard title={state === "ward" ? "Wound photo" : "Reference photo"} busy={busy} upload={upload} />}
       {below.map((key) => blocks(false)[key])}
       {state === "clinic" && <Clinic view={view} busy={busy} act={act} upload={upload} />}
-      {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} nowMs={nowMs} />}
+      {state === "theatre" && <Theatre view={view} busy={busy} act={act} upload={upload} ask={ask} nowMs={nowMs} />}
     </>
   );
 }

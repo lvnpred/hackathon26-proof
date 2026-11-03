@@ -99,3 +99,12 @@ test("postJourney fails with no answer in N s when the timeout passes", async ()
     globalThis.fetch = real;
   }
 });
+
+test("uploadJourney reports 100 when the upload ends even without a sized progress event, so the step moves to checking", async () => {
+  const seen = [];
+  const done = uploadJourney(7, "/photo", null, {}, { XHR: FakeXHR, onProgress: (p) => seen.push(p) });
+  FakeXHR.last.upload.onload?.();
+  FakeXHR.last.reply(200, "{}");
+  await done;
+  assert.deepEqual(seen, [100]);
+});

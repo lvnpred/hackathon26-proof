@@ -7,9 +7,6 @@ import { rosterFrom, wardPollIntervalMs } from "./roster";
 import { statusBody, statusQuery } from "./status";
 import { followWard } from "./wardStream";
 
-// A card that calls a model shows its step with these and passes the step's opts to act/upload/ask (spec §4.1).
-export { default as ModelStep, useModelStep } from "./ModelStep.jsx";
-
 // The roster and the clock live on the server (GET /journey/ward). Only the screen's own choices stay here.
 const ROLE = "cg-role";
 const PATIENT = "cg-patient";

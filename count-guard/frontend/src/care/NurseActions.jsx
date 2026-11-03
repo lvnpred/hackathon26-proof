@@ -6,6 +6,7 @@ import NowCard from "./NowCard";
 import NurseTasks from "./NurseTasks";
 import ProofItem from "./ProofItem.jsx";
 import TheatreChecklist from "./TheatreChecklist";
+import { own } from "./stepOutcome.js";
 import { checkFor } from "./verdict.js";
 
 const WARD_NURSE = "Nurse Meena (synthetic)";
@@ -40,7 +41,7 @@ export function proofFor({ view, step, by, busy, act, upload }) {
     const item = `${step}:${key}`;
     return (
       <ProofItem check={checkFor(view, item)} label={label} busy={busy} acts={view.acts}
-        onPhoto={(file) => upload(`/checks/${item}/photo`, file, { by })}
+        onPhoto={(file, o) => upload(`/checks/${item}/photo`, file, { by }, undefined, own(o))}
         onOverride={(reason) => act(`/checks/${item}/override`, { reason, by })} />
     );
   };
@@ -60,7 +61,7 @@ export default function NurseActions({ state, card, pick, control, view, act, up
           proof={proofFor({ view, step: "admission", by, busy, act, upload })} />
       </div>
     ),
-    theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} replaced={replaced} nowMs={nowMs} primary={nowStep} />,
+    theatre: <TheatreChecklist key="theatre" role="nurse" episodeId={episodeId} view={view} busy={busy} act={act} upload={upload} ask={ask} replaced={replaced} nowMs={nowMs} primary={nowStep} />,
     discharge: (
       <div key="discharge">
         <p className="label">Discharge checklist</p>

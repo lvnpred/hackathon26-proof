@@ -1,7 +1,6 @@
 // The three theatre panels (spec §6.4): drug given by voice, the simulated vitals strip, the context card.
 // Plain staff words only: no event names, no model names.
 import { hhmm } from "./clock.js";
-import { displayName } from "./names.js";
 
 export const RESEARCH_BANNER = "Research demo — not for clinical use";
 export const SIMULATED = "Simulated";
@@ -17,15 +16,15 @@ export function drugLine(row) {
   return [name, row.strength, row.amount != null ? `${row.amount} ${row.unit || ""}`.trim() : null, row.route].filter(Boolean).join(" ");
 }
 
-// Under a heard row: what a person still has to do, or who confirmed it.
+// Under a heard row: what a person still has to do, or when it was given (who confirmed it is the Provenance mark).
 export function drugStatus(row) {
-  if (row.given) return `Given ${hhmm(row.given.at_ms)} · confirmed by ${displayName(row.given.by)}`;
+  if (row.given) return `Given ${hhmm(row.given.at_ms)}`;
   if (!row.grounded) return "Not in the drug list. Check the name before confirming.";
   return "Heard, not confirmed";
 }
 
 export function heardPackLine(pack) {
-  const status = pack.confirmed_by ? `pack confirmed by ${displayName(pack.confirmed_by)}` : "not counted until a person confirms";
+  const status = pack.confirmed_by ? "in the swab count" : "not counted until a person confirms";
   return `Heard “${pack.text}” · ${pack.n} ${pack.item_type}${pack.n === 1 ? "" : "s"} · ${status}`;
 }
 

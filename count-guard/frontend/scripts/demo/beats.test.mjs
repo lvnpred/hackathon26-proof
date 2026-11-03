@@ -105,11 +105,11 @@ test("\"synthetic data\" and \"Research demo\" are expected on screen in both ap
 
 test("the §12 moments are each expected by a beat", () => {
   const scene = (s) => BEATS.filter((b) => b.scene === s).map(allText).join(" | ");
-  assert.match(scene("ward"), /Accepted — The photo shows a patient wristband/);
-  assert.match(scene("ward"), /Not accepted — /);
+  assert.match(scene("ward"), /Photo matches — The photo shows a patient wristband/);
+  assert.match(scene("ward"), /Photo does not match — /);
   assert.match(scene("ward"), /On the ward/);
   assert.match(scene("theatre"), /From voice/);
-  assert.match(scene("theatre"), /confirmed by Nurse Asha/);
+  assert.match(scene("theatre"), /Accepted by Nurse Asha/);
   assert.match(scene("theatre"), /Research demo — not for clinical use/);
   assert.match(scene("theatre"), /BP 86\/50, down 28% in 4 min\./);
   assert.match(scene("theatre"), /Advice only\. The count a person saves decides\./);
@@ -122,7 +122,7 @@ test("the §12 moments are each expected by a beat", () => {
 
 test("the wrong photo is retaken in the ward scene", () => {
   const ward = BEATS.filter((b) => b.scene === "ward");
-  const wrong = ward.findIndex((b) => b.expect.some((s) => s.startsWith("Not accepted — ")));
+  const wrong = ward.findIndex((b) => b.expect.some((s) => s.startsWith("Photo does not match — ")));
   assert.ok(wrong >= 0);
   assert.ok(ward.slice(wrong + 1).some((b) => b.clicks.some((c) => c.includes("again"))));
 });

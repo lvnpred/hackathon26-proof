@@ -2,6 +2,7 @@ import { hhmm } from "./clock.js";
 import { displayName } from "./names.js";
 import { blankRow } from "./orders.js";
 import { obsValues } from "./tasklist.js";
+import { proposalByModel } from "./provenance.js";
 
 export const MATCH_LABEL = {
   ok: "Photo matches the task",
@@ -49,15 +50,23 @@ export function newestPhoto(view, taskId) {
 }
 
 // The body for POST /tasks/{id}/done (without `by`), or { error }. Mirrors the server's DoneIn rules.
-export function doneBody({ task, via, transcript, form, photo, heardBy }) {
+const OBS_KEYS = ["sbp", "dbp", "hr", "spo2", "temp"];
+
+// proposed: the heard values the AI proposed; edited/heardText: heard words the person changed (clarity §4.3).
+export function doneBody({ task, via, transcript, form, photo, heardBy, proposed = null, edited = false, heardText = "" }) {
   const said = (transcript || "").trim();
   if (via === "voice" && !said) return { error: "A completion by voice needs what was said." };
   const body = { via, transcript: said, note: "" };
-  if (via === "voice" && heardBy) body.heard_by = heardBy;
+  if (via === "voice" && heardBy) {
+    body.heard_by = heardBy;
+    if (edited) Object.assign(body, { edited: true, heard_text: heardText });
+  }
   if (task.kind === "obs") {
     const out = obsValues(form || {});
     if (out.error) return { error: out.error };
     body.values = out.values;
+    const heard = Object.entries(proposed || {}).filter(([k, v]) => OBS_KEYS.includes(k) && Number.isFinite(Number(v)) && v !== "" && v !== null);
+    if (via === "voice" && heard.length) body.proposed_values = Object.fromEntries(heard.map(([k, v]) => [k, Number(v)]));
   }
   if (photo) body.proof_id = photo.id;
   return { body };
@@ -91,5 +100,6 @@ export function rowSession(proposal, task) {
     transcript: proposal.transcript || "",
     source: proposal.source,
     heardBy: proposal.heard_by,
+    ai: proposalByModel(proposal), // "Proposed by AI" only when a model made the values (clarity §4.3)
   };
 }

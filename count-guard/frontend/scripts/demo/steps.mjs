@@ -85,7 +85,7 @@ export const STEPS = {
     await H.file("Photo check: Consent on file", "eval/media/wrong-photo/wrong-photo-bed-rail-synthetic.png");
   },
   async "ward-retake"(H) {
-    await photo(H, "Consent on file", "eval/media/consent/consent-form.png", "Accepted — The photo shows a signed consent form");
+    await photo(H, "Consent on file", "eval/media/consent/consent-form.png", "Photo matches — The photo shows a signed consent form");
     await before(H, "ward-retake");
     await H.tick(...ADMISSION);
     await H.click("Complete admission");

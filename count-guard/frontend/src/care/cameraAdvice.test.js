@@ -25,7 +25,8 @@ test("acknowledging posts to the advice route with the person and an optional re
 test("resolve needs a typed reason and posts it with the person; it is shown once resolved", () => {
   assert.match(src, /disabled=\{busy \|\| !why\}/);
   assert.match(src, /act\(`\/camera\/advice\/\$\{row\.id\}\/resolve`, \{ by, reason: why \}\)/);
-  assert.match(src, /Resolved by \{displayName\(row\.resolved\.by\)\}/);
+  assert.match(src, /<Provenance item=\{\{ id: row\.id, ai: adviceByModel\(row\) \}\} events=\{acts\} \/>/); // "Overridden by {name} {HH:MM}" (provenance.js)
+  assert.match(src, /\(row\.resolved \|\| row\.acked\)\.reason/);
 });
 
 test("the replay is labelled Prepared and the closed case shows its explanation and the count sheet", () => {

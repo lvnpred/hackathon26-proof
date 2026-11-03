@@ -273,6 +273,9 @@ def complete_task(
     proof_id: str | None = None,
     heard_by: str = "",
     calls: list[dict] | None = None,
+    proposed_values: dict | None = None,
+    heard_text: str = "",
+    edited: bool = False,
 ) -> int:
     payload, view = _task(store, episode_id, task_id)
     _refuse_if_closed(view)
@@ -291,6 +294,11 @@ def complete_task(
     evidence = {"evidence_id": done["evidence_id"]} if "evidence_id" in done else {}
     if values:
         done["values"] = values
+    spoken = via == "voice" and bool(heard_by)  # only a save from what was heard carries the AI's proposal
+    if spoken and proposed_values:  # clarity §4.3: the heard proposal beside the saved values
+        done["proposed_values"] = proposed_values
+    if spoken and edited:  # heard words the person edited before saving
+        done.update(edited=True, heard_text=heard_text)
     store.append(episode_id, "task.done", done, ts_ms=ts)
     if payload["kind"] == "dose":
         name = payload["name"] or payload["title"]

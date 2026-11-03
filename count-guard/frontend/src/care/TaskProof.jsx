@@ -6,6 +6,7 @@ import { prefillObs } from "./capture";
 import { doneBody, MATCH_LABEL, newestPhoto } from "./drafts";
 import { momentFor } from "./moments.js";
 import { FROM_VOICE, isPrepared, sourceWords } from "./source.js";
+import Provenance from "./Provenance.jsx";
 import Source from "./Source.jsx";
 import { obsValues } from "./tasklist";
 import ProofItem from "./ProofItem.jsx";
@@ -15,8 +16,9 @@ const strings = (values) => Object.fromEntries(Object.entries(values || {}).map(
 
 // Confirm one task: the words said, the values, a photo, then Confirm. Nothing is saved until Confirm.
 // A strip or monitor read that does not match is flagged and Confirm stays on (D9). The photo's verdict is U9:
-// Not accepted or Not checked refuses Confirm until a new photo is accepted or the nurse overrides with a reason.
-// session: { proposal: { candidates: [task], values }, via, transcript, source, heardBy }.
+// Photo does not match or Not checked refuses Confirm until a new photo is accepted or the nurse overrides with a reason.
+// session: { proposal: { candidates: [task], values }, via, transcript, source, heardBy, edited?, heardText? }.
+// The heard values (the AI's proposal) go with Confirm, so a value the nurse changed reads "Changed by" (clarity §4.3).
 export default function TaskProof({ view, task, session, by, busy, act, upload, onClear }) {
   const [form, setForm] = useState(() => strings(session.proposal.values));
   const [photo, setPhoto] = useState(null);
@@ -40,7 +42,8 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       if (await act(`/tasks/${task.id}/begin`, { by })) onClear();
       return;
     }
-    const out = doneBody({ task, via: session.via, transcript: session.transcript, form, photo, heardBy: session.heardBy });
+    const out = doneBody({ task, via: session.via, transcript: session.transcript, form, photo, heardBy: session.heardBy,
+      proposed: session.proposal.values, edited: session.edited, heardText: session.heardText });
     if (out.error) return setError(out.error);
     setError("");
     if (await act(`/tasks/${task.id}/done`, { by, ...out.body })) onClear();
@@ -54,6 +57,8 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
       {session.transcript && (
         <p className="small">
           “{session.transcript}” <Source words={session.via === "voice" ? FROM_VOICE : null} prepared={session.via === "voice" && isPrepared({ heard_by: session.heardBy })} />
+          {/* Heard values stay the AI's proposal until Confirm saves them (then the row reads Accepted by …). */}
+          {session.via === "voice" && <> <Provenance item={{ id: task.id, ai: session.ai === true }} events={[]} /></>}
         </p>
       )}
       {task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} initial={form} onChange={setForm} />}
@@ -66,7 +71,7 @@ export default function TaskProof({ view, task, session, by, busy, act, upload, 
         </p>
       )}
       {photo && (
-        <ProofItem check={checkFor(view, `task:${task.id}`)} label={task.title} busy={busy}
+        <ProofItem check={checkFor(view, `task:${task.id}`)} label={task.title} busy={busy} acts={view.acts}
           onOverride={(reason) => act(`/checks/task:${task.id}/override`, { reason, by })} />
       )}
       {photo?.check?.evidence_id && <EvidenceThumb episodeId={view.episode?.id} evidenceId={photo.check.evidence_id} version={view.timeline?.length} fallback={<img src={photo.url} alt="Proof photo" width={72} height={72} style={{ objectFit: "cover", borderRadius: 6 }} />} />}

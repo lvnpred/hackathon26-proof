@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -113,6 +114,23 @@ class Values(Strict):
     temp: float | None = Field(default=None, ge=30, le=45)
 
 
+class HeardValues(Strict):
+    """What the AI heard (clarity §4.3): the Values ranges, every field optional, never NaN or infinite."""
+    sbp: int | None = Field(default=None, ge=30, le=300)
+    dbp: int | None = Field(default=None, ge=10, le=200)
+    hr: int | None = Field(default=None, ge=20, le=250)
+    spo2: int | None = Field(default=None, ge=50, le=100)
+    temp: float | None = Field(default=None, ge=30, le=45, allow_inf_nan=False)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _finite(cls, data):
+        """NaN or infinity fails as a word, so the 422 can echo it (a bare NaN is not JSON)."""
+        if isinstance(data, dict):
+            return {k: "not a finite number" if isinstance(v, float) and not math.isfinite(v) else v for k, v in data.items()}
+        return data
+
+
 class DoneIn(At):
     by: str = Field(min_length=1, max_length=80)
     via: Literal["tap", "voice", "text"] = "tap"
@@ -121,6 +139,10 @@ class DoneIn(At):
     transcript: str = Field(default="", max_length=2000)
     proof_id: str | None = Field(default=None, min_length=1, max_length=64)
     heard_by: str = Field(default="", max_length=40)
+    # Clarity §4.3: what the AI proposed (heard values, the heard words) beside what the person saves.
+    proposed_values: HeardValues | None = None
+    heard_text: str = Field(default="", max_length=2000)
+    edited: bool = False
 
     @model_validator(mode="after")
     def _voice_needs_words(self):
@@ -134,6 +156,7 @@ class DischargeIn(At):
     template: str = Field(default="hernia-repair", max_length=40)
     by: str = Field(min_length=1, max_length=80)
     draft_id: str | None = Field(default=None, min_length=1, max_length=64)
+    proposed_summary: str | None = Field(default=None, max_length=4000)  # the draft's summary as the AI proposed it
 
 
 def _write(request: Request, episode_id: str, at_ms: int | None, action) -> dict:
@@ -171,7 +194,9 @@ def begin(episode_id: str, task_id: str, body: BeginIn, request: Request) -> dic
 @flow_router.post("/tasks/{task_id}/done")
 def done(episode_id: str, task_id: str, body: DoneIn, request: Request) -> dict:
     values = body.values.model_dump(exclude_none=True) if body.values else None
-    extra = {"transcript": body.transcript.strip(), "proof_id": body.proof_id, "heard_by": body.heard_by}
+    extra = {"transcript": body.transcript.strip(), "proof_id": body.proof_id, "heard_by": body.heard_by,
+             "proposed_values": body.proposed_values.model_dump(exclude_none=True) if body.proposed_values else None,
+             "heard_text": body.heard_text.strip(), "edited": body.edited}
     extra["calls"] = live.spoken_calls(request.app.state.settings, body.via, body.heard_by)
     return _write(
         request,
@@ -198,6 +223,8 @@ def sign_discharge(episode_id: str, body: DischargeIn, request: Request) -> dict
     ts = _at(store, episode_id, body.at_ms)
     rx = _latest(events, "rx.ordered")
     signed = {"summary": body.summary.strip(), "by": body.by, **({"draft_id": body.draft_id} if body.draft_id else {})}
+    if body.draft_id and body.proposed_summary is not None:
+        signed["proposed_summary"] = body.proposed_summary.strip()
     store.append(episode_id, "discharge.signed", signed, ts_ms=ts)
     store.append(episode_id, "discharge.card", card_payload(body.template, rx["payload"] if rx else None, body.by), ts_ms=ts)
     # Every refusal is above. check_move needs the signed event, so a refusal here would be a bug (P2-R6).

@@ -135,7 +135,7 @@ export default function CountPanel({ episodeId, view, busy, act, upload, replace
         />
       )}
       {packed && (
-        <CameraAdvice episodeId={episodeId} version={view.timeline?.length} busy={busy} act={act} upload={upload} by={by} />
+        <CameraAdvice episodeId={episodeId} version={view.timeline?.length} busy={busy} act={act} upload={upload} by={by} acts={view.acts} />
       )}
     </section>
   );

@@ -83,6 +83,14 @@ export function answerHow(heardText, currentText, heardBy) {
   return { via: "text", heard_by: "" };
 }
 
+// Like answerHow, but heard words the person edited stay voice (clarity §4.3): `edited` and the words as heard go with
+// the save, so the chart can say "Changed by {name}". Text never heard (or heard as typed) is text.
+export function heardHow(heardText, currentText, heardBy) {
+  if (!heardText || !heardBy || heardBy === "typed") return { via: "text", heard_by: "" };
+  if ((currentText || "").trim() === heardText.trim()) return { via: "voice", heard_by: heardBy };
+  return { via: "voice", heard_by: heardBy, edited: true, heard_text: heardText.trim() };
+}
+
 // The patient's own words go to the doctor only; other roles see a fixed line.
 export const QUESTION_HIDDEN = "Question from the patient";
 export const questionText = (role, question) => (role === "doctor" ? question.text : QUESTION_HIDDEN);

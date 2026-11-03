@@ -108,6 +108,7 @@ def hear_drug(
     at_ms: int | None = Form(None, ge=0),
     text: str | None = Form(None, min_length=1, max_length=400),
     heard_by: str = Form("", max_length=40),
+    heard_text: str = Form("", max_length=400),
     file: UploadFile | None = File(None),
 ) -> dict:
     """A spoken or typed theatre line. A drug is a draft row; a pack line ("opening twenty swabs") is a heard pack.
@@ -123,6 +124,8 @@ def hear_drug(
                         calls=said["calls"])
     payload = {**payload, "by": by, "source": said["source"], "heard_by": said["source"], "calls": said["calls"],
                "evidence": found}
+    if said["source"] != "typed" and heard_text.strip() and heard_text.strip() != said["text"]:
+        payload["heard_text"] = heard_text.strip()  # clarity §4.3: the heard words, before the person edited them
     return _act(request, episode_id, kind, payload, at_ms)
 
 

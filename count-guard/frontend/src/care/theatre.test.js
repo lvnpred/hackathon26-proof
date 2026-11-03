@@ -197,7 +197,9 @@ test("theatre panels: simulated vitals, heard rows and packs read as plain staff
   assert.equal(drugLine(row), "lignocaine 2% 5 ml local infiltration");
   assert.equal(drugStatus(row), "Heard, not confirmed");
   assert.match(drugStatus({ ...row, grounded: false }), /Check the name/);
-  assert.equal(drugStatus({ ...row, given: { by: "Dr. A. Rao (synthetic)", at_ms: 40 * M } }), "Given 09:40 · confirmed by Dr. A. Rao");
+  assert.equal(drugStatus({ ...row, given: { by: "Dr. A. Rao (synthetic)", at_ms: 40 * M } }), "Given 09:40"); // who: the Provenance mark
+  assert.equal(heardPackLine({ text: "opening twenty swabs", n: 20, item_type: "swab", confirmed_by: "Nurse Asha (synthetic)" }),
+    "Heard “opening twenty swabs” · 20 swabs · in the swab count");
   assert.equal(heardPackLine({ text: "opening twenty swabs", n: 20, item_type: "swab", confirmed_by: null }),
     "Heard “opening twenty swabs” · 20 swabs · not counted until a person confirms");
   assert.equal(RESEARCH_BANNER, "Research demo — not for clinical use");

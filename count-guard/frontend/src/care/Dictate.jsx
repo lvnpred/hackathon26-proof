@@ -100,7 +100,8 @@ export default function Dictate({ label, field = "What was said", verb, capabili
         </div>
       </div>
       {message && <p className="note small" role="status">{message}</p>}
-      {heard && heard.text === text && <p className="small"><Source words={sourceWords({ kind: "voice", capability })} prepared={isPrepared({ heard_by: heard.by })} /></p>}
+      {/* The From voice mark stays while the heard text is edited, until it is sent (clarity §4.3). */}
+      {heard && text.trim() && <p className="small"><Source words={sourceWords({ kind: "voice", capability })} prepared={isPrepared({ heard_by: heard.by })} /></p>}
       <label className={`dictate-upload${busy || recording ? " disabled" : ""}`}>
         Upload audio
         <input className="visually-hidden" type="file" accept="audio/*" disabled={busy || recording} onChange={chooseFile} />

@@ -3,12 +3,13 @@ import { PREPARED, isPrepared } from "./source.js";
 
 export const NO_PHOTO = "No photo";
 export const NOT_CHECKED = "Not checked — model unavailable";
-const WORD = { accepted: "Accepted", not_accepted: "Not accepted" };
+// The model's verdict on a photo. "Accepted" is only ever a person (clarity §4.3, provenance.js).
+const WORD = { accepted: "Photo matches", not_accepted: "Photo does not match" };
 const TONE = { accepted: "fine", not_accepted: "check", not_checked: "check", overridden: "done", none: "wait" };
 
 const stateOf = (check) => check?.state || check?.verdict || "none";
 
-// "Not accepted — No wristband visible", with " · Prepared" when a prepared verdict stands behind it.
+// "Photo does not match — No wristband visible", with " · Prepared" when a prepared verdict stands behind it.
 export function proofLabel(check) {
   const state = stateOf(check);
   if (state === "none") return NO_PHOTO;

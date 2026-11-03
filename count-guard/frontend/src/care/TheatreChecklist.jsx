@@ -103,7 +103,7 @@ export default function TheatreChecklist({ role, view, episodeId, busy, act, upl
               <Controls step={step} role={role} view={view} episodeId={episodeId} busy={busy} act={act} upload={upload} replaced={replaced} onNote={setNote} by={by} primary={primary} />
             )}
             {role === "nurse" && STEP_PROOF[step.key] && canRecord(view, step.key) && (
-              <ProofItem check={checkFor(view, STEP_PROOF[step.key][0])} label={STEP_PROOF[step.key][1]} busy={busy}
+              <ProofItem check={checkFor(view, STEP_PROOF[step.key][0])} label={STEP_PROOF[step.key][1]} busy={busy} acts={view.acts}
                 onPhoto={(file) => upload(`/checks/${STEP_PROOF[step.key][0]}/photo`, file, { by })}
                 onOverride={(reason) => act(`/checks/${STEP_PROOF[step.key][0]}/override`, { reason, by })} />
             )}

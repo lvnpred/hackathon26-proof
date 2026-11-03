@@ -15,3 +15,4 @@ export function IconMic() { return <Icon><rect x="9" y="3" width="6" height="11"
 export function IconUndo() { return <Icon><path d="M9 7L4 12l5 5" /><path d="M4 12h10a6 6 0 010 6h-3" /></Icon>; }
 export function IconWhy() { return <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17v.5" /></Icon>; }
 export function IconBell() { return <Icon><path d="M6 17V11a6 6 0 0112 0v6l2 2H4l2-2z" /><path d="M10 21h4" /></Icon>; }
+export function IconPerson() { return <Icon><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0116 0" /></Icon>; }

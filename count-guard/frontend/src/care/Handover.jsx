@@ -1,5 +1,7 @@
 import { useState } from "react";
 import AiMoment from "./AiMoment.jsx";
+import Provenance from "./Provenance.jsx";
+import { madeByModel } from "./provenance.js";
 import Source from "./Source.jsx";
 import { isPrepared } from "./source.js";
 import { momentFor } from "./moments.js";
@@ -40,6 +42,7 @@ export default function Handover({ view, busy, act }) {
       {moment && <AiMoment moment={moment} role="nurse" episodeId={view.episode?.id} />}
       {handover && (
         <div className="stack" aria-label="Handover text">
+          <Provenance item={{ id: handover.id, at_ms: moment?.at_ms, ai: handover.wording === "llm" || madeByModel(handover) }} events={view.acts}>
           <p className="small muted">{handover.from} to {handover.to} · {handover.since} to {handover.until}</p>
           {handover.text && (
             <>
@@ -48,7 +51,7 @@ export default function Handover({ view, busy, act }) {
             </>
           )}
           <ol className="small">{(handover.lines || []).map((line, i) => <li key={i}>{line.text}</li>)}</ol>
-          {handover.accepted_by && <p className="small"><span className="pill info">Accepted</span> by {handover.accepted_by}</p>}
+          </Provenance>
         </div>
       )}
       {handover && !handover.accepted_by && (

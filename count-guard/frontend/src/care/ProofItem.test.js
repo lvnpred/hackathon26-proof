@@ -4,15 +4,15 @@ import fs from "node:fs";
 import { NO_PHOTO, checkFor, proofLabel, proofTone } from "./verdict.js";
 
 test("the line a photo check shows (spec §6.6)", () => {
-  assert.equal(proofLabel({ verdict: "not_accepted", source: "live", why: "No wristband visible" }), "Not accepted — No wristband visible");
-  assert.equal(proofLabel({ verdict: "accepted", source: "live", why: "Wristband with a name" }), "Accepted — Wristband with a name");
+  assert.equal(proofLabel({ verdict: "not_accepted", source: "live", why: "No wristband visible" }), "Photo does not match — No wristband visible");
+  assert.equal(proofLabel({ verdict: "accepted", source: "live", why: "Wristband with a name" }), "Photo matches — Wristband with a name");
   assert.equal(proofLabel({ verdict: "not_checked", source: "unavailable", why: "Not checked — model unavailable" }), "Not checked — model unavailable");
 });
 
 test("a prepared verdict says so", () => {
   assert.equal(proofLabel({ verdict: "accepted", source: "prepared", why: "The photo shows a signed consent form." }),
-    "Accepted — The photo shows a signed consent form. · Prepared");
-  assert.equal(proofLabel({ verdict: "not_accepted", source: "prepared", why: "A bed rail" }), "Not accepted — A bed rail · Prepared");
+    "Photo matches — The photo shows a signed consent form. · Prepared");
+  assert.equal(proofLabel({ verdict: "not_accepted", source: "prepared", why: "A bed rail" }), "Photo does not match — A bed rail · Prepared");
 });
 
 test("no photo and an override are visible, never silent", () => {

@@ -101,7 +101,7 @@ def view_text(state: str, why: str = "", reason: str = "") -> str:
         return switches.NOT_CHECKED
     if state == "overridden":
         return f"Overridden — {reason}"
-    return f"{'Accepted' if state == 'accepted' else 'Not accepted'} — {why}"
+    return f"{'Photo matches' if state == 'accepted' else 'Photo does not match'} — {why}"
 
 
 def _items(events: list[dict]) -> list[str]:

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import Correct from "./Correct.jsx";
 import Dictate from "./Dictate.jsx";
+import Provenance from "./Provenance.jsx";
+import { madeByModel } from "./provenance.js";
+import { heardHow } from "./askText.js";
 import Source from "./Source.jsx";
 import { FROM_VOICE, isPrepared } from "./source.js";
 import { uploadJourney } from "../journey.js";
@@ -8,7 +11,7 @@ import { drugLine, drugStatus, heardPackLine } from "./theatreLive.js";
 
 // Drug given by voice (spec §6.4): say or type the line, check the heard row, then a person taps to confirm.
 // A pack line ("opening twenty swabs") is only heard here: the swab count changes when a person confirms the pack.
-export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload }) {
+export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, acts = [] }) {
   const [problem, setProblem] = useState("");
   async function hear(file) {
     setProblem("");
@@ -19,8 +22,11 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload }
       return null;
     }
   }
-  const send = ({ text, heard }) =>
-    upload("/theatre/drug", null, { text, by, heard_by: heard && heard.text === text ? heard.by : "" }, "/theatre/drug");
+  // Heard words the person edited stay heard, with the words as heard, so the confirmed row can read "Changed by".
+  const send = ({ text, heard }) => {
+    const how = heardHow(heard?.text, text, heard?.by);
+    return upload("/theatre/drug", null, { text, by, heard_by: how.heard_by, ...(how.edited ? { heard_text: how.heard_text } : {}) }, "/theatre/drug");
+  };
   const open = panel.packs.filter((pack) => !pack.confirmed_by);
   return (
     <section className="card" aria-label="Drug given">
@@ -33,6 +39,8 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload }
             <li key={row.id}>
               <strong>{drugLine(row)}</strong>{" "}
               {row.source !== "typed" && <Source words={FROM_VOICE} prepared={isPrepared(row)} />}
+              {/* Who confirmed shows on every confirmed row; only a heard row was the AI's proposal. */}
+              <Provenance item={{ id: row.id, at_ms: row.at_ms, ai: row.source !== "typed" && madeByModel(row) }} events={acts} />
               <p className="small muted">{drugStatus(row)}</p>
               {!row.given && (
                 <button type="button" disabled={busy} onClick={() => act(`/theatre/drug/${row.id}/confirm`, { by })}>
@@ -51,6 +59,7 @@ export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload }
             <li key={pack.id}>
               <span className="small">{heardPackLine(pack)}</span>{" "}
               {pack.source !== "typed" && <Source words={FROM_VOICE} prepared={isPrepared(pack)} />}
+              <Provenance item={{ id: pack.id, at_ms: pack.at_ms, ai: pack.source !== "typed" && madeByModel(pack) }} events={acts} />
               {!pack.confirmed_by && (
                 <button type="button" disabled={busy} onClick={() => act(`/theatre/pack/${pack.id}/confirm`, { by })}>
                   Confirm pack of {pack.n}

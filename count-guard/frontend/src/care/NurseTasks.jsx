@@ -2,9 +2,10 @@ import { useState } from "react";
 import Dictate from "./Dictate";
 import ObsForm from "./ObsForm";
 import AiMoment from "./AiMoment.jsx";
+import Provenance from "./Provenance.jsx";
 import TaskProof from "./TaskProof";
 import VideoCheck from "./VideoCheck";
-import { answerHow } from "./askText";
+import { heardHow } from "./askText";
 import { lastDoneLine, rowSession } from "./drafts";
 import { rowMark, taskGroups } from "./tasklist";
 import { momentFor } from "./moments.js";
@@ -17,12 +18,16 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
   const live = due !== "paused";
   const last = lastDoneLine(task, view.photos);
   const proofMoment = momentFor(view, last?.evidenceId);
+  // The last save was from what was heard: the same predicate as the server's acts (acts.py), so the mark has an act.
+  const lastAt = (task.done || []).slice(-1)[0]?.at_ms;
+  const heardLast = (view.acts || []).some((a) => a.type === "task.done" && a.ref === task.id && a.at_ms === lastAt);
   const video = task.proof === "video" && task.has_setup;
 
   const send = async ({ text, heard }) => {
-    const proposal = await ask("/dictate/task", undefined, { text, by, heard_by: answerHow(heard?.text, text, heard?.by).heard_by });
+    const how = heardHow(heard?.text, text, heard?.by); // edited heard words stay heard (clarity §4.3)
+    const proposal = await ask("/dictate/task", undefined, { text, by, heard_by: how.heard_by });
     if (!proposal) return false;
-    onSession(rowSession(proposal, task), task);
+    onSession({ ...rowSession(proposal, task), edited: Boolean(how.edited), heardText: how.heard_text || "" }, task);
     return true;
   };
 
@@ -39,6 +44,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
         <p className="small muted">
           {last.text}
           {last.match && <> · <span className={`pill ${last.flagged ? "sun" : "info"}`}>{last.match}</span></>}
+          {heardLast && <> <Provenance item={{ id: task.id }} events={view.acts} /></>}
         </p>
       )}
       {proofMoment && <AiMoment moment={proofMoment} role="nurse" episodeId={view.episode?.id} />}

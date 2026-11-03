@@ -2,11 +2,13 @@ import { useState } from "react";
 import AiMoment from "./AiMoment.jsx";
 import { draftChanged, itemsToRows } from "./drafts";
 import OrderSentence from "./OrderSentence.jsx";
+import Provenance from "./Provenance.jsx";
+import { madeByModel } from "./provenance.js";
 import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
 
 // Rows of orders; Sign orders posts the filled rows through onSign(items, draftId), which resolves to the new view or null.
 // A dictated draft fills the rows once per draft id; draftId is sent only while the rows still came from that draft.
-export default function OrderForm({ busy, onSign, draft, moment = null, episodeId }) {
+export default function OrderForm({ busy, onSign, draft, moment = null, episodeId, acts = [] }) {
   const [rows, setRows] = useState([]);
   const [draftId, setDraftId] = useState(null);
   const [all, setAll] = useState(false);
@@ -17,6 +19,8 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
   const set = (index, patch) => setRows((list) => list.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   const { items, errors } = orderRowsToItems(rows);
   const invalid = Object.keys(errors).length > 0;
+  // Rows that still came from the AI's draft sit in the dashed "Proposed by AI" frame until they are signed.
+  const framed = (list) => (draftId && list.length ? <Provenance item={{ id: draftId, ai: madeByModel(moment) || madeByModel(draft) }} events={acts}>{list}</Provenance> : list);
 
   async function sign() {
     if (await onSign(items, draftId)) {
@@ -44,7 +48,7 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
       {rows.length > 0 && (
         <button type="button" aria-expanded={all} onClick={() => setAll(!all)}>Edit all fields</button>
       )}
-      {rows.map((row, index) => !all ? (
+      {framed(rows.map((row, index) => !all ? (
         <div className="stack" key={index}>
           <div className="row">
             <OrderSentence row={row} index={index} onChange={(next) => setRows((list) => list.map((r, i) => (i === index ? next : r)))} />
@@ -105,7 +109,7 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
           </div>
           {errors[index] && <p className="error small" role="alert">{errors[index]}</p>}
         </div>
-      ))}
+      )))}
       <button type="button" disabled={busy || invalid || items.length === 0} onClick={sign}>Sign orders</button>
     </section>
   );

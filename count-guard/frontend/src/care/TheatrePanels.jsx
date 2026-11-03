@@ -56,7 +56,7 @@ export default function TheatrePanels({ episodeId, view, role, by, busy, act, up
   if (!panel) return problem ? <p className="note small" role="alert">{problem}</p> : null;
   return (
     <>
-      <TheatreDrugs episodeId={episodeId} panel={panel} role={role} by={by} busy={busy} act={act} upload={upload} />
+      <TheatreDrugs episodeId={episodeId} panel={panel} role={role} by={by} busy={busy} act={act} upload={upload} acts={view?.acts} />
       <VitalsStrip panel={panel} busy={busy} act={act} />
       <ContextCard tier={panel.tier} card={card} busy={busy} onTier={toggleTier} />
       {problem && <p className="note small" role="alert">{problem}</p>}

@@ -111,7 +111,7 @@ def test_override_with_reason_opens_the_move(tmp_path, monkeypatch):
     assert row["state"] == "overridden" and row["reason"] == "Band checked by hand"
     assert _move(client, eid, "ward", checklist=ADMIT_CHECKS).status_code == 200
     plain = [line["plain"] for line in _view(client, eid)["timeline"]]
-    assert any("Not accepted — No wristband visible" in p for p in plain)
+    assert any("Photo does not match — No wristband visible" in p for p in plain)
     assert any("Band checked by hand" in p and "wristband" in p for p in plain)
 
 
@@ -138,7 +138,7 @@ def test_prepared_verdict_on_the_timeline_says_prepared(tmp_path):
     view = _photo(client, eid, "admission:band").json()
     lines = [t for t in view["timeline"] if t["type"] == "check.photo"]
     assert [t["plain"] for t in lines] == [
-        "Photo of the wristband: Accepted — The photo shows " + expected.EXPECT["admission:band"] + ". · Prepared"]
+        "Photo of the wristband: Photo matches — The photo shows " + expected.EXPECT["admission:band"] + ". · Prepared"]
     assert lines[0]["patient"] == ""  # staff only
 
 
@@ -147,7 +147,7 @@ def test_live_verdict_on_the_timeline_has_no_prepared_label(tmp_path, monkeypatc
     _live(client, monkeypatch, SAYS_NO)
     view = _photo(client, eid, "admission:band").json()
     assert [t["plain"] for t in view["timeline"] if t["type"] == "check.photo"] == [
-        "Photo of the wristband: Not accepted — No wristband visible"]
+        "Photo of the wristband: Photo does not match — No wristband visible"]
 
 
 def test_override_of_a_closed_item_is_409(tmp_path):

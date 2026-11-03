@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { call } from "../journey";
 import PhotoInput from "./PhotoInput.jsx";
+import Provenance from "./Provenance.jsx";
+import { adviceByModel } from "./provenance.js";
 import Source from "./Source.jsx";
-import { displayName } from "./names";
 import { DRAFTED_FROM_CAMERA, FROM_CAMERA, FROM_REPLAY } from "./source.js";
 import { pickedUpload } from "./video";
 
@@ -12,7 +13,7 @@ export const ADVICE_ONLY = "Advice only. The count a person saves decides.";
 // a missing swab as proof. A person acknowledges each finding, or resolves it with a reason. The recorded replay is
 // labelled Prepared. Closing the camera case drafts an explanation and the count sheet. Nothing here saves or blocks
 // the count.
-export default function CameraAdvice({ episodeId, version = 0, busy, act, upload, by }) {
+export default function CameraAdvice({ episodeId, version = 0, busy, act, upload, by, acts = [] }) {
   const [camera, setCamera] = useState(null);
   const [problem, setProblem] = useState("");
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function CameraAdvice({ episodeId, version = 0, busy, act, upload
       {problem && <p className="note" role="alert">{problem}</p>}
       {camera.source && <p className="small"><Source words={FROM_CAMERA} prepared={camera.source === "prepared"} /></p>}
       {camera.source && advice.length === 0 && <p className="small">The camera found nothing to check.</p>}
-      {advice.map((row) => <AdviceRow key={row.id} row={row} busy={busy} act={act} by={by} />)}
+      {advice.map((row) => <AdviceRow key={row.id} row={row} busy={busy} act={act} by={by} acts={acts} />)}
       {camera.case_id && (
         <div className="row">
           <button type="button" disabled={busy} onClick={() => act("/camera/close", { by })}>
@@ -75,21 +76,16 @@ export default function CameraAdvice({ episodeId, version = 0, busy, act, upload
   );
 }
 
-function AdviceRow({ row, busy, act, by }) {
+function AdviceRow({ row, busy, act, by, acts }) {
   const [reason, setReason] = useState("");
   const why = reason.trim();
   return (
     <div className="alert-card" role={row.acked || row.resolved ? undefined : "alert"}>
       <p className="small">{row.text}</p>
       {row.frame_url && <img src={row.frame_url} alt="Last frame the camera saw it in" width={240} style={{ borderRadius: 6, maxWidth: "100%", height: "auto" }} />}
-      {row.resolved && (
-        <p className="small muted">Resolved by {displayName(row.resolved.by)}. {row.resolved.reason}</p>
-      )}
-      {row.acked && (
-        <p className="small muted">
-          Seen by {displayName(row.acked.by)}{row.acked.reason ? `. ${row.acked.reason}` : ""}
-        </p>
-      )}
+      {/* The camera proposed it; Acknowledge is Seen by, or Overridden by with a reason; Resolve with reason overrides it. */}
+      <p className="small"><Provenance item={{ id: row.id, ai: adviceByModel(row) }} events={acts} /></p>
+      {(row.resolved || row.acked)?.reason && <p className="small muted">{(row.resolved || row.acked).reason}</p>}
       {!row.resolved && (
         <div className="row">
           <label className="field" style={{ flex: "2 1 200px" }}>

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import PhotoInput from "./PhotoInput.jsx";
+import Provenance from "./Provenance.jsx";
 import StatusPill from "./StatusPill.jsx";
 import { proofLabel, proofTone } from "./verdict.js";
 
 // One photo check (spec §6.6, U9): the verdict line, a photo button, and while the item is open an override
-// with a typed reason. onPhoto is left out where the photo is taken elsewhere (a task's Confirm card).
-export default function ProofItem({ check, label, busy, onPhoto, onOverride }) {
+// with a typed reason. The verdict is the AI's (Proposed by AI) until a person overrides it; a newer photo is the AI's again. onPhoto is left out where the photo is taken elsewhere (a task's Confirm card).
+export default function ProofItem({ check, label, busy, onPhoto, onOverride, acts = [] }) {
   const [reason, setReason] = useState("");
   const retake = check.state !== "none";
   async function override() {
@@ -17,6 +18,9 @@ export default function ProofItem({ check, label, busy, onPhoto, onOverride }) {
         <StatusPill role={proofTone(check)} text={proofLabel(check)} />
         {check.photo_url && <> <a href={check.photo_url} target="_blank" rel="noreferrer">See photo</a></>}
       </p>
+      {["accepted", "not_accepted", "overridden"].includes(check.state) && (
+        <p className="small"><Provenance item={{ id: check.item, ai: ["accepted", "not_accepted"].includes(check.state) }} events={check.state === "overridden" ? acts : []} /></p>
+      )}
       {onPhoto && <PhotoInput label={retake ? "Take the photo again" : "Take photo"} disabled={busy} onFiles={([file]) => onPhoto(file)} />}
       {check.open && (
         <div className="row">

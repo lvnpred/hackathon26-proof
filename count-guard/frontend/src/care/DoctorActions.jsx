@@ -11,6 +11,8 @@ import AiMoment from "./AiMoment.jsx";
 import { draftChanged } from "./drafts";
 import { draftSummary } from "./dischargeDraft.js";
 import DischargeDraft from "./DischargeDraft.jsx";
+import Provenance from "./Provenance.jsx";
+import { lastActOf, madeByModel, sameOrders } from "./provenance.js";
 import { lastSigned, momentFor } from "./moments";
 import OrderForm from "./OrderForm";
 import TheatreChecklist from "./TheatreChecklist";
@@ -39,7 +41,7 @@ function PhotoCard({ title, busy, upload }) {
 // order form sits under the Next card (OrderDraft) and the finished dictation box folds away (spec P3).
 function OrderDraft({ view, busy, signOrders }) {
   const draft = view.drafts?.order;
-  return <OrderForm busy={busy} onSign={signOrders} draft={draft} moment={momentFor(view, draft?.id)} episodeId={view.episode?.id} />;
+  return <OrderForm busy={busy} onSign={signOrders} draft={draft} moment={momentFor(view, draft?.id)} episodeId={view.episode?.id} acts={view.acts} />;
 }
 
 function OrdersDictation({ view, busy, upload, ask, signOrders }) {
@@ -51,6 +53,7 @@ function OrdersDictation({ view, busy, upload, ask, signOrders }) {
     <>
       {dictate}
       {signed && <AiMoment moment={signed} role="doctor" episodeId={view.episode?.id} />}
+      {signed && <p className="small"><Provenance item={{ id: signed.id, value: signed.refs?.items, same: sameOrders, ai: madeByModel(signed) }} events={view.acts} /></p>}
       <OrderDraft view={view} busy={busy} signOrders={signOrders} />
     </>
   );
@@ -100,13 +103,16 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   const [summaryDraftId, setSummaryDraftId] = useState(null);
   const [template, setTemplate] = useState("hernia-repair");
   const draft = view.drafts?.discharge;
+  const signedDraft = draft ? null : lastActOf(view.acts, "discharge.signed");
   if (draftChanged(summaryDraftId, draft)) {
     setSummaryDraftId(draft.id);
     setSummary(draftSummary(draft));
   }
   const templates = Object.entries(view.templates || {});
   async function signDischarge() {
-    const done = await act("/discharge/sign", { summary: summary.trim(), template, by: DOCTOR, draft_id: summaryDraftId || undefined });
+    // The draft's summary as proposed goes with the signing, so an edited summary reads "Changed by" (clarity §4.3).
+    const proposed = summaryDraftId && draft ? { proposed_summary: draftSummary(draft) } : {};
+    const done = await act("/discharge/sign", { summary: summary.trim(), template, by: DOCTOR, draft_id: summaryDraftId || undefined, ...proposed });
     if (done) {
       setSummary("");
       setSummaryDraftId(null);
@@ -116,16 +122,18 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
     <>
       <button type="button" className={primary && !draft ? "primary" : undefined} disabled={busy} onClick={() => act("/discharge/draft", { by: DOCTOR })}>Draft discharge</button>
       <button type="button" aria-expanded={open} onClick={onToggle}><IconMic />Dictate discharge</button>
+      {signedDraft && <p className="small">Discharge signed <Provenance item={{ id: signedDraft.ref }} events={view.acts} /></p>}
       {open && <Dictate label="Dictate discharge" capability="discharge" verb="Update draft" busy={busy} onHear={hearing(ask, "/dictate/discharge")} onSend={drafting(upload, "/dictate/discharge")} />}
       {(open || draft) && (
         <>
-          <DischargeDraft draft={draft} episodeId={view.episode?.id} />
+          <DischargeDraft draft={draft} episodeId={view.episode?.id} acts={view.acts} />
           <div>
             <p className="label">Discharge</p>
             {summaryDraftId && (
               <>
                 {momentFor(view, draft?.id) && <AiMoment moment={momentFor(view, draft.id)} role="doctor" episodeId={view.episode?.id} />}
                 <p className="note small" role="status">{draft?.timeline ? "Draft from the record." : "Draft from dictation."} Check the summary, then sign.</p>
+                <p className="small"><Provenance item={{ id: summaryDraftId, ai: madeByModel(draft) }} events={view.acts} /></p>
               </>
             )}
             <label className="field">

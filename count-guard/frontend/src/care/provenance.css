@@ -1,0 +1,8 @@
+/* AI proposed vs person accepted (clarity §4.3): a draft is dashed, a person's act is solid with a person icon. */
+.prov { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; padding: 2px 8px; border: 1px solid var(--line-control); border-radius: 8px; color: var(--ink-muted); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.prov-proposed { border-style: dashed; border-color: var(--line-control); }
+.prov-accepted { border-style: solid; border-color: var(--status-fine); color: var(--ink); }
+.prov-overridden { border-color: var(--status-check); }
+.prov-seen { border-color: var(--line-control); }
+.prov.prov-box { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; color: inherit; font-size: inherit; line-height: inherit; }
+.prov-mark { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--ink-muted); font-size: 13px; line-height: 18px; }

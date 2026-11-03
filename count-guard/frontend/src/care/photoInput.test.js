@@ -15,13 +15,26 @@ test("only PhotoInput and Dictate's audio input use a native file input in care/
   }
 });
 
-test("PhotoInput hides the real input, shows a camera button and the upload hint", () => {
+test("PhotoInput hides the real inputs, shows a camera button and the upload hint for plain files", () => {
   const src = read("PhotoInput.jsx");
-  assert.match(src, /className="visually-hidden" type="file"/);
+  assert.match(src, /className="visually-hidden"/);
+  assert.match(src, /type="file"/);
   assert.match(src, /className=\{`photo-input/);
   assert.match(src, /<IconCamera \/>/);
   assert.match(src, /<span className="small">or upload a file<\/span>/);
   assert.match(src, /label = "Take photo"/);
+});
+
+test("a photo button opens a dialog with take-a-photo and upload-a-file, never a bare file picker", () => {
+  const input = read("PhotoInput.jsx");
+  assert.match(input, /<CameraSheet/);
+  assert.match(input, /capture: "environment"/);
+  const sheet = read("CameraSheet.jsx");
+  assert.match(sheet, /role="dialog" aria-modal="true"/);
+  assert.match(sheet, /Take a photo/);
+  assert.match(sheet, /Upload a file/);
+  assert.match(sheet, /getUserMedia/);
+  assert.doesNotMatch(sheet, /type="file"/);
 });
 
 test("the tray and clip checks say what they add", () => {

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { BEATS, filmSeconds, missingMedia, sceneSeconds } from "./beats.mjs";
 import { findChrome } from "./chrome.mjs";
-import { scanBeat } from "./scan.mjs";
+import { ALLOWED_SELECTOR, STEP_LINE, scanBeat } from "./scan.mjs";
 import { API_PORT, startServers } from "./server.mjs";
 import { STEPS, helpers, waitGone, waitText } from "./steps.mjs";
 
@@ -89,14 +89,25 @@ try {
       if (problems.length) throw new Error(problems.join("; "));
       // The Demo dock is demo tooling, so the scan reads the app text without it. The Inspector Model tab may
       // name models, so its panel text is passed apart while that tab is open.
-      const seen = await on.evaluate((sel) => {
+      const seen = await on.evaluate(([sel, allowedSel, stepLine]) => {
         const app = document.querySelector(sel);
         const dock = app?.querySelector("[aria-label=Demo]")?.innerText || "";
         const inspector = app?.querySelector("[aria-label=Inspector]");
         const tab = inspector?.querySelector("[role=tab][aria-selected=true]")?.innerText?.trim();
         const modelPanel = tab === "Model" ? inspector.querySelector("[role=tabpanel]")?.innerText || "" : "";
-        return { text: (app?.innerText || "").replace(dock, ""), modelPanel };
-      }, root);
+        const text = (app?.innerText || "").replace(dock, "");
+        // Spec §4.1: a model step line and an open Expand view may name the model on a staff screen. They are hidden
+        // for one synchronous read, so the model rules read the page by DOM position without them.
+        const line = new RegExp(stepLine);
+        const allowed = [...(app?.querySelectorAll(allowedSel) || [])].filter(
+          (el) => el.matches('[data-expand="open"]') || line.test((el.innerText || "").replace(/\s+/g, " ").trim()),
+        );
+        const kept = allowed.map((el) => [el.style.getPropertyValue("display"), el.style.getPropertyPriority("display")]);
+        allowed.forEach((el) => el.style.setProperty("display", "none", "important"));
+        const modelText = (app?.innerText || "").replace(dock, "");
+        allowed.forEach((el, i) => (kept[i][0] ? el.style.setProperty("display", ...kept[i]) : el.style.removeProperty("display")));
+        return { text, modelPanel, modelText };
+      }, [root, ALLOWED_SELECTOR, STEP_LINE.source]);
       const bad = scanBeat({ ...seen, role: beat.role, beat: beat.id });
       if (bad.length) throw new Error(`scan: ${bad.join("; ")}`);
       await on.screenshot({ path: path.join(SHOTS, `${nn}-${beat.id}.png`), fullPage: true });

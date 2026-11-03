@@ -11,22 +11,47 @@ export function detailMessage(detail) {
   return detail?.message || detail;
 }
 
-// Every journey POST returns the whole journey view of one episode.
-export async function call(path, options) {
-  const response = await fetch(path, options);
-  const text = await response.text();
+// A reply's text -> its JSON body, or an Error carrying the readable detail and the status.
+function parseReply(ok, status, statusText, text) {
   let body = null;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
     body = { detail: text };
   }
-  if (!response.ok) {
-    const error = new Error(detailMessage(body?.detail) || response.statusText);
-    error.status = response.status;
+  if (!ok) {
+    const error = new Error(detailMessage(body?.detail) || statusText);
+    error.status = status;
     throw error;
   }
   return body;
+}
+
+export const noAnswer = (timeoutMs) => `no answer in ${timeoutMs / 1000} s`;
+
+// Every journey POST returns the whole journey view of one episode.
+// `signal` and `timeoutMs` are optional; a timeout fails with "no answer in N s".
+export async function call(path, options, { signal, timeoutMs } = {}) {
+  if (!signal && !timeoutMs) {
+    const response = await fetch(path, options);
+    return parseReply(response.ok, response.status, response.statusText, await response.text());
+  }
+  const ctl = new AbortController();
+  let timedOut = false;
+  const stop = () => ctl.abort();
+  if (signal?.aborted) ctl.abort();
+  signal?.addEventListener("abort", stop);
+  const timer = timeoutMs ? setTimeout(() => { timedOut = true; ctl.abort(); }, timeoutMs) : null;
+  try {
+    const response = await fetch(path, { ...options, signal: ctl.signal });
+    return parseReply(response.ok, response.status, response.statusText, await response.text());
+  } catch (exc) {
+    if (timedOut) throw new Error(noAnswer(timeoutMs));
+    throw exc;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", stop);
+  }
 }
 
 const base = (id) => `/journey/episodes/${id}`;
@@ -35,23 +60,58 @@ export function getJourney(id) {
   return call(base(id));
 }
 
-export function postJourney(id, path, body) {
-  return call(`${base(id)}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body || {}),
-  });
+export function postJourney(id, path, body, opts = {}) {
+  return call(
+    `${base(id)}${path}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) },
+    opts,
+  );
+}
+
+function abortError() {
+  const error = new Error("The call was stopped");
+  error.name = "AbortError";
+  return error;
 }
 
 // The file is added when given; each field is added unless it is null, undefined or "".
-export function uploadJourney(id, path, file, fields = {}) {
+// Sent by XMLHttpRequest so the upload can report progress (0-100) through `onProgress`.
+// `signal` aborts it; `timeoutMs` fails it with "no answer in N s". `XHR` lets tests pass a fake.
+export function uploadJourney(id, path, file, fields = {}, { onProgress, signal, timeoutMs, XHR } = {}) {
   const form = new FormData();
   if (Array.isArray(file)) file.forEach((f) => form.append("files", f));
   else if (file) form.append("file", file);
-  Object.entries(fields).forEach(([key, value]) => {
+  Object.entries(fields || {}).forEach(([key, value]) => {
     if (value !== null && value !== undefined && value !== "") form.append(key, value);
   });
-  return call(`${base(id)}${path}`, { method: "POST", body: form });
+  const Request = XHR || globalThis.XMLHttpRequest;
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError());
+    const xhr = new Request();
+    const stop = () => xhr.abort();
+    const settle = (fn) => (value) => { signal?.removeEventListener("abort", stop); fn(value); };
+    const ok = settle(resolve);
+    const fail = settle(reject);
+    xhr.open("POST", `${base(id)}${path}`);
+    if (timeoutMs) xhr.timeout = timeoutMs;
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      try {
+        ok(parseReply(xhr.status >= 200 && xhr.status < 300, xhr.status, xhr.statusText, xhr.responseText));
+      } catch (exc) {
+        fail(exc);
+      }
+    };
+    xhr.onerror = () => fail(new Error("The upload did not reach the server"));
+    xhr.ontimeout = () => fail(new Error(noAnswer(timeoutMs)));
+    xhr.onabort = () => fail(abortError());
+    signal?.addEventListener("abort", stop);
+    xhr.send(form);
+  });
 }
 
 // The ward list and the shared demo clock live on the server (spec §8).

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { scanBeat, scanText } from "./scan.mjs";
+import fs from "node:fs";
+import { ALLOWED_SELECTOR, allowedText, isStepLine, scanBeat, scanText } from "./scan.mjs";
 
 const hits = (t, role = "doctor") => scanText(t, role);
 
@@ -57,4 +58,52 @@ test("the AI page beat and the Inspector Model tab may name models; nothing else
   const panel = "Muse Spark 1.3 · live";
   assert.deepEqual(scanBeat({ text: `Chart ${panel} Close`, modelPanel: panel, role: "nurse", beat: "kumar-count" }), []);
   assert.equal(scanBeat({ text: `Ask Muse Spark 1.3 ${panel}`, modelPanel: panel, role: "nurse", beat: "kumar-count" }).length, 1);
+});
+
+const step = (text) => ({ kind: "step", text });
+const expand = (text) => ({ kind: "expand", text });
+
+test("model names may sit inside a model step line or an open Expand view on staff screens", () => {
+  const line = "Checking with SAM 3.1… 3 s";
+  const text = `Tray check\n${line}\nCount 12`;
+  assert.deepEqual(scanBeat({ text, allowed: [step(line)], role: "nurse", beat: "tray" }), []);
+  const done = "✓\nDone · live (Spark 1.3, 2.1 s)\nExpand";
+  assert.deepEqual(scanBeat({ text: `Orders\n${done}`, allowed: [step(done)], role: "doctor", beat: "orders" }), []);
+  const view = "Model returned: Spark 1.3 · live";
+  assert.deepEqual(scanBeat({ text: `Orders\n${view}`, allowed: [expand(view)], role: "doctor", beat: "orders" }), []);
+  assert.equal(scanBeat({ text, role: "nurse", beat: "tray" }).length, 1, "without the allowance it is flagged");
+  assert.equal(scanBeat({ text, allowed: [step(line)], role: "patient", beat: "home" }).length, 1, "a patient screen never names a model");
+  assert.equal(scanBeat({ text: "Recorded\nok", allowed: [expand("Recorded")], role: "nurse", beat: "x" }).length, 1, "other rules still read the region");
+});
+
+test("SAM 3.1 in a card line next to an allowed region is still flagged", () => {
+  const line = "Checking with SAM 3.1… 3 s";
+  assert.equal(scanBeat({ text: `SAM 3.1 saw it\n${line}`, allowed: [step(line)], role: "nurse", beat: "tray" }).length, 1);
+  assert.equal(scanBeat({ text: `${line}\n${line}`, allowed: [step(line)], role: "nurse", beat: "tray" }).length, 1, "one region takes out one place");
+});
+
+test("a model step whose text is not a step line gets no allowance", () => {
+  for (const t of ["SAM 3.1 saw three swabs", "Checking with SAM 3.1… 3 s and more", "Done · live (SAM 4, 2 s)", "Checking with Muse Spark… 3 s"]) {
+    assert.equal(scanBeat({ text: `Card\n${t}`, allowed: [step(t)], role: "nurse", beat: "tray" }).length, 1, t);
+  }
+  for (const t of ["Checking with Muse Voice… 12 s", "Done · live (Spark Open, 4 s)", "✓ Done · live (SAM 3.1, 0.9 s) Expand"]) assert.ok(isStepLine(t), t);
+});
+
+test("modelText read by DOM position is what the model rules see", () => {
+  const text = "Tray\nChecking with SAM 3.1… 3 s";
+  assert.deepEqual(scanBeat({ text, modelText: "Tray\n", role: "nurse", beat: "tray" }), []);
+  assert.equal(scanBeat({ text, modelText: text, role: "nurse", beat: "tray" }).length, 1);
+  assert.equal(scanBeat({ text, modelText: "Tray\n", role: "patient", beat: "home" }).length, 1, "patient: no allowance");
+});
+
+test("allowedText takes out each allowed region once; empty and unallowed regions are ignored", () => {
+  const line = "Checking with SAM 3.1… 3 s";
+  assert.equal(allowedText(`a ${line} b ${line}`, [step(line), step(""), step("SAM 3.1")]), `a  b ${line}`);
+});
+
+test("run.mjs reads the model text with the allowed regions hidden, open Expand views only", () => {
+  const src = fs.readFileSync(new URL("./run.mjs", import.meta.url), "utf8");
+  assert.match(src, /ALLOWED_SELECTOR, STEP_LINE\.source/);
+  assert.match(src, /setProperty\("display", "none", "important"\)/);
+  assert.equal(ALLOWED_SELECTOR, '.model-step, [data-expand="open"]');
 });

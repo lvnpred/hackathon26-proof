@@ -7,6 +7,9 @@ import { rosterFrom, wardPollIntervalMs } from "./roster";
 import { statusBody, statusQuery } from "./status";
 import { followWard } from "./wardStream";
 
+// A card that calls a model shows its step with these and passes the step's opts to act/upload/ask (spec §4.1).
+export { default as ModelStep, useModelStep } from "./ModelStep.jsx";
+
 // The roster and the clock live on the server (GET /journey/ward). Only the screen's own choices stay here.
 const ROLE = "cg-role";
 const PATIENT = "cg-patient";
@@ -168,7 +171,9 @@ export function useWard() {
     setPatients((list) => list.map((p) => (p.id === id ? shown({ ...p, view }) : p)));
   }
 
-  async function run(id, send, scope) {
+  // `opts` (optional) is passed to the journey client: { onProgress, signal, timeoutMs } from useModelStep.
+  // With `opts.ownFault` the error is thrown back to the card's model step instead of becoming the scoped fault.
+  async function run(id, send, scope, opts) {
     setFault(null);
     startWrite();
     try {
@@ -185,6 +190,8 @@ export function useWard() {
       }
       return next;
     } catch (exc) {
+      if (exc?.name === "AbortError") return null; // the card went away or stopped the call: no fault
+      if (opts?.ownFault) throw exc;
       setFault(makeFault(id, scope, exc.message));
       return null;
     } finally {
@@ -192,9 +199,11 @@ export function useWard() {
     }
   }
 
-  const act = (id, path, body, scope = path) => run(id, () => postJourney(id, path, { ...body, at_ms: nowMs }), scope);
-  const send = (id, path, file, fields) => uploadJourney(id, path, file, { ...fields, at_ms: nowMs });
-  const upload = (id, path, file, fields, scope = path) => run(id, () => send(id, path, file, fields), scope);
+  const clientOpts = ({ onProgress, signal, timeoutMs } = {}) => ({ onProgress, signal, timeoutMs });
+  const act = (id, path, body, scope = path, opts) =>
+    run(id, () => postJourney(id, path, { ...body, at_ms: nowMs }, clientOpts(opts)), scope, opts);
+  const send = (id, path, file, fields, opts) => uploadJourney(id, path, file, { ...fields, at_ms: nowMs }, clientOpts(opts));
+  const upload = (id, path, file, fields, scope = path, opts) => run(id, () => send(id, path, file, fields, opts), scope, opts);
 
   // A nurse's Seen is bookkeeping, not an action: it swaps the view and leaves the clock and busy flag alone.
   // A failure is dropped; the chart tries again the next time it opens.
@@ -208,12 +217,14 @@ export function useWard() {
   }
 
   // Like upload, but returns the JSON without swapping the view (a proposal is not a record).
-  async function ask(id, path, file, fields, scope = path) {
+  async function ask(id, path, file, fields, scope = path, opts) {
     setFault(null);
     setBusy(true);
     try {
-      return await send(id, path, file, fields);
+      return await send(id, path, file, fields, opts);
     } catch (exc) {
+      if (exc?.name === "AbortError") return null; // the card went away or stopped the call: no fault
+      if (opts?.ownFault) throw exc;
       setFault(makeFault(id, scope, exc.message));
       return null;
     } finally {

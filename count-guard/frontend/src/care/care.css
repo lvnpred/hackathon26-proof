@@ -318,3 +318,22 @@ button.moment-row:hover { background: var(--surface-sunk) }
 .state-facts dd { margin: 0; color: var(--ink); }
 .photo-capture { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 700; min-width: 120px; }
 .photo-capture:disabled { background: transparent; border-color: var(--line); color: var(--ink-muted); }
+
+/* One line per model step (spec §4.1): recording, uploading, checking, done, failed. */
+.model-step { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 10px; border-radius: 8px; background: var(--status-wait-soft); color: var(--ink); font-size: 0.92em; }
+.model-step .text { flex: 1 1 auto; overflow-wrap: anywhere; }
+.model-step .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--status-danger); animation: cg-pulse 1.2s ease-in-out infinite; }
+.model-step .tick { color: var(--status-fine); font-weight: 800; }
+.model-step .bar { flex: 1 0 100%; position: relative; height: 3px; border-radius: 2px; background: var(--status-done-soft); overflow: hidden; }
+.model-step .bar > span { position: absolute; inset: 0 auto 0 0; background: var(--status-wait); transition: width 0.2s; }
+.model-step .bar.indeterminate > span { width: 30%; animation: cg-indeterminate 1.4s ease-in-out infinite; }
+.model-step.stage-recording { background: var(--status-danger-soft); }
+.model-step.stage-done { background: var(--status-fine-soft); }
+.model-step.stage-failed { background: var(--status-danger-soft); color: var(--status-danger); }
+.model-step.stage-failed .text { font-weight: 700; }
+@keyframes cg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes cg-indeterminate { 0% { left: -30%; } 100% { left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .model-step .dot, .model-step .bar.indeterminate > span { animation: none; }
+  .model-step .bar.indeterminate > span { left: 0; width: 100%; opacity: 0.5; }
+}

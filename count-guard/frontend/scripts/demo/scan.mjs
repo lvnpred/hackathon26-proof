@@ -20,20 +20,55 @@ const PATIENT_RULES = [[/AI\s+\(on\s+behalf|Acknowledged\s+by/, "AI bookkeeping 
 export const MODEL_BEATS = new Set(["ai"]);
 
 // scanText(innerText, role, { models }) -> one message per rule that matches, each with the matched text.
-// `models: true` allows model names (the AI page).
-export function scanText(text, role, { models = false } = {}) {
-  const rules = [...RULES, ...(models ? [] : MODEL_RULES), ...(role === "patient" ? PATIENT_RULES : [])];
+// `models: true` allows model names (the AI page). `modelText` is the text the model rules read, when it differs.
+export function scanText(text, role, { models = false, modelText = text } = {}) {
+  const rules = [
+    ...RULES.map((r) => [...r, text]),
+    ...(models ? [] : MODEL_RULES.map((r) => [...r, modelText])),
+    ...(role === "patient" ? PATIENT_RULES.map((r) => [...r, text]) : []),
+  ];
   const out = [];
-  for (const [re, why] of rules) {
-    const m = String(text).match(re);
+  for (const [re, why, seen] of rules) {
+    const m = String(seen).match(re);
     if (m) out.push(`${why}: "${m[0]}"`);
   }
   return out;
 }
 
+// Spec §4.1 (C2): on a staff screen a model may be named only in a model step line and in an open Expand view.
+// A `.model-step` counts only when its text is a step line that names a model; an Expand view counts only while
+// it is open (`[data-expand="open"]`, the contract ModelStep and the Expand view keep).
+const STEP_MODEL = "(?:SAM 3\\.1|Spark 1\\.3|Spark Open|Muse Voice)";
+export const STEP_LINE = new RegExp(
+  `^(?:✓\\s*)?(?:Checking with ${STEP_MODEL}… \\d+ s|Done · live \\(${STEP_MODEL}, \\d+(?:\\.\\d+)? s\\))(?:\\s*Expand)?$`,
+);
+export const ALLOWED_SELECTOR = '.model-step, [data-expand="open"]';
+
+export const isStepLine = (text) => STEP_LINE.test(String(text).replace(/\s+/g, " ").trim());
+
+// One region -> true when its text may name a model: an open Expand view, or a model step showing a step line.
+export function allowedRegion({ kind, text }) {
+  return kind === "expand" || (kind === "step" && isStepLine(text));
+}
+
+// allowedText(text, regions) -> the text with each allowed region's text taken out once (a region is one place).
+export function allowedText(text, regions = []) {
+  return regions
+    .filter((r) => r?.text && allowedRegion(r))
+    .reduce((rest, { text: region }) => {
+      const at = rest.indexOf(region);
+      return at < 0 ? rest : rest.slice(0, at) + rest.slice(at + region.length);
+    }, String(text));
+}
+
 // scanBeat: the scan for one beat. The open Inspector Model tab's text (`modelPanel`) is left out, and the AI page
-// beat may name models.
-export function scanBeat({ text, modelPanel = "", role, beat }) {
-  const seen = modelPanel ? String(text).replace(modelPanel, "") : String(text);
-  return scanText(seen, role, { models: MODEL_BEATS.has(beat) });
+// beat may name models. The model rules read `modelText` when given (run.mjs reads it from the page with the allowed
+// regions hidden, so the cut is by DOM position), else the text minus the `allowed` regions ({ kind, text }). Every
+// other rule reads the whole text. A patient screen never names a model, so it gets no allowance.
+export function scanBeat({ text, modelPanel = "", modelText, allowed = [], role, beat }) {
+  const cut = (t) => (modelPanel ? String(t).replace(modelPanel, "") : String(t));
+  const seen = cut(text);
+  let forModels = seen;
+  if (role !== "patient") forModels = modelText !== undefined ? cut(modelText) : allowedText(seen, allowed);
+  return scanText(seen, role, { models: MODEL_BEATS.has(beat), modelText: forModels });
 }

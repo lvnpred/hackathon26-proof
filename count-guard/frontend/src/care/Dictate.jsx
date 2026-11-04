@@ -21,8 +21,9 @@ const MIC = (
 // `sendStep` (a useModelStep from the caller) runs the send instead; the caller then shows its line.
 // Expand (clarity §4.2): the heard line opens what was recorded and heard; the send line opens `sendRecord(result)`.
 // `view` (the chart view) gives the Expand its episode and the person acts.
+// autoSend: a recording once heard is sent at once (one step: record, hear, send); typed text still waits for the button.
 // Each step line sits in this box (spec §4.1): recording timer, upload, checking, done or Didn't work + Retry.
-export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, lens = "staff", sendCapability, sendStep, sendOutcome, sendRecord, view, onHear, onSend }) {
+export default function Dictate({ label, field = "What was said", verb, capability = "task_voice", placeholder, busy, maxLength = 2000, bare = false, lens = "staff", autoSend = false, sendCapability, sendStep, sendOutcome, sendRecord, view, onHear, onSend }) {
   const boxId = useId();
   const [recording, setRecording] = useState(false);
   const [text, setText] = useState("");
@@ -54,8 +55,10 @@ export default function Dictate({ label, field = "What was said", verb, capabili
   function heardIt(result) {
     if (!mounted.current) return;
     if (!result) return;
+    const said = { text: result.text, by: result.heard_by, audio_id: result.audio_id };
     setText(result.text);
-    setHeard({ text: result.text, by: result.heard_by, audio_id: result.audio_id });
+    setHeard(said);
+    if (autoSend && result.text?.trim()) sendSaid({ text: result.text.trim(), heard: said });
   }
   const hear = async (file) => heardIt(await hearWith(hearing, (f, opts) => hearRef.current(f, opts), file));
 
@@ -101,8 +104,8 @@ export default function Dictate({ label, field = "What was said", verb, capabili
     setHeard(null);
     hearing.reset();
   }
-  async function send() {
-    const said = { text: text.trim(), heard };
+  const send = () => sendSaid({ text: text.trim(), heard });
+  async function sendSaid(said) {
     if (!sendCapability && !sendStep) return sent(await onSend(said));
     const outcome = { ...(sendOutcome ? { outcome: sendOutcome } : {}), ...(sendRecord ? { record: sendRecord } : {}) };
     return sent(await sending.run((opts) => onSend(said, opts), outcome));

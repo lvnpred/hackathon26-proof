@@ -27,7 +27,7 @@ OPEN = ("open", "running")
 _BP = re.compile(r"(\d{2,3})\s*(?:over|/)\s*(\d{2,3})", re.I)
 _HR = re.compile(r"(?:pulse|heart rate|hr)\D{0,10}(\d{2,3})", re.I)
 _SPO2 = re.compile(r"(?:sats?|saturation|spo2|oxygen)\D{0,10}(\d{2,3})", re.I)
-_TEMP = re.compile(r"temp(?:erature)?\D{0,10}(\d{2}(?:\.\d)?)", re.I)
+_TEMP = re.compile(r"temp(?:erature)?\D{0,10}(\d{2,3}(?:\.\d+)?)\b", re.I)
 _OBS_WORD = re.compile(r"\b(bp|pressure|pulse|obs)\b", re.I)
 _WORD = re.compile(r"[a-z]{3,}")
 _STOP = set("every hour hours minute minutes with this that from over each after before times done given".split())
@@ -52,6 +52,9 @@ def parse_values(text: str) -> dict:
             out[key] = int(found.group(1))
     if found := _TEMP.search(heard):
         out["temp"] = float(found.group(1))
+    out = {k: v for k, v in out.items() if _value_ok(k, v)}  # a value outside its range was not read right
+    if not ("sbp" in out and "dbp" in out):  # a pressure is both numbers or neither
+        out = {k: v for k, v in out.items() if k not in ("sbp", "dbp")}
     return out
 
 

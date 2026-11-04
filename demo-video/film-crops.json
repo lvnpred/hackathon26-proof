@@ -1,0 +1,98 @@
+[
+ {
+  "frame": "F07a",
+  "src": "dd-admit",
+  "x": 0,
+  "y": 130,
+  "w": 1200,
+  "h": 280
+ },
+ {
+  "frame": "F07b",
+  "src": "ward-arrival",
+  "x": 0,
+  "y": 190,
+  "w": 1200,
+  "h": 400
+ },
+ {
+  "frame": "F08",
+  "src": "ward-photo-ok",
+  "x": 0,
+  "y": 290,
+  "w": 1200,
+  "h": 340
+ },
+ {
+  "frame": "F09",
+  "src": "ward-photo-wrong",
+  "x": 0,
+  "y": 700,
+  "w": 1200,
+  "h": 340
+ },
+ {
+  "frame": "F10",
+  "src": "theatre-drug",
+  "x": 0,
+  "y": 860,
+  "w": 1200,
+  "h": 420
+ },
+ {
+  "frame": "F11",
+  "src": "theatre-card",
+  "x": 0,
+  "y": 1230,
+  "w": 1200,
+  "h": 450
+ },
+ {
+  "frame": "F12",
+  "src": "theatre-camera",
+  "x": 0,
+  "y": 400,
+  "w": 1200,
+  "h": 500
+ },
+ {
+  "frame": "F13",
+  "src": "theatre-missing",
+  "x": 0,
+  "y": 1540,
+  "w": 1200,
+  "h": 680
+ },
+ {
+  "frame": "F14a",
+  "src": "theatre-hard-stop",
+  "x": 0,
+  "y": 540,
+  "w": 1200,
+  "h": 300
+ },
+ {
+  "frame": "F14b",
+  "src": "theatre-hard-stop",
+  "x": 0,
+  "y": 2560,
+  "w": 1200,
+  "h": 260
+ },
+ {
+  "frame": "F15",
+  "src": "theatre-reconcile",
+  "x": 0,
+  "y": 180,
+  "w": 1200,
+  "h": 340
+ },
+ {
+  "frame": "F16",
+  "src": "discharge-draft",
+  "x": 0,
+  "y": 800,
+  "w": 1200,
+  "h": 560
+ }
+]

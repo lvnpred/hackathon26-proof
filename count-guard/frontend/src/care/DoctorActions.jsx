@@ -9,12 +9,13 @@ import NowCard from "./NowCard";
 import Dictate from "./Dictate";
 import AiMoment from "./AiMoment.jsx";
 import { draftChanged } from "./drafts";
-import { draftSummary } from "./dischargeDraft.js";
+import { draftSummary, LEAVE_OUT, leftOutOf, notPlacedLine, pendingUnplaced, placeSentence } from "./dischargeDraft.js";
 import DischargeDraft from "./DischargeDraft.jsx";
 import Provenance from "./Provenance.jsx";
 import { lastActOf, madeByModel, sameOrders } from "./provenance.js";
 import { lastSigned, momentFor } from "./moments";
 import OrderForm from "./OrderForm";
+import UnplacedSentences from "./UnplacedSentences.jsx";
 import TheatreChecklist from "./TheatreChecklist";
 import { theatreSteps } from "./theatre";
 import PhotoInput from "./PhotoInput.jsx";
@@ -130,11 +131,13 @@ function Clinic({ view, busy, act, upload }) {
 function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   const [summary, setSummary] = useState("");
   const [summaryDraftId, setSummaryDraftId] = useState(null);
+  const [settled, setSettled] = useState({}); // unplaced sentence index -> the section chosen, or LEAVE_OUT (clarity §4.5)
   const [template, setTemplate] = useState("hernia-repair");
   const draft = view.drafts?.discharge;
   const signedDraft = draft ? null : lastActOf(view.acts, "discharge.signed");
   if (draftChanged(summaryDraftId, draft)) {
     setSummaryDraftId(draft.id);
+    setSettled({});
     setSummary(draftSummary(draft));
   }
   const templates = Object.entries(view.templates || {});
@@ -142,13 +145,17 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
   const shut = { draft: gate("dischargeDraft", view.state).reason, dictate: gate("dischargeDictate", view.state).reason, sign: gate("dischargeSign", view.state).reason };
   const drafter = useModelStep({ capability: "discharge" });
   const draftFromRecord = () => drafter.run((o) => act("/discharge/draft", { by: DOCTOR }, undefined, own(o)), { outcome: draftOutcome("discharge"), record: draftRecord("discharge") });
+  // Sign waits until each dictated sentence no section took is placed or left out (clarity §4.5).
+  const pending = summaryDraftId ? pendingUnplaced(draft?.unplaced, settled) : [];
   async function signDischarge() {
     // The draft's summary as proposed goes with the signing, so an edited summary reads "Changed by" (clarity §4.3).
     const proposed = summaryDraftId && draft ? { proposed_summary: draftSummary(draft) } : {};
-    const done = await act("/discharge/sign", { summary: summary.trim(), template, by: DOCTOR, draft_id: summaryDraftId || undefined, ...proposed });
+    const leftOut = summaryDraftId ? leftOutOf(draft?.unplaced, settled) : [];
+    const done = await act("/discharge/sign", { summary: summary.trim(), template, by: DOCTOR, draft_id: summaryDraftId || undefined, ...proposed, ...(leftOut.length ? { left_out: leftOut } : {}) });
     if (done) {
       setSummary("");
       setSummaryDraftId(null);
+      setSettled({});
     }
   }
   return (
@@ -176,6 +183,10 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
               Summary
               <textarea rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} />
             </label>
+            <UnplacedSentences sentences={pending} busy={busy} onSettle={(index, text, choice) => {
+              setSettled((was) => ({ ...was, [index]: choice }));
+              if (choice !== LEAVE_OUT) setSummary((s) => placeSentence(s, choice, text));
+            }} />
             <label className="field">
               Template
               <select value={template} onChange={(e) => setTemplate(e.target.value)}>
@@ -183,8 +194,9 @@ function Discharge({ view, busy, act, upload, ask, open, onToggle, primary }) {
                 {templates.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
               </select>
             </label>
-            <button type="button" className={primary && (draft || summary.trim()) && !shut.sign ? "primary" : undefined} disabled={busy || !summary.trim() || Boolean(shut.sign)} onClick={signDischarge}>Sign discharge</button>
+            <button type="button" className={primary && (draft || summary.trim()) && !shut.sign ? "primary" : undefined} disabled={busy || !summary.trim() || Boolean(shut.sign) || pending.length > 0} onClick={signDischarge}>Sign discharge</button>
             <Opens reason={shut.sign} />
+            {pending.length > 0 && <p className="note small" role="status">{notPlacedLine(pending.length)}</p>}
           </div>
         </>
       )}

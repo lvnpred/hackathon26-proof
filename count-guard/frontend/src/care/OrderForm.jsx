@@ -4,7 +4,7 @@ import { draftChanged, itemsToRows } from "./drafts";
 import OrderSentence from "./OrderSentence.jsx";
 import Provenance from "./Provenance.jsx";
 import { madeByModel } from "./provenance.js";
-import { blankRow, KINDS, orderRowsToItems, PREFILL } from "./orders";
+import { blankRow, KINDS, orderRowsToItems, PREFILL, unclearLines } from "./orders";
 
 // Rows of orders; Sign orders posts the filled rows through onSign(items, draftId), which resolves to the new view or null.
 // A dictated draft fills the rows once per draft id; draftId is sent only while the rows still came from that draft.
@@ -36,6 +36,7 @@ export default function OrderForm({ busy, onSign, draft, moment = null, episodeI
         <>
           {moment && <AiMoment moment={moment} role="doctor" episodeId={episodeId} />}
           <p className="note small" role="status">Draft from dictation. Check each row, then sign.</p>
+          {unclearLines(draft).map((line) => <p className="note small" key={line} data-unclear>{line}</p>)}
         </>
       )}
       <div className="row">

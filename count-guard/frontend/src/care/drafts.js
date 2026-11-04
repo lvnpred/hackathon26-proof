@@ -19,7 +19,7 @@ const text = (value) => (value === null || value === undefined ? "" : String(val
 
 // The inverse of orderRowsToItems: numbers become the strings a form holds.
 export function itemsToRows(items) {
-  return items.map((item) => {
+  return items.filter((item) => item.kind !== "unclear").map((item) => { // words not understood are never a row
     const row = { ...blankRow(item.kind || "other") };
     row.text = text(item.text);
     row.name = text(item.name);
@@ -51,6 +51,14 @@ export function newestPhoto(view, taskId) {
 
 // The body for POST /tasks/{id}/done (without `by`), or { error }. Mirrors the server's DoneIn rules.
 const OBS_KEYS = ["sbp", "dbp", "hr", "spo2", "temp"];
+
+// Spoken values as the strings the row's ObsForm holds: { sbp: 120 } -> { sbp: "120" } (clarity §4.5).
+export const rowForm = (values) => Object.fromEntries(Object.entries(values || {})
+  .filter(([k, v]) => OBS_KEYS.includes(k) && v !== null && v !== "" && Number.isFinite(Number(v))).map(([k, v]) => [k, String(v)]));
+
+// Where a spoken completion lands (clarity §4.5): an observation fills its own row's form; a task with photo proof
+// opens Confirm task (photo proofs only); any other task waits on its own row button.
+export const voiceTarget = (task) => (task.kind === "obs" ? "form" : task.proof === "photo" ? "proof" : "row");
 
 // proposed: the heard values the AI proposed; edited/heardText: heard words the person changed (clarity §4.3).
 export function doneBody({ task, via, transcript, form, photo, heardBy, proposed = null, edited = false, heardText = "" }) {

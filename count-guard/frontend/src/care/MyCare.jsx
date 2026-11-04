@@ -5,13 +5,14 @@ import { MATCH_LABEL, proofOf } from "./drafts";
 import { PageLead } from "../App";
 import { useCareWard } from "./CareShell";
 import StateHeader from "./StateHeader";
+import CheckMedicine from "./CheckMedicine.jsx";
 import { findPatient } from "./Patients";
 import Timeline from "./Timeline";
 import RecordEvidence from "./RecordEvidence.jsx";
 import { orderLines, orderStatus, patientTaskStatus } from "./tasklist";
 import { taskCheckLine } from "./video";
 
-// The same record as Today, read-only: no forms, no actions.
+// The same record as Today, read-only except checking a medicine.
 export default function MyCare() {
   const ward = useCareWard();
   const patient = findPatient(ward.patients, ward.patientBed);
@@ -19,8 +20,9 @@ export default function MyCare() {
   const { view } = patient;
   return (
     <Fragment key={patient.id}>
-      <PageLead kicker={patient.name} title="My care" body="Where you are and what has been recorded. You can read it here." />
+      <PageLead kicker={patient.name} title="My care" body="Where you are and what has been recorded. You can read it here, and check a medicine." />
       <StateHeader patient={patient} view={view} nowMs={ward.nowMs} you />
+      <CheckMedicine view={view} episodeId={patient.id} />
       <section className="card">
         <p className="label">Orders and tasks</p>
         {(view.order_list || []).length === 0 && <p className="empty small">No orders yet.</p>}

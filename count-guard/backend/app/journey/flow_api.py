@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -157,6 +157,8 @@ class DischargeIn(At):
     by: str = Field(min_length=1, max_length=80)
     draft_id: str | None = Field(default=None, min_length=1, max_length=64)
     proposed_summary: str | None = Field(default=None, max_length=4000)  # the draft's summary as the AI proposed it
+    # Dictated sentences no section took that the doctor chose to leave out (clarity §4.5): kept on the record.
+    left_out: list[Annotated[str, Field(min_length=1, max_length=600)]] = Field(default_factory=list, max_length=20)
 
 
 def _write(request: Request, episode_id: str, at_ms: int | None, action) -> dict:
@@ -225,6 +227,8 @@ def sign_discharge(episode_id: str, body: DischargeIn, request: Request) -> dict
     signed = {"summary": body.summary.strip(), "by": body.by, **({"draft_id": body.draft_id} if body.draft_id else {})}
     if body.draft_id and body.proposed_summary is not None:
         signed["proposed_summary"] = body.proposed_summary.strip()
+    if body.left_out:
+        signed["left_out"] = [s.strip() for s in body.left_out]
     store.append(episode_id, "discharge.signed", signed, ts_ms=ts)
     store.append(episode_id, "discharge.card", card_payload(body.template, rx["payload"] if rx else None, body.by), ts_ms=ts)
     # Every refusal is above. check_move needs the signed event, so a refusal here would be a bug (P2-R6).

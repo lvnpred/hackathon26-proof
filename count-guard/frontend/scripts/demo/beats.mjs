@@ -42,7 +42,7 @@ export const BEATS = [
   },
   {
     id: "dd-dictate", scene: "dd", app: "dd", role: "doctor", seconds: 14, film: true,
-    say: "She dictates the visit; the prescription fills itself and every medicine is checked.",
+    say: "She dictates the visit; the status counts the seconds, the prescription fills itself and every medicine is checked.",
     clicks: ['Button "Tap to dictate"', "Speak about 3 s", 'Button "Tap to dictate" again to finish'],
     expect: ["M. Fernandes (synthetic)", "52 F", "Paracetamol", "All medicines are ready. You can Save."],
     keyed: "1 Muse Voice Transcribe call and 1 Spark text call for the structured prescription (DD: STT_ENGINE=muse, LLM_PROVIDER=meta).",
@@ -65,7 +65,7 @@ export const BEATS = [
   },
   {
     id: "ward-photo-ok", scene: "ward", app: "cg", role: "nurse", seconds: 6, film: true,
-    say: "She photographs the wristband; the photo check accepts it and says what it saw.",
+    say: "She photographs the wristband; the photo check matches it and says what it saw.",
     clicks: [`Chart ${PATIENT}`, 'File eval/media/wristband/wristband-synthetic.png into "Photo check: Wristband on"'],
     expect: ["Photo matches — The photo shows a patient wristband with the patient's name printed on it. · Prepared", "Doctor Dictation PDF"],
     files: ["wristband-synthetic.png"],
@@ -73,7 +73,7 @@ export const BEATS = [
   },
   {
     id: "ward-photo-wrong", scene: "ward", app: "cg", role: "nurse", seconds: 6, film: true,
-    say: "A photo of the bed rail is sent for the consent form; the check does not accept it, and the item stays open.",
+    say: "A photo of the bed rail is sent for the consent form; the check does not match it, and the item stays open.",
     clicks: ['File eval/media/wrong-photo/wrong-photo-bed-rail-synthetic.png into "Photo check: Consent on file"'],
     expect: ["Photo does not match — The photo shows a bed rail, not a signed consent form. · Prepared", "Reason to override"],
     files: ["wrong-photo-bed-rail-synthetic.png"],
@@ -97,9 +97,9 @@ export const BEATS = [
   },
   {
     id: "theatre-drug", scene: "theatre", app: "cg", role: "nurse", seconds: 10, film: true,
-    say: "In theatre the local anaesthetic is said aloud; the heard line is drafted, and the nurse confirms it was given.",
+    say: "In theatre the local anaesthetic is said aloud; the heard line is drafted, Expand shows what was heard, and the nurse confirms it was given.",
     clicks: ["Role Nurse", 'File eval/media/drug-phrases/drug-lignocaine.wav into "Upload audio" in "Drug given"', 'Button "Add heard line"', 'Button "Expand" on the heard row (Captured shows), then "Close"', 'Button "Confirm given"'],
-    expect: ["lignocaine 2% 5 ml local infiltration", "From voice", "Accepted by Nurse Asha"],
+    expect: ["lignocaine 2% 5 ml local infiltration", "From voice", "Accepted by Nurse Asha", "Done · No model used — drafted by rules"],
     before: ["Heard, not confirmed"],
     files: ["drug-lignocaine.wav"],
     keyed: "1 Muse Voice Transcribe call. The row reads From voice without · Prepared. Switch: VOICE_LIVE.",

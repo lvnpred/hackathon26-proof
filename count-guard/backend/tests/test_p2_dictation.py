@@ -159,9 +159,19 @@ def test_model_reply_used_when_grounded(tmp_path, monkeypatch):
                                  "every_h": 6, "name": "paracetamol", "amount": "1 g"}
 
 
+def test_invented_extra_item_is_dropped_and_the_grounded_items_kept(tmp_path, monkeypatch):
+    # Clarity §4.5: grounding is per item. Before, one invented item sent the whole reply to the rules.
+    reply = json.dumps({**GOOD_REPLY, "items": GOOD_REPLY["items"] + [
+        {"kind": "dose", "text": "Ondansetron 4 mg every 8 h", "name": "Ondansetron", "amount": "4 mg", "every_h": 8}]})
+    monkeypatch.setattr(live, "spark_text", lambda s, prompt: reply)
+    client = _keyed_client(tmp_path)
+    eid = client.post("/journey/episodes", json={"label": "Synthetic demo, R. Kumar"}).json()["id"]
+    draft = _typed(client, eid, "dictate/orders", ORDERS_TEXT).json()["drafts"]["order"]
+    assert draft["source"] == "muse-spark-1.3" and draft["unclear"] == []
+    assert len(draft["items"]) == 2 and not any("ondansetron" in i["text"].lower() for i in draft["items"])
+
+
 @pytest.mark.parametrize("reply", [
-    json.dumps({**GOOD_REPLY, "items": GOOD_REPLY["items"] + [
-        {"kind": "dose", "text": "Ondansetron 4 mg every 8 h", "name": "Ondansetron", "amount": "4 mg", "every_h": 8}]}),
     json.dumps({**GOOD_REPLY, "items": [{**GOOD_REPLY["items"][0], "every_h": 4}]}),
     json.dumps({**GOOD_REPLY, "items": [{**GOOD_REPLY["items"][0], "amount": "2 g"}]}),
     "not json",
@@ -175,6 +185,10 @@ def test_model_reply_with_invented_content_falls_back(tmp_path, monkeypatch, rep
     assert len(draft["items"]) == 2 and not any("ondansetron" in i["text"].lower() for i in draft["items"])
 
 
+def _tidy_good(item):
+    return d._tidy({"mode": "tick", "proof": "none", **item})
+
+
 def _with_item(item):
     return json.dumps({**GOOD_REPLY, "items": GOOD_REPLY["items"] + [item]})
 
@@ -184,12 +198,13 @@ def _with_item(item):
     {"kind": "other", "text": "Ceftriaxone IV"},
     {"kind": "other", "text": "Paracetamol rest", "proof": "none", "mode": "start_end"},
 ])
-def test_digit_free_invention_falls_back(tmp_path, monkeypatch, item):
+def test_digit_free_invention_is_dropped(tmp_path, monkeypatch, item):
+    # Clarity §4.5: the invented item is left out; the grounded items keep the model's fields (was: all to rules).
     monkeypatch.setattr(live, "spark_text", lambda s, prompt: _with_item(item))
     client = _keyed_client(tmp_path)
     eid = client.post("/journey/episodes", json={"label": "x"}).json()["id"]
     draft = _typed(client, eid, "dictate/orders", ORDERS_TEXT).json()["drafts"]["order"]
-    assert draft["source"] == "rules (model reply not usable)" and len(draft["items"]) == 2
+    assert draft["source"] == "muse-spark-1.3" and draft["items"] == [_tidy_good(i) for i in GOOD_REPLY["items"]]
 
 
 def test_invented_proof_and_mode_not_accepted():

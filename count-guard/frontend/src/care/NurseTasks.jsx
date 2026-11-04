@@ -7,16 +7,33 @@ import Provenance from "./Provenance.jsx";
 import TaskProof from "./TaskProof";
 import VideoCheck from "./VideoCheck";
 import { heardHow } from "./askText";
-import { lastDoneLine, rowSession } from "./drafts";
+import { doneBody, lastDoneLine, rowForm, rowSession, voiceTarget } from "./drafts";
+import Source from "./Source.jsx";
+import { FROM_VOICE, isPrepared } from "./source.js";
 import { rowMark, taskGroups } from "./tasklist";
 import { momentFor } from "./moments.js";
 import { latestCheck, taskVideoLabel } from "./video";
 import { own } from "./stepOutcome.js";
 import { ExpandButton } from "./ModelExpand.jsx";
 
-function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProof, onSession }) {
+function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProof, onSession, onSaved }) {
   const { task, due, status } = row;
-  const done = (body = {}) => act(`/tasks/${task.id}/done`, { by, via: "tap", note: "", ...body });
+  // The row's spoken completion until it is saved: its values fill this row's form (clarity §4.5).
+  const [said, setSaid] = useState(null);
+  const [filled, setFilled] = useState(0); // bumps when spoken values fill the form, so ObsForm shows them
+  const [error, setError] = useState("");
+  const clear = () => { setSaid(null); setFilled((n) => n + 1); };
+  async function done(body = {}) {
+    const out = said
+      ? doneBody({ task, via: said.via, transcript: said.transcript, form: rowForm(body.values), heardBy: said.heardBy,
+        proposed: said.proposal.values, edited: said.edited, heardText: said.heardText })
+      : { body };
+    if (out.error) return setError(out.error);
+    setError("");
+    const next = await act(`/tasks/${task.id}/done`, { by, via: "tap", note: "", ...out.body });
+    if (next && said) { setSaid(null); onSaved(); }
+    return next;
+  }
   const mark = rowMark(task, due);
   const live = due !== "paused";
   const last = lastDoneLine(task, view.photos);
@@ -32,7 +49,9 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
     const how = heardHow(heard?.text, text, heard?.by); // edited heard words stay heard (clarity §4.3)
     const proposal = await ask("/dictate/task", undefined, { text, by, heard_by: how.heard_by }, "/dictate/task", own(o));
     if (!proposal) return null;
-    onSession({ ...rowSession(proposal, task), edited: Boolean(how.edited), heardText: how.heard_text || "" }, task);
+    const session = { ...rowSession(proposal, task), edited: Boolean(how.edited), heardText: how.heard_text || "" };
+    if (voiceTarget(task) === "proof") onSession(session, task); // Confirm task is for photo proofs only
+    else { setSaid(session); setFilled((n) => n + 1); }
     return proposal;
   };
 
@@ -57,7 +76,8 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
         <Dictate
           bare
           label={`Say it: ${task.title}`}
-          verb="Use this"
+          verb={task.kind === "obs" ? "Fill the form" : "Use this"}
+          autoSend
           busy={busy}
           sendCapability="wording"
           view={view}
@@ -65,6 +85,16 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
           onSend={send}
         />
       )}
+      {said && (
+        <p className="small" role="status">
+          “{said.transcript}” <Source words={said.via === "voice" ? FROM_VOICE : null} prepared={said.via === "voice" && isPrepared({ heard_by: said.heardBy })} />
+          {/* Heard values stay the AI's proposal until the nurse saves them (then the row reads Accepted or Changed by). */}
+          {said.via === "voice" && <> <Provenance item={{ id: task.id, ai: said.ai === true }} events={[]} /></>}
+          {" "}{task.kind === "obs" ? "Check the values, then save." : `Saved when you press ${task.mode === "start_end" ? "End" : mark.label}.`}
+          {" "}<button type="button" className="quiet" disabled={busy} onClick={clear}>Clear</button>
+        </p>
+      )}
+      {error && <p className="error small" role="alert">{error}</p>}
       {live && task.proof === "photo" && <button type="button" disabled={busy} onClick={() => onProof(task)}>Add photo proof</button>}
       {taskVideoLabel(task) && !video && <p className="small muted">{taskVideoLabel(task)}</p>}
       {live && video && (
@@ -80,7 +110,7 @@ function TaskRow({ view, row, by, busy, act, upload, ask, micOpen, onMic, onProo
         />
       )}
       {live && task.kind === "obs" && <button type="button" className="quiet" disabled={busy} onClick={() => onProof(task)}>Read from monitor photo</button>}
-      {live && task.kind === "obs" && <ObsForm busy={busy} due={due} label={mark.label} onSave={(values) => done({ values })} />}
+      {live && task.kind === "obs" && <ObsForm key={`${task.id}:${filled}`} busy={busy} due={due} label={mark.label} initial={said ? rowForm(said.proposal.values) : {}} onSave={(values) => done({ values })} />}
       {live && task.kind !== "obs" && task.mode === "start_end" && (
         task.status === "running"
           ? <button type="button" disabled={busy} onClick={() => done()}>End</button>
@@ -105,6 +135,7 @@ function Group({ title, empty, rows, micId, setMicId, ...rest }) {
             row={row}
             micOpen={micId === row.task.id}
             onMic={() => setMicId(micId === row.task.id ? null : row.task.id)}
+            onSaved={() => setMicId((open) => (open === row.task.id ? null : open))}
             {...rest}
           />
         ))}
@@ -113,7 +144,8 @@ function Group({ title, empty, rows, micId, setMicId, ...rest }) {
   );
 }
 
-// The nurse's one task list. A mic on each row opens a Dictate there; Confirm task is the one panel for all rows.
+// The nurse's one task list. A mic on each row opens a Dictate there: what is heard fills that row (its ObsForm, or its
+// own button for a tick task) in one step, and the nurse saves. Confirm task is only for photo proofs (clarity §4.5).
 // Outside an admitted state the list stays, its buttons disabled, and says when it opens (clarity §4.4).
 export default function NurseTasks({ view, nowMs, state, by, busy: working, act, upload, ask, reason = "" }) {
   const busy = working || Boolean(reason);

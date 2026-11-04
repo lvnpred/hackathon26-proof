@@ -12,19 +12,23 @@ import { ExpandButton } from "./ModelExpand.jsx";
 // Drug given by voice (spec §6.4): say or type the line, check the heard row, then a person taps to confirm.
 // A pack line ("opening twenty swabs") is only heard here: the swab count changes when a person confirms the pack.
 // Hearing goes through ward.ask with the Dictate box's voice step, so its upload, checking and any failure show there.
+const DRUG_LINE = "drug_line"; // no model stands behind it (modelStep.js): the step line names none
+const RULES_READ = () => ({ mode: "none" });
+
 export default function TheatreDrugs({ episodeId, panel, by, busy, act, upload, ask, acts = [] }) {
   const hear = (file, o) => ask("/ask/hear", file, { by }, "/theatre/drug", own(o));
   // Heard words the person edited stay heard, with the words as heard, so the confirmed row can read "Changed by".
-  const send = ({ text, heard }) => {
+  // The line is read by rules, no model: its step says so, and a refusal ("Heard: '…' — no drug name") shows there.
+  const send = ({ text, heard }, o) => {
     const how = heardHow(heard?.text, text, heard?.by);
-    return upload("/theatre/drug", null, { text, by, heard_by: how.heard_by, ...(how.edited ? { heard_text: how.heard_text } : {}) }, "/theatre/drug");
+    return upload("/theatre/drug", null, { text, by, heard_by: how.heard_by, ...(how.edited ? { heard_text: how.heard_text } : {}) }, "/theatre/drug", own(o));
   };
   const open = panel.packs.filter((pack) => !pack.confirmed_by);
   const view = { episode: { id: episodeId }, acts }; // what the Expand view needs: the episode and the person acts
   return (
     <section className="card" aria-label="Drug given">
       <Dictate bare label="Drug given" field="Drug, strength, amount, route" verb="Add heard line" capability="task_voice"
-        placeholder="e.g. lignocaine two percent, five ml, local infiltration" maxLength={400} busy={busy} view={view} onHear={hear} onSend={send} />
+        placeholder="e.g. lignocaine two percent, five ml, local infiltration" maxLength={400} busy={busy} view={view} sendCapability={DRUG_LINE} sendOutcome={RULES_READ} onHear={hear} onSend={send} />
       {panel.drugs.length > 0 && (
         <ul className="plain-list">
           {panel.drugs.map((row) => (

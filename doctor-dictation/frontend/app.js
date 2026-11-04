@@ -530,7 +530,7 @@ async function transcribe(blob) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), TRANSCRIBE_TIMEOUT_MS);
   try {
-    const r = await fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal });
+    const r = await (globalThis.StepInfo || { during: (kind, fn) => fn() }).during("transcribe", () => fetch("/api/transcribe", { method: "POST", body: fd, signal: ctrl.signal }));
     const j = await safeJson(r);
     if (!r.ok) throw new Error(j.hint || j.error || ("Transcription failed (" + r.status + ")"));
     if (typeof DDExpand !== "undefined") DDExpand.heard(j);   // the words and engine, paired with the recording (expand.js)
@@ -576,7 +576,7 @@ async function formatTranscript(transcript, snap) {
   setWorking(true, "Structuring the prescription…");
   setStep("structuring", { words: wordCount(transcript), mode: "dictate" });
   try {
-    const j = await postJson("/api/format", { transcript }, FORMAT_TIMEOUT_MS);
+    const j = await (globalThis.StepInfo || { during: (kind, fn) => fn() }).during("structure", () => postJson("/api/format", { transcript }, FORMAT_TIMEOUT_MS));
     state.transcriptSha = j.transcript_sha256 || "";
     state.engine = j.engine || "";
     state.structured = j.structured || {};

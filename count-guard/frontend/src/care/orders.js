@@ -1,6 +1,9 @@
 // Order form rows (strings, as typed) to the items POST /orders/sign takes.
 export const KINDS = [["dose", "Dose"], ["obs", "Observation"], ["procedure", "Procedure"], ["check", "Check"], ["other", "Other"]];
 
+// Dictated words that became no order (clarity §4.5): shown with what was heard, never a row, so never signed.
+export const unclearLines = (draft) => (draft?.unclear || []).filter((u) => u?.heard).map((u) => `Not understood — not added: "${u.heard}"`);
+
 export function blankRow(kind = "other") {
   return { kind, text: "", name: "", amount: "", every_h: "", mode: "tick", proof: "none", sbp_min: "", sbp_max: "" };
 }

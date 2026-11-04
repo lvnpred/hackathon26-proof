@@ -104,6 +104,10 @@ Record rows say how a reading was made in plain words ("Read by camera", "Read f
 
 The patient gets Why and Evidence only.
 
+### Step line, Expand, Provenance
+
+Every card that calls a model shows its own step line while it works ("Checking with Spark 1.3… 3 s") and how the call ended ("Done · live", "Done · Prepared (no live model)", "Didn't work" with Retry); a step never claims a model call that did not happen. **Expand** on any finished step opens what was captured, what the model returned, how the app used it and what a person did. **Provenance** marks each row as proposed by AI or accepted, changed, overridden or seen by a named person, so the record always says who decided.
+
 ### Test it
 
 ```bash

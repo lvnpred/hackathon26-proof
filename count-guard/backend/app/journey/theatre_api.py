@@ -118,7 +118,7 @@ def hear_drug(
     said = _heard(request.app.state.settings, file, text, heard_by)
     kind, payload = theatre.heard(said["text"])
     if kind == DRUG_HEARD and not (payload["name_as_heard"] or "").strip():
-        raise HTTPException(status_code=422, detail="No medicine name was heard. Say or type the drug again.")
+        raise HTTPException(status_code=422, detail=f"Heard: '{said['text']}' — no drug name")  # clarity §4.5
     said = keep_recording(request.app.state.settings, episode_id, said)  # kept only once the line is not refused
     used = {"heard_as": "pack" if kind == PACK_HEARD else "drug", "row": dict(payload), "read_by": "rules"}
     found = evidence_of(kind, inputs=heard_inputs(said), reply=said["text"] if said["calls"] else None, used=used,

@@ -10,6 +10,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app.journey import audio_api, dictation, evidence, expected, home_medicines, live, proof, spoken, states, switches, tasks, verdict
+from app.journey.dictation_cover import unplaced_sentences
 from app.journey.evidence_payload import evidence_of, fallback, heard_inputs
 from app.journey.api import MAX_PHOTO_BYTES, _act, _at, _require, _store, settle, view
 from app.journey.regions import strips_from
@@ -139,10 +140,18 @@ def dictate_orders(
         request, episode_id, tasks.ORDER_STATES,
         "Orders are dictated in clinic, admitting or ward. The patient is in {state}.",
         file, text, dictation.ORDER_PROMPT, dictation.items_from_reply, dictation.parse_order_text,
-        "orders", lambda r: not r["items"] and not r["reason"], heard_by,
+        "orders", lambda r: not r["items"] and not r["reason"] and not r.get("unclear"), heard_by,
     )
     spans = dictation.order_spans(meta["transcript"], result["items"])
     return _act(request, episode_id, "order.drafted", {**meta, **result, "spans": spans, "by": by}, at_ms)
+
+
+def _sections_reply(reply, transcript):
+    """A usable model reply's sections, and the sentences it left out as `unplaced` (clarity §4.5)."""
+    sections = dictation.sections_from_reply(reply, transcript)
+    if sections is None:
+        return None
+    return {"sections": sections, "unplaced": unplaced_sentences(transcript, [f"{s['heading']}: {s['text']}" for s in sections])}
 
 
 @media_router.post("/dictate/discharge")
@@ -158,14 +167,14 @@ def dictate_discharge(
     result, meta = _dictate(
         request, episode_id, ADMITTED,
         "The discharge is dictated once the patient is admitted. The patient is in {state}.",
-        file, text, dictation.DISCHARGE_PROMPT, dictation.sections_from_reply, dictation.discharge_sections,
-        "discharge summary", lambda r: not r, heard_by,
+        file, text, dictation.DISCHARGE_PROMPT, _sections_reply, dictation.discharge_draft,
+        "discharge summary", lambda r: not r["sections"] and not r["unplaced"], heard_by,
     )
     # Dictation amends an open draft written from the timeline: the new draft keeps that draft's record and summary.
     open_draft = dictation.open_drafts(_store(request).events(episode_id))["discharge"]
     kept = {k: open_draft[k] for k in AMENDED if k in open_draft} if open_draft and open_draft.get("from_timeline") else {}
     amends = {"amends": open_draft["id"]} if kept else {}
-    return _act(request, episode_id, "discharge.drafted", {**kept, **meta, "sections": result, "by": by, **amends}, at_ms)
+    return _act(request, episode_id, "discharge.drafted", {**kept, **meta, **result, "by": by, **amends}, at_ms)
 
 
 @media_router.post("/dictate/task")

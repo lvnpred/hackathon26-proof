@@ -29,3 +29,23 @@ export const dischargeLinks = (episodeId) => ({
   pdf: `/journey/episodes/${episodeId}/discharge.pdf`,
   ics: `/journey/episodes/${episodeId}/follow-up.ics`,
 });
+
+// Dictated sentences no section rule placed (clarity §4.5): the doctor chooses a section; nothing goes to "Course".
+export const NOT_PLACED = "Not placed — choose a section";
+export const SECTION_HEADINGS = ["Diagnosis", "Procedure", "Course on the ward", "Medicines", "Follow-up"];
+export const LEAVE_OUT = "Leave out";
+
+// settled: { index in draft.unplaced: a heading, or LEAVE_OUT }. Keyed by index, so a sentence said twice is two choices.
+// The sentences still waiting ([{ index, text }]) and the ones left out (texts, each as often as it was left out).
+export const pendingUnplaced = (unplaced, settled) => (unplaced || []).map((text, index) => ({ index, text })).filter(({ index }) => !(settled || {})[index]);
+export const leftOutOf = (unplaced, settled) => (unplaced || []).filter((_, index) => (settled || {})[index] === LEAVE_OUT);
+export const notPlacedLine = (n) => `${n} sentence${n === 1 ? "" : "s"} not placed`;
+
+// The summary with `sentence` added under `heading`: to that heading's line when there is one, else as a new line.
+export function placeSentence(summary, heading, sentence) {
+  const lines = summary ? summary.split("\n") : [];
+  const at = lines.findIndex((line) => line.startsWith(`${heading}:`));
+  if (at >= 0) lines[at] = `${lines[at].trimEnd()} ${sentence}`;
+  else lines.push(`${heading}: ${sentence}`);
+  return lines.join("\n");
+}
